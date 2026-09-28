@@ -1,3 +1,4 @@
+// Members: role management, invites with hashed one-time tokens, revocation.
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
