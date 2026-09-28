@@ -1,0 +1,877 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import {
+  createNotification,
+  loadIssueContext,
+  loadProjectContext,
+  recordEvent,
+  roleAtLeast,
+} from "./lib/auth";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+
+const PAGE_SIZE_MAX = 100;
+
+// ---------------------------------------------------------------------------
+// Issue list with filters, sorting and pagination (URL-syncable filters)
+// ---------------------------------------------------------------------------
+
+export const listIssues = query({
+  args: {
+    projectId: v.id("projects"),
+    page: v.optional(v.number()),
+    pageSize: v.optional(v.number()),
+    search: v.optional(v.string()),
+    statusId: v.optional(v.id("workflowStatuses")),
+    priority: v.optional(
+      v.union(
+        v.literal("urgent"),
+        v.literal("high"),
+        v.literal("medium"),
+        v.literal("low"),
+        v.literal("none"),
+      ),
+    ),
+    assigneeId: v.optional(v.union(v.id("users"), v.literal("unassigned"))),
+    labelId: v.optional(v.id("labels")),
+    includeArchived: v.optional(v.boolean()),
+    sort: v.optional(
+      v.union(
+        v.literal("created_at"),
+        v.literal("updated_at"),
+        v.literal("priority"),
+        v.literal("due_date"),
+        v.literal("number"),
+      ),
+    ),
+    direction: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId } = await loadProjectContext(ctx, args.projectId);
+    const page = Math.max(1, args.page ?? 1);
+    const pageSize = Math.min(PAGE_SIZE_MAX, Math.max(1, args.pageSize ?? 25));
+    const direction = args.direction ?? "desc";
+
+    let issues = await ctx.db
+      .query("issues")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .collect();
+
+    if (!args.includeArchived) {
+      issues = issues.filter((i) => !i.archivedAt);
+    }
+    if (args.statusId) issues = issues.filter((i) => i.statusId === args.statusId);
+    if (args.priority) issues = issues.filter((i) => i.priority === args.priority);
+    if (args.assigneeId === "unassigned") {
+      issues = issues.filter((i) => !i.assigneeId);
+    } else if (args.assigneeId) {
+      issues = issues.filter((i) => i.assigneeId === args.assigneeId);
+    }
+    if (args.labelId) {
+      const labelRows = await ctx.db
+        .query("issueLabels")
+        .collect();
+      const matching = new Set(
+        labelRows.filter((r) => r.workspaceId === workspaceId && r.labelId === args.labelId).map((r) => r.issueId),
+      );
+      issues = issues.filter((i) => matching.has(i._id));
+    }
+    if (args.search && args.search.trim().length > 0) {
+      const needle = args.search.trim().toLowerCase();
+      issues = issues.filter(
+        (i) =>
+          i.title.toLowerCase().includes(needle) ||
+          (i.description ?? "").toLowerCase().includes(needle),
+      );
+    }
+
+    const priorityRank: Record<string, number> = {
+      urgent: 4,
+      high: 3,
+      medium: 2,
+      low: 1,
+      none: 0,
+    };
+    const sortKey = args.sort ?? "created_at";
+    issues.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "priority") cmp = (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0);
+      else if (sortKey === "due_date") cmp = (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity);
+      else if (sortKey === "number") cmp = a.number - b.number;
+      else if (sortKey === "updated_at") cmp = a.updatedAt - b.updatedAt;
+      else cmp = a.createdAt - b.createdAt;
+      return direction === "desc" ? -cmp : cmp;
+    });
+
+    const total = issues.length;
+    const start = (page - 1) * pageSize;
+    const pageItems = issues.slice(start, start + pageSize);
+
+    const statusIds = [...new Set(pageItems.map((i) => i.statusId))];
+    const statuses = await Promise.all(statusIds.map((id) => ctx.db.get(id)));
+    const statusById = new Map(
+      statuses.filter((s): s is Doc<"workflowStatuses"> => s !== null).map((s) => [s._id, s]),
+    );
+
+    return {
+      issues: pageItems.map((i) => ({
+        ...i,
+        identifier: `${i.number}`,
+        status: statusById.get(i.statusId) ?? null,
+      })),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Enriched board data: statuses + lightweight issue cards grouped by status
+// ---------------------------------------------------------------------------
+
+export const getBoard = query({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const { workspaceId } = await loadProjectContext(ctx, args.projectId);
+    const workflow = await ctx.db
+      .query("workflows")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .first();
+    if (!workflow) return { statuses: [], columns: [], dependencies: [] };
+
+    const statuses = await ctx.db
+      .query("workflowStatuses")
+      .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
+      .collect();
+
+    const issues = (await ctx.db
+      .query("issues")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .collect()).filter((i) => !i.archivedAt);
+
+    const deps = (await ctx.db.query("issueDependencies").collect()).filter(
+      (d) => d.workspaceId === workspaceId && d.dependencyType === "blocks",
+    );
+
+    const memberIds = [...new Set(issues.map((i) => i.assigneeId).filter((x): x is Id<"users"> => !!x))];
+    const members = await Promise.all(memberIds.map((id) => ctx.db.get(id)));
+    const memberById = new Map(
+      members.filter((m): m is Doc<"users"> => m !== null).map((m) => [m._id, m]),
+    );
+
+    // unresolved blockers: blocking issue not in a completed/cancelled status
+    const completedStatusIds = new Set(
+      statuses.filter((s) => s.category === "completed" || s.category === "cancelled").map((s) => s._id),
+    );
+    const unresolvedBlockers = new Set(
+      deps
+        .filter((d) => !completedStatusIds.has(deps_statusOf(d.blockingIssueId, issues)))
+        .map((d) => d.blockedIssueId),
+    );
+
+    function deps_statusOf(issueId: Id<"issues">, all: Doc<"issues">[]): Id<"workflowStatuses"> {
+      return all.find((i) => i._id === issueId)?.statusId as Id<"workflowStatuses">;
+    }
+
+    const columns = statuses.map((status) => ({
+      status,
+      issues: issues
+        .filter((i) => i.statusId === status._id)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, 50)
+        .map((i) => ({
+          _id: i._id,
+          number: i.number,
+          title: i.title,
+          priority: i.priority,
+          assigneeId: i.assigneeId,
+          assigneeName: i.assigneeId ? memberById.get(i.assigneeId)?.name ?? null : null,
+          dueDate: i.dueDate,
+          isBlocked: unresolvedBlockers.has(i._id),
+        })),
+    }));
+
+    return { statuses, columns, dependencies: deps.map((d) => ({ blocking: d.blockingIssueId, blocked: d.blockedIssueId })) };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Issue detail
+// ---------------------------------------------------------------------------
+
+export const getIssue = query({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, args) => {
+    const { issue, project, role, workspaceId } = await loadIssueContext(ctx, args.issueId);
+
+    const workflow = await ctx.db
+      .query("workflows")
+      .withIndex("by_project", (q) => q.eq("projectId", issue.projectId))
+      .first();
+    const statuses = workflow
+      ? await ctx.db
+          .query("workflowStatuses")
+          .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
+          .collect()
+      : [];
+    const transitions = workflow
+      ? await ctx.db
+          .query("workflowTransitions")
+          .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
+          .collect()
+      : [];
+
+    const status = statuses.find((s) => s._id === issue.statusId) ?? null;
+    const currentCategory = status?.category ?? "backlog";
+
+    // dependencies: what blocks this issue / what it blocks
+    const blocking = await ctx.db
+      .query("issueDependencies")
+      .withIndex("by_blocked", (q) => q.eq("blockedIssueId", issue._id))
+      .collect();
+    const blockedByRows = blocking.filter((d) => d.dependencyType === "blocks");
+    const blocksRows = (
+      await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_blocking", (q) => q.eq("blockingIssueId", issue._id))
+        .collect()
+    ).filter((d) => d.dependencyType === "blocks");
+    const relatedRows = [
+      ...(await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_blocked", (q) => q.eq("blockedIssueId", issue._id))
+        .collect()),
+      ...(await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_blocking", (q) => q.eq("blockingIssueId", issue._id))
+        .collect()),
+    ].filter((d) => d.dependencyType !== "blocks");
+
+    async function issueCard(id: Id<"issues">) {
+      const i = await ctx.db.get(id);
+      if (!i) return null;
+      const s = statuses.find((st) => st._id === i.statusId) ?? null;
+      return {
+        _id: i._id,
+        number: i.number,
+        title: i.title,
+        statusName: s?.name ?? "—",
+        statusCategory: s?.category ?? "backlog",
+        completed: s ? s.category === "completed" || s.category === "cancelled" : false,
+        dueDate: i.dueDate,
+      };
+    }
+
+    const resolvedBlockers = (
+      await Promise.all(blockedByRows.map((d) => issueCard(d.blockingIssueId)))
+    ).filter((x): x is NonNullable<typeof x> => x !== null);
+    const unresolvedBlockers = resolvedBlockers.filter((b) => !b.completed);
+
+    const labels = await ctx.db
+      .query("issueLabels")
+      .withIndex("by_issue", (q) => q.eq("issueId", issue._id))
+      .collect();
+    const labelDocs = await Promise.all(labels.map((l) => ctx.db.get(l.labelId)));
+
+    const [assignee, reporter] = await Promise.all([
+      issue.assigneeId ? ctx.db.get(issue.assigneeId) : null,
+      ctx.db.get(issue.reporterId),
+    ]);
+
+    // which transitions are allowed from the current status
+    const outgoing = transitions.filter((t) => t.fromStatusId === issue.statusId);
+    const nextStatuses = outgoing
+      .map((t) => ({
+        transitionId: t._id,
+        status: statuses.find((s) => s._id === t.toStatusId)!,
+        requiresAssignee: t.requiresAssignee,
+        requiresComment: t.requiresComment,
+        requiresApproval: t.requiresApproval,
+      }))
+      .filter((t) => t.status);
+
+    return {
+      issue,
+      project,
+      role,
+      workspaceId,
+      status,
+      statuses,
+      nextStatuses,
+      canWrite: roleAtLeast(role, "member"),
+      assignee: assignee ? { name: assignee.name, image: assignee.image } : null,
+      reporter: reporter ? { name: reporter.name, image: reporter.image } : null,
+      labels: labelDocs.filter((l): l is Doc<"labels"> => l !== null),
+      blockers: resolvedBlockers,
+      unresolvedBlockerCount: unresolvedBlockers.length,
+      blocks: (await Promise.all(blocksRows.map((d) => issueCard(d.blockedIssueId)))).filter(
+        (x): x is NonNullable<typeof x> => x !== null,
+      ),
+      related: (await Promise.all(relatedRows.map((d) => issueCard(
+        d.blockingIssueId === issue._id ? d.blockedIssueId : d.blockingIssueId,
+      )))).filter((x): x is NonNullable<typeof x> => x !== null),
+      currentCategory,
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Create issue
+// ---------------------------------------------------------------------------
+
+export const createIssue = mutation({
+  args: {
+    projectId: v.id("projects"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.optional(
+      v.union(
+        v.literal("urgent"),
+        v.literal("high"),
+        v.literal("medium"),
+        v.literal("low"),
+        v.literal("none"),
+      ),
+    ),
+    assigneeId: v.optional(v.id("users")),
+    statusId: v.optional(v.id("workflowStatuses")),
+    dueDate: v.optional(v.number()),
+    estimatePoints: v.optional(v.number()),
+    labelIds: v.optional(v.array(v.id("labels"))),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role, project } = await loadProjectContext(ctx, args.projectId);
+    if (!roleAtLeast(role, "member")) {
+      throw new Error("Viewers cannot create issues");
+    }
+
+    const title = args.title.trim();
+    if (title.length < 3 || title.length > 200) {
+      throw new Error("Title must be 3-200 characters");
+    }
+    if ((args.description ?? "").length > 20000) {
+      throw new Error("Description must be at most 20,000 characters");
+    }
+
+    // next issue number inside the project
+    const existing = await ctx.db
+      .query("issues")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .collect();
+    const number = existing.reduce((max, i) => Math.max(max, i.number), 0) + 1;
+
+    const workflow = await ctx.db
+      .query("workflows")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .first();
+    if (!workflow) throw new Error("Project has no workflow");
+
+    const statuses = await ctx.db
+      .query("workflowStatuses")
+      .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
+      .collect();
+    const firstStatus = args.statusId
+      ? statuses.find((s) => s._id === args.statusId)
+      : statuses.find((s) => s.category === "backlog") ?? statuses[0];
+    if (!firstStatus) throw new Error("Workflow has no statuses");
+
+    if (args.assigneeId) {
+      const membership = await ctx.db
+        .query("memberships")
+        .withIndex("by_workspace_user", (q) =>
+          q.eq("workspaceId", workspaceId).eq("userId", args.assigneeId!),
+        )
+        .unique();
+      if (!membership) throw new Error("Assignee must be a workspace member");
+    }
+
+    const now = Date.now();
+    const issueId = await ctx.db.insert("issues", {
+      workspaceId,
+      projectId: args.projectId,
+      number,
+      title,
+      description: args.description?.trim() || undefined,
+      statusId: firstStatus._id,
+      priority: args.priority ?? "none",
+      assigneeId: args.assigneeId,
+      reporterId: userId,
+      dueDate: args.dueDate,
+      estimatePoints: args.estimatePoints,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (const labelId of args.labelIds ?? []) {
+      const label = await ctx.db.get(labelId);
+      if (label && label.workspaceId === workspaceId) {
+        await ctx.db.insert("issueLabels", { workspaceId, issueId, labelId });
+      }
+    }
+
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "issue",
+      entityId: issueId,
+      eventType: "issue.created",
+      projectId: args.projectId,
+      payload: { title, identifier: `${project.key}-${number}` },
+    });
+
+    if (args.assigneeId) {
+      await createNotification(ctx, {
+        workspaceId,
+        actorId: userId,
+        recipientId: args.assigneeId,
+        type: "issue.assigned",
+        title: `You were assigned ${project.key}-${number}`,
+        body: title,
+        resourceType: "issue",
+        resourceId: issueId,
+      });
+      await recordEvent(ctx, {
+        workspaceId,
+        actorId: userId,
+        entityType: "issue",
+        entityId: issueId,
+        eventType: "issue.assigned",
+        projectId: args.projectId,
+        payload: { assignee_id: args.assigneeId },
+      });
+    }
+
+    return { issueId, number };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Update issue (title/description/priority/assignee/due date/labels)
+// ---------------------------------------------------------------------------
+
+export const updateIssue = mutation({
+  args: {
+    issueId: v.id("issues"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    priority: v.optional(
+      v.union(
+        v.literal("urgent"),
+        v.literal("high"),
+        v.literal("medium"),
+        v.literal("low"),
+        v.literal("none"),
+      ),
+    ),
+    assigneeId: v.optional(v.union(v.id("users"), v.null())),
+    dueDate: v.optional(v.union(v.number(), v.null())),
+    estimatePoints: v.optional(v.union(v.number(), v.null())),
+    addLabelId: v.optional(v.id("labels")),
+    removeLabelId: v.optional(v.id("labels")),
+    parentIssueId: v.optional(v.union(v.id("issues"), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role, issue, project } = await loadIssueContext(
+      ctx,
+      args.issueId,
+    );
+    if (!roleAtLeast(role, "member")) {
+      throw new Error("Viewers cannot modify issues");
+    }
+
+    const patch: Record<string, unknown> = { updatedAt: Date.now() };
+    const changes: Array<{ field: string; from: unknown; to: unknown }> = [];
+
+    if (args.title !== undefined) {
+      const title = args.title.trim();
+      if (title.length < 3 || title.length > 200) throw new Error("Title must be 3-200 characters");
+      patch.title = title;
+      changes.push({ field: "title", from: issue.title, to: title });
+    }
+    if (args.description !== undefined) {
+      if (args.description.length > 20000) throw new Error("Description must be at most 20,000 characters");
+      patch.description = args.description.trim() || undefined;
+      changes.push({ field: "description", from: "…", to: "…" });
+    }
+    if (args.priority !== undefined && args.priority !== issue.priority) {
+      patch.priority = args.priority;
+      changes.push({ field: "priority", from: issue.priority, to: args.priority });
+    }
+    if (args.assigneeId !== undefined) {
+      const next = args.assigneeId ?? undefined;
+      if (next) {
+        const membership = await ctx.db
+          .query("memberships")
+          .withIndex("by_workspace_user", (q) =>
+            q.eq("workspaceId", workspaceId).eq("userId", next),
+          )
+          .unique();
+        if (!membership) throw new Error("Assignee must be a workspace member");
+      }
+      patch.assigneeId = next;
+      changes.push({ field: "assignee", from: issue.assigneeId ?? null, to: next ?? null });
+      if (next && next !== issue.assigneeId) {
+        await createNotification(ctx, {
+          workspaceId,
+          actorId: userId,
+          recipientId: next,
+          type: "issue.assigned",
+          title: `You were assigned ${project.key}-${issue.number}`,
+          body: issue.title,
+          resourceType: "issue",
+          resourceId: issue._id,
+        });
+      }
+    }
+    if (args.dueDate !== undefined) {
+      patch.dueDate = args.dueDate ?? undefined;
+      changes.push({ field: "due date", from: issue.dueDate ?? null, to: args.dueDate ?? null });
+    }
+    if (args.estimatePoints !== undefined) {
+      patch.estimatePoints = args.estimatePoints ?? undefined;
+    }
+    if (args.parentIssueId !== undefined) {
+      if (args.parentIssueId === args.issueId) {
+        throw new Error("An issue cannot be its own parent");
+      }
+      patch.parentIssueId = args.parentIssueId ?? undefined;
+    }
+
+    await ctx.db.patch(issue._id, patch);
+
+    if (args.addLabelId) {
+      const label = await ctx.db.get(args.addLabelId);
+      if (label && label.workspaceId === workspaceId) {
+        const dup = await ctx.db
+          .query("issueLabels")
+          .withIndex("by_issue", (q) => q.eq("issueId", issue._id))
+          .collect();
+        if (!dup.some((l) => l.labelId === args.addLabelId)) {
+          await ctx.db.insert("issueLabels", {
+            workspaceId,
+            issueId: issue._id,
+            labelId: args.addLabelId,
+          });
+        }
+      }
+    }
+    if (args.removeLabelId) {
+      const rows = await ctx.db
+        .query("issueLabels")
+        .withIndex("by_issue", (q) => q.eq("issueId", issue._id))
+        .collect();
+      for (const row of rows.filter((r) => r.labelId === args.removeLabelId)) {
+        await ctx.db.delete(row._id);
+      }
+    }
+
+    if (changes.length > 0) {
+      await recordEvent(ctx, {
+        workspaceId,
+        actorId: userId,
+        entityType: "issue",
+        entityId: issue._id,
+        eventType: "issue.updated",
+        projectId: issue.projectId,
+        payload: { changes },
+      });
+    }
+
+    return { ok: true };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Status transition — the workflow engine
+// ---------------------------------------------------------------------------
+
+export const transitionIssue = mutation({
+  args: {
+    issueId: v.id("issues"),
+    toStatusId: v.id("workflowStatuses"),
+    comment: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role, issue, project } = await loadIssueContext(
+      ctx,
+      args.issueId,
+    );
+    if (!roleAtLeast(role, "member")) {
+      throw new Error("Viewers cannot change issue status");
+    }
+
+    const workflow = await ctx.db
+      .query("workflows")
+      .withIndex("by_project", (q) => q.eq("projectId", issue.projectId))
+      .first();
+    if (!workflow) throw new Error("Project has no workflow");
+
+    const statuses = await ctx.db
+      .query("workflowStatuses")
+      .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
+      .collect();
+    const toStatus = statuses.find((s) => s._id === args.toStatusId);
+    if (!toStatus || toStatus.workspaceId !== workspaceId) {
+      throw new Error("Destination status does not exist in this workflow");
+    }
+    if (toStatus._id === issue.statusId) return { ok: true };
+
+    const transition = await ctx.db
+      .query("workflowTransitions")
+      .withIndex("by_from_to", (q) =>
+        q.eq("fromStatusId", issue.statusId).eq("toStatusId", args.toStatusId),
+      )
+      .unique();
+    if (!transition) {
+      const from = statuses.find((s) => s._id === issue.statusId);
+      throw new Error(`Transition from "${from?.name ?? "?"}" to "${toStatus.name}" is not allowed`);
+    }
+
+    // --- workflow guard rules -------------------------------------------------
+    if (transition.requiresAssignee && !issue.assigneeId) {
+      throw new Error("This transition requires an assignee");
+    }
+    if (transition.requiresComment && !(args.comment ?? "").trim()) {
+      throw new Error("This transition requires a comment");
+    }
+
+    // cannot complete an issue with unresolved blockers
+    if (toStatus.category === "completed") {
+      const blockers = await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_blocked", (q) => q.eq("blockedIssueId", issue._id))
+        .collect();
+      const openBlockers = [] as Doc<"issues">[];
+      for (const dep of blockers.filter((d) => d.dependencyType === "blocks")) {
+        const blocker = await ctx.db.get(dep.blockingIssueId);
+        if (!blocker) continue;
+        const bs = statuses.find((s) => s._id === blocker.statusId);
+        if (bs && bs.category !== "completed" && bs.category !== "cancelled") {
+          openBlockers.push(blocker);
+        }
+      }
+      if (openBlockers.length > 0) {
+        const names = openBlockers
+          .slice(0, 3)
+          .map((b) => `${project.key}-${b.number}`)
+          .join(", ");
+        throw new Error(
+          `Cannot complete: ${openBlockers.length} unresolved blocker${openBlockers.length > 1 ? "s" : ""} (${names})`,
+        );
+      }
+    }
+
+    const fromStatus = statuses.find((s) => s._id === issue.statusId);
+    const now = Date.now();
+    const patch: Record<string, unknown> = { statusId: toStatus._id, updatedAt: now };
+
+    if (fromStatus?.category === "backlog" && toStatus.category === "active") {
+      patch.startedAt = issue.startedAt ?? now;
+    }
+    if (toStatus.category === "completed") {
+      patch.completedAt = now;
+    } else if (issue.completedAt) {
+      patch.completedAt = undefined;
+    }
+
+    await ctx.db.patch(issue._id, patch);
+
+    if ((args.comment ?? "").trim()) {
+      await ctx.db.insert("comments", {
+        workspaceId,
+        issueId: issue._id,
+        authorId: userId,
+        body: (args.comment ?? "").trim(),
+        createdAt: now,
+      });
+    }
+
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "issue",
+      entityId: issue._id,
+      eventType: "issue.status_changed",
+      projectId: issue.projectId,
+      payload: {
+        from: fromStatus?.name ?? null,
+        to: toStatus.name,
+        from_status_id: issue.statusId,
+        to_status_id: toStatus._id,
+      },
+    });
+
+    // notify the assignee about status changes
+    if (issue.assigneeId && issue.assigneeId !== userId) {
+      await createNotification(ctx, {
+        workspaceId,
+        actorId: userId,
+        recipientId: issue.assigneeId,
+        type: "issue.status_changed",
+        title: `${project.key}-${issue.number} moved to ${toStatus.name}`,
+        body: issue.title,
+        resourceType: "issue",
+        resourceId: issue._id,
+      });
+    }
+
+    await runAutomations(ctx, {
+      workspaceId,
+      projectId: issue.projectId,
+      trigger: "issue.status_changed",
+      toStatusName: toStatus.name,
+      issueId: issue._id,
+      actorId: userId,
+    });
+
+    return { ok: true };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Automation rules engine (runs after issue transitions)
+// ---------------------------------------------------------------------------
+
+async function runAutomations(
+  ctx: MutationCtx,
+  args: {
+    workspaceId: Id<"workspaces">;
+    projectId: Id<"projects">;
+    trigger: string;
+    toStatusName?: string;
+    issueId: Id<"issues">;
+    actorId: Id<"users">;
+  },
+) {
+  const rules = await ctx.db
+    .query("automationRules")
+    .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+    .collect();
+
+  for (const rule of rules.filter((r) => r.isEnabled && r.triggerType === args.trigger)) {
+    const conditions = (rule.conditions ?? {}) as { to_status_name?: string };
+    if (conditions.to_status_name && conditions.to_status_name !== args.toStatusName) continue;
+
+    for (const action of rule.actions) {
+      if (action.type === "set_status" && action.statusName) {
+        const workflowId = await getWorkflowId(ctx, args.projectId);
+        const statuses = workflowId
+          ? await ctx.db
+              .query("workflowStatuses")
+              .withIndex("by_workflow", (q) => q.eq("workflowId", workflowId))
+              .collect()
+          : [];
+        const target = statuses.find((s) => s.name === action.statusName);
+        if (target) {
+          await ctx.db.patch(args.issueId, { statusId: target._id, updatedAt: Date.now() });
+        }
+      } else if (action.type === "set_priority" && action.priority) {
+        await ctx.db.patch(args.issueId, { priority: action.priority, updatedAt: Date.now() });
+      } else if (action.type === "add_label" && action.labelId) {
+        await ctx.db.insert("issueLabels", {
+          workspaceId: args.workspaceId,
+          issueId: args.issueId,
+          labelId: action.labelId,
+        });
+      } else if (action.type === "notify_assignee") {
+        const issue = await ctx.db.get(args.issueId);
+        if (issue?.assigneeId) {
+          await createNotification(ctx, {
+            workspaceId: args.workspaceId,
+            actorId: args.actorId,
+            recipientId: issue.assigneeId,
+            type: "automation",
+            title: `Automation: ${rule.name}`,
+            body: issue.title,
+            resourceType: "issue",
+            resourceId: issue._id,
+          });
+        }
+      }
+    }
+  }
+}
+
+async function getWorkflowId(ctx: MutationCtx | QueryCtx, projectId: Id<"projects">) {
+  const wf = await ctx.db
+    .query("workflows")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .first();
+  return wf?._id ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Archive / restore / delete
+// ---------------------------------------------------------------------------
+
+export const archiveIssue = mutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadIssueContext(ctx, args.issueId);
+    if (!roleAtLeast(role, "member")) throw new Error("Viewers cannot archive issues");
+    await ctx.db.patch(args.issueId, { archivedAt: Date.now(), updatedAt: Date.now() });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "issue",
+      entityId: args.issueId,
+      eventType: "issue.archived",
+    });
+  },
+});
+
+export const restoreIssue = mutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadIssueContext(ctx, args.issueId);
+    if (!roleAtLeast(role, "member")) throw new Error("Viewers cannot restore issues");
+    await ctx.db.patch(args.issueId, { archivedAt: undefined, updatedAt: Date.now() });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "issue",
+      entityId: args.issueId,
+      eventType: "issue.restored",
+    });
+  },
+});
+
+export const deleteIssue = mutation({
+  args: { issueId: v.id("issues") },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadIssueContext(ctx, args.issueId);
+    if (role !== "admin" && role !== "owner") {
+      throw new Error("Only admins can delete issues");
+    }
+    // remove dependent rows to keep the store consistent
+    const labels = await ctx.db
+      .query("issueLabels")
+      .withIndex("by_issue", (q) => q.eq("issueId", args.issueId))
+      .collect();
+    for (const l of labels) await ctx.db.delete(l._id);
+
+    const deps = [
+      ...(await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_blocked", (q) => q.eq("blockedIssueId", args.issueId))
+        .collect()),
+      ...(await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_blocking", (q) => q.eq("blockingIssueId", args.issueId))
+        .collect()),
+    ];
+    for (const d of deps) await ctx.db.delete(d._id);
+
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "issue",
+      entityId: args.issueId,
+      eventType: "issue.deleted",
+      payload: { title: (await ctx.db.get(args.issueId))?.title },
+    });
+    await ctx.db.delete(args.issueId);
+  },
+});
