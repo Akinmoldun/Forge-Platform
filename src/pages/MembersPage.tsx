@@ -42,11 +42,12 @@ import { toast } from "sonner";
 
 type InviteSummary = {
   sent: string[];
+  links: Array<{ email: string; link: string }>;
   failed: Array<{ email: string; error?: string; hint?: string }>;
   alreadyMember: string[];
   alreadyPending: string[];
   invalid: string[];
-  firstLink: string | null;
+  emailUnavailable?: string;
 };
 
 export default function MembersPage() {
@@ -67,6 +68,8 @@ export default function MembersPage() {
   const resendInvitation = useMutation(api.workspaces.resendInvitation);
   const revokeInvitation = useMutation(api.workspaces.revokeInvitation);
   const sendEmail = useAction(api.emails.sendInvitationEmail);
+  const emailStatus = useQuery(api.emails.emailConfigStatus);
+  const checkDeliveryStatus = useAction(api.emails.getEmailDeliveryStatus);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [emailsText, setEmailsText] = useState("");
@@ -88,6 +91,35 @@ export default function MembersPage() {
   const inviteLink = (token: string) =>
     `${window.location.origin}/invite?token=${encodeURIComponent(token)}`;
 
+  // Readiness probe: is a verified email sender actually configured? If not,
+  // invitations are still created but the email provider is never called —
+  // the UI falls back to shareable in-app links instead.
+  const checkDelivery = async (): Promise<{
+    ok: boolean;
+    reason?: string;
+    hint?: string;
+  }> => {
+    if (!emailStatus?.configured) {
+      return {
+        ok: false,
+        reason: "No email service is configured.",
+        hint:
+          "Invitations still work — share the links below. Add RESEND_API_KEY and EMAIL_FROM to send them automatically.",
+      };
+    }
+    try {
+      const status = await checkDeliveryStatus();
+      if (status.ready) return { ok: true };
+      return { ok: false, reason: status.reason, hint: status.hint };
+    } catch {
+      return {
+        ok: false,
+        reason: "Could not verify the email service.",
+        hint: "Invitations still work — share the links below.",
+      };
+    }
+  };
+
   // Batch invite: create one invitation per address, then send one email per
   // invitation so every recipient gets their own single-use link. Uses the
   // same emails.sendInvitationEmail action as the Resend button.
@@ -98,6 +130,11 @@ export default function MembersPage() {
     setProgress({ sent: 0, failed: 0, total: 0 });
     setSummary(null);
     try {
+      // Only call the email provider when a verified sender is actually
+      // available; otherwise create the invitations and fall back to links.
+      const gate = await checkDelivery();
+      const useEmail = gate.ok;
+
       const { results, invalid } = await createInvitations({
         workspaceId: workspaceId as never,
         emails,
@@ -106,69 +143,89 @@ export default function MembersPage() {
 
       const next: InviteSummary = {
         sent: [],
+        links: [],
         failed: [],
         alreadyMember: [],
         alreadyPending: [],
         invalid,
-        firstLink: null,
+        emailUnavailable: useEmail ? undefined : gate.reason,
       };
       for (const r of results) {
         if (r.status === "already_member") next.alreadyMember.push(r.email);
         if (r.status === "already_pending") next.alreadyPending.push(r.email);
       }
 
-      // One email per recipient; a small stagger stays friendly to rate limits.
       const toSend = results.flatMap((r) =>
         r.status === "created" && r.invitationId && r.token
           ? [{ email: r.email, invitationId: r.invitationId, token: r.token }]
           : [],
       );
-      setProgress({ sent: 0, failed: 0, total: toSend.length });
-      setSummary(next);
 
-      for (const [idx, inv] of toSend.entries()) {
-        const outcome = await sendEmail({
-          invitationId: inv.invitationId,
-          token: inv.token,
-        });
-        if (outcome?.delivered) {
-          next.sent.push(inv.email);
-          next.firstLink ??= inviteLink(inv.token);
-        } else {
-          next.failed.push({
-            email: inv.email,
-            error: outcome?.error,
-            hint: outcome?.hint,
-          });
-        }
-        setProgress({
-          sent: next.sent.length,
-          failed: next.failed.length,
-          total: toSend.length,
-        });
+      if (!useEmail) {
+        // Email unavailable: keep every invitation record and surface each
+        // recipient's unique single-use link as the fallback path.
+        next.links = toSend.map((inv) => ({
+          email: inv.email,
+          link: inviteLink(inv.token),
+        }));
         setSummary({ ...next });
-        if (idx < toSend.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
-      }
-
-      const { sent, failed } = next;
-      if (sent.length > 0 && failed.length === 0) {
-        toast.success(
-          sent.length === 1
-            ? `Invitation email sent to ${sent[0]}`
-            : `${sent.length} invitation emails sent`,
-        );
-      } else if (failed.length > 0) {
         toast.warning(
-          sent.length > 0
-            ? `${sent.length} email${sent.length > 1 ? "s" : ""} sent, ${failed.length} failed`
-            : "No invitation emails could be sent",
+          `${next.links.length} invitation${next.links.length === 1 ? "" : "s"} created with in-app links`,
           {
-            description: failed[0]?.hint ?? failed[0]?.error,
+            description: gate.hint ?? gate.reason,
             duration: 12000,
           },
         );
+      } else {
+        // One email per recipient; a small stagger stays friendly to rate limits.
+        setProgress({ sent: 0, failed: 0, total: toSend.length });
+        setSummary(next);
+
+        for (const [idx, inv] of toSend.entries()) {
+          const outcome = await sendEmail({
+            invitationId: inv.invitationId,
+            token: inv.token,
+          });
+          if (outcome?.delivered) {
+            next.sent.push(inv.email);
+          } else {
+            next.failed.push({
+              email: inv.email,
+              error: outcome?.error,
+              hint: outcome?.hint,
+            });
+          }
+          // Emailed or not, the invitation exists — keep a backup link.
+          next.links.push({ email: inv.email, link: inviteLink(inv.token) });
+          setProgress({
+            sent: next.sent.length,
+            failed: next.failed.length,
+            total: toSend.length,
+          });
+          setSummary({ ...next });
+          if (idx < toSend.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
+        }
+
+        const { sent, failed } = next;
+        if (sent.length > 0 && failed.length === 0) {
+          toast.success(
+            sent.length === 1
+              ? `Invitation email sent to ${sent[0]}`
+              : `${sent.length} invitation emails sent`,
+          );
+        } else if (failed.length > 0) {
+          toast.warning(
+            sent.length > 0
+              ? `${sent.length} email${sent.length > 1 ? "s" : ""} sent, ${failed.length} failed`
+              : "No invitation emails could be sent",
+            {
+              description: failed[0]?.hint ?? failed[0]?.error,
+              duration: 12000,
+            },
+          );
+        }
       }
       setEmailsText("");
     } catch (e) {
@@ -178,8 +235,8 @@ export default function MembersPage() {
     }
   };
 
-  // Same path as the initial invite: mint a fresh one-time token, then fire the
-  // identical emails.sendInvitationEmail action.
+  // Same path as the initial invite: mint a fresh one-time token, then either
+  // email it (verified sender available) or fall back to a shareable link.
   const handleResend = async (invitationId: string, recipientEmail: string) => {
     setResendingId(invitationId);
     try {
@@ -187,15 +244,32 @@ export default function MembersPage() {
         workspaceId: workspaceId as never,
         invitationId: invitationId as never,
       });
+      const gate = await checkDelivery();
+      if (!gate.ok) {
+        navigator.clipboard.writeText(inviteLink(token)).catch(() => {});
+        toast.info("Fresh invite link copied to clipboard", {
+          description: gate.reason ?? "No email service is configured.",
+          duration: 12000,
+        });
+        return;
+      }
       const outcome = await sendEmail({
         invitationId: invitationId as never,
         token,
       });
       if (outcome?.delivered) {
         toast.success(`Invitation email re-sent to ${recipientEmail}`);
+      } else if (outcome && "skipped" in outcome && outcome.skipped) {
+        navigator.clipboard.writeText(inviteLink(token)).catch(() => {});
+        toast.info("Fresh invite link copied to clipboard", {
+          description: outcome.error,
+          duration: 12000,
+        });
       } else {
+        navigator.clipboard.writeText(inviteLink(token)).catch(() => {});
         toast.warning(outcome?.error ?? "Could not send the invitation email", {
-          description: outcome?.hint,
+          description:
+            `${outcome?.hint ?? ""} A fresh invite link was copied to your clipboard.`.trim(),
           duration: 12000,
         });
       }
@@ -337,30 +411,39 @@ export default function MembersPage() {
                         )}
                       </div>
                     )}
-                    {summary.firstLink && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            readOnly
-                            value={summary.firstLink}
-                            className="font-mono text-xs"
-                          />
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() => {
-                              navigator.clipboard.writeText(summary.firstLink!);
-                              toast.success("Copied to clipboard");
-                            }}
-                          >
-                            <Copy className="size-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          First recipient's backup link (each invitee gets their own
-                          single-use link by email). Expires in 7 days.
+                    {summary.emailUnavailable && (
+                      <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs">
+                        <p className="font-medium text-foreground">
+                          Invitations created with in-app links
                         </p>
-                      </>
+                        <p className="mt-0.5 text-muted-foreground">
+                          {summary.emailUnavailable} — share each link below with its
+                          recipient. Links are single-use and expire in 7 days.
+                        </p>
+                      </div>
+                    )}
+                    {summary.links.length > 0 && (
+                      <div className="space-y-1.5">
+                        {summary.links.map(({ email, link }) => (
+                          <div key={email} className="flex items-center gap-2">
+                            <span className="w-40 shrink-0 truncate text-xs text-muted-foreground">
+                              {email}
+                            </span>
+                            <Input readOnly value={link} className="h-8 font-mono text-xs" />
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="size-8 shrink-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(link);
+                                toast.success(`Link copied for ${email}`);
+                              }}
+                            >
+                              <Copy className="size-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setInviteOpen(false)}>

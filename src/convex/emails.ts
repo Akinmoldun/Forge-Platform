@@ -1,14 +1,119 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
+
+// ---------------------------------------------------------------------------
+// Email availability. Invitations are only emailed when a verified sender is
+// configured: RESEND_API_KEY + EMAIL_FROM, with the EMAIL_FROM domain actually
+// verified in Resend. Otherwise invitations are still created and the app
+// falls back to shareable in-app links — the creator never copy-pastes a
+// "from" address and their personal email is never used as the sender.
+// ---------------------------------------------------------------------------
+
+type EmailConfig = { ok: true; from: string } | { ok: false; reason: string; hint: string };
+
+function resolveEmailConfig(): EmailConfig {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+  if (!apiKey) {
+    return {
+      ok: false,
+      reason: "Email service is not configured (missing RESEND_API_KEY).",
+      hint:
+        "Add RESEND_API_KEY and EMAIL_FROM (e.g. \"Forge <no-reply@yourdomain.com>\") in the deployment settings to send emails automatically. Invitations still work via in-app links.",
+    };
+  }
+  if (!from) {
+    return {
+      ok: false,
+      reason: "No verified sender address configured (missing EMAIL_FROM).",
+      hint:
+        "Verify your domain at resend.com/domains, then set EMAIL_FROM (e.g. \"Forge <no-reply@yourdomain.com>\") in the deployment settings. Until then, invitations are created with in-app links.",
+    };
+  }
+  return { ok: true, from };
+}
+
+/** Pulls the bare domain out of an EMAIL_FROM value like "Forge <no-reply@acme.com>". */
+function senderDomain(from: string): string | null {
+  const match = from.match(/@([a-z0-9.-]+)/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
+/**
+ * True when the EMAIL_FROM domain is among Resend's verified domains. If the
+ * domains API can't be parsed, we stay optimistic and let Resend's own error
+ * handling catch misconfiguration (fail-open, never fail the invitation).
+ */
+async function senderDomainIsVerified(apiKey: string, from: string): Promise<boolean> {
+  const domain = senderDomain(from);
+  if (!domain) return false;
+  try {
+    const response = await fetch("https://api.resend.com/domains", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!response.ok) return true; // can't verify → let the send attempt decide
+    const parsed = (await response.json()) as {
+      data?: Array<{ name?: string; status?: string }>;
+    };
+    if (!Array.isArray(parsed.data)) return true;
+    return parsed.data.some(
+      (d) => d.name?.toLowerCase() === domain && d.status === "verified",
+    );
+  } catch {
+    return true; // network hiccup → let the send attempt decide
+  }
+}
+
+/**
+ * Cheap reactive flag for the UI: is email sending configured at the env-var
+ * level? (Domain verification is probed by getEmailDeliveryStatus, which needs
+ * a network call and therefore runs as an action.)
+ */
+export const emailConfigStatus = query({
+  args: {},
+  handler: async () => {
+    return { configured: resolveEmailConfig().ok };
+  },
+});
+
+/**
+ * Full readiness check: env vars present AND the EMAIL_FROM domain is verified
+ * with Resend. The client runs this once per invite batch; if it isn't ready,
+ * invitation emails are skipped entirely (no Resend calls) and the UI falls
+ * back to in-app invitation links.
+ */
+export const getEmailDeliveryStatus = action({
+  args: {},
+  handler: async () => {
+    const config = resolveEmailConfig();
+    if (!config.ok) {
+      return { ready: false as const, reason: config.reason, hint: config.hint };
+    }
+    const verified = await senderDomainIsVerified(
+      process.env.RESEND_API_KEY as string,
+      config.from,
+    );
+    if (!verified) {
+      return {
+        ready: false as const,
+        reason: `The sender domain in EMAIL_FROM is not verified with Resend yet.`,
+        hint:
+          "Verify the domain at resend.com/domains (add the DNS records Resend shows), or change EMAIL_FROM to a domain that is verified. Invitations still work via in-app links.",
+      };
+    }
+    return { ready: true as const };
+  },
+});
 
 /**
  * Sends a workspace invitation email through Resend.
  *
  * Called directly from the Members page right after the invitation is created,
  * so delivery errors surface immediately as a toast instead of failing silently
- * inside a scheduled job.
+ * inside a scheduled job. Only called when getEmailDeliveryStatus reported
+ * ready; the env-var gate below is defense in depth.
  *
  * Only the invitationId and single-use token come from the client; everything
  * else (recipient, workspace, inviter) is loaded from the database so callers
@@ -30,19 +135,24 @@ export const sendInvitationEmail = action({
       return { delivered: false as const, error: "Invitation not found" };
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      const error = "Email service is not configured (missing RESEND_API_KEY).";
-      console.error("[emails] RESEND_API_KEY is not configured; cannot send invitation email");
-      await ctx.runMutation(internal.emails.markInvitationFailed, {
-        invitationId: args.invitationId,
-        error,
-      });
-      return { delivered: false as const, error };
+    const config = resolveEmailConfig();
+    if (!config.ok) {
+      // Not an invitation failure: the invitation stays pending and the app
+      // shows its shareable link instead. Never mark it failed here.
+      console.error(`[emails] Skipping invitation email: ${config.reason}`);
+      return {
+        delivered: false as const,
+        skipped: true as const,
+        error: config.reason,
+        hint: config.hint,
+      };
     }
-
-    const from = process.env.EMAIL_FROM ?? "Forge <onboarding@resend.dev>";
-    const inviteLink = `${process.env.CONVEX_SITE_URL ?? ""}/invite?token=${args.token}`;
+    const from = config.from;
+    const siteUrl = process.env.CONVEX_SITE_URL ?? "";
+    const inviteLink = `${siteUrl}/invite?token=${args.token}`;
+    const linkWarning = siteUrl
+      ? undefined
+      : "CONVEX_SITE_URL is not set; the emailed link may not point at this app.";
     const subject = `You've been invited to join ${invitation.workspaceName} on Forge`;
     const html = `
 <!doctype html>
@@ -100,7 +210,7 @@ export const sendInvitationEmail = action({
       response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -147,10 +257,11 @@ export const sendInvitationEmail = action({
       return { delivered: false as const, error: message, hint };
     }
 
+    if (linkWarning) console.warn(`[emails] ${linkWarning}`);
     await ctx.runMutation(internal.emails.markInvitationSent, {
       invitationId: args.invitationId,
     });
-    return { delivered: true as const };
+    return { delivered: true as const, linkWarning };
   },
 });
 
