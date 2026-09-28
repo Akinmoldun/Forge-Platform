@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { FunctionReference } from "convex/server";
 import {
   createNotification,
   findWorkspaceContext,
@@ -383,7 +385,10 @@ export const createInvitation = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const { workspaceId, role } = await loadWorkspaceContext(ctx, args.workspaceId);
+    const { workspaceId, role, workspace: ctxWorkspace } = await loadWorkspaceContext(
+      ctx,
+      args.workspaceId,
+    );
     if (!roleAtLeast(role, "admin")) {
       throw new Error("Only admins can invite members");
     }
@@ -406,7 +411,7 @@ export const createInvitation = mutation({
     const token = randomToken();
     const tokenHash = await sha256Hex(token);
     const now = Date.now();
-    await ctx.db.insert("invitations", {
+    const invitationId = await ctx.db.insert("invitations", {
       workspaceId,
       email,
       role: args.role,
@@ -424,7 +429,37 @@ export const createInvitation = mutation({
       payload: { email, role: args.role },
     });
 
-    return { token, email };
+    // Send the invitation email automatically via Resend (background job).
+    const inviterName = user.name ?? user.email ?? "A teammate";
+    const inviteLink = `${process.env.CONVEX_SITE_URL ?? ""}/invite?token=${token}`;
+    await ctx.scheduler.runAfter(
+      0,
+      (internal.emails as unknown as Record<string, FunctionReference<"action", "internal", Record<string, unknown>, unknown>>)[
+        "sendInvitationEmail"
+      ] as FunctionReference<
+        "action",
+        "internal",
+        {
+          invitationId: Id<"invitations">;
+          to: string;
+          workspaceName: string;
+          inviterName: string;
+          role: string;
+          inviteLink: string;
+        },
+        { emailId: string | null }
+      >,
+      {
+        invitationId,
+        to: email,
+        workspaceName: ctxWorkspace.name,
+        inviterName,
+        role: args.role,
+        inviteLink,
+      },
+    );
+
+    return { token, email, invitationId };
   },
 });
 
@@ -446,6 +481,7 @@ export const listInvitations = query({
         expiresAt: i.expiresAt,
         acceptedAt: i.acceptedAt,
         createdAt: i.createdAt,
+        emailSentAt: i.emailSentAt,
         status: i.acceptedAt ? "accepted" : i.expiresAt < Date.now() ? "expired" : "pending",
       }));
   },

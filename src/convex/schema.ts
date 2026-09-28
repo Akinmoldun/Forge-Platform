@@ -94,6 +94,8 @@ const schema = defineSchema(
       expiresAt: v.number(),
       acceptedAt: v.optional(v.number()),
       invitedBy: v.id("users"),
+      // set once the invitation email has been dispatched by the email action
+      emailSentAt: v.optional(v.number()),
       createdAt: v.number(),
     })
       .index("by_token", ["tokenHash"])

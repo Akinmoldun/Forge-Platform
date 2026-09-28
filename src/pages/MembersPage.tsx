@@ -26,7 +26,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListSkeleton, formatDate } from "@/components/forge";
-import { ArrowLeft, Copy, Link2, Mail, Trash2, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Link2,
+  Mail,
+  MailCheck,
+  MailWarning,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export default function MembersPage() {
@@ -62,7 +71,7 @@ export default function MembersPage() {
       });
       setLastToken(result.token);
       setEmail("");
-      toast.success("Invitation created — share the link below");
+      toast.success(`Invitation email sent to ${email}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to invite");
     }
@@ -116,12 +125,22 @@ export default function MembersPage() {
                 <DialogHeader>
                   <DialogTitle>Invite to {workspace.workspace.name}</DialogTitle>
                   <DialogDescription>
-                    A one-time invite link is generated. The token is stored hashed.
+                    They'll get an email with a single-use link to join.
                   </DialogDescription>
                 </DialogHeader>
                 {lastToken ? (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium">Share this invite link:</p>
+                    <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                      <MailCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                      <div className="text-sm">
+                        <p className="font-medium">Invitation sent</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          An email with a one-time join link is on its way. If it
+                          doesn't arrive, you can copy the link below to share
+                          manually.
+                        </p>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Input readOnly value={inviteLink(lastToken)} className="font-mono text-xs" />
                       <Button
@@ -185,7 +204,7 @@ export default function MembersPage() {
                         Cancel
                       </Button>
                       <Button onClick={handleInvite} disabled={!email.includes("@")}>
-                        <Mail /> Create invite
+                        <Mail /> Send invite
                       </Button>
                     </DialogFooter>
                   </>
@@ -298,6 +317,19 @@ export default function MembersPage() {
                     <span className="truncate text-sm">{inv.email}</span>
                     <RoleBadge role={inv.role} />
                     <div className="ml-auto flex items-center gap-2">
+                      {inv.status === "pending" && !inv.emailSentAt && (
+                        <span
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground"
+                          title="Email delivery pending or unavailable — use the invite link from when you created it"
+                        >
+                          <MailWarning className="size-3" /> email pending
+                        </span>
+                      )}
+                      {inv.status === "pending" && inv.emailSentAt && (
+                        <span className="flex items-center gap-1 text-[11px] text-emerald-600">
+                          <MailCheck className="size-3" /> emailed
+                        </span>
+                      )}
                       <Badge
                         variant="outline"
                         className={
