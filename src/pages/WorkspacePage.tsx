@@ -44,10 +44,10 @@ export default function WorkspacePage({ tab }: { tab?: "activity" }) {
   const projects = useQuery(api.projects.listProjects, {
     workspaceId: workspaceId as never,
   });
-  const activity = useQuery(
-    tab === "activity" ? api.analytics.listWorkspaceActivity : api.analytics.listWorkspaceActivity,
-    { workspaceId: workspaceId as never, limit: 40 },
-  );
+  const activity = useQuery(api.analytics.listWorkspaceActivity, {
+    workspaceId: workspaceId as never,
+    limit: 40,
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");

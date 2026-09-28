@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { AppShell } from "@/components/AppShell";
@@ -76,7 +77,7 @@ export default function IssuePage() {
 
   const [commentDraft, setCommentDraft] = useState("");
   const [transitionComment, setTransitionComment] = useState("");
-  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<Id<"workflowStatuses"> | null>(null);
   const [depOpen, setDepOpen] = useState(false);
   const [depIssueId, setDepIssueId] = useState("");
   const [depType, setDepType] = useState<string>("blocks");
@@ -114,7 +115,10 @@ export default function IssuePage() {
   const { issue, project, role, status, nextStatuses, canWrite } = detail;
   const identifier = `${project.key}-${issue.number}`;
 
-  const handleTransition = async (toStatusId: string, comment?: string) => {
+  const handleTransition = async (
+    toStatusId: Id<"workflowStatuses">,
+    comment?: string,
+  ) => {
     try {
       await transitionIssue({ issueId: issue._id, toStatusId, comment });
       toast.success("Status updated");
@@ -125,7 +129,10 @@ export default function IssuePage() {
     }
   };
 
-  const requestTransition = (toStatusId: string, requiresComment: boolean) => {
+  const requestTransition = (
+    toStatusId: Id<"workflowStatuses">,
+    requiresComment: boolean,
+  ) => {
     if (requiresComment) {
       setPendingStatus(toStatusId);
     } else {

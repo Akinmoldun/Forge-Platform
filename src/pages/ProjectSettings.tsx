@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { AppShell } from "@/components/AppShell";
@@ -228,9 +229,10 @@ export default function ProjectSettings() {
                             <Switch
                               checked={t[field]}
                               onCheckedChange={(c) =>
-                                updateTransition({ transitionId: t._id, [field]: c }).catch((e) =>
-                                  toast.error(e.message),
-                                )
+                                updateTransition({
+                                  transitionId: t._id as Id<"workflowTransitions">,
+                                  [field]: c,
+                                }).catch((e) => toast.error(e.message))
                               }
                               className="scale-75"
                             />

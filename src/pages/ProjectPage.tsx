@@ -1,6 +1,14 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -33,8 +41,11 @@ import {
   RiskBadge,
   StatusDot,
   formatDate,
+  formatDuration,
+  timeAgo,
+  eventText,
+  PRIORITIES,
 } from "@/components/forge";
-import { PRIORITIES } from "@/components/forge";
 import {
   Plus,
   Search,
@@ -56,16 +67,20 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const view = (searchParams.get("view") as ViewMode) ?? "board";
 
   const project = useQuery(api.projects.getProject, { projectId: projectId as never });
-  const labels = useQuery(
-    api.projects.listLabels,
-    project ? { workspaceId: project.project.workspaceId } : "skip",
-  );
   const members = useQuery(
     api.workspaces.listMembers,
     project ? { workspaceId: project.project.workspaceId } : "skip",
   );
   const board = useQuery(api.issues.getBoard, { projectId: projectId as never });
   const risk = useQuery(api.analytics.getProjectRisk, { projectId: projectId as never });
+  const analyticsTab = tab === "analytics";
+  const summary = useQuery(api.analytics.getProjectSummary, {
+    projectId: projectId as never,
+  });
+  const projectActivity = useQuery(api.analytics.listProjectActivity, {
+    projectId: projectId as never,
+    limit: 40,
+  });
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";
@@ -317,14 +332,17 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         </div>
 
         {/* Content */}
-        {tab === undefined && view === "board" && (
+        {tab === "analytics" ? (
+          <AnalyticsTab summary={summary} risk={risk} />
+        ) : tab === "activity" ? (
+          <ActivityTab activity={projectActivity} keyName={project.project.key} />
+        ) : view === "board" ? (
           <BoardView
             board={board}
             keyName={project.project.key}
             onIssueClick={(id) => navigate(`/app/issues/${id}`)}
           />
-        )}
-        {tab === undefined && view === "list" && (
+        ) : (
           <ListView
             issues={issues}
             keyName={project.project.key}
@@ -334,6 +352,250 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         )}
       </div>
     </AppShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Analytics tab
+// ---------------------------------------------------------------------------
+
+function AnalyticsTab({
+  summary,
+  risk,
+}: {
+  summary:
+    | {
+        total: number;
+        openCount: number;
+        completedCount: number;
+        completedThisWeek: number;
+        overdueCount: number;
+        unassignedCount: number;
+        avgCycleDays: number | null;
+        medianCycleDays: number | null;
+        avgReviewWaitDays: number | null;
+        throughput: Array<{ label: string; count: number }>;
+        byPriority: Array<{ priority: string; count: number }>;
+        byStatus: Array<{ statusName: string; color: string; count: number }>;
+        workload: Array<{ userId: string; name: string; openIssues: number; overdue: number }>;
+        hasData: boolean;
+      }
+    | undefined;
+  risk:
+    | {
+        score: number;
+        level: string;
+        factors: Array<{ label: string; detail: string; points: number }>;
+      }
+    | undefined;
+}) {
+  if (!summary) return <ListSkeleton rows={4} />;
+  if (!summary.hasData) {
+    return (
+      <EmptyState
+        icon={<TrendingUp className="size-5" />}
+        title="No analytics yet"
+        description="Analytics appear once the project has issues. Move issues across the board to build cycle-time and throughput data."
+      />
+    );
+  }
+  const maxThroughput = Math.max(1, ...summary.throughput.map((t) => t.count));
+  return (
+    <div className="space-y-6">
+      {/* Metric cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Open issues", value: summary.openCount, sub: `${summary.unassignedCount} unassigned` },
+          { label: "Completed", value: summary.completedCount, sub: `${summary.completedThisWeek} this week` },
+          {
+            label: "Avg cycle time",
+            value: formatDuration(summary.avgCycleDays),
+            sub: `median ${formatDuration(summary.medianCycleDays)}`,
+          },
+          { label: "Overdue", value: summary.overdueCount, sub: "open issues past due" },
+        ].map((m) => (
+          <Card key={m.label} className="border-border/70 shadow-none">
+            <CardHeader className="pb-1">
+              <CardDescription className="text-xs">{m.label}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-display text-2xl">{m.value}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{m.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Throughput */}
+        <Card className="border-border/70 shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Throughput</CardTitle>
+            <CardDescription className="text-xs">
+              Issues completed per week (last 8 weeks)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex h-32 items-end gap-2">
+              {summary.throughput.map((t) => (
+                <div key={t.label} className="flex flex-1 flex-col items-center gap-1">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(t.count / maxThroughput) * 100}%` }}
+                    transition={{ duration: 0.5 }}
+                    className="w-full max-w-8 rounded-t bg-primary/80"
+                    style={{ minHeight: t.count > 0 ? 4 : 2 }}
+                  />
+                  <span className="text-[9px] text-muted-foreground">{t.label}</span>
+                  <span className="text-[10px] font-medium">{t.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Workload */}
+        <Card className="border-border/70 shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Workload by member</CardTitle>
+            <CardDescription className="text-xs">Open issues per assignee</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {summary.workload.length === 0 ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">
+                No assigned open issues.
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {summary.workload.map((w) => (
+                  <div key={w.userId} className="flex items-center gap-3">
+                    <span className="w-28 truncate text-xs font-medium">{w.name}</span>
+                    <div className="h-2 flex-1 rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{
+                          width: `${Math.min(100, (w.openIssues / Math.max(1, summary.workload[0].openIssues)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="w-14 text-right text-xs text-muted-foreground">
+                      {w.openIssues} open{w.overdue > 0 ? ` · ${w.overdue} late` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Risk breakdown */}
+        {risk && risk.factors.length > 0 && (
+          <Card className="border-border/70 shadow-none">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Why {risk.level} risk?</CardTitle>
+                <RiskBadge level={risk.level} score={risk.score} />
+              </div>
+              <CardDescription className="text-xs">
+                Transparent rule-based score — each factor and its weight
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {risk.factors.map((f) => (
+                  <div key={f.label}>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="font-medium">{f.label}</span>
+                      <span className="text-muted-foreground">+{f.points} pts</span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{f.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* By status */}
+        <Card className="border-border/70 shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Issues by status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {summary.byStatus.map((s) => (
+                <div key={s.statusName} className="flex items-center gap-3">
+                  <StatusDot color={s.color} />
+                  <span className="w-32 truncate text-xs">{s.statusName}</span>
+                  <div className="h-2 flex-1 rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${(s.count / Math.max(1, summary.total)) * 100}%`,
+                        backgroundColor: s.color,
+                      }}
+                    />
+                  </div>
+                  <span className="w-6 text-right text-xs font-medium">{s.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Activity tab
+// ---------------------------------------------------------------------------
+
+function ActivityTab({
+  activity,
+  keyName,
+}: {
+  activity:
+    | Array<{
+        _id: string;
+        eventType: string;
+        actorName: string;
+        createdAt: number;
+        payload?: { name?: string; title?: string };
+      }>
+    | undefined;
+  keyName: string;
+}) {
+  if (!activity) return <ListSkeleton rows={5} />;
+  if (activity.length === 0) {
+    return (
+      <EmptyState
+        icon={<ActivityIcon className="size-5" />}
+        title="No activity yet"
+        description="Issue changes, comments, and transitions will appear here."
+      />
+    );
+  }
+  return (
+    <Card className="border-border/70 shadow-none">
+      <CardContent className="divide-y divide-border/60 p-0">
+        {activity.map((e) => (
+          <div key={e._id} className="flex items-center gap-3 px-4 py-3 text-sm">
+            <span className="flex size-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+              {e.actorName.slice(0, 2).toUpperCase()}
+            </span>
+            <span className="truncate">
+              <span className="font-medium">{e.actorName}</span>{" "}
+              <span className="text-muted-foreground">{eventText(e.eventType)}</span>
+              {e.payload?.title ? ` — ${String(e.payload.title)}` : ""}
+            </span>
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+              {timeAgo(e.createdAt)}
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

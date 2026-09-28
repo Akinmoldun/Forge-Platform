@@ -165,15 +165,15 @@ export const getBoard = query({
     const completedStatusIds = new Set(
       statuses.filter((s) => s.category === "completed" || s.category === "cancelled").map((s) => s._id),
     );
+    const statusByIssueId = new Map(issues.map((i) => [i._id, i.statusId]));
     const unresolvedBlockers = new Set(
       deps
-        .filter((d) => !completedStatusIds.has(deps_statusOf(d.blockingIssueId, issues)))
+        .filter((d) => {
+          const blockerStatus = statusByIssueId.get(d.blockingIssueId);
+          return blockerStatus !== undefined && !completedStatusIds.has(blockerStatus);
+        })
         .map((d) => d.blockedIssueId),
     );
-
-    function deps_statusOf(issueId: Id<"issues">, all: Doc<"issues">[]): Id<"workflowStatuses"> {
-      return all.find((i) => i._id === issueId)?.statusId as Id<"workflowStatuses">;
-    }
 
     const columns = statuses.map((status) => ({
       status,

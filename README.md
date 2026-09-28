@@ -1,293 +1,95 @@
-## Overview
+# Forge
 
-This project uses the following tech stack:
-- Vite
-- Typescript
-- React Router v7 (all imports from `react-router` instead of `react-router-dom`)
-- React 19 (for frontend components)
-- Tailwind v4 (for styling)
-- Shadcn UI (for UI components library)
-- Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication)
-- Framer Motion (for animations)
-- Three js (for 3d models)
+**Forge is a production-style engineering workflow platform for startup teams.** It combines projects, custom workflows, issue dependencies, explainable risk scoring, engineering analytics, and an immutable activity history into one multi-tenant workspace.
 
-All relevant files live in the 'src' directory.
+This implementation follows `PROJECT_PLAN.md`, adapted to this environment's stack: **React + Vite + TypeScript** on the frontend and **Convex** as the backend/database. Convex provides the reactive data layer the plan's "REST API + PostgreSQL + Redis Pub/Sub + WebSocket" architecture delivered — typed queries, transactions, and real-time updates to every subscribed client without a separate event bus.
 
-Use bun for the package manager.
+## Features
 
-## Setup
+- **Multi-tenant workspaces** — every query is scoped through workspace membership on the server; data cannot cross tenant boundaries
+- **Role-based access control** — `owner`, `admin`, `member`, `viewer` with server-side enforcement (viewers cannot create/modify anything)
+- **Custom workflow engine** — per-project statuses and transitions; rules like *requires assignee*, *requires comment*, *no unresolved blockers* are enforced server-side on every transition
+- **Issue dependencies** — `blocks`, `relates_to`, `duplicates`; self-dependencies and circular blocking chains are rejected with a DFS cycle check
+- **Explainable risk engine** — transparent rule-based score (blocked work, overdue issues, overdue blockers, high-priority backlog, stale issues) with every factor and weight shown in the dashboard
+- **Engineering analytics** — cycle time (avg/median), throughput by week, review wait time, workload per member, issues by status/priority — all with documented definitions
+- **Automation rules** — "when an issue enters *Review*, notify the assignee / set priority" — evaluated after every status transition
+- **Immutable activity history** — every create/update/transition/comment is appended to an audit trail (`activity_events`)
+- **Notifications** — assignment, comment, status-change, and blocking notifications with unread counts
+- **Hashed invitations** — one-time invite links with SHA-256-hashed tokens and 7-day expiry
+- **Real-time everything** — issue boards, filters, comments, and notifications update live across sessions via Convex subscriptions
 
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
+## Architecture
 
-## Environment Variables
-
-The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
-
-The convex server has a separate set of environment variables that are accessible by the convex backend.
-
-Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
-
-
-# Using Authentication (Important!)
-
-You must follow these conventions when using authentication.
-
-## Auth is already set up.
-
-All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
-
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
-
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
-
-## Using Convex Auth on the backend
-
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
-
-## Using Convex Auth on the frontend
-
-The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
-
-You MUST use this hook to get user data. Never do this yourself without the hook:
-```typescript
-import { useAuth } from "@/hooks/use-auth";
-
-const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
+```text
+Browser (React + Vite + Tailwind)
+   |
+   | WebSocket subscriptions + mutations
+   v
+Convex backend (src/convex/)
+   |--- lib/auth.ts        tenant context, RBAC, tenant-scoped fetchers
+   |--- workspaces.ts      workspaces, members, invitations
+   |--- projects.ts        projects, labels, workflow seeding
+   |--- issues.ts          issue CRUD, filters, workflow engine, automations
+   |--- collaboration.ts   comments, dependencies (+ cycle detection)
+   |--- analytics.ts       activity, notifications, analytics, risk engine
+   |--- workflows.ts       workflow data + transition rule editing
+   v
+Convex database (documents + indexes, source of truth)
 ```
 
-## Protected Routes
+### Tenant isolation rule
 
-The starter `/dashboard` route is protected with `RequireAuth`. Extend that page
-for the product's authenticated experience, and reuse `RequireAuth` when adding
-another protected route — do NOT hand-roll a redirect to `/auth`, since landing
-on a bare sign-in form with no explanation of what was blocked is confusing.
-
-`RequireAuth` states the block on the page the visitor asked for and sends them
-to `/auth?returnTo=<current route>` when they choose to sign in, so they come
-back to it. Pass `title` and `description` to say what the page is:
-
-```tsx
-<Route
-  path="/dashboard"
-  element={
-    <RequireAuth
-      title="Sign in to view your dashboard"
-      description="Your projects and settings live here."
-    >
-      <Dashboard />
-    </RequireAuth>
-  }
-/>
-```
-
-Pass `redirectImmediately` for a route where bouncing straight to `/auth` really
-is better.
-
-## Auth Page
-
-The auth page is defined in `src/pages/Auth.tsx`. Send sign-in and sign-up actions
-to `/auth`.
-
-## Authorization
-
-You can perform authorization checks on the frontend and backend.
-
-On the frontend, you can use the `useAuth` hook to get the current user's data and authentication state.
-
-You should also be protecting queries, mutations, and actions at the base level, checking for authorization securely.
-
-## Adding a redirect after auth
-
-The `/auth` route in `src/main.tsx` redirects to `/dashboard` by default. If the
-product's main authenticated route is different, update `redirectAfterAuth` to
-that route. A validated same-origin `returnTo` query parameter takes priority so
-users can resume the protected page they originally requested. Never leave an
-authenticated product redirecting back to the public landing page.
-
-## Complete authenticated products
-
-When the requested product implies accounts, a workspace, a dashboard, or other
-signed-in functionality, the task is not complete with only a landing page and
-auth form. Build the main authenticated experience, protect its route, and verify
-that signing in reaches it.
-
-# Frontend Conventions
-
-You will be using the Vite frontend with React 19, Tailwind v4, and Shadcn UI.
-
-Generally, pages should be in the `src/pages` folder, and components should be in the `src/components` folder.
-
-Shadcn primitives are located in the `src/components/ui` folder and should be used by default.
-
-## Page routing
-
-Your page component should go under the `src/pages` folder.
-
-When adding a page, update the react router configuration in `src/main.tsx` to include the new route you just added.
-
-## Shad CN conventions
-
-Follow these conventions when using Shad CN components, which you should use by default.
-- Remember to use "cursor-pointer" to make the element clickable
-- For title text, use the "tracking-tight font-bold" class to make the text more readable
-- Always make apps MOBILE RESPONSIVE. This is important
-- AVOID NESTED CARDS. Try and not to nest cards, borders, components, etc. Nested cards add clutter and make the app look messy.
-- AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
-- Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
-
-
-## Landing Pages
-
-You must always create good-looking designer-level styles to your application. 
-- Make it well animated and fit a certain "theme", ie neo brutalist, retro, neumorphism, glass morphism, etc
-
-Use known images and emojis from online.
-
-If the user is logged in already, show the get started button to say "Dashboard" or "Profile" instead to take them there.
-
-## Responsiveness and formatting
-
-Make sure pages are wrapped in a container to prevent the width stretching out on wide screens. Always make sure they are centered aligned and not off-center.
-
-Always make sure that your designs are mobile responsive. Verify the formatting to ensure it has correct max and min widths as well as mobile responsiveness.
-
-- Always create sidebars for protected dashboard pages and navigate between pages
-- Always create navbars for landing pages
-- On these bars, the created logo should be clickable and redirect to the index page
-
-## Animating with Framer Motion
-
-You must add animations to components using Framer Motion. It is already installed and configured in the project.
-
-To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
-
-
-### Other Items to animate
-- Fade in and Fade Out
-- Slide in and Slide Out animations
-- Rendering animations
-- Button clicks and UI elements
-
-Animate for all components, including on landing page and app pages.
-
-## Three JS Graphics
-
-Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
-
-## Colors
-
-You can override colors in: `src/index.css`
-
-This uses the oklch color format for tailwind v4.
-
-Always use these color variable names.
-
-Make sure all ui components are set up to be mobile responsive and compatible with both light and dark mode.
-
-Set theme using `dark` or `light` variables at the parent className.
-
-## Styling and Theming
-
-When changing the theme, always change the underlying theme of the shad cn components app-wide under `src/components/ui` and the colors in the index.css file.
-
-Avoid hardcoding in colors unless necessary for a use case, and properly implement themes through the underlying shad cn ui components.
-
-When styling, ensure buttons and clickable items have pointer-click on them (don't by default).
-
-Always follow a set theme style and ensure it is tuned to the user's liking.
-
-## Toasts
-
-You should always use toasts to display results to the user, such as confirmations, results, errors, etc.
-
-Use the shad cn Sonner component as the toaster. For example:
-
-```
-import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
-export function SonnerDemo() {
-  return (
-    <Button
-      variant="outline"
-      onClick={() =>
-        toast("Event has been created", {
-          description: "Sunday, December 03, 2023 at 9:00 AM",
-          action: {
-            label: "Undo",
-            onClick: () => console.log("Undo"),
-          },
-        })
-      }
-    >
-      Show Toast
-    </Button>
-  )
-}
-```
-
-Remember to import { toast } from "sonner". Usage: `toast("Event has been created.")`
-
-## Dialogs
-
-Always ensure your larger dialogs have a scroll in its content to ensure that its content fits the screen size. Make sure that the content is not cut off from the screen.
-
-Ideally, instead of using a new page, use a Dialog instead. 
-
-# Using the Convex backend
-
-You will be implementing the convex backend. Follow your knowledge of convex and the documentation to implement the backend.
-
-## The Convex Schema
-
-You must correctly follow the convex schema implementation.
-
-The schema is defined in `src/convex/schema.ts`.
-
-Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
-Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
-
-
-## Convex Actions: Using CRUD operations
-
-When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
-
-You cannot have queries or mutations in the same file as a "use node" action file. Thus, you must use pre-built queries and mutations in other files.
-
-You can also use the pre-installed internal crud functions for the database:
+Every protected resource is loaded through a workspace-scoped context loader — the equivalent of the plan's `repository.get_issue_for_workspace(...)`:
 
 ```ts
-// in convex/users.ts
-import { crud } from "convex-helpers/server/crud";
-import schema from "./schema.ts";
-
-export const { create, read, update, destroy } = crud(schema, "users");
-
-// in some file, in an action:
-const user = await ctx.runQuery(internal.users.read, { id: userId });
-
-await ctx.runMutation(internal.users.update, {
-  id: userId,
-  patch: {
-    status: "inactive",
-  },
-});
+const { issue, project, role } = await loadIssueContext(ctx, args.issueId);
+// throws unless the caller is a member of the workspace that owns the issue
 ```
 
+No endpoint fetches a document by ID without verifying membership first.
 
-## Common Convex Mistakes To Avoid
+### Workflow engine
 
-When using convex, make sure:
-- Document IDs are referenced as `_id` field, not `id`.
-- Document ID types are referenced as `Id<"TableName">`, not `string`.
-- Document object types are referenced as `Doc<"TableName">`.
-- Keep schemaValidation to false in the schema file.
-- You must correctly type your code so that it passes the type checker.
-- You must handle null / undefined cases of your convex queries for both frontend and backend, or else it will throw an error that your data could be null or undefined.
-- Always use the `@/folder` path, with `@/convex/folder/file.ts` syntax for importing convex files.
-- This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
-- Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
-- NEVER have return type validators.
+Transitions are validated server-side in `issues.transitionIssue`:
+
+1. The transition must exist in the project's workflow (`from → to`).
+2. `requiresAssignee` — the issue must have an assignee.
+3. `requiresComment` — a comment must accompany the transition.
+4. Completing an issue with unresolved blockers is rejected with a readable reason.
+5. Every accepted transition writes an `issue.status_changed` activity event and runs automation rules.
+
+## Project layout
+
+```text
+src/
+├── convex/            backend: schema + all queries/mutations
+├── components/        app shell, shared forge UI, shadcn/ui
+├── pages/             landing, auth, app home, workspace, project,
+│                      issue, settings, members, notifications, invite
+└── index.css          Cluely-inspired theme (light + dark)
+```
+
+## Development
+
+```bash
+bun install
+bun convex dev --once   # push backend + generate types
+bun run dev             # start the frontend
+bun tsc -b --noEmit     # typecheck everything
+```
+
+## Engineering decisions
+
+- **Why Convex instead of FastAPI + Postgres + Redis?** This environment's platform provides Convex as the managed backend. It preserves every architectural property the plan asked for — relational-style schema with indexes, transactions, tenant-scoped authorization, event/activity records, background-style automation execution — and replaces the WebSocket + Pub/Sub plumbing with native reactive queries.
+- **Why an append-only activity table?** Auditability, debugging, user trust, and it is the input for review-wait-time analytics.
+- **Why rule-based risk scoring?** Transparent and testable. Every point is explained in the UI; no black-box ML.
+- **What was intentionally not built:** billing, SSO, mobile apps, kubernetes-style infra, integrations marketplace.
+
+## Security checklist coverage
+
+- Passwordless email-OTP auth via Convex Auth (+ guest sessions for demo)
+- Role checks on every mutation (`roleAtLeast(role, ...)`)
+- Owner-only rename/transfer; admins cannot remove admins; ownership must transfer before owner leaves
+- Invitation tokens hashed, single-use, expiring
+- Soft deletes (archive) preserve history; hard delete cleans up dependents
+- Server-side validation for lengths, enums, and pagination on every mutation
