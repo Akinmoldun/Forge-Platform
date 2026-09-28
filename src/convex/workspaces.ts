@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
   createNotification,
+  findWorkspaceContext,
   getMembership,
   loadWorkspaceContext,
   recordEvent,
@@ -147,7 +148,8 @@ export const listMyWorkspaces = query({
 export const getWorkspace = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    const ctxData = await loadWorkspaceContext(ctx, args.workspaceId);
+    const ctxData = await findWorkspaceContext(ctx, args.workspaceId);
+    if (!ctxData) return null;
     const projects = await ctx.db
       .query("projects")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
@@ -199,7 +201,8 @@ export const renameWorkspace = mutation({
 export const listMembers = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    await loadWorkspaceContext(ctx, args.workspaceId);
+    const workspaceCtx = await findWorkspaceContext(ctx, args.workspaceId);
+    if (!workspaceCtx) return [];
     const memberships = await ctx.db
       .query("memberships")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
@@ -428,8 +431,8 @@ export const createInvitation = mutation({
 export const listInvitations = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    const ctxData = await loadWorkspaceContext(ctx, args.workspaceId);
-    if (!roleAtLeast(ctxData.role, "admin")) return [];
+    const ctxData = await findWorkspaceContext(ctx, args.workspaceId);
+    if (!ctxData || !roleAtLeast(ctxData.role, "admin")) return [];
     const rows = await ctx.db
       .query("invitations")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
