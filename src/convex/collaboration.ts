@@ -3,8 +3,9 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   createNotification,
+  findIssueContext,
+  findProjectContext,
   loadIssueContext,
-  loadProjectContext,
   recordEvent,
   roleAtLeast,
 } from "./lib/auth";
@@ -18,7 +19,9 @@ import type { Doc, Id } from "./_generated/dataModel";
 export const listComments = query({
   args: { issueId: v.id("issues") },
   handler: async (ctx, args) => {
-    const { issue } = await loadIssueContext(ctx, args.issueId);
+    const issueCtx = await findIssueContext(ctx, args.issueId);
+    if (!issueCtx) return [];
+    const { issue } = issueCtx;
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_issue_created", (q) => q.eq("issueId", issue._id))
@@ -146,7 +149,9 @@ async function currentUserId(ctx: MutationCtx | QueryCtx): Promise<Id<"users">> 
 export const listDependencies = query({
   args: { issueId: v.id("issues") },
   handler: async (ctx, args) => {
-    const { issue } = await loadIssueContext(ctx, args.issueId);
+    const issueCtx = await findIssueContext(ctx, args.issueId);
+    if (!issueCtx) return [];
+    const { issue } = issueCtx;
     const rows = [
       ...(await ctx.db
         .query("issueDependencies")
@@ -315,7 +320,9 @@ export const removeDependency = mutation({
 export const getBlockedIssues = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { workspaceId } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return [];
+    const workspaceId = projectCtx.workspaceId;
     const issues = (await ctx.db
       .query("issues")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))

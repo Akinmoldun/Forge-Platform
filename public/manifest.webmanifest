@@ -1,11 +1,11 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Forge",
+  "short_name": "Forge",
+  "description": "Multi-tenant engineering workflow platform",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0d1117",
+  "theme_color": "#2563eb",
   "icons": [
     {
       "src": "/logo.svg",

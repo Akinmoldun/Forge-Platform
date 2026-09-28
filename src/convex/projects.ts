@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
+  findProjectContext,
   loadProjectContext,
   loadWorkspaceContext,
   recordEvent,
@@ -42,7 +43,9 @@ export const listProjects = query({
 export const getProject = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { workspaceId, role, project } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return null;
+    const { workspaceId, role, project } = projectCtx;
     const issues = await ctx.db
       .query("issues")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))

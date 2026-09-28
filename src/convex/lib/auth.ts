@@ -66,6 +66,23 @@ export async function loadWorkspaceContext(
   return { workspaceId, workspace, userId: user._id, role: membership.role, membership };
 }
 
+// ---------------------------------------------------------------------------
+// Query-safe variants. Read queries use these so a deleted/out-of-tenant
+// resource renders a "not found" state instead of crashing the page.
+// Mutations keep using the throwing loaders so failures surface as toasts.
+// ---------------------------------------------------------------------------
+
+export async function findWorkspaceContext(
+  ctx: QueryCtx | MutationCtx,
+  workspaceId: Id<"workspaces">,
+): Promise<WorkspaceContext | null> {
+  try {
+    return await loadWorkspaceContext(ctx, workspaceId);
+  } catch {
+    return null;
+  }
+}
+
 export async function getMembership(
   ctx: QueryCtx | MutationCtx,
   workspaceId: Id<"workspaces">,
@@ -102,6 +119,17 @@ export async function loadProjectContext(
   return { ...workspace, project };
 }
 
+export async function findProjectContext(
+  ctx: QueryCtx | MutationCtx,
+  projectId: Id<"projects">,
+): Promise<ProjectContext | null> {
+  try {
+    return await loadProjectContext(ctx, projectId);
+  } catch {
+    return null;
+  }
+}
+
 export type IssueContext = ProjectContext & {
   issue: Doc<"issues">;
 };
@@ -115,6 +143,17 @@ export async function loadIssueContext(
   if (!issue) throw new Error("Issue not found");
   const project = await loadProjectContext(ctx, issue.projectId);
   return { ...project, issue };
+}
+
+export async function findIssueContext(
+  ctx: QueryCtx | MutationCtx,
+  issueId: Id<"issues">,
+): Promise<IssueContext | null> {
+  try {
+    return await loadIssueContext(ctx, issueId);
+  } catch {
+    return null;
+  }
 }
 
 export async function getProjectForWorkspace(

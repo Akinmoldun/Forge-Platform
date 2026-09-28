@@ -1,12 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { loadProjectContext, recordEvent, roleAtLeast } from "./lib/auth";
+import { findProjectContext, loadProjectContext, recordEvent, roleAtLeast } from "./lib/auth";
 
 /** Workflow data for settings: statuses + transitions with their rules. */
 export const getWorkflow = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { project } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return { workflow: null, statuses: [], transitions: [] };
+    const { project } = projectCtx;
     const workflow = await ctx.db
       .query("workflows")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))

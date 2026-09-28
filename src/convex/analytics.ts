@@ -1,6 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
+  findIssueContext,
+  findProjectContext,
+  findWorkspaceContext,
   loadIssueContext,
   loadProjectContext,
   loadWorkspaceContext,
@@ -17,7 +20,9 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 export const listIssueActivity = query({
   args: { issueId: v.id("issues") },
   handler: async (ctx, args) => {
-    const { issue } = await loadIssueContext(ctx, args.issueId);
+    const issueCtx = await findIssueContext(ctx, args.issueId);
+    if (!issueCtx) return [];
+    const { issue } = issueCtx;
     const events = await ctx.db
       .query("activityEvents")
       .withIndex("by_entity", (q) =>
@@ -32,7 +37,9 @@ export const listIssueActivity = query({
 export const listProjectActivity = query({
   args: { projectId: v.id("projects"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const { project } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return [];
+    const { project } = projectCtx;
     const events = await ctx.db
       .query("activityEvents")
       .withIndex("by_project_created", (q) => q.eq("projectId", project._id))
@@ -45,7 +52,8 @@ export const listProjectActivity = query({
 export const listWorkspaceActivity = query({
   args: { workspaceId: v.id("workspaces"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    await loadWorkspaceContext(ctx, args.workspaceId);
+    const workspaceCtx = await findWorkspaceContext(ctx, args.workspaceId);
+    if (!workspaceCtx) return [];
     const events = await ctx.db
       .query("activityEvents")
       .withIndex("by_workspace_created", (q) => q.eq("workspaceId", args.workspaceId))
@@ -137,7 +145,9 @@ export const markAllNotificationsRead = mutation({
 export const getProjectSummary = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { project } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return null;
+    const { project } = projectCtx;
     const issues = (await ctx.db
       .query("issues")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))
@@ -269,7 +279,9 @@ export const getProjectSummary = query({
 export const getProjectRisk = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { project } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return null;
+    const { project } = projectCtx;
     const issues = (await ctx.db
       .query("issues")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))
@@ -393,7 +405,9 @@ export const getProjectRisk = query({
 export const listAutomationRules = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { project } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return [];
+    const { project } = projectCtx;
     return await ctx.db
       .query("automationRules")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))

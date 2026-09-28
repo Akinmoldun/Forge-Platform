@@ -161,6 +161,8 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     );
   }
 
+  const analyticsData = { summary, risk };
+
   const memberName = (id: string | undefined) =>
     members?.find((m) => m.userId === id)?.name ?? null;
 
@@ -333,7 +335,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
 
         {/* Content */}
         {tab === "analytics" ? (
-          <AnalyticsTab summary={summary} risk={risk} />
+          <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
         ) : tab === "activity" ? (
           <ActivityTab activity={projectActivity} keyName={project.project.key} />
         ) : view === "board" ? (
@@ -380,6 +382,7 @@ function AnalyticsTab({
         workload: Array<{ userId: string; name: string; openIssues: number; overdue: number }>;
         hasData: boolean;
       }
+    | null
     | undefined;
   risk:
     | {
@@ -387,9 +390,13 @@ function AnalyticsTab({
         level: string;
         factors: Array<{ label: string; detail: string; points: number }>;
       }
+    | null
     | undefined;
 }) {
-  if (!summary) return <ListSkeleton rows={4} />;
+  if (summary === undefined) return <ListSkeleton rows={4} />;
+  if (summary === null) {
+    return <EmptyState title="Project not found" description="It may have been deleted, or you may not have access." />;
+  }
   if (!summary.hasData) {
     return (
       <EmptyState

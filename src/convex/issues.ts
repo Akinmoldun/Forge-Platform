@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
   createNotification,
+  findIssueContext,
+  findProjectContext,
   loadIssueContext,
   loadProjectContext,
   recordEvent,
@@ -47,7 +49,11 @@ export const listIssues = query({
     direction: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
   handler: async (ctx, args) => {
-    const { workspaceId } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) {
+      return { issues: [], total: 0, page: 1, pageSize: 25, totalPages: 1 };
+    }
+    const workspaceId = projectCtx.workspaceId;
     const page = Math.max(1, args.page ?? 1);
     const pageSize = Math.min(PAGE_SIZE_MAX, Math.max(1, args.pageSize ?? 25));
     const direction = args.direction ?? "desc";
@@ -134,7 +140,9 @@ export const listIssues = query({
 export const getBoard = query({
   args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
-    const { workspaceId } = await loadProjectContext(ctx, args.projectId);
+    const projectCtx = await findProjectContext(ctx, args.projectId);
+    if (!projectCtx) return { statuses: [], columns: [], dependencies: [] };
+    const workspaceId = projectCtx.workspaceId;
     const workflow = await ctx.db
       .query("workflows")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
@@ -204,7 +212,9 @@ export const getBoard = query({
 export const getIssue = query({
   args: { issueId: v.id("issues") },
   handler: async (ctx, args) => {
-    const { issue, project, role, workspaceId } = await loadIssueContext(ctx, args.issueId);
+    const issueCtx = await findIssueContext(ctx, args.issueId);
+    if (!issueCtx) return null;
+    const { issue, project, role, workspaceId } = issueCtx;
 
     const workflow = await ctx.db
       .query("workflows")
