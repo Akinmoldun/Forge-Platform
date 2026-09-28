@@ -75,7 +75,9 @@ export const sendInvitationEmail = action({
                   <a href="${inviteLink}" style="color:#2563eb;word-break:break-all;">${inviteLink}</a>
                 </p>
                 <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#6b7280;">
-                  Already have a Forge account with this email? You can also accept the invite from your Forge home page.
+                  New to Forge? Click the button above and create your free account with
+                  this email address (${invitation.email}). Already have an account? Just
+                  sign in — you can also accept the invite from your Forge home page.
                 </p>
               </td>
             </tr>

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListSkeleton, formatDate } from "@/components/forge";
 import {
@@ -39,6 +40,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+type InviteSummary = {
+  sent: string[];
+  failed: Array<{ email: string; error?: string; hint?: string }>;
+  alreadyMember: string[];
+  alreadyPending: string[];
+  invalid: string[];
+  firstLink: string | null;
+};
+
 export default function MembersPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const workspace = useQuery(api.workspaces.getWorkspace, {
@@ -53,60 +63,120 @@ export default function MembersPage() {
 
   const updateRole = useMutation(api.workspaces.updateMemberRole);
   const removeMember = useMutation(api.workspaces.removeMember);
-  const createInvitation = useMutation(api.workspaces.createInvitation);
+  const createInvitations = useMutation(api.workspaces.createInvitations);
   const resendInvitation = useMutation(api.workspaces.resendInvitation);
   const revokeInvitation = useMutation(api.workspaces.revokeInvitation);
   const sendEmail = useAction(api.emails.sendInvitationEmail);
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [email, setEmail] = useState("");
+  const [emailsText, setEmailsText] = useState("");
   const [role, setRole] = useState<string>("member");
-  const [lastToken, setLastToken] = useState<string | null>(null);
-  const [lastEmail, setLastEmail] = useState<string>("");
-  const [delivery, setDelivery] = useState<
-    | { delivered: boolean; error?: string; hint?: string }
-    | null
-  >(null);
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState({ sent: 0, failed: 0, total: 0 });
+  const [summary, setSummary] = useState<InviteSummary | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
   const isAdmin = workspace?.role === "admin" || workspace?.role === "owner";
 
+  // Accepts one-per-line, comma- or semicolon-separated addresses.
+  const parseEmails = (text: string): string[] =>
+    text
+      .split(/[\s,;]+/)
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+  const inviteLink = (token: string) =>
+    `${window.location.origin}/invite?token=${encodeURIComponent(token)}`;
+
+  // Batch invite: create one invitation per address, then send one email per
+  // invitation so every recipient gets their own single-use link. Uses the
+  // same emails.sendInvitationEmail action as the Resend button.
   const handleInvite = async () => {
+    const emails = parseEmails(emailsText);
+    if (emails.length === 0) return;
     setSending(true);
+    setProgress({ sent: 0, failed: 0, total: 0 });
+    setSummary(null);
     try {
-      const result = await createInvitation({
+      const { results, invalid } = await createInvitations({
         workspaceId: workspaceId as never,
-        email,
+        emails,
         role: role as never,
       });
-      setLastToken(result.token);
-      setLastEmail(result.email);
-      setEmail("");
 
-      // Fire the invite email right away so delivery problems surface here.
-      const outcome = await sendEmail({
-        invitationId: result.invitationId,
-        token: result.token,
-      });
-      setDelivery(outcome ?? null);
-      if (outcome?.delivered) {
-        toast.success(`Invitation email sent to ${result.email}`);
-      } else {
-        toast.warning(outcome?.error ?? "Could not send the invitation email", {
-          description: outcome?.hint,
-          duration: 12000,
-        });
+      const next: InviteSummary = {
+        sent: [],
+        failed: [],
+        alreadyMember: [],
+        alreadyPending: [],
+        invalid,
+        firstLink: null,
+      };
+      for (const r of results) {
+        if (r.status === "already_member") next.alreadyMember.push(r.email);
+        if (r.status === "already_pending") next.alreadyPending.push(r.email);
       }
+
+      // One email per recipient; a small stagger stays friendly to rate limits.
+      const toSend = results.flatMap((r) =>
+        r.status === "created" && r.invitationId && r.token
+          ? [{ email: r.email, invitationId: r.invitationId, token: r.token }]
+          : [],
+      );
+      setProgress({ sent: 0, failed: 0, total: toSend.length });
+      setSummary(next);
+
+      for (const [idx, inv] of toSend.entries()) {
+        const outcome = await sendEmail({
+          invitationId: inv.invitationId,
+          token: inv.token,
+        });
+        if (outcome?.delivered) {
+          next.sent.push(inv.email);
+          next.firstLink ??= inviteLink(inv.token);
+        } else {
+          next.failed.push({
+            email: inv.email,
+            error: outcome?.error,
+            hint: outcome?.hint,
+          });
+        }
+        setProgress({
+          sent: next.sent.length,
+          failed: next.failed.length,
+          total: toSend.length,
+        });
+        setSummary({ ...next });
+        if (idx < toSend.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+
+      const { sent, failed } = next;
+      if (sent.length > 0 && failed.length === 0) {
+        toast.success(
+          sent.length === 1
+            ? `Invitation email sent to ${sent[0]}`
+            : `${sent.length} invitation emails sent`,
+        );
+      } else if (failed.length > 0) {
+        toast.warning(
+          sent.length > 0
+            ? `${sent.length} email${sent.length > 1 ? "s" : ""} sent, ${failed.length} failed`
+            : "No invitation emails could be sent",
+          {
+            description: failed[0]?.hint ?? failed[0]?.error,
+            duration: 12000,
+          },
+        );
+      }
+      setEmailsText("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to invite");
     } finally {
       setSending(false);
     }
   };
-
-  const inviteLink = (token: string) =>
-    `${window.location.origin}/invite?token=${encodeURIComponent(token)}`;
 
   // Same path as the initial invite: mint a fresh one-time token, then fire the
   // identical emails.sendInvitationEmail action.
@@ -181,74 +251,129 @@ export default function MembersPage() {
                 <DialogHeader>
                   <DialogTitle>Invite to {workspace.workspace.name}</DialogTitle>
                   <DialogDescription>
-                    They'll get an email with a single-use link to join.
+                    One email per person, sent automatically from the workspace
+                    system address. Paste one or many addresses below.
                   </DialogDescription>
                 </DialogHeader>
-                {lastToken ? (
+                {summary ? (
                   <div className="space-y-3">
-                    {delivery?.delivered ? (
+                    {progress.total > 0 && (
+                      <div className="rounded-lg border border-border/60 bg-muted/40 p-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium">
+                            {sending
+                              ? `Sending ${progress.sent + progress.failed + 1} of ${progress.total}…`
+                              : `Sent ${progress.sent} of ${progress.total}`}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {progress.failed > 0 && `${progress.failed} failed`}
+                          </span>
+                        </div>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{
+                              width: `${progress.total > 0 ? ((progress.sent + progress.failed) / progress.total) * 100 : 0}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {summary.sent.length > 0 && (
                       <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
                         <MailCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                        <div className="text-sm">
-                          <p className="font-medium">Email sent to {lastEmail}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            They'll receive a one-time join link. If it doesn't
-                            arrive, the link below works too.
+                        <div className="min-w-0 text-sm">
+                          <p className="font-medium">
+                            {summary.sent.length === 1
+                              ? `Email sent to ${summary.sent[0]}`
+                              : `${summary.sent.length} invitation emails sent`}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {summary.sent.join(", ")}
                           </p>
                         </div>
                       </div>
-                    ) : (
+                    )}
+                    {summary.failed.length > 0 && (
                       <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
                         <MailWarning className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                        <div className="text-sm">
-                          <p className="font-medium">Invitation created — email not sent</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {delivery?.error ??
-                              "The email could not be delivered. Share the link below manually."}
+                        <div className="min-w-0 text-sm">
+                          <p className="font-medium">
+                            {summary.failed.length} email
+                            {summary.failed.length > 1 ? "s" : ""} could not be sent
                           </p>
-                          {delivery?.hint && (
+                          <ul className="mt-1 space-y-0.5">
+                            {summary.failed.slice(0, 5).map((f) => (
+                              <li key={f.email} className="truncate text-xs text-muted-foreground">
+                                {f.email} — {f.error ?? "unknown error"}
+                              </li>
+                            ))}
+                            {summary.failed.length > 5 && (
+                              <li className="text-xs text-muted-foreground">
+                                …and {summary.failed.length - 5} more
+                              </li>
+                            )}
+                          </ul>
+                          {summary.failed[0]?.hint && (
                             <p className="mt-1.5 text-xs leading-4 text-amber-700 dark:text-amber-400">
-                              {delivery.hint}
+                              {summary.failed[0].hint}
                             </p>
                           )}
                         </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
-                      <Input readOnly value={inviteLink(lastToken)} className="font-mono text-xs" />
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(inviteLink(lastToken));
-                          toast.success("Copied to clipboard");
-                        }}
-                      >
-                        <Copy className="size-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      The link expires in 7 days and can be used once.
-                    </p>
+                    {(summary.alreadyMember.length > 0 || summary.alreadyPending.length > 0 || summary.invalid.length > 0) && (
+                      <div className="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
+                        {summary.alreadyMember.length > 0 && (
+                          <p>Skipped, already members: {summary.alreadyMember.join(", ")}</p>
+                        )}
+                        {summary.alreadyPending.length > 0 && (
+                          <p>
+                            Skipped, invitation already pending: {summary.alreadyPending.join(", ")}
+                          </p>
+                        )}
+                        {summary.invalid.length > 0 && (
+                          <p>Invalid addresses: {summary.invalid.join(", ")}</p>
+                        )}
+                      </div>
+                    )}
+                    {summary.firstLink && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            readOnly
+                            value={summary.firstLink}
+                            className="font-mono text-xs"
+                          />
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(summary.firstLink!);
+                              toast.success("Copied to clipboard");
+                            }}
+                          >
+                            <Copy className="size-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          First recipient's backup link (each invitee gets their own
+                          single-use link by email). Expires in 7 days.
+                        </p>
+                      </>
+                    )}
                     <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setInviteOpen(false);
-                          setLastToken(null);
-                          setDelivery(null);
-                        }}
-                      >
+                      <Button variant="outline" onClick={() => setInviteOpen(false)}>
                         Done
                       </Button>
                       <Button
-                        onClick={() => {
-                          setLastToken(null);
-                          setDelivery(null);
-                        }}
                         variant="secondary"
+                        onClick={() => {
+                          setSummary(null);
+                          setProgress({ sent: 0, failed: 0, total: 0 });
+                        }}
                       >
-                        Invite another
+                        Invite more people
                       </Button>
                     </DialogFooter>
                   </div>
@@ -256,14 +381,21 @@ export default function MembersPage() {
                   <>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="inv-email">Email</Label>
-                        <Input
-                          id="inv-email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="teammate@company.com"
+                        <Label htmlFor="inv-emails">Email addresses</Label>
+                        <Textarea
+                          id="inv-emails"
+                          value={emailsText}
+                          onChange={(e) => setEmailsText(e.target.value)}
+                          placeholder={
+                            "teammate@company.com\nalex@example.com, sam@example.com"
+                          }
+                          rows={5}
+                          autoFocus
                         />
+                        <p className="text-xs text-muted-foreground">
+                          One per line, or separated by commas. Everyone gets the
+                          same role; you can change roles later.
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label>Role</Label>
@@ -283,8 +415,16 @@ export default function MembersPage() {
                       <Button variant="outline" onClick={() => setInviteOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleInvite} disabled={!email.includes("@") || sending}>
-                        <Mail /> {sending ? "Sending…" : "Send invite"}
+                      <Button
+                        onClick={handleInvite}
+                        disabled={parseEmails(emailsText).length === 0 || sending}
+                      >
+                        <Mail />
+                        {sending
+                          ? `Sending ${progress.sent + progress.failed + 1}/${progress.total}…`
+                          : parseEmails(emailsText).length > 1
+                            ? `Invite ${parseEmails(emailsText).length} people`
+                            : "Send invite"}
                       </Button>
                     </DialogFooter>
                   </>
@@ -446,6 +586,24 @@ export default function MembersPage() {
                                 : "size-3.5"
                             }
                           />
+                        </Button>
+                      )}
+                      {inv.status === "expired" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          disabled={resendingId === inv._id}
+                          onClick={() => handleResend(inv._id, inv.email)}
+                        >
+                          <RefreshCw
+                            className={
+                              resendingId === inv._id
+                                ? "size-3.5 animate-spin"
+                                : "size-3.5"
+                            }
+                          />
+                          Re-invite
                         </Button>
                       )}
                       {inv.status === "pending" && (

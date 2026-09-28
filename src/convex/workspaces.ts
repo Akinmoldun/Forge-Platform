@@ -373,10 +373,22 @@ function randomToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export const createInvitation = mutation({
+/**
+ * Creates one invitation per recipient email.
+ *
+ * Duplicate-proof by design: for each email we skip (a) existing workspace
+ * members, (b) emails already attached to a live pending or accepted
+ * invitation in this workspace, and (c) invalid/duplicate addresses within
+ * the batch itself. Each survivor gets its own row, its own one-time token,
+ * and — via the client calling emails.sendInvitationEmail per row — its own
+ * email with a personalized accept link.
+ *
+ * Returns per-email results so the UI can show exactly what happened.
+ */
+export const createInvitations = mutation({
   args: {
     workspaceId: v.id("workspaces"),
-    email: v.string(),
+    emails: v.array(v.string()),
     role: v.union(
       v.literal("admin"),
       v.literal("member"),
@@ -392,62 +404,108 @@ export const createInvitation = mutation({
       throw new Error("Only admins can invite members");
     }
     const user = await requireUser(ctx);
-    const email = args.email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error("Enter a valid email address");
-    }
-
-    // If the user already exists and is a member, reject
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", email))
-      .unique();
-    if (existing) {
-      const m = await getMembership(ctx, args.workspaceId, existing._id);
-      if (m) throw new Error("This user is already a member of the workspace");
-    }
-
     const workspaceForNotify = (await ctx.db.get(args.workspaceId))!;
-
-    const token = randomToken();
-    const tokenHash = await sha256Hex(token);
     const now = Date.now();
-    const invitationId = await ctx.db.insert("invitations", {
-      workspaceId,
-      email,
-      role: args.role,
-      tokenHash,
-      expiresAt: now + 7 * 24 * 60 * 60 * 1000,
-      invitedBy: user._id,
-      createdAt: now,
-    });
-    await recordEvent(ctx, {
-      workspaceId,
-      actorId: user._id,
-      entityType: "invitation",
-      entityId: email,
-      eventType: "member.invited",
-      payload: { email, role: args.role },
-    });
 
-    // In-app fallback: if the invitee already has a Forge account, notify them
-    // directly so they can accept without relying on email delivery.
-    if (existing) {
-      await createNotification(ctx, {
-        workspaceId,
-        actorId: user._id,
-        recipientId: existing._id,
-        type: "member.invited",
-        title: `${user.name ?? "Someone"} invited you to join ${workspaceForNotify.name}`,
-        body: `You were invited as ${args.role}. Check the Members page of the workspace, or ask them to send the invite link again.`,
-      });
+    // Normalize + drop malformed entries and duplicates inside the batch
+    const seen = new Set<string>();
+    const invalid: string[] = [];
+    const requested: string[] = [];
+    for (const raw of args.emails) {
+      const email = raw.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (raw.trim()) invalid.push(raw.trim());
+        continue;
+      }
+      if (seen.has(email)) continue; // duplicate within this batch
+      seen.add(email);
+      requested.push(email);
     }
 
-    // The email itself is sent by the emails.sendInvitationEmail action, called
-    // from the client right after this mutation so delivery errors surface
-    // immediately instead of failing silently in a scheduled job.
+    // Live invitation index for this workspace: one open invite per email
+    const liveInvites = new Set<string>();
+    for (const inv of await ctx.db
+      .query("invitations")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect()) {
+      if (!inv.acceptedAt && inv.expiresAt > now) {
+        liveInvites.add(inv.email);
+      }
+    }
 
-    return { token, email, invitationId };
+    const results: Array<{
+      email: string;
+      status: "created" | "already_member" | "already_pending" | "invalid" | "error";
+      invitationId?: Id<"invitations">;
+      token?: string;
+      error?: string;
+    }> = [];
+
+    for (const email of requested) {
+      // Existing user already in this workspace?
+      const existing = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", email))
+        .unique();
+      if (existing) {
+        const m = await getMembership(ctx, args.workspaceId, existing._id);
+        if (m) {
+          results.push({ email, status: "already_member" });
+          continue;
+        }
+      }
+      // Already has a live (pending/accepted-not-expired) invitation?
+      if (liveInvites.has(email)) {
+        results.push({ email, status: "already_pending" });
+        continue;
+      }
+
+      const token = randomToken();
+      const tokenHash = await sha256Hex(token);
+      try {
+        const invitationId = await ctx.db.insert("invitations", {
+          workspaceId,
+          email,
+          role: args.role,
+          tokenHash,
+          expiresAt: now + 7 * 24 * 60 * 60 * 1000,
+          invitedBy: user._id,
+          createdAt: now,
+        });
+        liveInvites.add(email);
+        await recordEvent(ctx, {
+          workspaceId,
+          actorId: user._id,
+          entityType: "invitation",
+          entityId: email,
+          eventType: "member.invited",
+          payload: { email, role: args.role },
+        });
+
+        // In-app fallback: if the invitee already has a Forge account, notify
+        // them directly so they can accept without relying on email delivery.
+        if (existing) {
+          await createNotification(ctx, {
+            workspaceId,
+            actorId: user._id,
+            recipientId: existing._id,
+            type: "member.invited",
+            title: `${user.name ?? "Someone"} invited you to join ${workspaceForNotify.name}`,
+            body: `You were invited as ${args.role}. You can accept from your Forge home page.`,
+          });
+        }
+
+        results.push({ email, status: "created", invitationId, token });
+      } catch (err) {
+        results.push({
+          email,
+          status: "error",
+          error: err instanceof Error ? err.message : "Failed to create invitation",
+        });
+      }
+    }
+
+    return { results, invalid };
   },
 });
 
@@ -476,11 +534,8 @@ export const resendInvitation = mutation({
     if (invitation.acceptedAt) {
       throw new Error("This invitation has already been accepted");
     }
-    if (invitation.expiresAt < Date.now()) {
-      throw new Error("This invitation has expired");
-    }
-
-    // A new token revokes any previously shared link for this invitation.
+    // A new token revokes any previously shared link, and the fresh expiry
+    // window makes resending work for expired invitations too.
     const token = randomToken();
     const tokenHash = await sha256Hex(token);
     await ctx.db.patch(invitation._id, {
