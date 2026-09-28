@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import {
   createNotification,
   findWorkspaceContext,
@@ -450,6 +451,57 @@ export const createInvitation = mutation({
   },
 });
 
+/**
+ * Generates a fresh one-time token for an existing pending invitation and
+ * clears the previous email-delivery state. The client then triggers the same
+ * emails.sendInvitationEmail action used when the invitation was created.
+ */
+export const resendInvitation = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    invitationId: v.id("invitations"),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadWorkspaceContext(
+      ctx,
+      args.workspaceId,
+    );
+    if (!roleAtLeast(role, "admin")) {
+      throw new Error("Only admins can resend invitations");
+    }
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation || invitation.workspaceId !== workspaceId) {
+      throw new Error("Invitation not found");
+    }
+    if (invitation.acceptedAt) {
+      throw new Error("This invitation has already been accepted");
+    }
+    if (invitation.expiresAt < Date.now()) {
+      throw new Error("This invitation has expired");
+    }
+
+    // A new token revokes any previously shared link for this invitation.
+    const token = randomToken();
+    const tokenHash = await sha256Hex(token);
+    await ctx.db.patch(invitation._id, {
+      tokenHash,
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      emailSentAt: undefined,
+      emailError: undefined,
+    });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "invitation",
+      entityId: args.invitationId,
+      eventType: "member.invitation_resent",
+      payload: { email: invitation.email, role: invitation.role },
+    });
+
+    return { token };
+  },
+});
+
 export const listInvitations = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
@@ -509,6 +561,50 @@ export const getInvitationByToken = query({
   },
 });
 
+/**
+ * Shared acceptance path used by both the public token link (/invite) and the
+ * home-page banner for existing users: create the membership, mark the
+ * invitation used, and notify the workspace owner.
+ */
+async function joinFromInvitation(
+  ctx: MutationCtx,
+  invitation: Doc<"invitations">,
+  user: Doc<"users">,
+): Promise<{ workspaceId: Id<"workspaces"> }> {
+  const existing = await getMembership(ctx, invitation.workspaceId, user._id);
+  if (existing) {
+    await ctx.db.patch(invitation._id, { acceptedAt: Date.now() });
+    return { workspaceId: invitation.workspaceId };
+  }
+
+  await ctx.db.insert("memberships", {
+    workspaceId: invitation.workspaceId,
+    userId: user._id,
+    role: invitation.role,
+    joinedAt: Date.now(),
+  });
+  await ctx.db.patch(invitation._id, { acceptedAt: Date.now() });
+
+  const workspace = await ctx.db.get(invitation.workspaceId);
+  await createNotification(ctx, {
+    workspaceId: invitation.workspaceId,
+    recipientId: workspace!.ownerId,
+    actorId: user._id,
+    type: "member.joined",
+    title: `${user.name ?? user.email ?? "Someone"} joined ${workspace?.name ?? "your workspace"}`,
+  });
+  await recordEvent(ctx, {
+    workspaceId: invitation.workspaceId,
+    actorId: user._id,
+    entityType: "membership",
+    entityId: user._id,
+    eventType: "member.joined",
+  });
+
+  return { workspaceId: invitation.workspaceId };
+}
+
+/** Accepts an invitation via its one-time token (public /invite page). */
 export const acceptInvitation = mutation({
   args: { token: v.string() },
   handler: async (ctx, args) => {
@@ -522,36 +618,78 @@ export const acceptInvitation = mutation({
     if (invitation.acceptedAt) throw new Error("This invitation has already been used");
     if (invitation.expiresAt < Date.now()) throw new Error("This invitation has expired");
 
-    const existing = await getMembership(ctx, invitation.workspaceId, user._id);
-    if (existing) {
-      await ctx.db.patch(invitation._id, { acceptedAt: Date.now() });
-      return { workspaceId: invitation.workspaceId };
+    return await joinFromInvitation(ctx, invitation, user);
+  },
+});
+
+/**
+ * Pending invitations addressed to the signed-in user's email. Powers the
+ * "you've been invited" banner on the Forge home page so existing users can
+ * accept without needing the email link.
+ */
+export const getMyInvitations = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    const email = user.email?.trim().toLowerCase();
+    if (!email) return [];
+
+    const now = Date.now();
+    const rows = await ctx.db
+      .query("invitations")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .collect();
+
+    const pending = rows.filter((i) => !i.acceptedAt && i.expiresAt > now);
+    const visible = await Promise.all(
+      pending.map(async (i) => ({
+        invitation: i,
+        alreadyMember: (await getMembership(ctx, i.workspaceId, user._id)) !== null,
+      })),
+    );
+
+    return Promise.all(
+      visible
+        .filter(({ alreadyMember }) => !alreadyMember)
+        .map(async ({ invitation }) => {
+          const [workspace, inviter] = await Promise.all([
+            ctx.db.get(invitation.workspaceId),
+            ctx.db.get(invitation.invitedBy),
+          ]);
+          return {
+            invitationId: invitation._id,
+            workspaceId: invitation.workspaceId,
+            workspaceName: workspace?.name ?? "a workspace",
+            role: invitation.role,
+            inviterName: inviter?.name ?? inviter?.email ?? "A teammate",
+            expiresAt: invitation.expiresAt,
+          };
+        }),
+    );
+  },
+});
+
+/**
+ * Accepts a pending invitation by id. Only allowed when the signed-in user's
+ * email matches the invitation — this is the home-page banner path for users
+ * who already have a Forge account, so no token is required.
+ */
+export const acceptMyInvitation = mutation({
+  args: { invitationId: v.id("invitations") },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const email = user.email?.trim().toLowerCase();
+
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation) throw new Error("This invitation is no longer available");
+    if (invitation.acceptedAt) throw new Error("This invitation has already been used");
+    if (invitation.expiresAt < Date.now()) throw new Error("This invitation has expired");
+    if (!email || email !== invitation.email) {
+      throw new Error(
+        "You are signed in with a different email than the one this invitation was sent to",
+      );
     }
 
-    await ctx.db.insert("memberships", {
-      workspaceId: invitation.workspaceId,
-      userId: user._id,
-      role: invitation.role,
-      joinedAt: Date.now(),
-    });
-    await ctx.db.patch(invitation._id, { acceptedAt: Date.now() });
-
-    const workspace = await ctx.db.get(invitation.workspaceId);
-    await createNotification(ctx, {
-      workspaceId: invitation.workspaceId,
-      recipientId: workspace!.ownerId,
-      actorId: user._id,
-      type: "member.joined",
-      title: `${user.name ?? user.email ?? "Someone"} joined ${workspace?.name ?? "your workspace"}`,
-    });
-    await recordEvent(ctx, {
-      workspaceId: invitation.workspaceId,
-      actorId: user._id,
-      entityType: "membership",
-      entityId: user._id,
-      eventType: "member.joined",
-    });
-
-    return { workspaceId: invitation.workspaceId };
+    return await joinFromInvitation(ctx, invitation, user);
   },
 });

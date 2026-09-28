@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EmptyState, ListSkeleton } from "@/components/forge";
+import { EmptyState, ListSkeleton, formatDate } from "@/components/forge";
 import { RoleBadge } from "@/components/AppShell";
 import {
   FolderKanban,
@@ -23,15 +23,34 @@ import {
   Plus,
   ArrowRight,
   Building2,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AppHome() {
   const workspaces = useQuery(api.workspaces.listMyWorkspaces);
+  const myInvitations = useQuery(api.workspaces.getMyInvitations);
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const create = useMutation(api.workspaces.createWorkspace);
+  const acceptMyInvitation = useMutation(api.workspaces.acceptMyInvitation);
+
+  const handleAccept = async (invitationId: string) => {
+    setAcceptingId(invitationId);
+    try {
+      const result = await acceptMyInvitation({
+        invitationId: invitationId as never,
+      });
+      toast.success("Invitation accepted");
+      navigate(`/app/workspaces/${result.workspaceId}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to accept invitation");
+    } finally {
+      setAcceptingId(null);
+    }
+  };
 
   const handleCreate = async () => {
     try {
@@ -90,6 +109,37 @@ export default function AppHome() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {myInvitations !== undefined && myInvitations.length > 0 && (
+          <div className="mt-6 space-y-2">
+            {myInvitations.map((inv) => (
+              <div
+                key={inv.invitationId}
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Mail className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {inv.inviterName} invited you to join{" "}
+                    <span className="font-semibold">{inv.workspaceName}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    As {inv.role} · expires {formatDate(inv.expiresAt)}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={acceptingId === inv.invitationId}
+                  onClick={() => handleAccept(inv.invitationId)}
+                >
+                  {acceptingId === inv.invitationId ? "Accepting…" : "Accept invitation"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-8">
           {workspaces === undefined ? (

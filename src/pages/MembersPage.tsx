@@ -33,6 +33,7 @@ import {
   Mail,
   MailCheck,
   MailWarning,
+  RefreshCw,
   Trash2,
   UserPlus,
 } from "lucide-react";
@@ -53,6 +54,7 @@ export default function MembersPage() {
   const updateRole = useMutation(api.workspaces.updateMemberRole);
   const removeMember = useMutation(api.workspaces.removeMember);
   const createInvitation = useMutation(api.workspaces.createInvitation);
+  const resendInvitation = useMutation(api.workspaces.resendInvitation);
   const revokeInvitation = useMutation(api.workspaces.revokeInvitation);
   const sendEmail = useAction(api.emails.sendInvitationEmail);
 
@@ -66,6 +68,7 @@ export default function MembersPage() {
     | null
   >(null);
   const [sending, setSending] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const isAdmin = workspace?.role === "admin" || workspace?.role === "owner";
 
@@ -104,6 +107,34 @@ export default function MembersPage() {
 
   const inviteLink = (token: string) =>
     `${window.location.origin}/invite?token=${encodeURIComponent(token)}`;
+
+  // Same path as the initial invite: mint a fresh one-time token, then fire the
+  // identical emails.sendInvitationEmail action.
+  const handleResend = async (invitationId: string, recipientEmail: string) => {
+    setResendingId(invitationId);
+    try {
+      const { token } = await resendInvitation({
+        workspaceId: workspaceId as never,
+        invitationId: invitationId as never,
+      });
+      const outcome = await sendEmail({
+        invitationId: invitationId as never,
+        token,
+      });
+      if (outcome?.delivered) {
+        toast.success(`Invitation email re-sent to ${recipientEmail}`);
+      } else {
+        toast.warning(outcome?.error ?? "Could not send the invitation email", {
+          description: outcome?.hint,
+          duration: 12000,
+        });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to resend invitation");
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   if (workspace === undefined) {
     return (
@@ -399,6 +430,24 @@ export default function MembersPage() {
                       <span className="hidden text-xs text-muted-foreground sm:block">
                         {formatDate(inv.createdAt)}
                       </span>
+                      {inv.status === "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-muted-foreground hover:text-foreground"
+                          title="Resend invitation email"
+                          disabled={resendingId === inv._id}
+                          onClick={() => handleResend(inv._id, inv.email)}
+                        >
+                          <RefreshCw
+                            className={
+                              resendingId === inv._id
+                                ? "size-3.5 animate-spin"
+                                : "size-3.5"
+                            }
+                          />
+                        </Button>
+                      )}
                       {inv.status === "pending" && (
                         <Button
                           variant="ghost"

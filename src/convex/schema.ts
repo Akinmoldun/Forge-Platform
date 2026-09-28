@@ -101,7 +101,8 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_token", ["tokenHash"])
-      .index("by_workspace", ["workspaceId"]),
+      .index("by_workspace", ["workspaceId"])
+      .index("by_email", ["email"]),
 
     // -------------------------------------------------------------
     // Projects

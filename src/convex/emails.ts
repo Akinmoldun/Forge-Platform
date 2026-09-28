@@ -33,6 +33,7 @@ export const sendInvitationEmail = action({
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       const error = "Email service is not configured (missing RESEND_API_KEY).";
+      console.error("[emails] RESEND_API_KEY is not configured; cannot send invitation email");
       await ctx.runMutation(internal.emails.markInvitationFailed, {
         invitationId: args.invitationId,
         error,
@@ -109,6 +110,7 @@ export const sendInvitationEmail = action({
       });
     } catch (err) {
       const error = `Could not reach the email service: ${err instanceof Error ? err.message : "network error"}`;
+      console.error(`[emails] Invitation email to ${invitation.email} failed: ${error}`);
       await ctx.runMutation(internal.emails.markInvitationFailed, {
         invitationId: args.invitationId,
         error,
@@ -133,6 +135,9 @@ export const sendInvitationEmail = action({
         hint =
           "Resend only delivers to the account owner's own email address until a sending domain is verified. Verify your domain at resend.com/domains and set EMAIL_FROM, test with your own address, or invite an existing Forge user — they can accept the invite directly from their Forge home page.";
       }
+      console.error(
+        `[emails] Invitation email to ${invitation.email} failed: ${message}`,
+      );
       await ctx.runMutation(internal.emails.markInvitationFailed, {
         invitationId: args.invitationId,
         error: message,
