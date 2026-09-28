@@ -1,5 +1,5 @@
 // Members: role management, invites with hashed one-time tokens, revocation.
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { useParams, Link } from "react-router";
@@ -54,15 +54,23 @@ export default function MembersPage() {
   const removeMember = useMutation(api.workspaces.removeMember);
   const createInvitation = useMutation(api.workspaces.createInvitation);
   const revokeInvitation = useMutation(api.workspaces.revokeInvitation);
+  const sendEmail = useAction(api.emails.sendInvitationEmail);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("member");
   const [lastToken, setLastToken] = useState<string | null>(null);
+  const [lastEmail, setLastEmail] = useState<string>("");
+  const [delivery, setDelivery] = useState<
+    | { delivered: boolean; error?: string; hint?: string }
+    | null
+  >(null);
+  const [sending, setSending] = useState(false);
 
   const isAdmin = workspace?.role === "admin" || workspace?.role === "owner";
 
   const handleInvite = async () => {
+    setSending(true);
     try {
       const result = await createInvitation({
         workspaceId: workspaceId as never,
@@ -70,10 +78,27 @@ export default function MembersPage() {
         role: role as never,
       });
       setLastToken(result.token);
+      setLastEmail(result.email);
       setEmail("");
-      toast.success(`Invitation email sent to ${email}`);
+
+      // Fire the invite email right away so delivery problems surface here.
+      const outcome = await sendEmail({
+        invitationId: result.invitationId,
+        token: result.token,
+      });
+      setDelivery(outcome ?? null);
+      if (outcome?.delivered) {
+        toast.success(`Invitation email sent to ${result.email}`);
+      } else {
+        toast.warning(outcome?.error ?? "Could not send the invitation email", {
+          description: outcome?.hint,
+          duration: 12000,
+        });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to invite");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -130,17 +155,34 @@ export default function MembersPage() {
                 </DialogHeader>
                 {lastToken ? (
                   <div className="space-y-3">
-                    <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                      <MailCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                      <div className="text-sm">
-                        <p className="font-medium">Invitation sent</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          An email with a one-time join link is on its way. If it
-                          doesn't arrive, you can copy the link below to share
-                          manually.
-                        </p>
+                    {delivery?.delivered ? (
+                      <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                        <MailCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                        <div className="text-sm">
+                          <p className="font-medium">Email sent to {lastEmail}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            They'll receive a one-time join link. If it doesn't
+                            arrive, the link below works too.
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                        <MailWarning className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                        <div className="text-sm">
+                          <p className="font-medium">Invitation created — email not sent</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {delivery?.error ??
+                              "The email could not be delivered. Share the link below manually."}
+                          </p>
+                          {delivery?.hint && (
+                            <p className="mt-1.5 text-xs leading-4 text-amber-700 dark:text-amber-400">
+                              {delivery.hint}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Input readOnly value={inviteLink(lastToken)} className="font-mono text-xs" />
                       <Button
@@ -163,11 +205,18 @@ export default function MembersPage() {
                         onClick={() => {
                           setInviteOpen(false);
                           setLastToken(null);
+                          setDelivery(null);
                         }}
                       >
                         Done
                       </Button>
-                      <Button onClick={() => setLastToken(null)} variant="secondary">
+                      <Button
+                        onClick={() => {
+                          setLastToken(null);
+                          setDelivery(null);
+                        }}
+                        variant="secondary"
+                      >
                         Invite another
                       </Button>
                     </DialogFooter>
@@ -203,8 +252,8 @@ export default function MembersPage() {
                       <Button variant="outline" onClick={() => setInviteOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleInvite} disabled={!email.includes("@")}>
-                        <Mail /> Send invite
+                      <Button onClick={handleInvite} disabled={!email.includes("@") || sending}>
+                        <Mail /> {sending ? "Sending…" : "Send invite"}
                       </Button>
                     </DialogFooter>
                   </>
@@ -317,12 +366,17 @@ export default function MembersPage() {
                     <span className="truncate text-sm">{inv.email}</span>
                     <RoleBadge role={inv.role} />
                     <div className="ml-auto flex items-center gap-2">
-                      {inv.status === "pending" && !inv.emailSentAt && (
+                      {inv.status === "pending" && inv.emailError && (
                         <span
-                          className="flex items-center gap-1 text-[11px] text-muted-foreground"
-                          title="Email delivery pending or unavailable — use the invite link from when you created it"
+                          className="flex items-center gap-1 text-[11px] text-amber-600"
+                          title={inv.emailError}
                         >
-                          <MailWarning className="size-3" /> email pending
+                          <MailWarning className="size-3" /> email failed
+                        </span>
+                      )}
+                      {inv.status === "pending" && !inv.emailError && !inv.emailSentAt && (
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          email pending
                         </span>
                       )}
                       {inv.status === "pending" && inv.emailSentAt && (

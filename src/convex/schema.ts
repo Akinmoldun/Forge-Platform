@@ -96,6 +96,8 @@ const schema = defineSchema(
       invitedBy: v.id("users"),
       // set once the invitation email has been dispatched by the email action
       emailSentAt: v.optional(v.number()),
+      // last delivery failure message, cleared when a resend succeeds
+      emailError: v.optional(v.string()),
       createdAt: v.number(),
     })
       .index("by_token", ["tokenHash"])

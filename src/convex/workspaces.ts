@@ -1,7 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { internal } from "./_generated/api";
-import type { FunctionReference } from "convex/server";
 import {
   createNotification,
   findWorkspaceContext,
@@ -385,7 +383,7 @@ export const createInvitation = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const { workspaceId, role, workspace: ctxWorkspace } = await loadWorkspaceContext(
+    const { workspaceId, role } = await loadWorkspaceContext(
       ctx,
       args.workspaceId,
     );
@@ -408,6 +406,8 @@ export const createInvitation = mutation({
       if (m) throw new Error("This user is already a member of the workspace");
     }
 
+    const workspaceForNotify = (await ctx.db.get(args.workspaceId))!;
+
     const token = randomToken();
     const tokenHash = await sha256Hex(token);
     const now = Date.now();
@@ -429,35 +429,22 @@ export const createInvitation = mutation({
       payload: { email, role: args.role },
     });
 
-    // Send the invitation email automatically via Resend (background job).
-    const inviterName = user.name ?? user.email ?? "A teammate";
-    const inviteLink = `${process.env.CONVEX_SITE_URL ?? ""}/invite?token=${token}`;
-    await ctx.scheduler.runAfter(
-      0,
-      (internal.emails as unknown as Record<string, FunctionReference<"action", "internal", Record<string, unknown>, unknown>>)[
-        "sendInvitationEmail"
-      ] as FunctionReference<
-        "action",
-        "internal",
-        {
-          invitationId: Id<"invitations">;
-          to: string;
-          workspaceName: string;
-          inviterName: string;
-          role: string;
-          inviteLink: string;
-        },
-        { emailId: string | null }
-      >,
-      {
-        invitationId,
-        to: email,
-        workspaceName: ctxWorkspace.name,
-        inviterName,
-        role: args.role,
-        inviteLink,
-      },
-    );
+    // In-app fallback: if the invitee already has a Forge account, notify them
+    // directly so they can accept without relying on email delivery.
+    if (existing) {
+      await createNotification(ctx, {
+        workspaceId,
+        actorId: user._id,
+        recipientId: existing._id,
+        type: "member.invited",
+        title: `${user.name ?? "Someone"} invited you to join ${workspaceForNotify.name}`,
+        body: `You were invited as ${args.role}. Check the Members page of the workspace, or ask them to send the invite link again.`,
+      });
+    }
+
+    // The email itself is sent by the emails.sendInvitationEmail action, called
+    // from the client right after this mutation so delivery errors surface
+    // immediately instead of failing silently in a scheduled job.
 
     return { token, email, invitationId };
   },
@@ -482,6 +469,7 @@ export const listInvitations = query({
         acceptedAt: i.acceptedAt,
         createdAt: i.createdAt,
         emailSentAt: i.emailSentAt,
+        emailError: i.emailError,
         status: i.acceptedAt ? "accepted" : i.expiresAt < Date.now() ? "expired" : "pending",
       }));
   },
