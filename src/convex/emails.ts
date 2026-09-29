@@ -6,9 +6,10 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 // ---------------------------------------------------------------------------
 // Email availability. Invitations are only emailed when a verified sender is
 // configured: RESEND_API_KEY + EMAIL_FROM, with the EMAIL_FROM domain actually
-// verified in Resend. Otherwise invitations are still created and the app
-// falls back to shareable in-app links — the creator never copy-pastes a
-// "from" address and their personal email is never used as the sender.
+// verified in Resend — enforced both in the readiness probe and again inside
+// the send action itself. Otherwise invitations are still created and the app
+// falls back to shareable in-app links; no provider call is ever attempted
+// and no fallback sender address exists.
 // ---------------------------------------------------------------------------
 
 type EmailConfig = { ok: true; from: string } | { ok: false; reason: string; hint: string };
@@ -147,6 +148,26 @@ export const sendInvitationEmail = action({
         hint: config.hint,
       };
     }
+
+    // Hard gate: even with both env vars present, never call the email
+    // provider's send endpoint unless the sender domain is actually verified.
+    if (
+      !(await senderDomainIsVerified(
+        process.env.RESEND_API_KEY as string,
+        config.from,
+      ))
+    ) {
+      const reason = "No verified sending domain is configured in Resend yet.";
+      console.error(`[emails] Skipping invitation email: ${reason}`);
+      return {
+        delivered: false as const,
+        skipped: true as const,
+        error: reason,
+        hint:
+          "Verify a domain at resend.com/domains and set EMAIL_FROM to enable automatic invitation emails. Invitations still work via in-app links.",
+      };
+    }
+
     const from = config.from;
     const siteUrl = process.env.CONVEX_SITE_URL ?? "";
     const inviteLink = `${siteUrl}/invite?token=${args.token}`;
