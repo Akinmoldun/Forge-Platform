@@ -1,5 +1,6 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
 import { RequireAuth } from "@/components/RequireAuth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
@@ -90,6 +91,65 @@ class RootErrorBoundary extends React.Component<
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
+/**
+ * Route-level error boundary: a crash in one page renders an error card with
+ * the REAL error message and a manual retry button. It never reloads the page
+ * automatically (which could loop) and never leaves a blank screen.
+ */
+class RouteErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error) {
+    console.error("[Route] Render error:", error);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-background p-6">
+          <div className="w-full max-w-lg rounded-xl border border-destructive/40 bg-card p-6">
+            <p className="text-sm font-semibold text-destructive">
+              This page failed to render
+            </p>
+            <p className="mt-2 break-words text-sm text-foreground">
+              {this.state.error.message || "Unknown error"}
+            </p>
+            {this.state.error.stack && (
+              <pre className="mt-3 max-h-40 overflow-auto rounded border border-border/60 p-2 text-left text-[10px] leading-4 text-muted-foreground">
+                {this.state.error.stack}
+              </pre>
+            )}
+            <div className="mt-4 flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => this.setState({ error: null })}
+              >
+                Try again
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => this.setState({ error: null })}
+              >
+                Dismiss
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Check the browser console for the full error, including failed
+              queries or actions.
+            </p>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -123,7 +183,8 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
-            <Routes>
+            <RouteErrorBoundary>
+              <Routes>
               <Route path="/" element={<Landing />} />
               <Route
                 path="/auth"
@@ -143,7 +204,8 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/app/notifications" element={<RequireAuth redirectImmediately><NotificationsPage /></RequireAuth>} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
+            </RouteErrorBoundary>
           </Suspense>
         </BrowserRouter>
         <Toaster />

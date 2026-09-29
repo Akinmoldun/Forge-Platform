@@ -69,13 +69,33 @@ async function senderDomainIsVerified(apiKey: string, from: string): Promise<boo
 
 /**
  * Cheap reactive flag for the UI: is email sending configured at the env-var
- * level? (Domain verification is probed by getEmailDeliveryStatus, which needs
- * a network call and therefore runs as an action.)
+ * level? A missing EMAIL_FROM is a VALID fallback state, never an error — the
+ * result always carries emailAvailable/useLinkFallback so the client can
+ * proceed with in-app links. This must never throw.
  */
 export const emailConfigStatus = query({
   args: {},
   handler: async () => {
-    return { configured: resolveEmailConfig().ok };
+    try {
+      const config = resolveEmailConfig();
+      return {
+        configured: config.ok,
+        emailAvailable: config.ok,
+        useLinkFallback: !config.ok,
+        reason: config.ok ? undefined : config.reason,
+      };
+    } catch (err) {
+      console.error(
+        "[emails] Failed to read email configuration:",
+        err instanceof Error ? err.message : err,
+      );
+      return {
+        configured: false,
+        emailAvailable: false,
+        useLinkFallback: true,
+        reason: "Email configuration could not be read.",
+      };
+    }
   },
 });
 
@@ -88,23 +108,52 @@ export const emailConfigStatus = query({
 export const getEmailDeliveryStatus = action({
   args: {},
   handler: async () => {
-    const config = resolveEmailConfig();
-    if (!config.ok) {
-      return { ready: false as const, reason: config.reason, hint: config.hint };
-    }
-    const verified = await senderDomainIsVerified(
-      process.env.RESEND_API_KEY as string,
-      config.from,
-    );
-    if (!verified) {
+    // This probe must never be the reason the app fails: every path returns a
+    // value, and any unexpected error degrades to "email unavailable — use the
+    // in-app link fallback". No secrets are ever included in messages.
+    try {
+      const config = resolveEmailConfig();
+      if (!config.ok) {
+        return {
+          ready: false as const,
+          emailAvailable: false as const,
+          useLinkFallback: true as const,
+          reason: config.reason,
+          hint: config.hint,
+        };
+      }
+      const verified = await senderDomainIsVerified(
+        process.env.RESEND_API_KEY as string,
+        config.from,
+      );
+      if (!verified) {
+        return {
+          ready: false as const,
+          emailAvailable: false as const,
+          useLinkFallback: true as const,
+          reason: "The sender domain in EMAIL_FROM is not verified with Resend yet.",
+          hint:
+            "Verify the domain at resend.com/domains (add the DNS records Resend shows), or change EMAIL_FROM to a domain that is verified. Invitations still work via in-app links.",
+        };
+      }
+      return {
+        ready: true as const,
+        emailAvailable: true as const,
+        useLinkFallback: false as const,
+      };
+    } catch (err) {
+      console.error(
+        "[emails] Delivery status probe failed:",
+        err instanceof Error ? err.message : err,
+      );
       return {
         ready: false as const,
-        reason: `The sender domain in EMAIL_FROM is not verified with Resend yet.`,
-        hint:
-          "Verify the domain at resend.com/domains (add the DNS records Resend shows), or change EMAIL_FROM to a domain that is verified. Invitations still work via in-app links.",
+        emailAvailable: false as const,
+        useLinkFallback: true as const,
+        reason: "Email availability could not be determined.",
+        hint: "Invitations will be created with in-app links.",
       };
     }
-    return { ready: true as const };
   },
 });
 

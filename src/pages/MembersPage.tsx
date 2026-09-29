@@ -68,7 +68,6 @@ export default function MembersPage() {
   const resendInvitation = useMutation(api.workspaces.resendInvitation);
   const revokeInvitation = useMutation(api.workspaces.revokeInvitation);
   const sendEmail = useAction(api.emails.sendInvitationEmail);
-  const emailStatus = useQuery(api.emails.emailConfigStatus);
   const checkDeliveryStatus = useAction(api.emails.getEmailDeliveryStatus);
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -91,30 +90,37 @@ export default function MembersPage() {
   const inviteLink = (token: string) =>
     `${window.location.origin}/invite?token=${encodeURIComponent(token)}`;
 
-  // Readiness probe: is a verified email sender actually configured? If not,
-  // invitations are still created but the email provider is never called —
-  // the UI falls back to shareable in-app links instead.
+  // Readiness probe: is a verified email sender actually configured? A missing
+  // EMAIL_FROM is a valid fallback state — never an error and never a crash:
+  // every path resolves to either "send email" or "use in-app links", with a
+  // timeout so a stalled request cannot hang the invite flow.
   const checkDelivery = async (): Promise<{
     ok: boolean;
     reason?: string;
     hint?: string;
   }> => {
-    if (!emailStatus?.configured) {
-      return {
-        ok: false,
-        reason: "No email service is configured.",
-        hint:
-          "Invitations still work — share the links below. Add RESEND_API_KEY and EMAIL_FROM to send them automatically.",
-      };
-    }
     try {
-      const status = await checkDeliveryStatus();
+      const status = await Promise.race([
+        checkDeliveryStatus(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
+      ]);
+      if (!status) {
+        return {
+          ok: false,
+          reason: "Email availability check timed out.",
+          hint: "Invitations still work — share the links below.",
+        };
+      }
       if (status.ready) return { ok: true };
       return { ok: false, reason: status.reason, hint: status.hint };
-    } catch {
+    } catch (err) {
+      console.error(
+        "[invite] Email availability check failed:",
+        err instanceof Error ? err.message : err,
+      );
       return {
         ok: false,
-        reason: "Could not verify the email service.",
+        reason: "Email availability could not be determined.",
         hint: "Invitations still work — share the links below.",
       };
     }
