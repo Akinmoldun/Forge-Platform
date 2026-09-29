@@ -7,6 +7,7 @@ import {
   loadIssueContext,
   loadProjectContext,
   loadWorkspaceContext,
+  optionalUser,
   requireUser,
   roleAtLeast,
 } from "./lib/auth";
@@ -93,7 +94,11 @@ async function hydrateEvents(
 export const listNotifications = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
+    // Session-safe: this query is mounted in the app sidebar, which can render
+    // before the auth token finishes loading. Return empty instead of throwing
+    // so it never 500s during the unauthenticated window.
+    const user = await optionalUser(ctx);
+    if (!user) return { notifications: [], unreadCount: 0 };
     const rows = await ctx.db
       .query("notifications")
       .withIndex("by_recipient_created", (q) => q.eq("recipientId", user._id))

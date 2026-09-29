@@ -6,6 +6,7 @@ import {
   findWorkspaceContext,
   getMembership,
   loadWorkspaceContext,
+  optionalUser,
   recordEvent,
   requireUser,
   roleAtLeast,
@@ -118,7 +119,11 @@ export const createWorkspace = mutation({
 export const listMyWorkspaces = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
+    // Session-safe: Convex Auth tokens load asynchronously, so this query can
+    // run before the session is established. Return [] instead of throwing to
+    // avoid unhandled 500s (the client treats [] as "not signed in yet").
+    const user = await optionalUser(ctx);
+    if (!user) return [];
     const memberships = await ctx.db
       .query("memberships")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -685,7 +690,9 @@ export const acceptInvitation = mutation({
 export const getMyInvitations = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
+    // Session-safe (see listMyWorkspaces): [] while auth is still resolving.
+    const user = await optionalUser(ctx);
+    if (!user) return [];
     const email = user.email?.trim().toLowerCase();
     if (!email) return [];
 
