@@ -173,14 +173,14 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <Badge variant="secondary" className="font-mono text-[11px]">
+              <Badge variant="secondary" className="rounded-[4px] font-mono text-[11px]">
                 {project.project.key}
               </Badge>
-              <h1 className="font-display text-2xl">{project.project.name}</h1>
+              <h1 className="font-display text-2xl tracking-[-0.02em]">{project.project.name}</h1>
               <RoleBadge role={project.role} />
               {risk && risk.hasData && <RiskBadge level={risk.level} score={risk.score} />}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               {openCount} open · {project.doneIssueCount} done
               {project.project.description ? ` · ${project.project.description}` : ""}
             </p>
@@ -410,7 +410,7 @@ function AnalyticsTab({
   return (
     <div className="space-y-6">
       {/* Metric cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Open issues", value: summary.openCount, sub: `${summary.unassignedCount} unassigned` },
           { label: "Completed", value: summary.completedCount, sub: `${summary.completedThisWeek} this week` },
@@ -421,21 +421,17 @@ function AnalyticsTab({
           },
           { label: "Overdue", value: summary.overdueCount, sub: "open issues past due" },
         ].map((m) => (
-          <Card key={m.label} className="border-border/70 shadow-none">
-            <CardHeader className="pb-1">
-              <CardDescription className="text-xs">{m.label}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="font-display text-2xl">{m.value}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{m.sub}</p>
-            </CardContent>
-          </Card>
+          <div key={m.label} className="bg-card p-4">
+            <p className="text-xs text-muted-foreground">{m.label}</p>
+            <p className="mt-1 font-display text-2xl">{m.value}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{m.sub}</p>
+          </div>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Throughput */}
-        <Card className="border-border/70 shadow-none">
+        <Card className="border-border shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Throughput</CardTitle>
             <CardDescription className="text-xs">
@@ -450,7 +446,7 @@ function AnalyticsTab({
                     initial={{ height: 0 }}
                     animate={{ height: `${(t.count / maxThroughput) * 100}%` }}
                     transition={{ duration: 0.5 }}
-                    className="w-full max-w-8 rounded-t bg-primary/80"
+                    className="w-full max-w-8 rounded-t bg-foreground/80"
                     style={{ minHeight: t.count > 0 ? 4 : 2 }}
                   />
                   <span className="text-[9px] text-muted-foreground">{t.label}</span>
@@ -462,7 +458,7 @@ function AnalyticsTab({
         </Card>
 
         {/* Workload */}
-        <Card className="border-border/70 shadow-none">
+        <Card className="border-border shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Workload by member</CardTitle>
             <CardDescription className="text-xs">Open issues per assignee</CardDescription>
@@ -477,9 +473,9 @@ function AnalyticsTab({
                 {summary.workload.map((w) => (
                   <div key={w.userId} className="flex items-center gap-3">
                     <span className="w-28 truncate text-xs font-medium">{w.name}</span>
-                    <div className="h-2 flex-1 rounded-full bg-muted">
+                    <div className="h-1 flex-1 rounded-full bg-secondary">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-full bg-foreground/70"
                         style={{
                           width: `${Math.min(100, (w.openIssues / Math.max(1, summary.workload[0].openIssues)) * 100)}%`,
                         }}
@@ -497,7 +493,7 @@ function AnalyticsTab({
 
         {/* Risk breakdown */}
         {risk && risk.factors.length > 0 && (
-          <Card className="border-border/70 shadow-none">
+          <Card className="border-border shadow-none">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">Why {risk.level} risk?</CardTitle>
@@ -524,7 +520,7 @@ function AnalyticsTab({
         )}
 
         {/* By status */}
-        <Card className="border-border/70 shadow-none">
+        <Card className="border-border shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Issues by status</CardTitle>
           </CardHeader>
@@ -534,7 +530,7 @@ function AnalyticsTab({
                 <div key={s.statusName} className="flex items-center gap-3">
                   <StatusDot color={s.color} />
                   <span className="w-32 truncate text-xs">{s.statusName}</span>
-                  <div className="h-2 flex-1 rounded-full bg-muted">
+                  <div className="h-1.5 flex-1 rounded-full bg-secondary">
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -584,11 +580,11 @@ function ActivityTab({
     );
   }
   return (
-    <Card className="border-border/70 shadow-none">
-      <CardContent className="divide-y divide-border/60 p-0">
+    <Card className="border-border shadow-none">
+      <CardContent className="divide-y divide-border p-0">
         {activity.map((e) => (
           <div key={e._id} className="flex items-center gap-3 px-4 py-3 text-sm">
-            <span className="flex size-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+            <span className="flex size-7 items-center justify-center rounded-md border border-border bg-secondary text-[10px] font-medium">
               {e.actorName.slice(0, 2).toUpperCase()}
             </span>
             <span className="truncate">
@@ -638,11 +634,11 @@ function BoardView({
   return (
     <div className="grid gap-3 overflow-x-auto pb-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
       {board.columns.map((col) => (
-        <div key={col.status._id} className="rounded-xl bg-muted/50 p-2.5">
+        <div key={col.status._id} className="rounded-lg border border-border bg-secondary/50 p-2.5">
           <div className="mb-2.5 flex items-center gap-1.5 px-1">
             <StatusDot color={col.status.color} />
             <span className="text-xs font-semibold">{col.status.name}</span>
-            <span className="ml-auto text-[10px] text-muted-foreground">{col.issues.length}</span>
+            <span className="ml-auto font-mono text-[10px] text-muted-foreground">{col.issues.length}</span>
           </div>
           <div className="space-y-2">
             {col.issues.length === 0 && (
@@ -652,7 +648,7 @@ function BoardView({
               <button
                 key={i._id}
                 onClick={() => onIssueClick(i._id)}
-                className="w-full rounded-lg border border-border/70 bg-card p-2.5 text-left transition-all hover:border-primary/50 hover:shadow-sm"
+                className="w-full rounded-md border border-border bg-card p-2.5 text-left transition-colors hover:border-white/20 hover:bg-secondary"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold text-muted-foreground">
@@ -663,7 +659,7 @@ function BoardView({
                 <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-4">{i.title}</p>
                 <div className="mt-2 flex items-center gap-1.5">
                   {i.isBlocked && (
-                    <Badge variant="outline" className="border-red-500/40 px-1 py-0 text-[9px] text-red-600">
+                    <Badge variant="outline" className="border-red-500/30 px-1 py-0 text-[9px] text-red-400">
                       blocked
                     </Badge>
                   )}
@@ -727,10 +723,10 @@ function ListView({
     );
   }
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70">
+    <div className="overflow-hidden rounded-lg border border-border">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border/70 bg-muted/50 text-left text-xs text-muted-foreground">
+          <tr className="border-b border-border bg-secondary/50 text-left text-xs text-muted-foreground">
             <th className="px-4 py-2.5 font-medium">Issue</th>
             <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Status</th>
             <th className="hidden px-4 py-2.5 font-medium md:table-cell">Priority</th>
@@ -738,12 +734,12 @@ function ListView({
             <th className="px-4 py-2.5 text-right font-medium">Updated</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/60">
+        <tbody className="divide-y divide-border">
           {issues.issues.map((i) => (
             <tr
               key={i._id}
               onClick={() => onIssueClick(i._id)}
-              className="cursor-pointer transition-colors hover:bg-muted/40"
+              className="cursor-pointer transition-colors hover:bg-secondary/60"
             >
               <td className="px-4 py-2.5">
                 <span className="text-xs font-semibold text-muted-foreground">

@@ -148,7 +148,7 @@ export default function ProjectSettings() {
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl">Project settings</h1>
+            <h1 className="font-display text-2xl tracking-[-0.02em]">Project settings</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Workflows and automations are enforced server-side on every transition.
             </p>
@@ -179,7 +179,7 @@ export default function ProjectSettings() {
                 {statuses.map((s) => (
                   <div
                     key={s._id}
-                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-card px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
                   >
                     <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color ?? "#8b8b93" }} />
                     <span className="text-sm font-medium">{s.name}</span>
@@ -207,7 +207,7 @@ export default function ProjectSettings() {
                   return (
                     <div
                       key={t._id}
-                      className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card px-3 py-3 sm:flex-row sm:items-center"
+                      className="flex flex-col gap-3 rounded-lg border border-border bg-card px-3 py-3 sm:flex-row sm:items-center"
                     >
                       <div className="flex min-w-0 items-center gap-2 text-sm">
                         <span className="font-medium">{from.name}</span>
@@ -369,9 +369,9 @@ export default function ProjectSettings() {
                 {automations.map((r) => (
                   <div
                     key={r._id}
-                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-card px-3 py-3"
+                    className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-3"
                   >
-                    <Zap className={`size-4 ${r.isEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                    <Zap className={`size-4 ${r.isEnabled ? "text-amber-400" : "text-muted-foreground"}`} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{r.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -404,7 +404,7 @@ export default function ProjectSettings() {
           {/* Danger zone */}
           <TabsContent value="danger" className="mt-6">
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-              <h2 className="text-sm font-semibold text-destructive">Archive project</h2>
+              <h2 className="text-sm font-medium text-destructive">Archive project</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Archives the project and all its issues. Activity history is preserved; nothing is permanently deleted.
               </p>

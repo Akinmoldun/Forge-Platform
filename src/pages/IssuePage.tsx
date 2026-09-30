@@ -185,7 +185,7 @@ export default function IssuePage() {
           </Link>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
           {/* Main column */}
           <div className="min-w-0">
             {/* Title */}
@@ -218,7 +218,7 @@ export default function IssuePage() {
               </div>
             ) : (
               <h1
-                className={`font-display text-2xl leading-tight ${canWrite ? "cursor-text" : ""}`}
+                className={`font-display text-2xl leading-tight tracking-[-0.02em] ${canWrite ? "cursor-text" : ""}`}
                 onClick={() => {
                   if (canWrite) {
                     setTitleDraft(issue.title);
@@ -261,7 +261,7 @@ export default function IssuePage() {
                 </div>
               ) : (
                 <div
-                  className={`rounded-lg border border-border/60 bg-muted/30 p-4 text-sm leading-6 ${
+                  className={`rounded-lg border border-border bg-card p-4 text-sm leading-6 ${
                     canWrite ? "cursor-text" : ""
                   }`}
                   onClick={() => {
@@ -348,7 +348,7 @@ export default function IssuePage() {
                 )}
               </div>
               {detail.blockers.length === 0 && detail.blocks.length === 0 && detail.related.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border/70 px-4 py-5 text-center text-xs text-muted-foreground">
+                <p className="rounded-lg border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">
                   No dependencies yet.
                 </p>
               ) : (
@@ -448,10 +448,10 @@ export default function IssuePage() {
               ) : activity.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No activity recorded yet.</p>
               ) : (
-                <div className="space-y-0 border-l border-border/70 pl-4">
+                <div className="space-y-0 border-l border-border pl-4">
                   {activity.map((e) => (
                     <div key={e._id} className="relative pb-4">
-                      <span className="absolute -left-[21px] top-1 size-2 rounded-full bg-border" />
+                      <span className="absolute -left-[21px] top-1 size-2 rounded-full border border-border bg-secondary" />
                       <p className="text-sm">
                         <span className="font-medium">{e.actorName}</span>{" "}
                         <span className="text-muted-foreground">{eventText(e.eventType)}</span>
@@ -618,7 +618,7 @@ export default function IssuePage() {
                     .map((l) => (
                       <button
                         key={l._id}
-                        className="rounded-md border border-dashed border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-foreground"
+                        className="rounded-md border border-dashed border-border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:border-white/30 hover:text-foreground"
                         onClick={() =>
                           updateIssue({ issueId: issue._id, addLabelId: l._id as never }).catch((e) =>
                             toast.error(e.message),
@@ -645,7 +645,7 @@ export default function IssuePage() {
 
             {/* Role note */}
             {role === "viewer" && (
-              <p className="rounded-md bg-muted px-3 py-2 text-[11px] text-muted-foreground">
+              <p className="rounded-md border border-border bg-secondary px-3 py-2 text-[11px] text-muted-foreground">
                 You have view-only access to this issue.
               </p>
             )}
@@ -710,15 +710,15 @@ function DepRow({
   return (
     <Link
       to={link}
-      className="flex items-center gap-2.5 rounded-lg border border-border/60 px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/40"
+      className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:border-white/20 hover:bg-secondary"
     >
-      <Badge variant="secondary" className="shrink-0 text-[10px]">
+      <Badge variant="secondary" className="shrink-0 rounded-[4px] text-[10px]">
         {kind}
       </Badge>
       <span className="shrink-0 font-mono text-xs text-muted-foreground">{issueKey}</span>
       <span className={`truncate ${done ? "text-muted-foreground line-through" : ""}`}>{title}</span>
       {overdue && (
-        <Badge variant="outline" className="ml-auto shrink-0 border-red-500/40 text-[10px] text-red-600">
+        <Badge variant="outline" className="ml-auto shrink-0 border-red-500/30 text-[10px] text-red-400">
           overdue
         </Badge>
       )}

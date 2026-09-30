@@ -36,8 +36,8 @@ export default function NotificationsPage() {
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl">Notifications</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="font-display text-2xl tracking-[-0.02em]">Notifications</h1>
+            <p className="mt-1 text-[13px] text-muted-foreground">
               {unread > 0 ? `${unread} unread` : "You're all caught up"}
             </p>
           </div>
@@ -66,28 +66,30 @@ export default function NotificationsPage() {
               description="Assignments, comments, and status changes that involve you will appear here."
             />
           ) : (
-            <div className="overflow-hidden rounded-xl border border-border/70">
-              <ul className="divide-y divide-border/60">
+            <div className="overflow-hidden rounded-lg border border-border">
+              <ul className="divide-y divide-border">
                 {rows.map((n) => (
                   <li key={n._id}>
                     <button
-                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/60"
                       onClick={() => openNotification(n._id, n.resourceType, n.resourceId)}
                     >
                       <span
-                        className={`mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                          n.readAt ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                        className={`mt-1 flex size-8 shrink-0 items-center justify-center rounded-md border ${
+                          n.readAt
+                            ? "border-border bg-secondary text-muted-foreground"
+                            : "border-white/20 bg-secondary text-foreground"
                         }`}
                       >
                         {n.readAt ? <Bell className="size-4" /> : <BellRing className="size-4" />}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className={`truncate text-sm ${n.readAt ? "" : "font-semibold"}`}>
+                          <p className={`truncate text-sm ${n.readAt ? "" : "font-medium"}`}>
                             {n.title}
                           </p>
                           {!n.readAt && (
-                            <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+                            <span className="size-1.5 shrink-0 rounded-full bg-foreground" />
                           )}
                         </div>
                         {n.body && (

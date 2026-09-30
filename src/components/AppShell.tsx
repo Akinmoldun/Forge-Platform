@@ -34,19 +34,21 @@ export function AppShell({
   const active = workspaceId ? workspaces.find((w) => w._id === workspaceId) : undefined;
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
-          <Link to="/app" className="flex items-center gap-2">
-            <ForgeLogo className="size-6" />
-            <span className="font-display text-[15px]">Forge</span>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex h-12 w-full max-w-7xl items-center gap-2 px-4 sm:px-6">
+          <Link to="/app" className="flex items-center gap-2 pr-1">
+            <ForgeLogo className="size-5" />
+            <span className="text-[14px] font-semibold tracking-tight">Forge</span>
           </Link>
+
+          <span className="h-4 w-px bg-border" aria-hidden />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-sm font-medium">
-                {active ? active.name : "Workspaces"}
-                <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-[13px] font-medium text-foreground">
+                <span className="max-w-32 truncate sm:max-w-44">{active ? active.name : "Workspaces"}</span>
+                <ChevronsUpDown className="size-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-60">
@@ -57,7 +59,7 @@ export function AppShell({
                   onClick={() => navigate(`/app/workspaces/${w._id}`)}
                 >
                   <span className="flex-1 truncate">{w.name}</span>
-                  {active?._id === w._id && <Check className="size-4" />}
+                  {active?._id === w._id && <Check className="size-3.5" />}
                 </DropdownMenuItem>
               ))}
               {workspaces.length === 0 && (
@@ -72,14 +74,17 @@ export function AppShell({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <nav className="ml-2 hidden items-center gap-1 md:flex">
+          <nav className="ml-1 hidden items-center gap-0.5 md:flex">
             {workspaceId && (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   asChild
-                  className={cn(location.pathname === `/app/workspaces/${workspaceId}` && "bg-accent")}
+                  className={cn(
+                    "h-7 px-2.5 text-[13px] text-muted-foreground",
+                    location.pathname === `/app/workspaces/${workspaceId}` && "bg-secondary text-foreground",
+                  )}
                 >
                   <Link to={`/app/workspaces/${workspaceId}`}>Overview</Link>
                 </Button>
@@ -87,7 +92,10 @@ export function AppShell({
                   variant="ghost"
                   size="sm"
                   asChild
-                  className={cn(location.pathname === `/app/workspaces/${workspaceId}/activity` && "bg-accent")}
+                  className={cn(
+                    "h-7 px-2.5 text-[13px] text-muted-foreground",
+                    location.pathname === `/app/workspaces/${workspaceId}/activity` && "bg-secondary text-foreground",
+                  )}
                 >
                   <Link to={`/app/workspaces/${workspaceId}/activity`}>Activity</Link>
                 </Button>
@@ -95,7 +103,10 @@ export function AppShell({
                   variant="ghost"
                   size="sm"
                   asChild
-                  className={cn(location.pathname === `/app/workspaces/${workspaceId}/members` && "bg-accent")}
+                  className={cn(
+                    "h-7 px-2.5 text-[13px] text-muted-foreground",
+                    location.pathname === `/app/workspaces/${workspaceId}/members` && "bg-secondary text-foreground",
+                  )}
                 >
                   <Link to={`/app/workspaces/${workspaceId}/members`}>Members</Link>
                 </Button>
@@ -103,7 +114,10 @@ export function AppShell({
                   variant="ghost"
                   size="sm"
                   asChild
-                  className={cn(location.pathname === `/app/workspaces/${workspaceId}/settings` && "bg-accent")}
+                  className={cn(
+                    "h-7 px-2.5 text-[13px] text-muted-foreground",
+                    location.pathname === `/app/workspaces/${workspaceId}/settings` && "bg-secondary text-foreground",
+                  )}
                 >
                   <Link to={`/app/workspaces/${workspaceId}/settings`}>Settings</Link>
                 </Button>
@@ -111,33 +125,37 @@ export function AppShell({
             )}
           </nav>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
+              className="relative size-8 text-muted-foreground hover:text-foreground"
               onClick={() => navigate("/app/notifications")}
               aria-label="Notifications"
             >
-              <Bell className="size-4.5" />
+              <Bell className="size-4" />
               {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
                   {unread > 9 ? "9+" : unread}
                 </span>
               )}
             </Button>
+            <span className="mx-1 hidden h-4 w-px bg-border sm:block" aria-hidden />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="size-8">
-                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                <button
+                  className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Account menu"
+                >
+                  <Avatar className="size-6.5">
+                    <AvatarFallback className="border border-border bg-secondary text-[10px] font-medium text-foreground">
                       {(user?.name ?? user?.email ?? "?").slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="truncate">
+                <DropdownMenuLabel className="truncate font-normal">
                   {user?.name ?? user?.email ?? "Account"}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -165,7 +183,7 @@ export function AppShell({
       </header>
 
       <main className="flex-1">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">{children}</div>
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>
       </main>
     </div>
   );
@@ -174,14 +192,14 @@ export function AppShell({
 export function RoleBadge({ role }: { role: string }) {
   const tone =
     role === "owner"
-      ? "border-primary/30 bg-primary/10 text-primary"
+      ? "border-white/25 bg-white/10 text-foreground"
       : role === "admin"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+        ? "border-amber-500/25 bg-amber-500/10 text-amber-400"
         : role === "member"
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-          : "border-border bg-muted text-muted-foreground";
+          ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
+          : "border-border bg-secondary text-muted-foreground";
   return (
-    <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wide", tone)}>
+    <Badge variant="outline" className={cn("rounded-[4px] text-[10px] uppercase tracking-wider", tone)}>
       {role}
     </Badge>
   );

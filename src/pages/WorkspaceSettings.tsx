@@ -75,12 +75,12 @@ export default function WorkspaceSettings() {
           </Link>
         </div>
 
-        <h1 className="font-display text-2xl">Workspace settings</h1>
+        <h1 className="font-display text-2xl tracking-[-0.02em]">Workspace settings</h1>
 
         {/* General */}
         <section className="mt-8">
-          <h2 className="text-sm font-semibold">General</h2>
-          <div className="mt-3 space-y-3 rounded-xl border border-border/70 bg-card p-4">
+          <h2 className="text-sm font-medium">General</h2>
+          <div className="mt-3 space-y-3 rounded-lg border border-border bg-card p-4">
             <div className="space-y-2">
               <Label htmlFor="ws-name">Workspace name</Label>
               <div className="flex gap-2">
@@ -121,11 +121,11 @@ export default function WorkspaceSettings() {
         {/* Ownership transfer */}
         {isOwner && members && members.length > 1 && (
           <section className="mt-8">
-            <h2 className="text-sm font-semibold">Transfer ownership</h2>
+            <h2 className="text-sm font-medium">Transfer ownership</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               The new owner becomes the workspace owner; you become an admin.
             </p>
-            <div className="mt-3 flex gap-2 rounded-xl border border-border/70 bg-card p-4">
+            <div className="mt-3 flex gap-2 rounded-lg border border-border bg-card p-4">
               <Select value={newOwner} onValueChange={setNewOwner}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Choose a member…" />
@@ -181,8 +181,8 @@ export default function WorkspaceSettings() {
         {/* Leave */}
         {!isOwner && (
           <section className="mt-8">
-            <h2 className="text-sm font-semibold">Membership</h2>
-            <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-card p-4">
+            <h2 className="text-sm font-medium">Membership</h2>
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-card p-4">
               <div>
                 <p className="text-sm">Your role</p>
                 <p className="text-xs text-muted-foreground">
@@ -219,9 +219,9 @@ export default function WorkspaceSettings() {
         )}
 
         {/* Isolation note */}
-        <section className="mt-8 rounded-xl border border-border/70 bg-muted/40 p-4">
+        <section className="mt-8 rounded-lg border border-border bg-secondary p-4">
           <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <div className="text-xs leading-5 text-muted-foreground">
               <p className="font-medium text-foreground">Tenant isolation</p>
               <p className="mt-1">

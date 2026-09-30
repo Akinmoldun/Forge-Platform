@@ -43,14 +43,14 @@ export default function InvitePage() {
     <div className="relative flex min-h-screen flex-col bg-background">
       <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_35%,black,transparent)]" />
       <div className="relative flex flex-1 items-center justify-center px-4">
-        <Card className="w-full max-w-md border-border/70 shadow-xl">
+        <Card className="w-full max-w-md border-border shadow-none">
           <CardHeader className="text-center">
             <div className="flex justify-center">
               <Link to="/" aria-label="Forge home">
                 <ForgeLogo className="size-12" />
               </Link>
             </div>
-            <CardTitle className="font-display mt-2">Workspace invitation</CardTitle>
+            <CardTitle className="font-display mt-2 tracking-[-0.02em]">Workspace invitation</CardTitle>
           </CardHeader>
           <CardContent className="pb-2">
             {!token ? (
@@ -71,8 +71,8 @@ export default function InvitePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 p-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary p-3">
+                  <div className="flex size-10 items-center justify-center rounded-md border border-border bg-background text-foreground">
                     <Building2 className="size-5" />
                   </div>
                   <div className="min-w-0">
@@ -86,11 +86,11 @@ export default function InvitePage() {
                   </div>
                 </div>
                 {invitation.acceptedAt ? (
-                  <p className="flex items-center justify-center gap-1.5 text-sm text-emerald-600">
+                  <p className="flex items-center justify-center gap-1.5 text-sm text-emerald-400">
                     <CheckCircle2 className="size-4" /> Already accepted
                   </p>
                 ) : invitation.expiresAt < Date.now() ? (
-                  <p className="flex items-center justify-center gap-1.5 text-sm text-red-600">
+                  <p className="flex items-center justify-center gap-1.5 text-sm text-red-400">
                     <XCircle className="size-4" /> This invitation has expired
                   </p>
                 ) : (

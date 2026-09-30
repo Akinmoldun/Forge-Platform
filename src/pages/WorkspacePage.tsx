@@ -100,11 +100,11 @@ export default function WorkspacePage({ tab }: { tab?: "activity" }) {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="font-display text-2xl">{workspace.workspace.name}</h1>
+              <h1 className="font-display text-2xl tracking-[-0.02em]">{workspace.workspace.name}</h1>
               <RoleBadge role={workspace.role} />
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {workspace.projectCount} projects · {workspace.memberCount} members · /{workspace.workspace.slug}
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {workspace.projectCount} projects · {workspace.memberCount} members · <span className="font-mono">/{workspace.workspace.slug}</span>
             </p>
           </div>
           <div className="flex gap-2">
@@ -182,31 +182,21 @@ export default function WorkspacePage({ tab }: { tab?: "activity" }) {
         {tab !== "activity" ? (
           <>
             {/* Stats */}
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Card className="border-border/70 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Projects</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="font-display text-2xl">{workspace.projectCount}</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border/70 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Members</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="font-display text-2xl">{workspace.memberCount}</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border/70 shadow-none">
-                <CardHeader className="pb-2">
-                  <CardDescription>Your role</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
+              <div className="bg-card p-4">
+                <p className="text-xs text-muted-foreground">Projects</p>
+                <p className="mt-1 font-display text-2xl">{workspace.projectCount}</p>
+              </div>
+              <div className="bg-card p-4">
+                <p className="text-xs text-muted-foreground">Members</p>
+                <p className="mt-1 font-display text-2xl">{workspace.memberCount}</p>
+              </div>
+              <div className="bg-card p-4">
+                <p className="text-xs text-muted-foreground">Your role</p>
+                <div className="mt-2">
                   <RoleBadge role={workspace.role} />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Projects */}
@@ -235,21 +225,21 @@ export default function WorkspacePage({ tab }: { tab?: "activity" }) {
                     <Link
                       key={p._id}
                       to={`/app/projects/${p._id}`}
-                      className="group rounded-xl border border-border/70 bg-card p-5 transition-all hover:border-primary/40 hover:shadow-[0_0_24px_-14px_var(--primary)]"
+                      className="group rounded-lg border border-border bg-card p-5 transition-colors hover:border-white/20 hover:bg-secondary"
                     >
                       <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="font-mono text-[11px]">
+                        <Badge variant="secondary" className="rounded-[4px] font-mono text-[11px]">
                           {p.key}
                         </Badge>
-                        <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                        <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                       </div>
-                      <h3 className="mt-3 font-semibold">{p.name}</h3>
+                      <h3 className="mt-4 font-medium tracking-[-0.01em]">{p.name}</h3>
                       {p.description && (
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
                           {p.description}
                         </p>
                       )}
-                      <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="mt-4 flex items-center gap-4 border-t border-border pt-3 text-xs text-muted-foreground">
                         <span>{p.openIssueCount} open</span>
                         <span>{p.doneIssueCount} done</span>
                         <span className="ml-auto capitalize">{p.status}</span>
@@ -272,8 +262,8 @@ export default function WorkspacePage({ tab }: { tab?: "activity" }) {
                     View all
                   </Link>
                 </div>
-                <Card className="border-border/70 shadow-none">
-                  <CardContent className="divide-y divide-border/60 p-0">
+                <Card className="border-border shadow-none">
+                  <CardContent className="divide-y divide-border p-0">
                     {activity.slice(0, 6).map((e) => (
                       <div key={e._id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                         <ActivityIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -305,11 +295,11 @@ export default function WorkspacePage({ tab }: { tab?: "activity" }) {
                 description="Actions like creating projects, issues, and comments will appear here."
               />
             ) : (
-              <Card className="border-border/70 shadow-none">
-                <CardContent className="divide-y divide-border/60 p-0">
+              <Card className="border-border shadow-none">
+                <CardContent className="divide-y divide-border p-0">
                   {activity.map((e) => (
                     <div key={e._id} className="flex items-center gap-3 px-4 py-3 text-sm">
-                      <span className="flex size-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+                      <span className="flex size-7 items-center justify-center rounded-md border border-border bg-secondary text-[10px] font-medium">
                         {e.actorName.slice(0, 2).toUpperCase()}
                       </span>
                       <span className="truncate">

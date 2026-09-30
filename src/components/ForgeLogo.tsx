@@ -10,12 +10,12 @@ export function ForgeLogo({ className }: { className?: string }) {
       className={cn("shrink-0", className)}
       aria-hidden
     >
-      <rect width="32" height="32" rx="8" className="fill-primary" />
+      <rect width="32" height="32" rx="7" className="fill-foreground" />
       <path
         d="M8 11h16v3.2h-6.4V24h-3.2V14.2H8V11z"
-        className="fill-primary-foreground"
+        className="fill-background"
       />
-      <circle cx="24" cy="9" r="2.4" className="fill-amber-400" />
+      <circle cx="24" cy="9" r="2.4" className="fill-primary" />
     </svg>
   );
 }

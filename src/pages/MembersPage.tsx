@@ -315,8 +315,8 @@ export default function MembersPage() {
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl">Members</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="font-display text-2xl tracking-[-0.02em]">Members</h1>
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Roles control what each person can do. Viewers cannot modify issues.
             </p>
           </div>
@@ -338,7 +338,7 @@ export default function MembersPage() {
                 {summary ? (
                   <div className="space-y-3">
                     {progress.total > 0 && (
-                      <div className="rounded-lg border border-border/60 bg-muted/40 p-3">
+                      <div className="rounded-lg border border-border bg-secondary p-3">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-medium">
                             {sending
@@ -349,9 +349,9 @@ export default function MembersPage() {
                             {progress.failed > 0 && `${progress.failed} failed`}
                           </span>
                         </div>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
                           <div
-                            className="h-full rounded-full bg-primary transition-all"
+                            className="h-full rounded-full bg-foreground transition-all"
                             style={{
                               width: `${progress.total > 0 ? ((progress.sent + progress.failed) / progress.total) * 100 : 0}%`,
                             }}
@@ -360,8 +360,8 @@ export default function MembersPage() {
                       </div>
                     )}
                     {summary.sent.length > 0 && (
-                      <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                        <MailCheck className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                      <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3">
+                        <MailCheck className="mt-0.5 size-4 shrink-0 text-emerald-400" />
                         <div className="min-w-0 text-sm">
                           <p className="font-medium">
                             {summary.sent.length === 1
@@ -375,8 +375,8 @@ export default function MembersPage() {
                       </div>
                     )}
                     {summary.failed.length > 0 && (
-                      <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
-                        <MailWarning className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                      <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                        <MailWarning className="mt-0.5 size-4 shrink-0 text-amber-400" />
                         <div className="min-w-0 text-sm">
                           <p className="font-medium">
                             {summary.failed.length} email
@@ -395,7 +395,7 @@ export default function MembersPage() {
                             )}
                           </ul>
                           {summary.failed[0]?.hint && (
-                            <p className="mt-1.5 text-xs leading-4 text-amber-700 dark:text-amber-400">
+                            <p className="mt-1.5 text-xs leading-4 text-amber-400">
                               {summary.failed[0].hint}
                             </p>
                           )}
@@ -403,7 +403,7 @@ export default function MembersPage() {
                       </div>
                     )}
                     {(summary.alreadyMember.length > 0 || summary.alreadyPending.length > 0 || summary.invalid.length > 0) && (
-                      <div className="rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
+                      <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
                         {summary.alreadyMember.length > 0 && (
                           <p>Skipped, already members: {summary.alreadyMember.join(", ")}</p>
                         )}
@@ -418,7 +418,7 @@ export default function MembersPage() {
                       </div>
                     )}
                     {summary.emailUnavailable && (
-                      <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs">
+                      <div className="rounded-lg border border-border bg-secondary p-3 text-xs">
                         <p className="font-medium text-foreground">
                           Invitations created with in-app links
                         </p>
@@ -526,23 +526,23 @@ export default function MembersPage() {
         {members === undefined ? (
           <ListSkeleton rows={4} />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border/70">
+          <div className="overflow-hidden rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/70 bg-muted/50 text-left text-xs text-muted-foreground">
+                <tr className="border-b border-border bg-secondary/50 text-left text-xs text-muted-foreground">
                   <th className="px-4 py-2.5 font-medium">Member</th>
                   <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Joined</th>
                   <th className="px-4 py-2.5 font-medium">Role</th>
                   {isAdmin && <th className="px-4 py-2.5" />}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60">
+              <tbody className="divide-y divide-border">
                 {members.map((m) => (
                   <tr key={m.membershipId}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
-                          <AvatarFallback className="text-[10px]">
+                          <AvatarFallback className="border border-border bg-secondary text-[10px]">
                             {m.name.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -620,7 +620,7 @@ export default function MembersPage() {
                 {invitations.map((inv) => (
                   <div
                     key={inv._id}
-                    className="flex items-center gap-3 rounded-lg border border-border/60 bg-card px-3 py-2.5"
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5"
                   >
                     <Mail className="size-4 text-muted-foreground" />
                     <span className="truncate text-sm">{inv.email}</span>
@@ -628,7 +628,7 @@ export default function MembersPage() {
                     <div className="ml-auto flex items-center gap-2">
                       {inv.status === "pending" && inv.emailError && (
                         <span
-                          className="flex items-center gap-1 text-[11px] text-amber-600"
+                          className="flex items-center gap-1 text-[11px] text-amber-400"
                           title={inv.emailError}
                         >
                           <MailWarning className="size-3" /> email failed
@@ -640,7 +640,7 @@ export default function MembersPage() {
                         </span>
                       )}
                       {inv.status === "pending" && inv.emailSentAt && (
-                        <span className="flex items-center gap-1 text-[11px] text-emerald-600">
+                        <span className="flex items-center gap-1 text-[11px] text-emerald-400">
                           <MailCheck className="size-3" /> emailed
                         </span>
                       )}
@@ -648,10 +648,10 @@ export default function MembersPage() {
                         variant="outline"
                         className={
                           inv.status === "accepted"
-                            ? "border-emerald-500/40 text-emerald-600"
+                            ? "border-emerald-500/30 text-emerald-400"
                             : inv.status === "expired"
                               ? "border-border text-muted-foreground"
-                              : "border-amber-500/40 text-amber-600"
+                              : "border-amber-500/30 text-amber-400"
                         }
                       >
                         {inv.status}

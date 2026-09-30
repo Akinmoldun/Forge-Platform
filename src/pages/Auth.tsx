@@ -107,18 +107,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   return (
     <div className="relative flex min-h-screen flex-col bg-background">
       <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_35%,black,transparent)]" />
-      <div className="relative flex flex-1 items-center justify-center px-4">
-        <div className="flex h-full flex-col items-center justify-center">
-          <Card className="min-w-[350px] border-border/70 pb-0 shadow-xl">
+      <div className="relative flex flex-1 items-center justify-center px-4 py-12">
+        <div className="flex h-full w-full flex-col items-center justify-center">
+          <Card className="w-full min-w-0 max-w-sm border-border shadow-none sm:min-w-[350px]">
             {step === "signIn" ? (
               <>
                 <CardHeader className="text-center">
                   <div className="flex justify-center">
                     <Link to="/" aria-label="Forge home">
-                      <ForgeLogo className="mb-4 mt-4 size-12" />
+                      <ForgeLogo className="mb-4 mt-4 size-11" />
                     </Link>
                   </div>
-                  <CardTitle className="font-display text-xl">Sign in to Forge</CardTitle>
+                  <CardTitle className="font-display text-xl tracking-[-0.02em]">Sign in to Forge</CardTitle>
                   <CardDescription>
                     Enter your email to log in or create an account
                   </CardDescription>
@@ -150,14 +150,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                         )}
                       </Button>
                     </div>
-                    {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+                    {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
 
                     <div className="mt-4">
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                           <span className="w-full border-t" />
                         </div>
-                        <div className="relative flex justify-center text-xs uppercase">
+                        <div className="relative flex justify-center text-xs uppercase tracking-wider">
                           <span className="bg-card px-2 text-muted-foreground">Or</span>
                         </div>
                       </div>
@@ -210,7 +210,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       </InputOTP>
                     </div>
                     {error && (
-                      <p className="mt-2 text-center text-sm text-red-500">{error}</p>
+                      <p className="mt-2 text-center text-sm text-red-400">{error}</p>
                     )}
                     <p className="mt-4 text-center text-sm text-muted-foreground">
                       Didn't receive a code?{" "}
@@ -255,7 +255,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               </>
             )}
 
-            <div className="rounded-b-lg border-t bg-muted/60 px-6 py-4 text-center text-xs text-muted-foreground">
+            <div className="rounded-b-lg border-t border-border bg-secondary px-6 py-4 text-center text-xs text-muted-foreground">
               <Link to="/" className="flex items-center justify-center gap-1.5 hover:text-foreground">
                 <ForgeLogo className="size-3.5" />
                 <span className="font-medium">Forge</span>

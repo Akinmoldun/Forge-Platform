@@ -67,10 +67,10 @@ export default function AppHome() {
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl">Your workspaces</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl tracking-[-0.02em]">Your workspaces</h1>
+            <p className="mt-1 text-[13px] text-muted-foreground">
               Each workspace is an isolated tenant with its own members, projects, and workflows.
             </p>
           </div>
@@ -115,9 +115,9 @@ export default function AppHome() {
             {myInvitations.map((inv) => (
               <div
                 key={inv.invitationId}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3"
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-3"
               >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-secondary text-foreground">
                   <Mail className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -161,24 +161,24 @@ export default function AppHome() {
                 <button
                   key={w._id}
                   onClick={() => navigate(`/app/workspaces/${w._id}`)}
-                  className="group rounded-xl border border-border/70 bg-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-[0_0_24px_-14px_var(--primary)]"
+                  className="group rounded-lg border border-border bg-card p-5 text-left transition-colors hover:border-white/20 hover:bg-secondary"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex size-10 items-center justify-center rounded-md border border-border bg-secondary text-foreground">
                       <Building2 className="size-5" />
                     </div>
                     <RoleBadge role={w.role} />
                   </div>
-                  <h3 className="mt-3 font-semibold">{w.name}</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">/{w.slug}</p>
-                  <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+                  <h3 className="mt-4 font-medium tracking-[-0.01em]">{w.name}</h3>
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">/{w.slug}</p>
+                  <div className="mt-4 flex items-center gap-4 border-t border-border pt-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <FolderKanban className="size-3.5" /> {w.projectCount} projects
                     </span>
                     <span className="flex items-center gap-1">
                       <Users className="size-3.5" /> {w.memberCount} members
                     </span>
-                    <ArrowRight className="ml-auto size-4 transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="ml-auto size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </button>
               ))}

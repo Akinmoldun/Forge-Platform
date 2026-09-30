@@ -6,11 +6,11 @@ export const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 export type PriorityValue = (typeof PRIORITIES)[number];
 
 const PRIORITY_STYLE: Record<string, string> = {
-  urgent: "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400",
-  high: "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  medium: "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  low: "border-slate-400/40 bg-slate-400/10 text-slate-600 dark:text-slate-300",
-  none: "border-border bg-muted text-muted-foreground",
+  urgent: "border-red-500/30 bg-red-500/10 text-red-400",
+  high: "border-orange-500/30 bg-orange-500/10 text-orange-400",
+  medium: "border-sky-500/30 bg-sky-500/10 text-sky-400",
+  low: "border-white/15 bg-white/5 text-zinc-400",
+  none: "border-border bg-secondary text-muted-foreground",
 };
 
 export function PriorityBadge({ priority }: { priority: string }) {
@@ -25,10 +25,10 @@ export function PriorityBadge({ priority }: { priority: string }) {
 }
 
 const RISK_STYLE: Record<string, string> = {
-  low: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  medium: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  high: "border-orange-600/40 bg-orange-600/10 text-orange-600 dark:text-orange-400",
-  critical: "border-red-600/50 bg-red-600/15 text-red-600 dark:text-red-400",
+  low: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  medium: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+  high: "border-orange-500/30 bg-orange-500/10 text-orange-400",
+  critical: "border-red-500/40 bg-red-500/15 text-red-400",
 };
 
 export function RiskBadge({ level, score }: { level: string; score?: number }) {
@@ -63,15 +63,15 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/80 px-6 py-14 text-center">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-14 text-center">
       {icon && (
-        <div className="mb-3 flex size-11 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground">
           {icon}
         </div>
       )}
-      <p className="text-sm font-semibold">{title}</p>
+      <p className="text-sm font-medium">{title}</p>
       {description && (
-        <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">{description}</p>
+        <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>
