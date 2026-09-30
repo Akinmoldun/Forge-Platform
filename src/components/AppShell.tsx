@@ -147,7 +147,7 @@ export function AppShell({
                   className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Account menu"
                 >
-                  <Avatar className="size-6.5">
+                  <Avatar className="size-7">
                     <AvatarFallback className="border border-border bg-secondary text-[10px] font-medium text-foreground">
                       {(user?.name ?? user?.email ?? "?").slice(0, 2).toUpperCase()}
                     </AvatarFallback>
@@ -199,7 +199,7 @@ export function RoleBadge({ role }: { role: string }) {
           ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
           : "border-border bg-secondary text-muted-foreground";
   return (
-    <Badge variant="outline" className={cn("rounded-[4px] text-[10px] uppercase tracking-wider", tone)}>
+    <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wider", tone)}>
       {role}
     </Badge>
   );

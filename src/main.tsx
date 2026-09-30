@@ -113,7 +113,7 @@ class RouteErrorBoundary extends React.Component<
     if (this.state.error) {
       return (
         <main className="flex min-h-screen items-center justify-center bg-background p-6">
-          <div className="w-full max-w-lg rounded-xl border border-destructive/40 bg-card p-6">
+          <div className="w-full max-w-lg rounded-lg border border-destructive/40 bg-card p-6">
             <p className="text-sm font-semibold text-destructive">
               This page failed to render
             </p>
