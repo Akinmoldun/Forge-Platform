@@ -10,19 +10,21 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
-// Lazy load route components for better code splitting
-const Landing = lazy(() => import("./pages/Landing.tsx"));
-const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const AppHome = lazy(() => import("./pages/AppHome.tsx"));
-const WorkspacePage = lazy(() => import("./pages/WorkspacePage.tsx"));
-const ProjectPage = lazy(() => import("./pages/ProjectPage.tsx"));
-const IssuePage = lazy(() => import("./pages/IssuePage.tsx"));
-const ProjectSettings = lazy(() => import("./pages/ProjectSettings.tsx"));
-const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings.tsx"));
-const MembersPage = lazy(() => import("./pages/MembersPage.tsx"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage.tsx"));
-const InvitePage = lazy(() => import("./pages/InvitePage.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+// Lazy load route components for better code splitting. Relative,
+// extensionless paths — Vite compiles these into hashed /assets/*.js chunks;
+// the raw /src/*.tsx URLs never exist in a production build.
+const Landing = lazy(() => import("./pages/Landing"));
+const AuthPage = lazy(() => import("./pages/Auth"));
+const AppHome = lazy(() => import("./pages/AppHome"));
+const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
+const ProjectPage = lazy(() => import("./pages/ProjectPage"));
+const IssuePage = lazy(() => import("./pages/IssuePage"));
+const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
+const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings"));
+const MembersPage = lazy(() => import("./pages/MembersPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
