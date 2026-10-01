@@ -360,7 +360,7 @@ function HomePage() {
           <BoardWindow />
         </div>
       </section>
-      <div className="fm-container fm-quote"><blockquote>“A good workflow makes the next step obvious — and the last change easy to find.”</blockquote><cite>Forge · Built around the life of an issue</cite></div>
+      <div className="fm-container fm-quote"><blockquote>“A good workflow makes the next step obvious, and the last change easy to find.”</blockquote><cite>Forge · Built around the life of an issue</cite></div>
       <ClosingCTA title="Move the work forward, together." />
     </>
   );
@@ -379,7 +379,7 @@ function WorkflowsPage() {
       <section className="fm-section fm-section-pad">
         <div className="fm-container fm-split">
           <div>
-            <div className="fm-kicker">01 — Define the path</div>
+            <div className="fm-kicker">01 · Define the path</div>
             <h2 className="fm-heading-sm">Your project. Its own vocabulary.</h2>
             <p className="fm-body" style={{ marginTop: 16 }}>Order the statuses that reflect how the team works: Backlog, In progress, Review, Done, or another sequence that fits the project. Statuses are not a one-size-fits-all workspace setting.</p>
             <div className="fm-list">
@@ -393,7 +393,7 @@ function WorkflowsPage() {
         <div className="fm-container fm-split fm-split-reverse">
           <TransitionWindow />
           <div>
-            <div className="fm-kicker">02 — Enforce the rules</div>
+            <div className="fm-kicker">02 · Enforce the rules</div>
             <h2 className="fm-heading-sm">The API is where a rule counts.</h2>
             <p className="fm-body" style={{ marginTop: 16 }}>Rules are checked on every transition. Require an assignee, ask for a comment, or keep an issue from closing until unresolved blockers are cleared. A rejected transition explains what needs attention.</p>
             <div className="fm-list">
@@ -403,8 +403,7 @@ function WorkflowsPage() {
         </div>
       </section>
       <section className="fm-section fm-section-pad">
-        <div className="fm-container">
-          <SectionHeading label="03 — Keep the loop moving" title="What happens after a transition." body="Automation rules run after status changes, and each accepted change is recorded in the activity history." />
+        <div className="fm-container">          <SectionHeading label="03 · Keep the loop moving" title="What happens after a transition." body="Automation rules run after status changes, and each accepted change is recorded in the activity history." />
           <div className="fm-governance">
             {[
               { icon: Bell, title: "Notify the assignee", text: "A transition rule can send the assignee a notification when an issue enters a chosen status." },
@@ -428,7 +427,7 @@ function AnalyticsPage() {
         <div className="fm-container fm-analytics-hero">
           <div className="fm-eyebrow">Engineering analytics</div>
           <h1 className="fm-heading" style={{ marginTop: 18 }}>See the shape of the work.</h1>
-          <p className="fm-body">Use project history to understand flow, workload, and risk—with definitions your team can inspect.</p>
+          <p className="fm-body">Use project history to understand flow, workload, and risk, with definitions your team can inspect.</p>
           <div className="fm-hero-actions"><ButtonLink to="/app">Open the workspace <ArrowUpRight size={12} /></ButtonLink><ButtonLink to="/auth" quiet>Get started</ButtonLink></div>
         </div>
       </section>

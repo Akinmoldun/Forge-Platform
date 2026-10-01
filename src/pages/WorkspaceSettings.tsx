@@ -89,6 +89,18 @@ export default function WorkspaceSettings() {
                   value={nameValue}
                   onChange={(e) => setName(e.target.value)}
                   disabled={!isOwner}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      isOwner &&
+                      nameValue.trim().length >= 2 &&
+                      nameValue !== workspace.workspace.name
+                    ) {
+                      renameWorkspace({ workspaceId: workspaceId as never, name: nameValue })
+                        .then(() => toast.success("Workspace renamed"))
+                        .catch((e) => toast.error(e.message));
+                    }
+                  }}
                 />
                 <Button
                   disabled={

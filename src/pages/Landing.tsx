@@ -19,11 +19,20 @@ const fadeUp = {
   transition: { duration: 0.5 },
 };
 
+/** Smooth-scrolls to in-page anchors with an offset for the fixed header. */
+function scrollToAnchor(hash: string) {
+  const el = document.querySelector(hash);
+  if (!el) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const top = el.getBoundingClientRect().top + window.scrollY - 64;
+  window.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
+}
+
 const FEATURES = [
   {
     icon: Workflow,
     title: "Custom workflow engine",
-    text: "Model your real process — statuses, transitions, required assignees, required comments. Invalid moves are rejected at the API, not just hidden in the UI.",
+    text: "Model your real process: statuses, transitions, required assignees, required comments. Invalid moves are rejected at the API, not just hidden in the UI.",
   },
   {
     icon: GitBranch,
@@ -48,7 +57,7 @@ const FEATURES = [
   {
     icon: Gauge,
     title: "Engineering analytics",
-    text: "Cycle time, throughput, review wait, and workload per member — computed from your actual history with documented definitions.",
+    text: "Cycle time, throughput, review wait, and workload per member, computed from your actual history with documented definitions.",
   },
 ];
 
@@ -86,9 +95,9 @@ export default function Landing() {
             <span className="text-[14px] font-semibold tracking-tight">Forge</span>
           </Link>
           <nav className="ml-8 hidden items-center gap-6 text-[13px] text-muted-foreground md:flex">
-            <a href="#features" className="transition-colors hover:text-foreground">Features</a>
-            <a href="#workflow" className="transition-colors hover:text-foreground">Workflow engine</a>
-            <a href="#risk" className="transition-colors hover:text-foreground">Risk engine</a>
+            <a href="#features" className="transition-colors hover:text-foreground" onClick={(e) => { e.preventDefault(); scrollToAnchor("#features"); }}>Features</a>
+            <a href="#workflow" className="transition-colors hover:text-foreground" onClick={(e) => { e.preventDefault(); scrollToAnchor("#workflow"); }}>Workflow engine</a>
+            <a href="#risk" className="transition-colors hover:text-foreground" onClick={(e) => { e.preventDefault(); scrollToAnchor("#risk"); }}>Risk engine</a>
           </nav>
           <div className="ml-auto flex items-center gap-1.5">
             {!isLoading && isAuthenticated ? (
@@ -109,7 +118,7 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero — split editorial layout */}
+      {/* Hero, split editorial layout */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)]" />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-16 sm:px-6 sm:pb-20 sm:pt-24 lg:grid-cols-[1fr_320px] lg:items-end lg:gap-16">
@@ -133,7 +142,7 @@ export default function Landing() {
                 <Link to="/auth">Start your workspace</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <a href="#features">See what's inside</a>
+                <a href="#features" onClick={(e) => { e.preventDefault(); scrollToAnchor("#features"); }}>See what's inside</a>
               </Button>
             </motion.div>
           </div>
@@ -143,7 +152,7 @@ export default function Landing() {
             className="max-w-sm text-[13px] leading-6 text-muted-foreground lg:justify-self-end"
           >
             Forge combines projects, custom workflows, issue dependencies, and
-            engineering analytics into one workspace — so status meetings get
+            engineering analytics into one workspace, so status meetings get
             shorter and blocked work gets visible before it becomes a fire.
           </motion.p>
         </div>
@@ -164,8 +173,9 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features — numbered hairline grid */}
-      <section id="features" className="border-b border-border">
+      {/* Features, numbered hairline grid */}
+      {/* Anchor sections carry scroll-margin so the fixed header never covers them */}
+      <section id="features" className="scroll-mt-16 border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <motion.div {...fadeUp} className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
@@ -202,8 +212,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Workflow engine — split with code mock */}
-      <section id="workflow" className="border-b border-border">
+      {/* Workflow engine, split with code mock */}
+      <section id="workflow" className="scroll-mt-16 border-b border-border">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:gap-16">
           <motion.div {...fadeUp}>
             <p className="eyebrow">Workflow engine</p>
@@ -267,8 +277,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Risk engine — split with card mock */}
-      <section id="risk" className="border-b border-border">
+      {/* Risk engine, split with card mock */}
+      <section id="risk" className="scroll-mt-16 border-b border-border">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:gap-16">
           <motion.div {...fadeUp} className="order-last lg:order-first">
             <div className="rounded-lg border border-border bg-card p-5">
@@ -303,7 +313,7 @@ export default function Landing() {
           <motion.div {...fadeUp}>
             <p className="eyebrow">Explainable risk scoring</p>
             <h2 className="font-display mt-3 max-w-md text-3xl tracking-[-0.02em] sm:text-4xl">
-              Know why a project is at risk — not just that it is
+              Know why a project is at risk, not just that it is
             </h2>
             <p className="mt-4 max-w-md text-[13px] leading-6 text-muted-foreground">
               Forge computes a transparent, rule-based score from blocked and
@@ -315,7 +325,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Product visual — board window */}
+      {/* Product visual, board window */}
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <motion.div {...fadeUp} className="mb-10 flex flex-wrap items-end justify-between gap-4">
@@ -415,7 +425,7 @@ export default function Landing() {
           </div>
           <p>Multi-tenant engineering workflow platform.</p>
           <div className="flex items-center gap-5">
-            <a href="#features" className="transition-colors hover:text-foreground">Features</a>
+            <a href="#features" className="transition-colors hover:text-foreground" onClick={(e) => { e.preventDefault(); scrollToAnchor("#features"); }}>Features</a>
             <Link to="/auth" className="transition-colors hover:text-foreground">Sign in</Link>
           </div>
         </div>

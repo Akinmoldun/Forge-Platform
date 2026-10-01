@@ -31,6 +31,7 @@ import {
   EmptyState,
   ListSkeleton,
 } from "@/components/forge";
+import { ConfirmAction } from "@/components/ConfirmAction";
 import {
   ArrowLeft,
   Workflow,
@@ -241,8 +242,8 @@ export default function ProjectSettings() {
                         ))}
                       </div>
                     </div>
-                      )
-                    })}
+                  );
+                })}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
                 Rules are seeded automatically: Review/Done require an assignee; Done requires approval. Blocker validation always applies when completing an issue.
@@ -387,14 +388,26 @@ export default function ProjectSettings() {
                         toggleRule({ ruleId: r._id, isEnabled: c }).catch((e) => toast.error(e.message))
                       }
                     />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteRule({ ruleId: r._id }).catch((e) => toast.error(e.message))}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <ConfirmAction
+                      title={`Delete rule "${r.name}"?`}
+                      description="The rule stops running immediately. Existing issues are not affected."
+                      confirmLabel="Delete rule"
+                      onConfirm={() =>
+                        deleteRule({ ruleId: r._id })
+                          .then(() => toast.success("Rule deleted"))
+                          .catch((e) => toast.error(e.message))
+                      }
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete rule ${r.name}`}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      }
+                    />
                   </div>
                 ))}
               </div>
@@ -408,11 +421,11 @@ export default function ProjectSettings() {
               <p className="mt-1 text-xs text-muted-foreground">
                 Archives the project and all its issues. Activity history is preserved; nothing is permanently deleted.
               </p>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="mt-3"
-                onClick={() =>
+              <ConfirmAction
+                title="Archive this project?"
+                description="The project and all its issues are archived. Activity history is preserved; nothing is permanently deleted."
+                confirmLabel="Archive project"
+                onConfirm={() =>
                   archiveProject({ projectId: projectId as never, status: "archived" })
                     .then(() => {
                       toast.success("Project archived");
@@ -420,9 +433,12 @@ export default function ProjectSettings() {
                     })
                     .catch((e) => toast.error(e.message))
                 }
-              >
-                Archive project
-              </Button>
+                trigger={
+                  <Button variant="destructive" size="sm" className="mt-3">
+                    Archive project
+                  </Button>
+                }
+              />
             </div>
           </TabsContent>
         </Tabs>

@@ -16,6 +16,21 @@ import { useNavigate, Link, useLocation } from "react-router";
 import { Check, ChevronsUpDown, LogOut, Plus, Bell, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
+import { FadeIn } from "./motion";
+
+/** Restore scroll to the top on route change so new pages never open mid-scroll. */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  const reduce =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  }, [pathname, reduce]);
+  return null;
+}
+
+import { useEffect } from "react";
 
 export function AppShell({
   children,
@@ -35,6 +50,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <ScrollToTop />
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex h-12 w-full max-w-7xl items-center gap-2 px-4 sm:px-6">
           <Link to="/app" className="flex items-center gap-2 pr-1">
@@ -77,50 +93,25 @@ export function AppShell({
           <nav className="ml-1 hidden items-center gap-0.5 md:flex">
             {workspaceId && (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className={cn(
-                    "h-7 px-2.5 text-[13px] text-muted-foreground",
-                    location.pathname === `/app/workspaces/${workspaceId}` && "bg-secondary text-foreground",
-                  )}
-                >
-                  <Link to={`/app/workspaces/${workspaceId}`}>Overview</Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className={cn(
-                    "h-7 px-2.5 text-[13px] text-muted-foreground",
-                    location.pathname === `/app/workspaces/${workspaceId}/activity` && "bg-secondary text-foreground",
-                  )}
-                >
-                  <Link to={`/app/workspaces/${workspaceId}/activity`}>Activity</Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className={cn(
-                    "h-7 px-2.5 text-[13px] text-muted-foreground",
-                    location.pathname === `/app/workspaces/${workspaceId}/members` && "bg-secondary text-foreground",
-                  )}
-                >
-                  <Link to={`/app/workspaces/${workspaceId}/members`}>Members</Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className={cn(
-                    "h-7 px-2.5 text-[13px] text-muted-foreground",
-                    location.pathname === `/app/workspaces/${workspaceId}/settings` && "bg-secondary text-foreground",
-                  )}
-                >
-                  <Link to={`/app/workspaces/${workspaceId}/settings`}>Settings</Link>
-                </Button>
+                {([
+                  ["Overview", `/app/workspaces/${workspaceId}`],
+                  ["Activity", `/app/workspaces/${workspaceId}/activity`],
+                  ["Members", `/app/workspaces/${workspaceId}/members`],
+                  ["Settings", `/app/workspaces/${workspaceId}/settings`],
+                ] as const).map(([label, to]) => (
+                  <Button
+                    key={to}
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className={cn(
+                      "h-7 px-2.5 text-[13px] text-muted-foreground transition-colors",
+                      location.pathname === to && "bg-secondary text-foreground",
+                    )}
+                  >
+                    <Link to={to}>{label}</Link>
+                  </Button>
+                ))}
               </>
             )}
           </nav>
@@ -135,7 +126,7 @@ export function AppShell({
             >
               <Bell className="size-4" />
               {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 animate-in fade-in zoom-in items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
                   {unread > 9 ? "9+" : unread}
                 </span>
               )}
@@ -183,7 +174,9 @@ export function AppShell({
       </header>
 
       <main className="flex-1">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>
+        <FadeIn key={location.pathname} className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-6 sm:pb-20 sm:pt-8">
+          {children}
+        </FadeIn>
       </main>
     </div>
   );

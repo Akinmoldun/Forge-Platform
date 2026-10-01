@@ -1,6 +1,9 @@
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RotateCcw, TriangleAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 export type PriorityValue = (typeof PRIORITIES)[number];
@@ -63,7 +66,12 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-14 text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.2, 0.7, 0.2, 1] }}
+      className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-14 text-center"
+    >
       {icon && (
         <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground">
           {icon}
@@ -74,6 +82,34 @@ export function EmptyState({
         <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
+    </motion.div>
+  );
+}
+
+/** Full-page error card with retry. Used when a query fails outright. */
+export function ErrorState({
+  title = "Something went wrong",
+  description,
+  onRetry,
+}: {
+  title?: string;
+  description?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
+      <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
+        <TriangleAlert className="size-5" />
+      </div>
+      <p className="text-sm font-medium">{title}</p>
+      {description && (
+        <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
+      )}
+      {onRetry && (
+        <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+          <RotateCcw className="size-3.5" /> Try again
+        </Button>
+      )}
     </div>
   );
 }
@@ -111,7 +147,7 @@ export function formatDate(ts: number | undefined | null): string {
 }
 
 export function formatDuration(days: number | null): string {
-  if (days === null) return "—";
+  if (days === null) return "No data";
   if (days < 1) return `${Math.round(days * 24)}h`;
   if (days < 30) return `${days.toFixed(1)}d`;
   return `${Math.round(days / 30)}mo`;

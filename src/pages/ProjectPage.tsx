@@ -46,6 +46,7 @@ import {
   eventText,
   PRIORITIES,
 } from "@/components/forge";
+import { AnimatedNumber, FadeIn, MotionBar, ProgressRing, Stagger, StaggerItem } from "@/components/motion";
 import {
   Plus,
   Search,
@@ -55,6 +56,7 @@ import {
   TrendingUp,
   ArrowUpDown,
   Activity as ActivityIcon,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -120,9 +122,12 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>("medium");
   const [assignee, setAssignee] = useState<string>("none");
+  const [creating, setCreating] = useState(false);
   const createIssue = useMutation(api.issues.createIssue);
 
   const handleCreateIssue = async () => {
+    if (title.trim().length < 3) return;
+    setCreating(true);
     try {
       await createIssue({
         projectId: projectId as never,
@@ -137,6 +142,8 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
       toast.success("Issue created");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create issue");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -274,7 +281,11 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
                     <Button variant="outline" onClick={() => setCreateOpen(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleCreateIssue} disabled={title.trim().length < 3}>
+                    <Button
+                      onClick={handleCreateIssue}
+                      disabled={title.trim().length < 3 || creating}
+                    >
+                      {creating && <Loader2 className="animate-spin" />}
                       Create issue
                     </Button>
                   </DialogFooter>
@@ -359,7 +370,12 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
 
 // ---------------------------------------------------------------------------
 // Analytics tab
-// ---------------------------------------------------------------------------
+const RISK_TONE: Record<string, string> = {
+  low: "text-emerald-400",
+  medium: "text-amber-400",
+  high: "text-orange-400",
+  critical: "text-red-400",
+};
 
 function AnalyticsTab({
   summary,
@@ -406,84 +422,132 @@ function AnalyticsTab({
       />
     );
   }
+
   const maxThroughput = Math.max(1, ...summary.throughput.map((t) => t.count));
+  const completionPct = summary.total > 0 ? Math.round((summary.completedCount / summary.total) * 100) : 0;
+  const overduePct = summary.openCount > 0 ? Math.round((summary.overdueCount / summary.openCount) * 100) : 0;
+  const riskMax = Math.max(1, ...(risk?.factors.map((f) => f.points) ?? [1]));
+
   return (
-    <div className="space-y-6">
-      {/* Metric cards */}
-      <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+    <FadeIn className="space-y-6">
+      {/* Metric cards: aligned hairline grid, animated counters, percentage bars */}
+      <Stagger className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Open issues", value: summary.openCount, sub: `${summary.unassignedCount} unassigned` },
-          { label: "Completed", value: summary.completedCount, sub: `${summary.completedThisWeek} this week` },
-          {
-            label: "Avg cycle time",
-            value: formatDuration(summary.avgCycleDays),
-            sub: `median ${formatDuration(summary.medianCycleDays)}`,
-          },
-          { label: "Overdue", value: summary.overdueCount, sub: "open issues past due" },
+          { label: "Open issues", count: summary.openCount, sub: `${summary.unassignedCount} unassigned`, pct: null },
+          { label: "Completed", count: summary.completedCount, sub: `${completionPct}% of all issues`, pct: completionPct },
+          { label: "Overdue", count: summary.overdueCount, sub: `${overduePct}% of open work`, pct: overduePct },
+          { label: "Avg cycle time", count: null, sub: `median ${formatDuration(summary.medianCycleDays)}`, pct: null, duration: formatDuration(summary.avgCycleDays) },
         ].map((m) => (
-          <div key={m.label} className="bg-card p-4">
+          <StaggerItem key={m.label} className="bg-card p-4">
             <p className="text-xs text-muted-foreground">{m.label}</p>
-            <p className="mt-1 font-display text-2xl">{m.value}</p>
+            {m.duration !== undefined ? (
+              <p className="mt-1 font-display text-2xl">{m.duration}</p>
+            ) : (
+              <p className="mt-1 font-display text-2xl">
+                <AnimatedNumber value={m.count ?? 0} />
+              </p>
+            )}
             <p className="mt-0.5 text-[11px] text-muted-foreground">{m.sub}</p>
-          </div>
+            {m.pct !== null && <MotionBar pct={m.pct} className="mt-2.5 h-1" barClassName="bg-foreground/50" />}
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Throughput */}
+        {/* Throughput: bars grow from the baseline, real count above each bar */}
         <Card className="border-border shadow-none">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
             <CardTitle className="text-sm">Throughput</CardTitle>
             <CardDescription className="text-xs">
-              Issues completed per week (last 8 weeks)
+              Issues completed per week, last 8 weeks. {summary.completedThisWeek} this week.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex h-32 items-end gap-2">
-              {summary.throughput.map((t) => (
-                <div key={t.label} className="flex flex-1 flex-col items-center gap-1">
+            <div className="flex h-40 items-end gap-2">
+              {summary.throughput.map((t, i) => (
+                <div key={t.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+                  <span className={`text-[10px] font-medium tabular-nums transition-opacity ${t.count > 0 ? "opacity-100" : "opacity-0"}`}>
+                    {t.count}
+                  </span>
                   <motion.div
                     initial={{ height: 0 }}
-                    animate={{ height: `${(t.count / maxThroughput) * 100}%` }}
-                    transition={{ duration: 0.5 }}
-                    className="w-full max-w-8 rounded-t bg-foreground/80"
-                    style={{ minHeight: t.count > 0 ? 4 : 2 }}
+                    animate={{ height: `${Math.max(3, (t.count / maxThroughput) * 100)}%` }}
+                    transition={{ duration: 0.55, delay: i * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
+                    className={`w-full max-w-8 rounded-t ${t.count > 0 ? "bg-foreground/80" : "bg-foreground/20"}`}
                   />
                   <span className="text-[9px] text-muted-foreground">{t.label}</span>
-                  <span className="text-[10px] font-medium">{t.count}</span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Workload */}
+        {/* Completion: ring animates to the real percentage */}
         <Card className="border-border shadow-none">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Completion</CardTitle>
+            <CardDescription className="text-xs">Share of all issues that are done</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-6 sm:flex-row">
+            <ProgressRing value={completionPct} size={92} stroke={7}>
+              <div className="text-center">
+                <p className="font-display text-lg leading-none">{completionPct}%</p>
+                <p className="text-[9px] text-muted-foreground">done</p>
+              </div>
+            </ProgressRing>
+            <div className="w-full min-w-0 flex-1 space-y-3">
+              <div>
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-muted-foreground">Avg cycle time</span>
+                  <span className="font-medium tabular-nums">{formatDuration(summary.avgCycleDays)}</span>
+                </div>
+                <MotionBar pct={Math.min(100, (summary.avgCycleDays ?? 0) * 10)} className="mt-1.5 h-1" barClassName="bg-foreground/50" />
+              </div>
+              <div>
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-muted-foreground">Median cycle time</span>
+                  <span className="font-medium tabular-nums">{formatDuration(summary.medianCycleDays)}</span>
+                </div>
+                <MotionBar pct={Math.min(100, (summary.medianCycleDays ?? 0) * 10)} className="mt-1.5 h-1" barClassName="bg-foreground/50" />
+              </div>
+              <div>
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-muted-foreground">Review wait</span>
+                  <span className="font-medium tabular-nums">{formatDuration(summary.avgReviewWaitDays)}</span>
+                </div>
+                <MotionBar pct={Math.min(100, (summary.avgReviewWaitDays ?? 0) * 10)} className="mt-1.5 h-1" barClassName="bg-foreground/50" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Workload: bars relative to the busiest member */}
+        <Card className="border-border shadow-none">
+          <CardHeader className="pb-3">
             <CardTitle className="text-sm">Workload by member</CardTitle>
             <CardDescription className="text-xs">Open issues per assignee</CardDescription>
           </CardHeader>
           <CardContent>
             {summary.workload.length === 0 ? (
-              <p className="py-4 text-center text-xs text-muted-foreground">
+              <p className="py-6 text-center text-xs text-muted-foreground">
                 No assigned open issues.
               </p>
             ) : (
-              <div className="space-y-2.5">
-                {summary.workload.map((w) => (
-                  <div key={w.userId} className="flex items-center gap-3">
-                    <span className="w-28 truncate text-xs font-medium">{w.name}</span>
-                    <div className="h-1 flex-1 rounded-full bg-secondary">
-                      <div
-                        className="h-full rounded-full bg-foreground/70"
-                        style={{
-                          width: `${Math.min(100, (w.openIssues / Math.max(1, summary.workload[0].openIssues)) * 100)}%`,
-                        }}
-                      />
+              <div className="space-y-3">
+                {summary.workload.map((w, i) => (
+                  <div key={w.userId}>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="min-w-0 truncate font-medium">{w.name}</span>
+                      <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                        {w.openIssues} open{w.overdue > 0 ? ` · ${w.overdue} late` : ""}
+                      </span>
                     </div>
-                    <span className="w-14 text-right text-xs text-muted-foreground">
-                      {w.openIssues} open{w.overdue > 0 ? ` · ${w.overdue} late` : ""}
-                    </span>
+                    <MotionBar
+                      pct={(w.openIssues / Math.max(1, summary.workload[0].openIssues)) * 100}
+                      className="mt-1.5 h-1"
+                      barClassName="bg-foreground/60"
+                      delay={i * 0.05}
+                    />
                   </div>
                 ))}
               </div>
@@ -491,62 +555,103 @@ function AnalyticsTab({
           </CardContent>
         </Card>
 
-        {/* Risk breakdown */}
-        {risk && risk.factors.length > 0 && (
+        {/* Risk breakdown with weighted bars */}
+        {risk && (
           <Card className="border-border shadow-none">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">Why {risk.level} risk?</CardTitle>
                 <RiskBadge level={risk.level} score={risk.score} />
               </div>
               <CardDescription className="text-xs">
-                Transparent rule-based score — each factor and its weight
+                Rule-based score. Each factor and its weight is shown.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {risk.factors.map((f) => (
-                  <div key={f.label}>
-                    <div className="flex items-baseline justify-between text-xs">
-                      <span className="font-medium">{f.label}</span>
-                      <span className="text-muted-foreground">+{f.points} pts</span>
+              {risk.factors.length === 0 ? (
+                <p className={`py-4 text-center text-xs ${RISK_TONE[risk.level] ?? "text-muted-foreground"}`}>
+                  No risk factors detected. The project is healthy.
+                </p>
+              ) : (
+                <div className="space-y-3.5">
+                  {risk.factors.map((f, i) => (
+                    <div key={f.label}>
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="font-medium">{f.label}</span>
+                        <span className="tabular-nums text-muted-foreground">+{f.points} pts</span>
+                      </div>
+                      <MotionBar
+                        pct={(f.points / riskMax) * 100}
+                        className="mt-1.5 h-1"
+                        barClassName={risk.level === "low" ? "bg-emerald-400/60" : "bg-foreground/60"}
+                        delay={i * 0.05}
+                      />
+                      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{f.detail}</p>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">{f.detail}</p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* By status */}
-        <Card className="border-border shadow-none">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Issues by status</CardTitle>
+        {/* Status + priority distribution: full-width, real percentages */}
+        <Card className="border-border shadow-none lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Issues by status and priority</CardTitle>
+            <CardDescription className="text-xs">Distribution across the project workflow</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {summary.byStatus.map((s) => (
-                <div key={s.statusName} className="flex items-center gap-3">
-                  <StatusDot color={s.color} />
-                  <span className="w-32 truncate text-xs">{s.statusName}</span>
-                  <div className="h-1.5 flex-1 rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${(s.count / Math.max(1, summary.total)) * 100}%`,
-                        backgroundColor: s.color,
-                      }}
-                    />
+          <CardContent className="grid gap-8 lg:grid-cols-2">
+            <div className="space-y-2.5">
+              {summary.byStatus.map((s, i) => (
+                <div key={s.statusName}>
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <StatusDot color={s.color} />
+                      <span className="truncate">{s.statusName}</span>
+                    </span>
+                    <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                      {s.count} · {summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0}%
+                    </span>
                   </div>
-                  <span className="w-6 text-right text-xs font-medium">{s.count}</span>
+                  <MotionBar
+                    pct={summary.total > 0 ? (s.count / summary.total) * 100 : 0}
+                    className="mt-1.5 h-1"
+                    barStyle={{ backgroundColor: s.color }}
+                    delay={i * 0.04}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2.5">
+              {summary.byPriority.map((p, i) => (
+                <div key={p.priority}>
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="capitalize">{p.priority}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {p.count} · {summary.openCount > 0 ? Math.round((p.count / summary.openCount) * 100) : 0}%
+                    </span>
+                  </div>
+                  <MotionBar
+                    pct={summary.openCount > 0 ? (p.count / summary.openCount) * 100 : 0}
+                    className="mt-1.5 h-1"
+                    barStyle={{
+                      backgroundColor:
+                        p.priority === "urgent" ? "#f06a6a"
+                        : p.priority === "high" ? "#e6a23c"
+                        : p.priority === "medium" ? "#4f8ff7"
+                        : p.priority === "low" ? "#8b8b93"
+                        : "#3a3a42",
+                    }}
+                    delay={i * 0.04}
+                  />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </FadeIn>
   );
 }
 
@@ -590,7 +695,7 @@ function ActivityTab({
             <span className="truncate">
               <span className="font-medium">{e.actorName}</span>{" "}
               <span className="text-muted-foreground">{eventText(e.eventType)}</span>
-              {e.payload?.title ? ` — ${String(e.payload.title)}` : ""}
+              {e.payload?.title ? ` (${String(e.payload.title)})` : ""}
             </span>
             <span className="ml-auto shrink-0 text-xs text-muted-foreground">
               {timeAgo(e.createdAt)}
@@ -648,7 +753,7 @@ function BoardView({
               <button
                 key={i._id}
                 onClick={() => onIssueClick(i._id)}
-                className="w-full rounded-md border border-border bg-card p-2.5 text-left transition-colors hover:border-white/20 hover:bg-secondary"
+                className="w-full rounded-md border border-border bg-card p-2.5 text-left transition-all duration-150 hover:-translate-y-px hover:border-white/20 hover:bg-secondary active:translate-y-0"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold text-muted-foreground">
@@ -739,7 +844,9 @@ function ListView({
             <tr
               key={i._id}
               onClick={() => onIssueClick(i._id)}
-              className="cursor-pointer transition-colors hover:bg-secondary/60"
+              tabIndex={0}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onIssueClick(i._id)}
+              className="cursor-pointer transition-colors hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none"
             >
               <td className="px-4 py-2.5">
                 <span className="text-xs font-semibold text-muted-foreground">
@@ -758,7 +865,7 @@ function ListView({
                 <PriorityBadge priority={i.priority} />
               </td>
               <td className="hidden px-4 py-2.5 text-xs text-muted-foreground md:table-cell">
-                {i.assigneeId ? memberName(i.assigneeId) ?? "—" : "Unassigned"}
+                {i.assigneeId ? memberName(i.assigneeId) ?? "Unknown" : "Unassigned"}
               </td>
               <td className="px-4 py-2.5 text-right text-xs text-muted-foreground">
                 {formatDate(i.updatedAt)}

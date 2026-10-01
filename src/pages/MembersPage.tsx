@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListSkeleton, formatDate } from "@/components/forge";
+import { ConfirmAction } from "@/components/ConfirmAction";
 import {
   ArrowLeft,
   Copy,
@@ -108,7 +109,7 @@ export default function MembersPage() {
         return {
           ok: false,
           reason: "Email availability check timed out.",
-          hint: "Invitations still work — share the links below.",
+          hint: "Invitations still work. Share the links below.",
         };
       }
       if (status.ready) return { ok: true };
@@ -121,7 +122,7 @@ export default function MembersPage() {
       return {
         ok: false,
         reason: "Email availability could not be determined.",
-        hint: "Invitations still work — share the links below.",
+        hint: "Invitations still work. Share the links below.",
       };
     }
   };
@@ -385,7 +386,7 @@ export default function MembersPage() {
                           <ul className="mt-1 space-y-0.5">
                             {summary.failed.slice(0, 5).map((f) => (
                               <li key={f.email} className="truncate text-xs text-muted-foreground">
-                                {f.email} — {f.error ?? "unknown error"}
+                                {f.email}: {f.error ?? "unknown error"}
                               </li>
                             ))}
                             {summary.failed.length > 5 && (
@@ -423,7 +424,7 @@ export default function MembersPage() {
                           Invitations created with in-app links
                         </p>
                         <p className="mt-0.5 text-muted-foreground">
-                          {summary.emailUnavailable} — share each link below with its
+                          {summary.emailUnavailable} Share each link below with its
                           recipient. Links are single-use and expire in 7 days.
                         </p>
                       </div>
@@ -493,9 +494,9 @@ export default function MembersPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Admin — manage projects & members</SelectItem>
-                            <SelectItem value="member">Member — create & update issues</SelectItem>
-                            <SelectItem value="viewer">Viewer — read-only</SelectItem>
+                            <SelectItem value="admin">Admin: manage projects & members</SelectItem>
+                            <SelectItem value="member">Member: create & update issues</SelectItem>
+                            <SelectItem value="viewer">Viewer: read-only</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -582,25 +583,35 @@ export default function MembersPage() {
                         <RoleBadge role={m.role} />
                       )}
                     </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 text-right">
-                        {m.role !== "owner" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              removeMember({
-                                workspaceId: workspaceId as never,
-                                userId: m.userId,
-                              }).catch((e) => toast.error(e.message))
-                            }
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        )}
-                      </td>
-                    )}
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-right">
+                          {m.role !== "owner" && (
+                            <ConfirmAction
+                              title={`Remove ${m.name}?`}
+                              description="They will lose access to this workspace's projects and issues until re-invited."
+                              confirmLabel="Remove member"
+                              onConfirm={() =>
+                                removeMember({
+                                  workspaceId: workspaceId as never,
+                                  userId: m.userId,
+                                })
+                                  .then(() => toast.success(`${m.name} removed`))
+                                  .catch((e) => toast.error(e.message))
+                              }
+                              trigger={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Remove ${m.name}`}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              }
+                            />
+                          )}
+                        </td>
+                      )}
                   </tr>
                 ))}
               </tbody>
@@ -696,19 +707,29 @@ export default function MembersPage() {
                         </Button>
                       )}
                       {inv.status === "pending" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-muted-foreground hover:text-destructive"
-                          onClick={() =>
+                        <ConfirmAction
+                          title={`Revoke invitation for ${inv.email}?`}
+                          description="Their link stops working immediately. You can invite them again at any time."
+                          confirmLabel="Revoke invitation"
+                          onConfirm={() =>
                             revokeInvitation({
                               workspaceId: workspaceId as never,
                               invitationId: inv._id,
-                            }).catch((e) => toast.error(e.message))
+                            })
+                              .then(() => toast.success("Invitation revoked"))
+                              .catch((e) => toast.error(e.message))
                           }
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Revoke invitation for ${inv.email}`}
+                              className="size-7 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          }
+                        />
                       )}
                     </div>
                   </div>

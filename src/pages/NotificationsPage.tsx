@@ -8,12 +8,16 @@ import { EmptyState, ListSkeleton, timeAgo } from "@/components/forge";
 import { Bell, BellRing, CheckCheck, Inbox } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
+import { FadeIn } from "@/components/motion";
 
 export default function NotificationsPage() {
   const notifications = useQuery(api.analytics.listNotifications);
   const markRead = useMutation(api.analytics.markNotificationRead);
   const markAllRead = useMutation(api.analytics.markAllNotificationsRead);
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
 
   const rows = notifications?.notifications ?? [];
   const unread = notifications?.unreadCount ?? 0;
@@ -34,27 +38,29 @@ export default function NotificationsPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl tracking-[-0.02em]">Notifications</h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              {unread > 0 ? `${unread} unread` : "You're all caught up"}
-            </p>
+        <FadeIn>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl tracking-[-0.02em]">Notifications</h1>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                {unread > 0 ? `${unread} unread` : "You're all caught up"}
+              </p>
+            </div>
+            {unread > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  markAllRead()
+                    .then(() => toast.success("All marked as read"))
+                    .catch((e) => toast.error(e.message))
+                }
+              >
+                <CheckCheck /> Mark all read
+              </Button>
+            )}
           </div>
-          {unread > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                markAllRead()
-                  .then(() => toast.success("All marked as read"))
-                  .catch((e) => toast.error(e.message))
-              }
-            >
-              <CheckCheck /> Mark all read
-            </Button>
-          )}
-        </div>
+        </FadeIn>
 
         <div className="mt-8">
           {notifications === undefined ? (
@@ -67,47 +73,56 @@ export default function NotificationsPage() {
             />
           ) : (
             <div className="overflow-hidden rounded-lg border border-border">
-              <ul className="divide-y divide-border">
-                {rows.map((n) => (
-                  <li key={n._id}>
-                    <button
-                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/60"
-                      onClick={() => openNotification(n._id, n.resourceType, n.resourceId)}
+              <motion.ul layout={reduce ? false : true} className="divide-y divide-border">
+                <AnimatePresence initial={false}>
+                  {rows.map((n) => (
+                    <motion.li
+                      key={n._id}
+                      layout={reduce ? false : true}
+                      initial={reduce ? false : { opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduce ? undefined : { opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: [0.2, 0.7, 0.2, 1] }}
                     >
-                      <span
-                        className={`mt-1 flex size-8 shrink-0 items-center justify-center rounded-md border ${
-                          n.readAt
-                            ? "border-border bg-secondary text-muted-foreground"
-                            : "border-white/20 bg-secondary text-foreground"
-                        }`}
+                      <button
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/60"
+                        onClick={() => openNotification(n._id, n.resourceType, n.resourceId)}
                       >
-                        {n.readAt ? <Bell className="size-4" /> : <BellRing className="size-4" />}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className={`truncate text-sm ${n.readAt ? "" : "font-medium"}`}>
-                            {n.title}
-                          </p>
-                          {!n.readAt && (
-                            <span className="size-1.5 shrink-0 rounded-full bg-foreground" />
+                        <span
+                          className={`mt-1 flex size-8 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                            n.readAt
+                              ? "border-border bg-secondary text-muted-foreground"
+                              : "border-white/20 bg-secondary text-foreground"
+                          }`}
+                        >
+                          {n.readAt ? <Bell className="size-4" /> : <BellRing className="size-4" />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className={`truncate text-sm ${n.readAt ? "" : "font-medium"}`}>
+                              {n.title}
+                            </p>
+                            {!n.readAt && (
+                              <span className="size-1.5 shrink-0 rounded-full bg-foreground" />
+                            )}
+                          </div>
+                          {n.body && (
+                            <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{n.body}</p>
                           )}
+                          <div className="mt-1 flex items-center gap-2">
+                            <Badge variant="outline" className="text-[9px] uppercase">
+                              {n.type.replace(/\./g, " ")}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground">
+                              {timeAgo(n.createdAt)}
+                            </span>
+                          </div>
                         </div>
-                        {n.body && (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{n.body}</p>
-                        )}
-                        <div className="mt-1 flex items-center gap-2">
-                          <Badge variant="outline" className="text-[9px] uppercase">
-                            {n.type.replace(/\./g, " ")}
-                          </Badge>
-                          <span className="text-[11px] text-muted-foreground">
-                            {timeAgo(n.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      </button>
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </motion.ul>
             </div>
           )}
         </div>

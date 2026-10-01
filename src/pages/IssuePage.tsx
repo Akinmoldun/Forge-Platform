@@ -48,6 +48,7 @@ import {
   CheckCircle2,
   GitBranch,
   History,
+  Loader2,
   MessageSquare,
   Send,
   Tag,
@@ -85,6 +86,8 @@ export default function IssuePage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
+  const [addingComment, setAddingComment] = useState(false);
+  const [addingDep, setAddingDep] = useState(false);
 
   if (detail === null) {
     return (
@@ -141,17 +144,22 @@ export default function IssuePage() {
   };
 
   const handleAddComment = async () => {
-    if (!commentDraft.trim()) return;
+    if (!commentDraft.trim() || addingComment) return;
+    setAddingComment(true);
     try {
       await addComment({ issueId: issue._id, body: commentDraft });
       setCommentDraft("");
       toast.success("Comment added");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to add comment");
+    } finally {
+      setAddingComment(false);
     }
   };
 
   const handleAddDependency = async () => {
+    if (!depIssueId || addingDep) return;
+    setAddingDep(true);
     try {
       await addDependency({
         issueId: issue._id,
@@ -163,6 +171,8 @@ export default function IssuePage() {
       setDepIssueId("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to add dependency");
+    } finally {
+      setAddingDep(false);
     }
   };
 
@@ -339,7 +349,8 @@ export default function IssuePage() {
                         <Button variant="outline" onClick={() => setDepOpen(false)}>
                           Cancel
                         </Button>
-                        <Button onClick={handleAddDependency} disabled={!depIssueId}>
+                        <Button onClick={handleAddDependency} disabled={!depIssueId || addingDep}>
+                          {addingDep && <Loader2 className="animate-spin" />}
                           Add dependency
                         </Button>
                       </DialogFooter>
@@ -404,10 +415,10 @@ export default function IssuePage() {
                   <Button
                     size="icon"
                     onClick={handleAddComment}
-                    disabled={!commentDraft.trim()}
+                    disabled={!commentDraft.trim() || addingComment}
                     className="shrink-0"
                   >
-                    <Send />
+                    {addingComment ? <Loader2 className="animate-spin" /> : <Send />}
                   </Button>
                 </div>
               )}
@@ -589,7 +600,7 @@ export default function IssuePage() {
                   </PopoverContent>
                 </Popover>
               ) : (
-                <p className="text-sm">{issue.dueDate ? formatDate(issue.dueDate) : "—"}</p>
+                <p className="text-sm">{issue.dueDate ? formatDate(issue.dueDate) : "Not set"}</p>
               )}
             </div>
 
@@ -640,7 +651,7 @@ export default function IssuePage() {
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <User className="size-3" /> Reporter
               </p>
-              <p className="text-sm">{detail.reporter?.name ?? "—"}</p>
+              <p className="text-sm">{detail.reporter?.name ?? "Unknown"}</p>
             </div>
 
             {/* Role note */}
