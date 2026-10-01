@@ -1,7 +1,6 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import { RequireAuth } from "@/components/RequireAuth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -13,7 +12,14 @@ import "./index.css";
 // Lazy load route components for better code splitting. Relative,
 // extensionless paths — Vite compiles these into hashed /assets/*.js chunks;
 // the raw /src/*.tsx URLs never exist in a production build.
-const Landing = lazy(() => import("./pages/Landing"));
+const MarketingReferencePage = lazy(
+  () => import("./pages/marketing-reference/MarketingReferencePage"),
+);
+const RequireAuth = lazy(() =>
+  import("./components/RequireAuth").then((module) => ({
+    default: module.RequireAuth,
+  })),
+);
 const AuthPage = lazy(() => import("./pages/Auth"));
 const AppHome = lazy(() => import("./pages/AppHome"));
 const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
@@ -91,7 +97,42 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = import.meta.env.VITE_CONVEX_URL;
+const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
+
+function BackendSetupNotice() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card p-7 text-center">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Backend configuration required
+        </p>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight">
+          Connect a Convex deployment to open the Forge app
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          The public product pages work without a backend. Sign-in, workspaces,
+          and project data need a valid VITE_CONVEX_URL.
+        </p>
+        <a
+          className="mt-6 inline-flex rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary"
+          href="/"
+        >
+          Return to Forge
+        </a>
+      </div>
+    </main>
+  );
+}
+
+function WithConvexAuth({ children }: { children: React.ReactNode }) {
+  if (!convex) return <BackendSetupNotice />;
+  return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>;
+}
+
+function withConvexAuth(element: React.ReactNode) {
+  return <WithConvexAuth>{element}</WithConvexAuth>;
+}
 
 /**
  * Route-level error boundary: a crash in one page renders an error card with
@@ -181,37 +222,143 @@ createRoot(document.getElementById("root")!).render(
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>
-      <ConvexAuthProvider client={convex}>
-        <BrowserRouter>
-          <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <RouteErrorBoundary>
-              <Routes>
-              <Route path="/" element={<Landing />} />
+      <BrowserRouter>
+        <RouteSyncer />
+        <Suspense fallback={<RouteLoading />}>
+          <RouteErrorBoundary>
+            <Routes>
+              <Route
+                path="/"
+                element={<MarketingReferencePage pageKey="home" />}
+              />
+              <Route
+                path="/workflows"
+                element={<MarketingReferencePage pageKey="workflows" />}
+              />
+              <Route
+                path="/analytics"
+                element={<MarketingReferencePage pageKey="analytics" />}
+              />
+              <Route
+                path="/enterprise"
+                element={<MarketingReferencePage pageKey="enterprise" />}
+              />
+              <Route
+                path="/capabilities"
+                element={<MarketingReferencePage pageKey="capabilities" />}
+              />
               <Route
                 path="/auth"
-                element={<AuthPage redirectAfterAuth="/app" />}
+                element={withConvexAuth(
+                  <AuthPage redirectAfterAuth="/app" />,
+                )}
               />
-              <Route path="/app" element={<RequireAuth redirectImmediately><AppHome /></RequireAuth>} />
-              <Route path="/app/workspaces/:workspaceId" element={<RequireAuth redirectImmediately><WorkspacePage /></RequireAuth>} />
-              <Route path="/app/workspaces/:workspaceId/activity" element={<RequireAuth redirectImmediately><WorkspacePage tab="activity" /></RequireAuth>} />
-              <Route path="/app/workspaces/:workspaceId/members" element={<RequireAuth redirectImmediately><MembersPage /></RequireAuth>} />
-              <Route path="/app/workspaces/:workspaceId/settings" element={<RequireAuth redirectImmediately><WorkspaceSettings /></RequireAuth>} />
-              <Route path="/app/projects/:projectId" element={<RequireAuth redirectImmediately><ProjectPage /></RequireAuth>} />
-              <Route path="/app/projects/:projectId/board" element={<RequireAuth redirectImmediately><ProjectPage /></RequireAuth>} />
-              <Route path="/app/projects/:projectId/analytics" element={<RequireAuth redirectImmediately><ProjectPage tab="analytics" /></RequireAuth>} />
-              <Route path="/app/projects/:projectId/activity" element={<RequireAuth redirectImmediately><ProjectPage tab="activity" /></RequireAuth>} />
-              <Route path="/app/projects/:projectId/settings/workflows" element={<RequireAuth redirectImmediately><ProjectSettings /></RequireAuth>} />
-              <Route path="/app/issues/:issueId" element={<RequireAuth redirectImmediately><IssuePage /></RequireAuth>} />
-              <Route path="/app/notifications" element={<RequireAuth redirectImmediately><NotificationsPage /></RequireAuth>} />
-              <Route path="/invite" element={<InvitePage />} />
+              <Route
+                path="/app"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <AppHome />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <WorkspacePage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/activity"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <WorkspacePage tab="activity" />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/members"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <MembersPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/settings"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <WorkspaceSettings />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/projects/:projectId"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProjectPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/projects/:projectId/board"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProjectPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/projects/:projectId/analytics"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProjectPage tab="analytics" />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/projects/:projectId/activity"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProjectPage tab="activity" />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/projects/:projectId/settings/workflows"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProjectSettings />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/issues/:issueId"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <IssuePage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/notifications"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <NotificationsPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/invite"
+                element={withConvexAuth(<InvitePage />)}
+              />
               <Route path="*" element={<NotFound />} />
-              </Routes>
-            </RouteErrorBoundary>
-          </Suspense>
-        </BrowserRouter>
-        <Toaster />
-      </ConvexAuthProvider>
+            </Routes>
+          </RouteErrorBoundary>
+        </Suspense>
+      </BrowserRouter>
+      <Toaster />
     </RootErrorBoundary>
   </StrictMode>,
 );

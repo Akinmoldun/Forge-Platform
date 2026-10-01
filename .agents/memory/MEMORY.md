@@ -1,0 +1,1 @@
+- [Convex code generation access](convex-codegen-access.md) — The CLI requires deployment access before writing local client types; missing access blocks app-wide type checks.
