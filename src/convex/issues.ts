@@ -364,6 +364,18 @@ export const createIssue = mutation({
     if ((args.description ?? "").length > 20000) {
       throw new Error("Description must be at most 20,000 characters");
     }
+    if (args.dueDate !== undefined && args.dueDate <= 0) {
+      throw new Error("Due date must be a valid timestamp");
+    }
+    if (
+      args.estimatePoints !== undefined &&
+      (args.estimatePoints < 0 || args.estimatePoints > 1000)
+    ) {
+      throw new Error("Estimate points must be between 0 and 1000");
+    }
+    if ((args.labelIds?.length ?? 0) > 20) {
+      throw new Error("An issue can have at most 20 labels");
+    }
 
     // next issue number inside the project
     const existing = await ctx.db
@@ -385,6 +397,9 @@ export const createIssue = mutation({
     const firstStatus = args.statusId
       ? statuses.find((s) => s._id === args.statusId)
       : statuses.find((s) => s.category === "backlog") ?? statuses[0];
+    if (args.statusId && !firstStatus) {
+      throw new Error("The selected status does not exist in this project's workflow");
+    }
     if (!firstStatus) throw new Error("Workflow has no statuses");
 
     if (args.assigneeId) {
@@ -505,6 +520,16 @@ export const updateIssue = mutation({
       patch.description = args.description.trim() || undefined;
       changes.push({ field: "description", from: "…", to: "…" });
     }
+    if (args.dueDate !== undefined && args.dueDate !== null && args.dueDate <= 0) {
+      throw new Error("Due date must be a valid timestamp");
+    }
+    if (
+      args.estimatePoints !== undefined &&
+      args.estimatePoints !== null &&
+      (args.estimatePoints < 0 || args.estimatePoints > 1000)
+    ) {
+      throw new Error("Estimate points must be between 0 and 1000");
+    }
     if (args.priority !== undefined && args.priority !== issue.priority) {
       patch.priority = args.priority;
       changes.push({ field: "priority", from: issue.priority, to: args.priority });
@@ -545,6 +570,21 @@ export const updateIssue = mutation({
     if (args.parentIssueId !== undefined) {
       if (args.parentIssueId === args.issueId) {
         throw new Error("An issue cannot be its own parent");
+      }
+      if (args.parentIssueId !== null) {
+        const parent = await ctx.db.get(args.parentIssueId);
+        if (!parent || parent.workspaceId !== workspaceId) {
+          throw new Error("Parent issue not found in this workspace");
+        }
+        // walk up the parent chain to reject circular parent relationships
+        let cursor: Doc<"issues"> | null = parent;
+        for (let depth = 0; cursor && depth < 20; depth++) {
+          if (!cursor.parentIssueId) break;
+          if (cursor.parentIssueId === args.issueId) {
+            throw new Error("This would create a circular parent relationship");
+          }
+          cursor = await ctx.db.get(cursor.parentIssueId);
+        }
       }
       patch.parentIssueId = args.parentIssueId ?? undefined;
     }
@@ -780,11 +820,17 @@ async function runAutomations(
       } else if (action.type === "set_priority" && action.priority) {
         await ctx.db.patch(args.issueId, { priority: action.priority, updatedAt: Date.now() });
       } else if (action.type === "add_label" && action.labelId) {
-        await ctx.db.insert("issueLabels", {
-          workspaceId: args.workspaceId,
-          issueId: args.issueId,
-          labelId: action.labelId,
-        });
+        const existingLabels = await ctx.db
+          .query("issueLabels")
+          .withIndex("by_issue", (q) => q.eq("issueId", args.issueId))
+          .collect();
+        if (!existingLabels.some((l) => l.labelId === action.labelId)) {
+          await ctx.db.insert("issueLabels", {
+            workspaceId: args.workspaceId,
+            issueId: args.issueId,
+            labelId: action.labelId,
+          });
+        }
       } else if (action.type === "notify_assignee") {
         const issue = await ctx.db.get(args.issueId);
         if (issue?.assigneeId) {

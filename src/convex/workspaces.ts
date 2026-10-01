@@ -408,6 +408,9 @@ export const createInvitations = mutation({
     if (!roleAtLeast(role, "admin")) {
       throw new Error("Only admins can invite members");
     }
+    if (args.emails.length > 50) {
+      throw new Error("You can invite up to 50 people at a time");
+    }
     const user = await requireUser(ctx);
     const workspaceForNotify = (await ctx.db.get(args.workspaceId))!;
     const now = Date.now();

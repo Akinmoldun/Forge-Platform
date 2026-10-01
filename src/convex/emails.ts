@@ -185,6 +185,23 @@ export const sendInvitationEmail = action({
       return { delivered: false as const, error: "Invitation not found" };
     }
 
+    // Only workspace admins/owners may trigger invitation emails — the client
+    // always calls this right after createInvitations/resendInvitation, both of
+    // which already require the admin role, so legitimate flows are unchanged.
+    const access = await ctx.runQuery(internal.emails.getInvitationAccess, {
+      invitationId: args.invitationId,
+      userId,
+    });
+    if (!access) {
+      return { delivered: false as const, error: "Invitation not found" };
+    }
+    if (!access.allowed) {
+      return {
+        delivered: false as const,
+        error: "Only workspace admins can send invitation emails",
+      };
+    }
+
     const config = resolveEmailConfig();
     if (!config.ok) {
       // Not an invitation failure: the invitation stays pending and the app
@@ -332,6 +349,26 @@ export const sendInvitationEmail = action({
       invitationId: args.invitationId,
     });
     return { delivered: true as const, linkWarning };
+  },
+});
+
+/**
+ * Authorization probe for the send action: the caller must be an admin or the
+ * owner of the workspace that owns the invitation. Runs as an internal query
+ * because actions have no direct db access.
+ */
+export const getInvitationAccess = internalQuery({
+  args: { invitationId: v.id("invitations"), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation) return null;
+    const membership = await ctx.db
+      .query("memberships")
+      .withIndex("by_workspace_user", (q) =>
+        q.eq("workspaceId", invitation.workspaceId).eq("userId", args.userId),
+      )
+      .unique();
+    return { allowed: membership?.role === "admin" || membership?.role === "owner" };
   },
 });
 

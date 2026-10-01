@@ -197,7 +197,10 @@ export const updateProject = mutation({
     }
     if (args.description !== undefined) patch.description = args.description.trim() || undefined;
     if (args.status !== undefined) patch.status = args.status;
-    if (args.targetDate !== undefined) patch.targetDate = args.targetDate;
+    if (args.targetDate !== undefined) {
+      if (args.targetDate <= 0) throw new Error("Target date must be a valid timestamp");
+      patch.targetDate = args.targetDate;
+    }
 
     await ctx.db.patch(args.projectId, patch);
     await recordEvent(ctx, {
@@ -271,10 +274,19 @@ export const createLabel = mutation({
     if (!roleAtLeast(role, "member")) throw new Error("Viewers cannot create labels");
     const name = args.name.trim().toLowerCase();
     if (name.length < 2 || name.length > 30) throw new Error("Label name must be 2-30 characters");
+    const color = args.color.trim();
+    if (color.length < 1 || color.length > 32) throw new Error("Label color must be 1-32 characters");
+    const duplicates = await ctx.db
+      .query("labels")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    if (duplicates.some((l) => l.name === name)) {
+      throw new Error(`A label named "${name}" already exists in this workspace`);
+    }
     const labelId = await ctx.db.insert("labels", {
       workspaceId,
       name,
-      color: args.color,
+      color,
     });
     return { labelId };
   },

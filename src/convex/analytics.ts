@@ -45,7 +45,7 @@ export const listProjectActivity = query({
       .query("activityEvents")
       .withIndex("by_project_created", (q) => q.eq("projectId", project._id))
       .order("desc")
-      .take(args.limit ?? 60);
+      .take(Math.min(200, Math.max(1, args.limit ?? 60)));
     return await hydrateEvents(ctx, events);
   },
 });
@@ -59,7 +59,7 @@ export const listWorkspaceActivity = query({
       .query("activityEvents")
       .withIndex("by_workspace_created", (q) => q.eq("workspaceId", args.workspaceId))
       .order("desc")
-      .take(args.limit ?? 100);
+      .take(Math.min(200, Math.max(1, args.limit ?? 100)));
     return await hydrateEvents(ctx, events);
   },
 });
@@ -450,13 +450,47 @@ export const createAutomationRule = mutation({
     if (!roleAtLeast(role, "admin")) {
       throw new Error("Only admins can manage automation rules");
     }
+
+    const name = args.name.trim() || "Untitled rule";
+    if (name.length > 120) throw new Error("Rule name must be at most 120 characters");
+    const toStatusName = args.toStatusName.trim();
+    if (toStatusName.length < 1 || toStatusName.length > 100) {
+      throw new Error("Trigger status name must be 1-100 characters");
+    }
+    if (args.actions.length === 0 || args.actions.length > 10) {
+      throw new Error("A rule needs 1-10 actions");
+    }
+    // Only action types the automation engine actually executes are accepted;
+    // anything else would be stored but silently never run.
+    for (const action of args.actions) {
+      if (action.type === "set_status" && !action.statusName) {
+        throw new Error("set_status actions need a statusName");
+      }
+      if (action.type === "set_priority" && !action.priority) {
+        throw new Error("set_priority actions need a priority");
+      }
+      if (action.type === "add_label" && !action.labelId) {
+        throw new Error("add_label actions need a labelId");
+      }
+      if (
+        action.type !== "set_status" &&
+        action.type !== "set_priority" &&
+        action.type !== "add_label" &&
+        action.type !== "notify_assignee"
+      ) {
+        throw new Error(
+          `Unsupported action type "${action.type}". Supported: set_status, set_priority, add_label, notify_assignee`,
+        );
+      }
+    }
+
     const now = Date.now();
     const ruleId = await ctx.db.insert("automationRules", {
       workspaceId,
       projectId: project._id,
-      name: args.name.trim() || "Untitled rule",
+      name,
       triggerType: args.triggerType,
-      conditions: { to_status_name: args.toStatusName },
+      conditions: { to_status_name: toStatusName },
       actions: args.actions,
       isEnabled: true,
       createdBy: userId,
