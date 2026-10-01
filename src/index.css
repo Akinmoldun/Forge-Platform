@@ -1,6 +1,8 @@
 /* DO NOT CHANGE */
 @import "tailwindcss";
 @import "tw-animate-css";
+@source not "../.cache";
+@source not "../.config";
 @custom-variant dark (&:is(.dark *));
 
 /* DO NOT CHANGE */
