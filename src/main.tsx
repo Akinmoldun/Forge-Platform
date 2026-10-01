@@ -132,13 +132,27 @@ function BackendSetupNotice() {
   );
 }
 
-function WithConvexAuth({ children }: { children: React.ReactNode }) {
+/**
+ * The Convex auth session is mounted ONCE, above the router.
+ *
+ * It used to be created per route element, so every client-side navigation
+ * tore the session state down and built it back up: `isLoading` reset to true
+ * and `isAuthenticated` reset to false until the stored token was read again.
+ * A route guard that looked at that window treated a signed-in user as signed
+ * out and sent them to /auth, which then forwarded to the workspace picker.
+ * One provider for the whole app keeps the session stable across navigation.
+ */
+function AppProviders({ children }: { children: React.ReactNode }) {
   if (!convex) return <BackendSetupNotice />;
   return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>;
 }
 
-function withConvexAuth(element: React.ReactNode) {
-  return <WithConvexAuth>{element}</WithConvexAuth>;
+/**
+ * Route elements still call this so the route table stays unchanged. The
+ * provider itself is mounted by `AppProviders` above the router.
+ */
+function withConvexAuth(children: React.ReactNode) {
+  return children;
 }
 
 /**
@@ -229,11 +243,12 @@ createRoot(document.getElementById("root")!).render(
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>
-      <BrowserRouter>
-        <RouteSyncer />
-        <Suspense fallback={<RouteLoading />}>
-          <RouteErrorBoundary>
-            <Routes>
+      <AppProviders>
+        <BrowserRouter>
+          <RouteSyncer />
+          <Suspense fallback={<RouteLoading />}>
+            <RouteErrorBoundary>
+              <Routes>
               <Route
                 path="/"
                 element={<MarketingReferencePage pageKey="home" />}
@@ -401,10 +416,11 @@ createRoot(document.getElementById("root")!).render(
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </RouteErrorBoundary>
-        </Suspense>
-      </BrowserRouter>
-      <Toaster />
+            </RouteErrorBoundary>
+          </Suspense>
+        </BrowserRouter>
+        <Toaster />
+      </AppProviders>
     </RootErrorBoundary>
   </StrictMode>,
 );
