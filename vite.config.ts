@@ -89,6 +89,7 @@ export default defineConfig({
       // never sees it. Without it here the first page load discovers it,
       // re-optimizes and full-reloads the preview mid-screenshot.
       '@vly-ai/integrations',
+      'sonner',
     ],
   },
   // Performance hints
@@ -96,6 +97,11 @@ export default defineConfig({
     // Bind to all interfaces so the browser runtime's server-ready event fires.
     host: true,
     port: 5173,
+    watch: {
+      // Replit and Bun keep large package/browser caches in the workspace root.
+      // They are not app source and can overwhelm Vite's recursive file watcher.
+      ignored: ["**/.cache/**", "**/.config/**"],
+    },
     // Keep HMR on, but disable full-screen error overlay
     hmr: {
       overlay: false,

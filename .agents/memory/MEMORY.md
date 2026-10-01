@@ -1,1 +1,2 @@
 - [Convex code generation access](convex-codegen-access.md) — The CLI requires deployment access before writing local client types; missing access blocks app-wide type checks.
+- [Workspace cache exclusions](workspace-cache-exclusions.md) — Keep Replit and Bun caches out of Vite/Tailwind scans to prevent stalled development transforms.
