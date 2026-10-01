@@ -96,16 +96,16 @@ export default defineConfig({
   server: {
     // Bind to all interfaces so the browser runtime's server-ready event fires.
     host: true,
-    port: 5000,
+    // The Freebuff preview proxy dials 127.0.0.1:5173 — this port must match
+    // it or every preview request 502s with "connection refused".
+    port: 5173,
     allowedHosts: true,
     watch: {
       // Replit and Bun keep large package/browser caches in the workspace root.
       // They are not app source and can overwhelm Vite's recursive file watcher.
       ignored: ["**/.cache/**", "**/.config/**"],
     },
-    // Keep HMR on, but disable full-screen error overlay
-    hmr: {
-      overlay: false,
-    },
+    // Freebuff requires HMR disabled; keep hmr:false (no overlay override).
+    hmr: false,
   },
 });
