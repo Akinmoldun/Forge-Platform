@@ -35,11 +35,13 @@ export function RequireAuth({
   /** Skip the explanation and go straight to `/auth`. */
   redirectImmediately?: boolean;
 }) {
-  const { isLoading, authResolved, isAuthenticated } = useAuth();
+  const { isSessionPending, isSignedOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  if (isLoading) {
+  // Still resolving, or the client is refreshing the access token: show the
+  // loading state. Redirecting here is what sent signed-in users to /auth.
+  if (isSessionPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -47,11 +49,9 @@ export function RequireAuth({
     );
   }
 
-  // Protection stays, but it only fires on a session that has actually been
-  // reported as signed out. A session that is merely unresolved (slow token
-  // read, reconnect, cold backend) renders the protected page instead of
-  // sending a signed-in visitor to /auth.
-  if (authResolved && !isAuthenticated) {
+  // Protection stays: a sign-out that has been confirmed still lands on /auth,
+  // and the protected page is never rendered for a signed-out visitor.
+  if (isSignedOut) {
     const returnTo = `${location.pathname}${location.search}`;
     const signInHref = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
 

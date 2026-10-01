@@ -35,7 +35,12 @@ function resolveRedirectAfterAuth(
 }
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  const {
+    isLoading: authLoading,
+    isAuthenticated,
+    isSessionPending,
+    signIn,
+  } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -52,6 +57,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       navigate(redirect);
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
+
+  // The auth client reports "no access token" for the moment before it finishes
+  // refreshing one. Flashing the sign-in form in that window is what makes an
+  // already signed-in visitor believe they were signed out, so wait instead.
+  if (authLoading || isSessionPending) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <span className="sr-only">Checking your session</span>
+      </main>
+    );
+  }
 
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
