@@ -26,17 +26,17 @@ export type RuleKey = "requiresAssignee" | "requiresComment" | "requiresApproval
 export const RULES: Array<{ key: RuleKey; label: string; help: string }> = [
   {
     key: "requiresAssignee",
-    label: "Require assignee",
+    label: "Requires assignee",
     help: "The issue must already have an assignee before it can enter the destination status.",
   },
   {
     key: "requiresComment",
-    label: "Require comment",
+    label: "Requires comment",
     help: "A non-empty comment is required when entering the destination status.",
   },
   {
     key: "requiresApproval",
-    label: "Require approval",
+    label: "Requires approval",
     help: "Marks this transition as needing sign-off before it is used.",
   },
 ];
@@ -168,18 +168,47 @@ export function TransitionRulesPanel({
   }
 
   return (
-    <div className="divide-y divide-border">
-      {transitions.map((transition) => (
-        <TransitionRuleRow
-          key={transition._id}
-          transition={transition}
-          statuses={statuses}
-          canEdit={canEdit}
-          value={(key) => value(transition._id, key)}
-          onToggle={(key, next) => onToggle(transition._id, key, next)}
-          onEdit={() => onEdit(transition._id)}
-        />
-      ))}
+    <div>
+      <div className="divide-y divide-border">
+        {transitions.map((transition) => (
+          <TransitionRuleRow
+            key={transition._id}
+            transition={transition}
+            statuses={statuses}
+            canEdit={canEdit}
+            value={(key) => value(transition._id, key)}
+            onToggle={(key, next) => onToggle(transition._id, key, next)}
+            onEdit={() => onEdit(transition._id)}
+          />
+        ))}
+      </div>
+      {/* System rules apply to every transition, so they are listed once. */}
+      <div className="space-y-1.5 border-t border-border px-3 py-2.5">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Always enforced
+        </p>
+        {SYSTEM_RULES.map((rule) => (
+          <div
+            key={rule.label}
+            className="flex items-start gap-2.5 rounded-md border border-dashed border-border px-3 py-2"
+          >
+            <rule.icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-[13px]">
+                {rule.label}
+                <InfoHint text={rule.help} />
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                {rule.help}
+              </span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded border border-border bg-secondary px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <ShieldCheck className="size-2.5" />
+              always on
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

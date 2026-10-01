@@ -27,13 +27,15 @@ export type MarketingPageKey =
   | "workflows"
   | "analytics"
   | "enterprise"
-  | "capabilities";
+  | "capabilities"
+  | "about";
 
 const PAGE_LINKS: { label: string; to: string; key: MarketingPageKey }[] = [
   { label: "Product", to: "/capabilities", key: "capabilities" },
   { label: "Workflow", to: "/workflows", key: "workflows" },
   { label: "Analytics", to: "/analytics", key: "analytics" },
   { label: "Teams", to: "/enterprise", key: "enterprise" },
+  { label: "About", to: "/about", key: "about" },
 ];
 
 function Header({ pageKey }: { pageKey: MarketingPageKey }) {
@@ -611,6 +613,50 @@ function CapabilitiesPage() {
   );
 }
 
+const aboutPrinciples = [
+  { icon: Workflow, title: "The work has rules", text: "An issue moves through a project's own statuses, and each transition carries the requirements it enforces." },
+  { icon: Shield, title: "Access stays explicit", text: "Workspaces are isolated tenants. Roles decide who can read, change, or invite." },
+  { icon: History, title: "The record stays", text: "Creates, edits, transitions, and comments are appended to activity history rather than overwritten." },
+  { icon: Network, title: "Context travels with the issue", text: "Dependencies, ownership, and timing stay attached to the work instead of living in chat." },
+];
+
+function AboutPage() {
+  return (
+    <>
+      <section className="fm-section">
+        <div className="fm-container fm-cap-hero">
+          <div className="fm-eyebrow">About Forge</div>
+          <h1 className="fm-heading" style={{ marginTop: 14 }}>Built around the life of an issue.</h1>
+          <p className="fm-body">Forge is an engineering workflow platform for teams that need their project rules, their issues, and their history in one place.</p>
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading label="What it is" title="One workspace, from plan to shipped." body="Each workspace holds projects, issues, and the workflow that governs them. Nothing is duplicated into a separate tracker." />
+          <FeatureGrid items={aboutPrinciples} />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container fm-split">
+          <div>
+            <div className="fm-kicker">How it fits together</div>
+            <h2 className="fm-heading-sm">Three parts, one record.</h2>
+            <div className="fm-list">
+              <div className="fm-list-row"><Workflow size={13} />Projects define their own statuses and transitions.</div>
+              <div className="fm-list-row"><GitBranch size={13} />Issues carry dependencies, ownership, and timing.</div>
+              <div className="fm-list-row"><History size={13} />Activity history records what changed and who changed it.</div>
+            </div>
+            <Link className="fm-button" to="/capabilities" style={{ marginTop: 20 }}>See the capabilities <ArrowRight size={12} /></Link>
+          </div>
+          <TransitionWindow />
+        </div>
+      </section>
+      <div className="fm-container fm-quote"><blockquote>“A good workflow makes the next step obvious, and the last change easy to find.”</blockquote><cite>Forge · Built around the life of an issue</cite></div>
+      <ClosingCTA title="Put the work in motion." />
+    </>
+  );
+}
+
 export function MarketingReferencePage({ pageKey }: { pageKey: MarketingPageKey }) {
   const content = {
     home: <HomePage />,
@@ -618,6 +664,7 @@ export function MarketingReferencePage({ pageKey }: { pageKey: MarketingPageKey 
     analytics: <AnalyticsPage />,
     enterprise: <EnterprisePage />,
     capabilities: <CapabilitiesPage />,
+    about: <AboutPage />,
   }[pageKey];
 
   return (

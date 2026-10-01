@@ -270,6 +270,10 @@ createRoot(document.getElementById("root")!).render(
                 element={<MarketingReferencePage pageKey="capabilities" />}
               />
               <Route
+                path="/about"
+                element={<MarketingReferencePage pageKey="about" />}
+              />
+              <Route
                 path="/auth"
                 element={withConvexAuth(
                   <AuthPage redirectAfterAuth="/app" />,
