@@ -30,11 +30,10 @@ export type MarketingPageKey =
   | "capabilities";
 
 const PAGE_LINKS: { label: string; to: string; key: MarketingPageKey }[] = [
-  { label: "Overview", to: "/", key: "home" },
-  { label: "Workflows", to: "/workflows", key: "workflows" },
+  { label: "Product", to: "/capabilities", key: "capabilities" },
+  { label: "Workflow", to: "/workflows", key: "workflows" },
   { label: "Analytics", to: "/analytics", key: "analytics" },
-  { label: "For teams", to: "/enterprise", key: "enterprise" },
-  { label: "Capabilities", to: "/capabilities", key: "capabilities" },
+  { label: "Teams", to: "/enterprise", key: "enterprise" },
 ];
 
 function Header({ pageKey }: { pageKey: MarketingPageKey }) {
@@ -95,9 +94,9 @@ function Footer() {
         </div>
         <div className="fm-footer-column">
           <strong>Platform</strong>
-          <Link to="/workflows">Workflows</Link>
+          <Link to="/capabilities">Product</Link>
+          <Link to="/workflows">Workflow</Link>
           <Link to="/analytics">Analytics</Link>
-          <Link to="/capabilities">Capabilities</Link>
         </div>
         <div className="fm-footer-column">
           <strong>Teams</strong>

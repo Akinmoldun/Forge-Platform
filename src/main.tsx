@@ -22,12 +22,16 @@ const RequireAuth = lazy(() =>
 );
 const AuthPage = lazy(() => import("./pages/Auth"));
 const AppHome = lazy(() => import("./pages/AppHome"));
-const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
+const OverviewPage = lazy(() => import("./pages/OverviewPage"));
+const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
+const WorkflowPage = lazy(() => import("./pages/WorkflowPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const TeamsPage = lazy(() => import("./pages/TeamsPage"));
+const ActivityPage = lazy(() => import("./pages/ActivityPage"));
 const ProjectPage = lazy(() => import("./pages/ProjectPage"));
 const IssuePage = lazy(() => import("./pages/IssuePage"));
 const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
 const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings"));
-const MembersPage = lazy(() => import("./pages/MembersPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -265,15 +269,39 @@ createRoot(document.getElementById("root")!).render(
                 path="/app/workspaces/:workspaceId"
                 element={withConvexAuth(
                   <RequireAuth redirectImmediately>
-                    <WorkspacePage />
+                    <OverviewPage />
                   </RequireAuth>,
                 )}
               />
               <Route
-                path="/app/workspaces/:workspaceId/activity"
+                path="/app/workspaces/:workspaceId/projects"
                 element={withConvexAuth(
                   <RequireAuth redirectImmediately>
-                    <WorkspacePage tab="activity" />
+                    <ProjectsPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/workflow"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <WorkflowPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/analytics"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <AnalyticsPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/teams"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <TeamsPage />
                   </RequireAuth>,
                 )}
               />
@@ -281,7 +309,15 @@ createRoot(document.getElementById("root")!).render(
                 path="/app/workspaces/:workspaceId/members"
                 element={withConvexAuth(
                   <RequireAuth redirectImmediately>
-                    <MembersPage />
+                    <TeamsPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/workspaces/:workspaceId/activity"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ActivityPage />
                   </RequireAuth>,
                 )}
               />
