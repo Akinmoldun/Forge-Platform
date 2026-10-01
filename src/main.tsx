@@ -25,9 +25,6 @@ const AppHome = lazy(() => import("./pages/AppHome"));
 const OverviewPage = lazy(() => import("./pages/OverviewPage"));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
 const WorkflowPage = lazy(() => import("./pages/WorkflowPage"));
-const WorkspaceRouteRedirect = lazy(
-  () => import("./pages/WorkspaceRouteRedirect"),
-);
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const TeamsPage = lazy(() => import("./pages/TeamsPage"));
 const ActivityPage = lazy(() => import("./pages/ActivityPage"));
@@ -253,16 +250,12 @@ createRoot(document.getElementById("root")!).render(
                 path="/"
                 element={<MarketingReferencePage pageKey="home" />}
               />
-              {/* "Workflow" used to be a marketing landing page here. It now
-                  resolves into the authenticated workspace editor, so every
-                  marketing link to it lands on the real screen. */}
+              {/* Public product page. It must stay reachable without signing in:
+                  the public navigation links here. The authenticated workflow
+                  editor lives at /app/workspaces/:workspaceId/workflow. */}
               <Route
                 path="/workflows"
-                element={withConvexAuth(
-                  <RequireAuth redirectImmediately>
-                    <WorkspaceRouteRedirect view="workflow" />
-                  </RequireAuth>,
-                )}
+                element={<MarketingReferencePage pageKey="workflows" />}
               />
               <Route
                 path="/analytics"
