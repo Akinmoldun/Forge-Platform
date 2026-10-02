@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import {
   Activity,
   ArrowDownRight,
+  ArrowLeftRight,
   ArrowRight,
   ArrowUpRight,
   Bell,
@@ -13,11 +14,15 @@ import {
   History,
   LockKeyhole,
   Menu,
+  MessageSquare,
   Network,
   Radio,
   Shield,
+  ShieldAlert,
+  User,
   Workflow,
   X,
+  Zap,
 } from "lucide-react";
 import { ForgeLogo } from "@/components/ForgeLogo";
 import "./marketing.css";
@@ -144,6 +149,7 @@ function Hero({
   primary = "Create a workspace",
   secondary,
   aside,
+  extra,
   className = "",
 }: {
   eyebrow: string;
@@ -152,6 +158,7 @@ function Hero({
   primary?: string;
   secondary?: string;
   aside?: React.ReactNode;
+  extra?: React.ReactNode;
   className?: string;
 }) {
   return (
@@ -166,6 +173,7 @@ function Hero({
             <ButtonLink to="/auth">{primary} <ArrowRight size={13} /></ButtonLink>
             {secondary && <ButtonLink to="/app" quiet>{secondary} <ArrowUpRight size={12} /></ButtonLink>}
           </div>
+          {extra && <div className="fm-hero-extra">{extra}</div>}
         </div>
         <div className="fm-hero-aside fm-reveal fm-delay-2">{aside}</div>
       </div>
@@ -301,12 +309,12 @@ function SectionHeading({ label, title, body }: { label: string; title: string; 
   );
 }
 
-function ClosingCTA({ title = "Put the work in motion.", body = "Start a workspace, set the shape of a project, and bring your team in." }: { title?: string; body?: string }) {
+function ClosingCTA({ title = "Put the work in motion.", body = "Start a workspace, set the shape of a project, and bring your team in.", action = "Create a workspace" }: { title?: string; body?: string; action?: string }) {
   return (
     <div className="fm-container">
       <div className="fm-cta">
         <div><h2>{title}</h2><p>{body}</p></div>
-        <ButtonLink to="/auth">Create a workspace <ArrowRight size={13} /></ButtonLink>
+        <ButtonLink to="/auth">{action} <ArrowRight size={13} /></ButtonLink>
       </div>
     </div>
   );
@@ -367,56 +375,277 @@ function HomePage() {
   );
 }
 
+const wfColumns = [
+  { name: "Backlog", count: 12, tone: "", cards: [{ id: "WEB-224", name: "Document request limits", person: "AL", tag: "Normal", time: "3d" }] },
+  { name: "In progress", count: 8, tone: "blue", cards: [{ id: "WEB-218", name: "Make retry state visible", person: "MC", tag: "High", time: "2h" }] },
+  { name: "Review", count: 5, tone: "purple", cards: [{ id: "WEB-231", name: "Resolve session timeout", person: "JT", tag: "Urgent", time: "4h" }] },
+  { name: "Done", count: 24, tone: "green", cards: [{ id: "WEB-209", name: "Clarify response codes", person: "RS", tag: "Normal", time: "1d" }] },
+];
+
+function WorkflowHeroPreview() {
+  return (
+    <div className="fm-window" aria-label="Illustration of a Forge workflow interface">
+      <div className="fm-window-bar">
+        <i className="fm-window-dot" /><i className="fm-window-dot" /><i className="fm-window-dot" />
+        <span className="fm-window-title">forge / web platform / workflow</span>
+        <span className="fm-window-state"><i /> live</span>
+      </div>
+      <div className="fm-wf-scroll">
+        <div className="fm-wf-flow">
+          {wfColumns.map((col, index) => (
+            <Fragment key={col.name}>
+              {index > 0 && <div className="fm-wf-arrow" aria-hidden="true"><ArrowRight size={11} /></div>}
+              <div className="fm-wf-cell">
+                <div className="fm-wf-pill">
+                  <i className={`fm-wf-dot ${col.tone}`} />
+                  <span>{col.name}</span>
+                  <b>{col.count}</b>
+                </div>
+                {col.cards.map((card) => (
+                  <div className="fm-wf-card" key={card.id}>
+                    <div className="fm-wf-card-top"><span>{card.id}</span><span>{card.tag}</span></div>
+                    <div className="fm-wf-card-name">{card.name}</div>
+                    <div className="fm-wf-card-meta"><span className="fm-avatar">{card.person}</span><span>{card.time}</span></div>
+                  </div>
+                ))}
+              </div>
+            </Fragment>
+          ))}
+        </div>
+      </div>
+      <div className="fm-wf-foot">
+        <span className="fm-wf-foot-label">Selected transition</span>
+        <span className="fm-wf-foot-flow">In progress <ArrowRight size={10} /> Review</span>
+        <span className="fm-wf-chip"><Check size={9} /> assignee</span>
+        <span className="fm-wf-chip"><Check size={9} /> comment</span>
+        <span className="fm-wf-chip fm-wf-chip-ok">allowed</span>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowEditorPreview() {
+  const statuses = [
+    { name: "Backlog", count: 12, tone: "", active: false },
+    { name: "In progress", count: 8, tone: "blue", active: false },
+    { name: "Review", count: 5, tone: "purple", active: true },
+    { name: "Done", count: 24, tone: "green", active: false },
+  ];
+  return (
+    <div className="fm-window" aria-label="Illustration of the Forge workflow editor">
+      <div className="fm-window-bar">
+        <i className="fm-window-dot" />
+        <span className="fm-window-title">workflow editor / web platform</span>
+        <span className="fm-window-state"><i /> 2 staged</span>
+      </div>
+      <div className="fm-wf-scroll">
+        <div className="fm-wf-flow fm-wf-flow-pills">
+          {statuses.map((status, index) => (
+            <Fragment key={status.name}>
+              {index > 0 && <div className="fm-wf-arrow" aria-hidden="true"><ArrowRight size={11} /></div>}
+              <div className={`fm-wf-pill${status.active ? " fm-wf-pill-active" : ""}`}>
+                <i className={`fm-wf-dot ${status.tone}`} />
+                <span>{status.name}</span>
+                <b>{status.count}</b>
+              </div>
+            </Fragment>
+          ))}
+        </div>
+      </div>
+      <div className="fm-wf-rulespanel">
+        <div className="fm-wf-rulespanel-head">
+          <span className="fm-wf-rulespanel-title">In progress <ArrowRight size={10} /> Review</span>
+          <span className="fm-wf-chip fm-wf-chip-blue">selected</span>
+        </div>
+        <div className="fm-wf-rulespanel-row"><span>Requires assignee</span><i className="fm-wf-toggle on" aria-hidden="true" /></div>
+        <div className="fm-wf-rulespanel-row"><span>Requires comment</span><i className="fm-wf-toggle on" aria-hidden="true" /></div>
+        <div className="fm-wf-rulespanel-row"><span>No unresolved blockers</span><span className="fm-wf-badge"><LockKeyhole size={9} /> always</span></div>
+        <div className="fm-wf-rulespanel-foot">
+          <span className="fm-wf-btn-mock">Save workflow</span>
+          <span>2 staged changes</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const wfCapabilities = [
+  { icon: Workflow, title: "Custom statuses", text: "Order the statuses each project actually uses." },
+  { icon: ArrowLeftRight, title: "Controlled transitions", text: "An explicit set of allowed moves between statuses." },
+  { icon: User, title: "Assignee requirements", text: "Work cannot move without a clear owner." },
+  { icon: MessageSquare, title: "Comment requirements", text: "Ask for context at the moments that matter." },
+  { icon: ShieldAlert, title: "Blocker protection", text: "Completion waits until blocking issues clear." },
+  { icon: Zap, title: "Workflow automation", text: "Notify and set priority after status changes." },
+];
+
+function WorkflowCapabilities() {
+  return (
+    <div className="fm-wf-caps">
+      {wfCapabilities.map(({ icon: Icon, title, text }) => (
+        <article className="fm-wf-cap" key={title}>
+          <Icon size={15} strokeWidth={1.5} />
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+const wfRules = [
+  { icon: User, title: "Requires assignee", text: "A transition needs a clear owner before it can run.", state: "on" },
+  { icon: MessageSquare, title: "Requires comment", text: "Ask for context when work moves to review or done.", state: "on" },
+  { icon: ShieldAlert, title: "No unresolved blockers", text: "Completion waits until blocking issues are cleared.", state: "locked" },
+  { icon: Bell, title: "Notify assignee", text: "Send the assignee a notification after a status change.", state: "on" },
+  { icon: Zap, title: "Set priority automatically", text: "Adjust priority as part of the transition.", state: "off" },
+  { icon: ArrowLeftRight, title: "Trigger on status change", text: "Run automation whenever an issue changes status.", state: "on" },
+];
+
+function WorkflowRules() {
+  return (
+    <div className="fm-wf-rules" aria-label="Illustration of workflow rules and automation">
+      {wfRules.map(({ icon: Icon, title, text, state }) => (
+        <article className="fm-wf-rule" key={title}>
+          <span className="fm-wf-rule-icon"><Icon size={14} strokeWidth={1.5} /></span>
+          <div className="fm-wf-rule-main"><b>{title}</b><span>{text}</span></div>
+          {state === "locked"
+            ? <span className="fm-wf-badge"><LockKeyhole size={9} /> always enforced</span>
+            : <i className={`fm-wf-toggle ${state}`} aria-hidden="true" />}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+const wfSteps = [
+  { num: "01", title: "Define your statuses", text: "Order the statuses each project uses, from backlog to done." },
+  { num: "02", title: "Set transition rules", text: "Require an assignee, a comment, or clear blockers before work moves." },
+  { num: "03", title: "Let the team move forward", text: "Forge checks every transition and records what changed." },
+];
+
+function WorkflowSteps() {
+  return (
+    <div className="fm-wf-steps">
+      {wfSteps.map((step) => (
+        <article className="fm-wf-step" key={step.num}>
+          <span className="fm-wf-step-num">{step.num}</span>
+          <h3>{step.title}</h3>
+          <p>{step.text}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+const wfDataStats = [
+  { label: "Open issues", value: "41" },
+  { label: "Blocked", value: "4" },
+  { label: "Review queue", value: "5" },
+  { label: "Avg cycle time", value: "4.2d" },
+];
+
+const wfDataTransitions = [
+  { id: "WEB-231", from: "In progress", to: "Review", time: "2h ago" },
+  { id: "WEB-218", from: "Review", to: "Done", time: "5h ago" },
+  { id: "WEB-237", from: "Backlog", to: "In progress", time: "1d ago" },
+];
+
+const wfDataDistribution = [
+  { name: "Backlog", count: 12, width: 30, tone: "" },
+  { name: "In progress", count: 8, width: 20, tone: "blue" },
+  { name: "Review", count: 5, width: 13, tone: "purple" },
+  { name: "Done", count: 24, width: 60, tone: "green" },
+];
+
+function WorkflowDataPreview() {
+  return (
+    <div className="fm-window" aria-label="Illustration of workflow data in Forge">
+      <div className="fm-window-bar">
+        <i className="fm-window-dot" />
+        <span className="fm-window-title">forge / web platform / workflow data</span>
+        <span className="fm-window-state">last 30 days</span>
+      </div>
+      <div className="fm-wf-data-stats">
+        {wfDataStats.map((stat) => <div className="fm-wf-data-stat" key={stat.label}><b>{stat.value}</b><span>{stat.label}</span></div>)}
+      </div>
+      <div className="fm-wf-data-bottom">
+        <div className="fm-wf-data-left">
+          <div className="fm-wf-data-title">Recent transitions</div>
+          {wfDataTransitions.map((item) => (
+            <div className="fm-wf-trans" key={item.id}>
+              <span className="fm-wf-trans-id">{item.id}</span>
+              <span className="fm-wf-trans-flow">{item.from} <ArrowRight size={9} /> {item.to}</span>
+              <span className="fm-wf-trans-time">{item.time}</span>
+            </div>
+          ))}
+        </div>
+        <div className="fm-wf-data-right">
+          <div className="fm-wf-data-title">Issues by status</div>
+          {wfDataDistribution.map((row) => (
+            <div className="fm-wf-dist" key={row.name}>
+              <span className="fm-wf-dist-name">{row.name}</span>
+              <span className="fm-wf-dist-track"><i className={row.tone} style={{ width: `${row.width}%` }} /></span>
+              <span className="fm-wf-dist-count">{row.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorkflowsPage() {
   return (
     <>
       <Hero
-        eyebrow="Project workflow engine"
-        title={<>A process your team can<br />actually rely on.</>}
-        description="Every project can follow its own statuses and transition rules. Forge checks the rules when work moves, not after the process drifts."
-        secondary="Open Forge"
-        aside={<span>STATUS DESIGN / TRANSITION RULES / AUTOMATION / HISTORY</span>}
+        eyebrow="WORKFLOW CONTROL"
+        title={<>Turn every handoff<br />into a clear next step.</>}
+        description="Design a workflow your team can follow, measure, and improve without losing context."
+        primary="Get started"
+        secondary="View the workspace"
+        aside={<WorkflowHeroPreview />}
+        extra={<span className="fm-wf-cmd"><i /><b>web platform</b>4 statuses · 6 rules · 3 automations</span>}
+        className="fm-wf-hero"
       />
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading label="Workflow capabilities" title="Every handoff, governed." body="Forge turns a project's process into enforced statuses, checked transitions, and automation that runs after the work moves." />
+          <WorkflowCapabilities />
+        </div>
+      </section>
       <section className="fm-section fm-section-pad">
         <div className="fm-container fm-split">
           <div>
-            <div className="fm-kicker">01 · Define the path</div>
-            <h2 className="fm-heading-sm">Your project. Its own vocabulary.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>Order the statuses that reflect how the team works: Backlog, In progress, Review, Done, or another sequence that fits the project. Statuses are not a one-size-fits-all workspace setting.</p>
+            <div className="fm-kicker">The workflow editor</div>
+            <h2 className="fm-heading-sm">Configure the workflow with your team.</h2>
+            <p className="fm-body" style={{ marginTop: 16 }}>Set the statuses a project uses, then define what each transition requires. Forge checks every move and explains exactly what a rule needs.</p>
             <div className="fm-list">
-              {["Per-project status configuration", "An explicit set of allowed transitions", "A consistent view of work by status"].map((item) => <div className="fm-list-row" key={item}><Workflow size={13} />{item}</div>)}
+              {["Per-project status sequences", "Transition rules with clear errors", "Changes staged until you save"].map((item) => <div className="fm-list-row" key={item}><Check size={13} />{item}</div>)}
             </div>
+            <Link className="fm-button" to="/app" style={{ marginTop: 20 }}>Explore workflow <ArrowRight size={12} /></Link>
           </div>
-          <BoardWindow />
+          <WorkflowEditorPreview />
         </div>
       </section>
       <section className="fm-section fm-section-pad">
-        <div className="fm-container fm-split fm-split-reverse">
-          <TransitionWindow />
-          <div>
-            <div className="fm-kicker">02 · Enforce the rules</div>
-            <h2 className="fm-heading-sm">The API is where a rule counts.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>Rules are checked on every transition. Require an assignee, ask for a comment, or keep an issue from closing until unresolved blockers are cleared. A rejected transition explains what needs attention.</p>
-            <div className="fm-list">
-              {["Required assignee", "Required transition comment", "No unresolved blockers at completion"].map((item) => <div className="fm-list-row" key={item}><Check size={13} />{item}</div>)}
-            </div>
-          </div>
+        <div className="fm-container">
+          <SectionHeading label="Rules and automation" title="The process, written down and enforced." body="Rules are checked on every transition. Automation runs after a change is accepted, so the next step is always a clear responsibility." />
+          <WorkflowRules />
         </div>
       </section>
       <section className="fm-section fm-section-pad">
-        <div className="fm-container">          <SectionHeading label="03 · Keep the loop moving" title="What happens after a transition." body="Automation rules run after status changes, and each accepted change is recorded in the activity history." />
-          <div className="fm-governance">
-            {[
-              { icon: Bell, title: "Notify the assignee", text: "A transition rule can send the assignee a notification when an issue enters a chosen status." },
-              { icon: Activity, title: "Set priority", text: "A transition can trigger a priority change as part of the project's automation rules." },
-              { icon: History, title: "Append the event", text: "Accepted transitions add a status-change event to the issue's activity record." },
-              { icon: GitBranch, title: "Check dependencies", text: "Blocking links are checked for cycles, and unresolved blockers can prevent completion." },
-            ].map(({ icon: Icon, title, text }) => <article className="fm-governance-item" key={title}><Icon size={16} strokeWidth={1.5} /><h3>{title}</h3><p>{text}</p></article>)}
-          </div>
+        <div className="fm-container">
+          <SectionHeading label="How it works" title="Three steps to a workflow your team follows." />
+          <WorkflowSteps />
         </div>
       </section>
-      <div className="fm-container fm-quote"><blockquote>Define the path once. Let the work move with the same expectations every time.</blockquote><cite>Custom workflows · Forge</cite></div>
-      <ClosingCTA title="Give your project a clear path." body="Set up a workspace and configure a workflow for the way your team works." />
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading label="Workflow data" title="See the state of the work." body="An illustrative view of the signals a project workflow produces." />
+          <WorkflowDataPreview />
+        </div>
+      </section>
+      <ClosingCTA title="Build a workflow your team can trust." body="Make every status, transition, and blocker visible." action="Get started" />
     </>
   );
 }
