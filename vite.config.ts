@@ -95,10 +95,8 @@ export default defineConfig({
   // Performance hints
   server: {
     // Bind to all interfaces so the browser runtime's server-ready event fires.
-    host: true,
-    // The Freebuff preview proxy dials 127.0.0.1:5173 — this port must match
-    // it or every preview request 502s with "connection refused".
-    port: 5173,
+    host: '0.0.0.0',
+    port: 3000,
     allowedHosts: true,
     watch: {
       // Replit and Bun keep large package/browser caches in the workspace root.

@@ -89,6 +89,11 @@ export default function IssuePage() {
   const [addingComment, setAddingComment] = useState(false);
   const [addingDep, setAddingDep] = useState(false);
 
+  const projectIssues = useQuery(
+    api.issues.listIssues,
+    depOpen && detail ? { projectId: detail.project._id, pageSize: 100 } : "skip",
+  );
+
   if (detail === null) {
     return (
       <AppShell>
@@ -175,11 +180,6 @@ export default function IssuePage() {
       setAddingDep(false);
     }
   };
-
-  const projectIssues = useQuery(
-    api.issues.listIssues,
-    depOpen ? { projectId: project._id, pageSize: 100 } : "skip",
-  );
 
   return (
     <AppShell workspaceId={detail.workspaceId}>

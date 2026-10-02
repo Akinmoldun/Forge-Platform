@@ -140,15 +140,17 @@ function BackendSetupNotice() {
  * One provider for the whole app keeps the session stable across navigation.
  */
 function AppProviders({ children }: { children: React.ReactNode }) {
-  if (!convex) return <BackendSetupNotice />;
+  if (!convex) return <>{children}</>;
   return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>;
 }
 
 /**
- * Route elements still call this so the route table stays unchanged. The
- * provider itself is mounted by `AppProviders` above the router.
+ * Route elements call this to ensure Convex is connected before rendering
+ * authenticated views. If no Convex URL is configured, a friendly setup
+ * notice is displayed with a link back to public Forge pages.
  */
 function withConvexAuth(children: React.ReactNode) {
+  if (!convex) return <BackendSetupNotice />;
   return children;
 }
 

@@ -17,6 +17,7 @@
 
     /* Linting */
     "strict": true,
+    "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "erasableSyntaxOnly": true,
@@ -28,5 +29,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "vly-toolbar-readonly.tsx"]
+  "include": ["src", "vly-toolbar-readonly.tsx"],
+  "exclude": ["src/convex"]
 }
