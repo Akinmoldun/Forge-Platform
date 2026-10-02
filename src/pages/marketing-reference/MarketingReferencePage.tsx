@@ -18,6 +18,7 @@ import {
   LockKeyhole,
   Menu,
   MessageSquare,
+  Minus,
   Network,
   Radio,
   Search,
@@ -43,11 +44,11 @@ export type MarketingPageKey =
   | "about";
 
 const PAGE_LINKS: { label: string; to: string; key: MarketingPageKey; paths: string[] }[] = [
-  { label: "Product", to: "/product", key: "capabilities", paths: ["/product", "/capabilities"] },
-  { label: "Workflow", to: "/workflow", key: "workflows", paths: ["/workflow", "/workflows"] },
+  { label: "Overview", to: "/", key: "home", paths: ["/"] },
+  { label: "Workflows", to: "/workflows", key: "workflows", paths: ["/workflows", "/workflow"] },
   { label: "Analytics", to: "/analytics", key: "analytics", paths: ["/analytics"] },
-  { label: "Teams", to: "/teams", key: "enterprise", paths: ["/teams", "/enterprise"] },
-  { label: "About", to: "/about", key: "about", paths: ["/about"] },
+  { label: "For teams", to: "/enterprise", key: "enterprise", paths: ["/enterprise", "/teams"] },
+  { label: "Capabilities", to: "/capabilities", key: "capabilities", paths: ["/capabilities", "/product"] },
 ];
 
 const AUTH_PATHS = new Set(["/auth", "/app", "/invite"]);
@@ -106,7 +107,6 @@ function Header({ pageKey }: { pageKey: MarketingPageKey }) {
               <Link
                 key={item.key}
                 to={item.to}
-                className={active ? "fm-link-active" : undefined}
                 aria-current={active ? "page" : undefined}
                 onClick={() => setOpen(false)}
               >
@@ -117,8 +117,8 @@ function Header({ pageKey }: { pageKey: MarketingPageKey }) {
         </nav>
         <div className="fm-nav-actions">
           <Link className="fm-button fm-button-quiet" to="/auth">Sign in</Link>
-          <Link className="fm-button fm-button-primary" to="/auth">
-            Get started <ArrowUpRight size={12} />
+          <Link className="fm-button fm-button-primary" to="/app">
+            Open Forge <ArrowUpRight size={12} />
           </Link>
         </div>
       </div>
@@ -137,23 +137,34 @@ function Footer() {
           <p>Engineering work, with its rules and history in one place.</p>
         </div>
         <div className="fm-footer-column">
-          <strong>Product</strong>
-          <Link to="/product">Overview</Link>
-          <Link to="/workflow">Workflow</Link>
+          <strong>Platform</strong>
+          <Link to="/">Overview</Link>
+          <Link to="/workflows">Workflows</Link>
           <Link to="/analytics">Analytics</Link>
-          <Link to="/teams">Teams</Link>
+          <Link to="/capabilities">Capabilities</Link>
+        </div>
+        <div className="fm-footer-column">
+          <strong>Teams</strong>
+          <Link to="/enterprise">For teams</Link>
+          <Link to="/enterprise">Workspace roles</Link>
+          <Link to="/enterprise">Invitations</Link>
+          <Link to="/enterprise">Activity history</Link>
+        </div>
+        <div className="fm-footer-column">
+          <strong>Company</strong>
           <Link to="/about">About</Link>
+          <Link to="/capabilities">Common questions</Link>
         </div>
         <div className="fm-footer-column">
           <strong>Get started</strong>
-          <Link to="/auth">Create workspace</Link>
+          <Link to="/auth">Create a workspace</Link>
           <Link to="/auth">Sign in</Link>
-          <Link to="/app">Open the app</Link>
+          <Link to="/app">Open Forge</Link>
         </div>
       </div>
       <div className="fm-container fm-footer-bottom">
         <span>© 2026 Forge Labs, Inc.</span>
-        <span>Work moves. The record stays.</span>
+        <span>Engineering operations for startup teams</span>
       </div>
     </footer>
   );
@@ -248,32 +259,68 @@ function FeatureGrid({ items = homeFeatures }: { items?: typeof homeFeatures }) 
 function TransitionWindow() {
   return (
     <div className="fm-window">
-      <div className="fm-window-bar"><i className="fm-window-dot" /><span className="fm-window-title">transition / In review → Done</span></div>
+      <div className="fm-window-bar">
+        <i className="fm-window-dot" />
+        <span className="fm-window-title">transition / validate</span>
+        <span className="fm-window-state"><i /> accepted</span>
+      </div>
+      <div className="fm-tx-flow">
+        <span className="fm-tx-status">In progress</span>
+        <ChevronRight size={14} />
+        <span className="fm-tx-status is-to">Review</span>
+        <span className="fm-tx-id">WEB-218</span>
+      </div>
       <div className="fm-rule-code">
-        <div className="fm-rule-line"><span className="fm-rule-key">requires_assignee</span><span className="fm-rule-value">Maya Chen</span><Check size={11} /></div>
-        <div className="fm-rule-line"><span className="fm-rule-key">requires_comment</span><span className="fm-rule-value">"Reviewed and ready"</span><Check size={11} /></div>
-        <div className="fm-rule-line"><span className="fm-rule-key">no_open_blockers</span><span className="fm-rule-value">0 unresolved</span><Check size={11} /></div>
-        <div className="fm-rule-result">WEB-218 moved to Done · activity recorded · assignee notified</div>
+        <div className="fm-rule-line"><span className="fm-rule-key">requires_assignee</span><span className="fm-rule-value">Maya Chen</span><Check size={12} /></div>
+        <div className="fm-rule-line"><span className="fm-rule-key">requires_comment</span><span className="fm-rule-value">"Reviewed and ready"</span><Check size={12} /></div>
+        <div className="fm-rule-line"><span className="fm-rule-key">no_unresolved_blockers</span><span className="fm-rule-value">0 unresolved</span><Check size={12} /></div>
+      </div>
+      <div className="fm-tx-result">
+        <span className="fm-tx-result-head"><Check size={12} />Transition accepted</span>
+        <span className="fm-tx-result-row">Status changed · In progress to Review</span>
+        <span className="fm-tx-result-row">Activity appended · issue.transition recorded</span>
+        <span className="fm-tx-result-row">Automation · assignee notified, priority set to high</span>
+        <span className="fm-tx-result-row">Dependencies re-checked · WEB-219 still blocks WEB-224</span>
       </div>
     </div>
   );
 }
 
-function RiskWindow() {
-  const factors = [
-    ["Blocked work", "4 open issues waiting on blockers", 48, "+24"],
-    ["Overdue issues", "2 open issues past due date", 23, "+12"],
-    ["Priority pressure", "3 urgent or high issues open", 18, "+9"],
-    ["Stale issues", "2 untouched for 21+ days", 10, "+5"],
-  ] as const;
+const riskFactors = [
+  { label: "Blocked work", detail: "3 open issues waiting on unresolved blockers", points: 18, cap: 30 },
+  { label: "Overdue issues", detail: "4 open issues past their due date", points: 20, cap: 30 },
+  { label: "Overdue blockers", detail: "1 overdue issue blocking other work", points: 5, cap: 15 },
+  { label: "High-priority backlog", detail: "3 urgent or high issues still open", points: 9, cap: 15 },
+  { label: "Stale issues", detail: "3 issues untouched for 21 or more days", points: 6, cap: 10 },
+];
+
+const RISK_LEVELS = [
+  { min: 60, label: "critical" },
+  { min: 35, label: "high" },
+  { min: 15, label: "medium" },
+  { min: 0, label: "low" },
+];
+
+function RiskWindow({ illustrative = false }: { illustrative?: boolean }) {
+  const score = riskFactors.reduce((total, factor) => total + factor.points, 0);
+  const level = RISK_LEVELS.find((entry) => score >= entry.min)?.label ?? "low";
   return (
     <div className="fm-window fm-risk">
-      <div className="fm-risk-title"><span>Web Platform</span><span className="fm-risk-score">Risk score · 50</span></div>
-      {factors.map(([name, detail, amount, points]) => (
-        <div className="fm-risk-factor" key={name}>
-          <div className="fm-risk-factor-head"><span>{name}</span><span>{points} pts</span></div>
-          <div className="fm-risk-track"><div className="fm-risk-fill" style={{ width: `${amount}%` }} /></div>
-          <small>{detail}</small>
+      <div className="fm-risk-title">
+        <span>Web Platform</span>
+        <span className="fm-risk-score">Risk score · {score} · {level}</span>
+      </div>
+      {illustrative && <div className="fm-risk-note">Illustrative project data</div>}
+      {riskFactors.map((factor) => (
+        <div className="fm-risk-factor" key={factor.label}>
+          <div className="fm-risk-factor-head">
+            <span>{factor.label}</span>
+            <span>{factor.points} / {factor.cap} pts</span>
+          </div>
+          <div className="fm-risk-track">
+            <div className="fm-risk-fill" style={{ width: `${Math.round((factor.points / factor.cap) * 100)}%` }} />
+          </div>
+          <small>{factor.detail}</small>
         </div>
       ))}
     </div>
@@ -327,7 +374,7 @@ const homeActivity = [
   { who: "RS", text: "unblocked WEB-231", time: "1d" },
 ];
 
-function HomeWorkspacePreview() {
+function WorkspaceBoardPreview() {
   return (
     <div className="fm-hm-app" aria-label="Forge workspace preview">
       <div className="fm-hm-app-bar">
@@ -404,6 +451,75 @@ function HomeWorkspacePreview() {
   );
 }
 
+const boardColumns: { name: string; count: number; list: { id: string; name: string; person: string; tag: string; age: string; selected?: boolean }[] }[] = [
+  {
+    name: "Backlog",
+    count: 12,
+    list: [
+      { id: "WEB-224", name: "Document request limits", person: "AL", tag: "Normal", age: "3d" },
+      { id: "WEB-241", name: "Split billing webhook retries", person: "SK", tag: "High", age: "5d" },
+      { id: "WEB-246", name: "Add audit filter to issue list", person: "JT", tag: "Low", age: "6d" },
+    ],
+  },
+  {
+    name: "In progress",
+    count: 8,
+    list: [
+      { id: "WEB-218", name: "Make retry state visible", person: "MC", tag: "High", age: "2h", selected: true },
+      { id: "WEB-233", name: "Backfill workspace invitations", person: "RS", tag: "Normal", age: "1d" },
+    ],
+  },
+  {
+    name: "Review",
+    count: 4,
+    list: [
+      { id: "WEB-231", name: "Resolve session timeout", person: "JT", tag: "Urgent", age: "4h" },
+      { id: "WEB-229", name: "Rate limit comment writes", person: "AL", tag: "High", age: "1d" },
+    ],
+  },
+  {
+    name: "Done",
+    count: 19,
+    list: [
+      { id: "WEB-209", name: "Clarify response codes", person: "RS", tag: "Normal", age: "2d" },
+      { id: "WEB-212", name: "Index issue dependencies", person: "MC", tag: "Normal", age: "3d" },
+    ],
+  },
+];
+
+function ProjectBoardPreview() {
+  return (
+    <div className="fm-window">
+      <div className="fm-window-bar">
+        <i className="fm-window-dot" />
+        <span className="fm-window-title">forge / acme-labs / web-platform / issues</span>
+        <span className="fm-window-state"><i /> 43 open · 2 overdue</span>
+      </div>
+      <div className="fm-board">
+        {boardColumns.map((column) => (
+          <div className="fm-board-col" key={column.name}>
+            <div className="fm-board-head"><span>{column.name}</span><b>{column.count}</b></div>
+            {column.list.map((issue) => (
+              <div className={`fm-issue${issue.selected ? " is-selected" : ""}`} key={issue.id}>
+                <span className="fm-issue-id">{issue.id}</span>
+                <div className="fm-issue-name">{issue.name}</div>
+                <div className="fm-issue-meta">
+                  <span className={`fm-issue-tag is-${issue.tag.toLowerCase()}`}>{issue.tag}</span>
+                  <span>{issue.age}</span>
+                </div>
+                <div className="fm-issue-foot">
+                  <span className="fm-avatar">{issue.person}</span>
+                  <span className="fm-issue-owner">{issue.person === "MC" ? "Maya Chen" : issue.person === "JT" ? "Jonah Tate" : issue.person === "RS" ? "Rina Shah" : issue.person === "AL" ? "Alex Liu" : "Sana Khan"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const homeCapabilities = [
   { icon: Workflow, label: "Custom workflows", sub: "Statuses and rules per project" },
   { icon: GitBranch, label: "Issue dependencies", sub: "Blocking chains that stay valid" },
@@ -412,7 +528,7 @@ const homeCapabilities = [
   { icon: History, label: "Immutable activity history", sub: "Append-only record of every change" },
 ];
 
-function HomeCapabilityStrip() {
+function CapabilityStrip() {
   return (
     <div className="fm-hm-strip">
       {homeCapabilities.map(({ icon: Icon, label, sub }) => (
@@ -488,13 +604,13 @@ function TeamMini() {
 }
 
 const homeProducts = [
-  { icon: Kanban, title: "Projects", text: "Coordinate active work and milestones", to: "/product", preview: <ProjectsMini /> },
-  { icon: Workflow, title: "Workflow", text: "Make status changes and handoffs explicit", to: "/workflow", preview: <WorkflowMini /> },
+  { icon: Kanban, title: "Projects", text: "Coordinate active work and milestones", to: "/capabilities", preview: <ProjectsMini /> },
+  { icon: Workflow, title: "Workflow", text: "Make status changes and handoffs explicit", to: "/workflows", preview: <WorkflowMini /> },
   { icon: TrendingUp, title: "Analytics", text: "Understand throughput, cycle time, and risk", to: "/analytics", preview: <AnalyticsMini /> },
-  { icon: Users, title: "Team activity", text: "Keep assignments, comments, and changes visible", to: "/teams", preview: <TeamMini /> },
+  { icon: Users, title: "Team activity", text: "Keep assignments, comments, and changes visible", to: "/enterprise", preview: <TeamMini /> },
 ];
 
-function HomeProductGrid() {
+function ProductAreaGrid() {
   return (
     <div className="fm-hm-tiles">
       {homeProducts.map(({ icon: Icon, title, text, to, preview }) => (
@@ -533,7 +649,7 @@ const homeFlowRules = [
   { key: "notify_assignee", label: "Notify assignee", value: "On transition", on: false },
 ];
 
-function HomeWorkflowPreview() {
+function WorkflowRulesPreview() {
   return (
     <div className="fm-window fm-hm-flowwin">
       <div className="fm-window-bar">
@@ -591,7 +707,7 @@ const homeMetrics = [
   { label: "Risk score", value: "50", tone: "risk" },
 ];
 
-function HomeAnalyticsPreview() {
+function AnalyticsDashboardPreview() {
   return (
     <div className="fm-window fm-hm-dash">
       <div className="fm-window-bar">
@@ -621,8 +737,8 @@ function HomeAnalyticsPreview() {
         <div className="fm-hm-panel">
           <div className="fm-hm-panel-head"><span>Cycle time</span><b>3.2d</b></div>
           <svg className="fm-hm-spark" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">
-            <polyline points="0,26 17,22 34,27 51,16 68,19 85,11 102,13 120,5 120,34 0,34" fill="rgba(127,157,255,.12)" stroke="none" />
-            <polyline points="0,26 17,22 34,27 51,16 68,19 85,11 102,13 120,5" fill="none" stroke="#7f9dff" strokeWidth="1.4" />
+            <polyline points="0,26 17,22 34,27 51,16 68,19 85,11 102,13 120,5 120,34 0,34" fill="rgba(255,255,255,.07)" stroke="none" />
+            <polyline points="0,26 17,22 34,27 51,16 68,19 85,11 102,13 120,5" fill="none" stroke="#e0e0e0" strokeWidth="1.4" />
           </svg>
           <div className="fm-hm-panel-foot"><span>started to completed</span><b>review wait 9h</b></div>
         </div>
@@ -650,7 +766,7 @@ const homeFeed = [
   { who: "JT", event: "blocking", ref: "WEB-231 blocked by WEB-219", time: "1d" },
 ];
 
-function HomeTeamPreview() {
+function TeamActivityPreview() {
   return (
     <div className="fm-window fm-hm-team">
       <div className="fm-window-bar">
@@ -692,12 +808,12 @@ function HomePage() {
     <>
       <Hero
         eyebrow="Engineering operations for startup teams"
-        title={<>Move important work<br />forward with less friction.</>}
-        description="Forge brings projects, workflows, dependencies, risk, analytics, and team activity into one focused workspace."
-        primary="Get started"
-        secondary="Explore the product"
-        secondaryTo="/product"
-        aside={<HomeWorkspacePreview />}
+        title={<>Keep engineering work<br />in motion.</>}
+        description="Forge gives your team a place to shape project workflows, connect dependent issues, and understand what is slowing delivery."
+        primary="Create a workspace"
+        secondary="Explore the platform"
+        secondaryTo="/capabilities"
+        aside={<WorkspaceBoardPreview />}
         className="fm-home-hero fm-hm-hero"
         extra={
           <div className="fm-hm-hero-meta">
@@ -708,67 +824,60 @@ function HomePage() {
         }
       />
       <section className="fm-section fm-hm-strip-section">
-        <div className="fm-container"><HomeCapabilityStrip /></div>
+        <div className="fm-container"><CapabilityStrip /></div>
       </section>
-      <section className="fm-section fm-section-pad fm-hm-sec">
+      <section className="fm-section fm-section-pad">
         <div className="fm-container">
-          <SectionHeading label="Product overview" title="One workspace for the work that matters." body="Projects, workflow rules, engineering signals, and team activity in one place." />
-          <HomeProductGrid />
+          <SectionHeading
+            label="Capability overview"
+            title="The work has rules. Forge keeps them in view."
+            body="Six capabilities sit under every project, every status, and every change your team makes."
+          />
+          <FeatureGrid items={homeFeatures} />
         </div>
       </section>
-      <section className="fm-section fm-section-pad fm-hm-sec">
-        <div className="fm-container fm-split fm-hm-split">
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container fm-split">
           <div>
-            <div className="fm-kicker">Workflow</div>
-            <h2 className="fm-heading-sm">Make every handoff visible.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>Give teams a shared view of how work moves from backlog to completion, including the rules and blockers that affect progress.</p>
+            <div className="fm-kicker">Workflow demonstration</div>
+            <h2 className="fm-heading-sm">Every transition is checked.</h2>
+            <p className="fm-body" style={{ marginTop: 20 }}>Forge validates a status change against the rules the project defined, records what happened, and runs the automation that follows.</p>
             <div className="fm-list">
-              {["Custom status flows", "Transition rules", "Blocker protection", "Automation triggers"].map((item) => (
-                <div className="fm-list-row" key={item}><Check size={13} />{item}</div>
+              {["Source and destination status", "Assignee and comment requirements", "Blocker validation before the move"].map((item) => (
+                <div className="fm-list-row" key={item}><Check size={14} />{item}</div>
               ))}
             </div>
-            <Link className="fm-button" to="/workflow" style={{ marginTop: 20 }}>Explore workflow <ArrowRight size={12} /></Link>
+            <Link className="fm-button" to="/workflows" style={{ marginTop: 24 }}>Explore workflows <ArrowRight size={13} /></Link>
           </div>
-          <HomeWorkflowPreview />
+          <TransitionWindow />
         </div>
       </section>
-      <section className="fm-section fm-section-pad fm-hm-sec">
-        <div className="fm-container fm-split fm-split-reverse fm-hm-split">
-          <HomeAnalyticsPreview />
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container fm-split fm-split-reverse">
+          <RiskWindow illustrative />
           <div>
-            <div className="fm-kicker">Risk and analytics</div>
-            <h2 className="fm-heading-sm">Know what is slowing delivery, and why.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>Open, blocked, and overdue work feed a risk score you can trace back to the issues behind it.</p>
-            <div className="fm-list">
-              {["Explainable risk factors", "Throughput by week", "Cycle time and review wait"].map((item) => (
-                <div className="fm-list-row" key={item}><Check size={13} />{item}</div>
-              ))}
-            </div>
-            <Link className="fm-button" to="/analytics" style={{ marginTop: 20 }}>Explore analytics <ArrowRight size={12} /></Link>
+            <div className="fm-kicker">Risk preview</div>
+            <h2 className="fm-heading-sm">The score comes with its reasons.</h2>
+            <p className="fm-body" style={{ marginTop: 20 }}>A project risk score is a transparent calculation. Every factor and the points it contributes are shown next to the number.</p>
+            <Link className="fm-button" to="/analytics" style={{ marginTop: 24 }}>See how risk is calculated <ArrowRight size={13} /></Link>
           </div>
         </div>
       </section>
-      <section className="fm-section fm-section-pad fm-hm-sec">
-        <div className="fm-container fm-split fm-hm-split">
-          <div>
-            <div className="fm-kicker">Team and activity</div>
-            <h2 className="fm-heading-sm">Everyone sees the same state of the work.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>See who is carrying what, and follow status changes, comments, assignments, and blocking events as they happen.</p>
-            <Link className="fm-button" to="/teams" style={{ marginTop: 20 }}>Explore teams <ArrowRight size={12} /></Link>
-          </div>
-          <HomeTeamPreview />
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading
+            label="Inside a project"
+            title="The board your team actually works from."
+            body="Issues grouped by the statuses this project defined, with priority, ownership, and blockers visible on the card."
+          />
+          <ProjectBoardPreview />
         </div>
       </section>
-      <div className="fm-container fm-hm-final">
-        <div>
-          <h2>Give your team a clearer way to ship.</h2>
-          <p>Create a workspace and bring projects, workflow, and engineering insight together.</p>
-        </div>
-        <div className="fm-hm-final-actions">
-          <ButtonLink to="/auth">Create workspace <ArrowRight size={13} /></ButtonLink>
-          <ButtonLink to="/auth" quiet>Sign in</ButtonLink>
-        </div>
-      </div>
+      <ClosingCTA
+        title="Move the work forward, together."
+        body="Start a workspace, shape the process, and bring your engineering work into view."
+        action="Create a workspace"
+      />
     </>
   );
 }
@@ -915,25 +1024,88 @@ function WorkflowRules() {
   );
 }
 
-const wfSteps = [
-  { num: "01", title: "Define your statuses", text: "Order the statuses each project uses, from backlog to done." },
-  { num: "02", title: "Set transition rules", text: "Require an assignee, a comment, or clear blockers before work moves." },
-  { num: "03", title: "Let the team move forward", text: "Forge checks every transition and records what changed." },
+const ruleValidation = [
+  {
+    key: "requiresAssignee",
+    label: "Requires assignee",
+    state: "passed",
+    value: "WEB-218 · Maya Chen",
+    note: "An owner has to be set on the issue before the transition can run.",
+  },
+  {
+    key: "requiresComment",
+    label: "Requires comment",
+    state: "passed",
+    value: "Reviewed and ready",
+    note: "The move has to carry a comment so the team can read the reason later.",
+  },
+  {
+    key: "noUnresolvedBlockers",
+    label: "No unresolved blockers",
+    state: "passed",
+    value: "0 unresolved",
+    note: "Completion waits until every blocking issue has been closed.",
+  },
+  {
+    key: "rejectedTransition",
+    label: "Rejected example",
+    state: "refused",
+    value: "WEB-231 blocked by WEB-219",
+    note: "The move is refused and the blocking issue is named in the error.",
+  },
 ];
 
-function WorkflowSteps() {
+function RuleValidationPanel() {
   return (
-    <div className="fm-wf-steps">
-      {wfSteps.map((step) => (
-        <article className="fm-wf-step" key={step.num}>
-          <span className="fm-wf-step-num">{step.num}</span>
-          <h3>{step.title}</h3>
-          <p>{step.text}</p>
+    <div className="fm-window" aria-label="Illustration of workflow rule validation">
+      <div className="fm-window-bar">
+        <span className="fm-window-title">validateTransition · In progress to Review</span>
+        <span className="fm-window-state"><i /> 3 passed · 1 refused</span>
+      </div>
+      <div className="fm-rule-check">
+        {ruleValidation.map((rule) => (
+          <div className={`fm-rule-check-row is-${rule.state}`} key={rule.key}>
+            <span className="fm-rule-check-icon">
+              {rule.state === "passed" ? <Check size={13} /> : <X size={13} />}
+            </span>
+            <span className="fm-rule-check-body">
+              <b>{rule.key}</b>
+              <em>{rule.label}</em>
+              <span>{rule.note}</span>
+            </span>
+            <span className="fm-rule-check-value">{rule.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const automationSequence = [
+  { num: "01", icon: Bell, title: "Notify the assignee", text: "The current assignee is told that the issue moved." },
+  { num: "02", icon: Zap, title: "Set priority", text: "A rule can raise or lower priority as part of the move." },
+  { num: "03", icon: History, title: "Append the event", text: "The transition is written to activity history with its actor and time." },
+  { num: "04", icon: GitBranch, title: "Check dependencies", text: "Issues blocked by this one are re-evaluated against the new status." },
+];
+
+function AutomationSequence() {
+  return (
+    <div className="fm-seq">
+      {automationSequence.map(({ num, icon: Icon, title, text }) => (
+        <article className="fm-seq-item" key={num}>
+          <div className="fm-seq-head">
+            <span className="fm-seq-icon"><Icon size={14} strokeWidth={1.5} /></span>
+            <span className="fm-seq-num">{num}</span>
+          </div>
+          <h3>{title}</h3>
+          <p>{text}</p>
         </article>
       ))}
     </div>
   );
 }
+
+
 
 const wfDataStats = [
   { label: "Open issues", value: "41" },
@@ -996,33 +1168,64 @@ function WorkflowsPage() {
   return (
     <>
       <Hero
-        eyebrow="WORKFLOW CONTROL"
-        title={<>Turn every handoff<br />into a clear next step.</>}
-        description="Design a workflow your team can follow, measure, and improve without losing context."
-        primary="Get started"
-        secondary="View the workspace"
+        eyebrow="Workflow engine"
+        title={<>A process your team<br />can actually rely on.</>}
+        description="Every project can follow its own statuses and transition rules. Forge checks the rules when work moves, not after the process drifts."
+        primary="Create a workspace"
+        secondary="Open Forge"
+        secondaryTo="/app"
         aside={<WorkflowHeroPreview />}
-        extra={<span className="fm-wf-cmd"><i /><b>web platform</b>4 statuses · 6 rules · 3 automations</span>}
         className="fm-wf-hero"
       />
       <section className="fm-section fm-section-pad">
         <div className="fm-container">
-          <SectionHeading label="Workflow capabilities" title="Every handoff, governed." body="Forge turns a project's process into enforced statuses, checked transitions, and automation that runs after the work moves." />
-          <WorkflowCapabilities />
+          <SectionHeading
+            label="Define the path"
+            title="Your project. Its own vocabulary."
+            body="Each project orders its own statuses, allows its own transitions, and carries its own rules. The workflow below is one project's own."
+          />
+          <WorkflowRulesPreview />
         </div>
       </section>
       <section className="fm-section fm-section-pad">
         <div className="fm-container fm-split">
           <div>
+            <div className="fm-kicker">Enforce the rules</div>
+            <h2 className="fm-heading-sm">The API is where a rule counts.</h2>
+            <p className="fm-body" style={{ marginTop: 20 }}>A rule is only useful if it is checked in the same place the work moves. Forge validates every transition server side and returns the exact requirement that is not met.</p>
+            <div className="fm-list">
+              {["requiresAssignee", "requiresComment", "noUnresolvedBlockers"].map((rule) => (
+                <div className="fm-list-row" key={rule}><Check size={14} />{rule}</div>
+              ))}
+            </div>
+          </div>
+          <RuleValidationPanel />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading
+            label="After the transition"
+            title="What happens after a transition?"
+            body="Once a move is accepted, Forge completes it in a fixed order so nothing is silently skipped."
+          />
+          <AutomationSequence />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container fm-split fm-split-reverse">
+          <WorkflowEditorPreview />
+          <div>
             <div className="fm-kicker">The workflow editor</div>
             <h2 className="fm-heading-sm">Configure the workflow with your team.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>Set the statuses a project uses, then define what each transition requires. Forge checks every move and explains exactly what a rule needs.</p>
+            <p className="fm-body" style={{ marginTop: 20 }}>Set the statuses a project uses, then define what each transition requires. Changes stay staged until the workflow is saved.</p>
             <div className="fm-list">
-              {["Per-project status sequences", "Transition rules with clear errors", "Changes staged until you save"].map((item) => <div className="fm-list-row" key={item}><Check size={13} />{item}</div>)}
+              {["Per-project status sequences", "Transition rules with clear errors", "Changes staged until you save"].map((item) => (
+                <div className="fm-list-row" key={item}><Check size={14} />{item}</div>
+              ))}
             </div>
-            <Link className="fm-button" to="/app" style={{ marginTop: 20 }}>Explore workflow <ArrowRight size={12} /></Link>
+            <Link className="fm-button" to="/app" style={{ marginTop: 24 }}>Open Forge <ArrowRight size={13} /></Link>
           </div>
-          <WorkflowEditorPreview />
         </div>
       </section>
       <section className="fm-section fm-section-pad">
@@ -1033,8 +1236,8 @@ function WorkflowsPage() {
       </section>
       <section className="fm-section fm-section-pad">
         <div className="fm-container">
-          <SectionHeading label="How it works" title="Three steps to a workflow your team follows." />
-          <WorkflowSteps />
+          <SectionHeading label="Workflow capabilities" title="Every handoff, governed." body="Statuses, controlled transitions, and automation that runs after the work moves." />
+          <WorkflowCapabilities />
         </div>
       </section>
       <section className="fm-section fm-section-pad">
@@ -1043,7 +1246,11 @@ function WorkflowsPage() {
           <WorkflowDataPreview />
         </div>
       </section>
-      <ClosingCTA title="Build a workflow your team can trust." body="Make every status, transition, and blocker visible." action="Get started" />
+      <ClosingCTA
+        title="Define the path once. Let the work move with the same expectations every time."
+        body="Make every status, transition, and blocker visible to the team doing the work."
+        action="Create a workspace"
+      />
     </>
   );
 }
@@ -1075,14 +1282,23 @@ function AnalyticsPage() {
           <div className="fm-window fm-chart-large">
             <div className="fm-window-bar"><i className="fm-window-dot" /><span className="fm-window-title">project / delivery trends</span><span className="fm-window-state">last 8 weeks</span></div>
             <div className="fm-chart">
-              <div className="fm-chart-head"><strong>Weekly completed issues</strong><span>Illustrative view · issue history</span></div>
-              <div className="fm-chart-area">
-                <svg viewBox="0 0 700 160" preserveAspectRatio="none" aria-label="Illustrative weekly throughput trend">
-                  <path d="M0 130 C45 120 50 94 100 104 S155 128 200 91 S260 74 300 92 S350 55 400 65 S455 83 500 51 S560 60 600 30 S660 50 700 18" />
-                  <path className="fm-chart-secondary" d="M0 142 C45 132 65 135 100 125 S160 105 200 114 S260 105 300 101 S365 94 400 96 S455 86 500 82 S555 70 600 75 S660 62 700 59" />
-                </svg>
+              <div className="fm-chart-head"><strong>Weekly completed issues</strong><span>Illustrative data · computed from issue history</span></div>
+              <div className="fm-chart-body">
+                <div className="fm-chart-axis"><span>40</span><span>30</span><span>20</span><span>10</span><span>0</span></div>
+                <div className="fm-chart-plot">
+                  <div className="fm-chart-area">
+                    <svg viewBox="0 0 700 160" preserveAspectRatio="none" aria-label="Illustrative weekly throughput trend">
+                      <path d="M0 130 C45 120 50 94 100 104 S155 128 200 91 S260 74 300 92 S350 55 400 65 S455 83 500 51 S560 60 600 30 S660 50 700 18" />
+                      <path className="fm-chart-secondary" d="M0 142 C45 132 65 135 100 125 S160 105 200 114 S260 105 300 101 S365 94 400 96 S455 86 500 82 S555 70 600 75 S660 62 700 59" />
+                    </svg>
+                  </div>
+                  <div className="fm-chart-labels"><span>Week 01</span><span>Week 02</span><span>Week 03</span><span>Week 04</span><span>Week 05</span><span>Week 06</span><span>Week 07</span><span>Week 08</span></div>
+                </div>
               </div>
-              <div className="fm-chart-labels"><span>Week 01</span><span>Week 02</span><span>Week 03</span><span>Week 04</span><span>Week 05</span><span>Week 06</span><span>Week 07</span><span>Week 08</span></div>
+              <div className="fm-chart-legend">
+                <span><i /> Completed</span>
+                <span><i /> Opened</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1095,7 +1311,17 @@ function AnalyticsPage() {
             <p className="fm-body" style={{ marginTop: 16 }}>Forge's rule-based risk score surfaces the factors underneath the number: blocked work, overdue issues and blockers, high-priority backlog, and stale issues. Each factor and weight is visible.</p>
             <Link className="fm-button" to="/capabilities" style={{ marginTop: 20 }}>View capability details <ArrowRight size={12} /></Link>
           </div>
-          <RiskWindow />
+          <RiskWindow illustrative />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading
+            label="At a glance"
+            title="The same signals in one panel."
+            body="Open work, delivery pace, and the measures a team reviews in its weekly planning."
+          />
+          <AnalyticsDashboardPreview />
         </div>
       </section>
       <section className="fm-section fm-section-pad">
@@ -1150,24 +1376,97 @@ function EnterprisePage() {
         </div>
       </section>
       <section className="fm-section fm-section-pad">
-        <div className="fm-container">
-          <SectionHeading label="Invite the team" title="Bring people in with an expiring invitation." body="Workspace invitations use a one-time token. The stored token is SHA-256 hashed and the invitation expires after seven days." />
-          <div className="fm-window">
-            <div className="fm-window-bar"><i className="fm-window-dot" /><span className="fm-window-title">workspace / members / invitations</span></div>
-            <div className="fm-rule-code">
-              <div className="fm-rule-line"><span className="fm-rule-key">Invitation</span><span className="fm-rule-value">One time use</span><Check size={11} /></div>
-              <div className="fm-rule-line"><span className="fm-rule-key">Token storage</span><span className="fm-rule-value">SHA-256 hash</span><Check size={11} /></div>
-              <div className="fm-rule-line"><span className="fm-rule-key">Expiry</span><span className="fm-rule-value">7 days</span><Check size={11} /></div>
-            </div>
+        <div className="fm-container fm-split">
+          <div>
+            <div className="fm-kicker">Invite the team</div>
+            <h2 className="fm-heading-sm">Bring people in with an expiring invitation.</h2>
+            <p className="fm-body" style={{ marginTop: 20 }}>Workspace invitations use a one-time token. Only the hash is stored, and the invitation expires after seven days.</p>
+            <Link className="fm-button" to="/auth" style={{ marginTop: 24 }}>Create a workspace <ArrowRight size={13} /></Link>
+          </div>
+          <InvitationPreview />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container fm-split fm-split-reverse">
+          <TeamActivityPreview />
+          <div>
+            <div className="fm-kicker">Immutable history</div>
+            <h2 className="fm-heading-sm">Every change is recorded, not overwritten.</h2>
+            <p className="fm-body" style={{ marginTop: 20 }}>Creates, edits, transitions, comments, and assignment changes are appended to activity history. The record is never edited in place.</p>
           </div>
         </div>
       </section>
-      <div className="fm-container fm-stats">
-        {[["Owner", "Workspace ownership and administration."], ["Admin", "Workspace administration within assigned role."], ["Member", "Contribute to the team's engineering work."], ["Viewer", "View workspace work without modifying it."]].map(([name, desc]) => <div className="fm-stat" key={name}><strong>{name}</strong><span>{desc}</span></div>)}
-      </div>
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading
+            label="Workspace roles"
+            title="Four roles, one hierarchy."
+            body="Permissions are checked on the server against the member's role in the workspace."
+          />
+          <RoleMatrix />
+        </div>
+      </section>
       <div className="fm-container fm-quote"><blockquote>People, project rules, and the history of a decision belong in the same workspace.</blockquote><cite>Forge · Workspace model</cite></div>
-      <ClosingCTA title="Start with a workspace your team can share." body="Invite the people doing the work and give each person an appropriate workspace role." />
+      <ClosingCTA
+        title="People, project rules, and the history of a decision belong in the same workspace."
+        body="Invite the people doing the work and give each person an appropriate workspace role."
+        action="Create a workspace"
+      />
     </>
+  );
+}
+
+function InvitationPreview() {
+  return (
+    <div className="fm-window" aria-label="Illustration of a workspace invitation">
+      <div className="fm-window-bar">
+        <span className="fm-window-title">workspace / acme-labs / members / invite</span>
+        <span className="fm-window-state"><i /> admin only</span>
+      </div>
+      <div className="fm-invite">
+        <div className="fm-invite-field"><span>Email</span><b>engineer@acme-labs.dev</b></div>
+        <div className="fm-invite-field"><span>Role</span><b>Member</b></div>
+      </div>
+      <div className="fm-rule-code">
+        <div className="fm-rule-line"><span className="fm-rule-key">token</span><span className="fm-rule-value">one time use</span><Check size={12} /></div>
+        <div className="fm-rule-line"><span className="fm-rule-key">storage</span><span className="fm-rule-value">sha256:3f9a…c41d</span><Check size={12} /></div>
+        <div className="fm-rule-line"><span className="fm-rule-key">expires_at</span><span className="fm-rule-value">now + 7 days</span><Check size={12} /></div>
+      </div>
+      <div className="fm-invite-foot">Resending generates a fresh token and revokes the previously shared link.</div>
+    </div>
+  );
+}
+
+const ROLE_NAMES = ["owner", "admin", "member", "viewer"] as const;
+
+const roleCapabilities = [
+  { label: "View projects, issues, and analytics", owner: true, admin: true, member: true, viewer: true },
+  { label: "Create and edit issues", owner: true, admin: true, member: true, viewer: false },
+  { label: "Comment, link dependencies, manage labels", owner: true, admin: true, member: true, viewer: false },
+  { label: "Configure workflows and automation rules", owner: true, admin: true, member: false, viewer: false },
+  { label: "Manage members, roles, and invitations", owner: true, admin: true, member: false, viewer: false },
+];
+
+function RoleMatrix() {
+  return (
+    <div className="fm-roles">
+      <div className="fm-roles-row fm-roles-head">
+        <span>Permission</span>
+        {ROLE_NAMES.map((role) => <span key={role}>{role[0].toUpperCase() + role.slice(1)}</span>)}
+      </div>
+      {roleCapabilities.map((row) => (
+        <div className="fm-roles-row" key={row.label}>
+          <span>{row.label}</span>
+          {ROLE_NAMES.map((role) => (
+            <span key={role}>
+              {row[role]
+                ? <Check size={14} aria-label={`${role}: allowed`} />
+                : <Minus size={14} aria-label={`${role}: not allowed`} />}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1210,11 +1509,25 @@ function CapabilitiesPage() {
       <section className="fm-section">
         <div className="fm-container fm-cap-hero">
           <div className="fm-eyebrow">Forge capabilities</div>
-          <h1 className="fm-heading" style={{ marginTop: 14 }}>A closer look at how work moves.</h1>
+          <h1 className="fm-heading" style={{ marginTop: 20 }}>A closer look at how work moves.</h1>
           <p className="fm-body">A practical index of the workspace, workflow, and visibility features Forge provides.</p>
+          <div className="fm-hero-actions">
+            <ButtonLink to="/auth">Create a workspace <ArrowRight size={13} /></ButtonLink>
+            <ButtonLink to="/app" quiet>Open Forge</ButtonLink>
+          </div>
         </div>
       </section>
-      <section className="fm-section">
+      <section className="fm-section fm-section-pad">
+        <div className="fm-container">
+          <SectionHeading
+            label="Product areas"
+            title="Four places your team works."
+            body="Projects, workflow, analytics, and team activity share the same records and the same workspace."
+          />
+          <ProductAreaGrid />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad">
         <div className="fm-container fm-matrix">
           {matrixGroups.map((group) => (
             <section className="fm-matrix-group" key={group.title}>
@@ -1227,7 +1540,7 @@ function CapabilitiesPage() {
         </div>
       </section>
       <section className="fm-container fm-faq">
-        <div><div className="fm-kicker"><CircleHelp size={13} /> Common questions</div><h2 className="fm-heading-sm">The details matter.</h2></div>
+        <div><div className="fm-kicker"><CircleHelp size={14} /> Common questions</div><h2 className="fm-heading-sm">The details matter.</h2></div>
         <div className="fm-faq-list">
           <article className="fm-faq-item"><h3>Can each project have its own workflow?</h3><p>Yes. Each project can define its statuses and transitions, including transition requirements enforced by the workflow engine.</p></article>
           <article className="fm-faq-item"><h3>How is project risk calculated?</h3><p>The risk score is rule-based and explainable. Forge displays contributing factors and weights rather than hiding them behind a single label.</p></article>
@@ -1235,7 +1548,7 @@ function CapabilitiesPage() {
           <article className="fm-faq-item"><h3>How do workspace invitations work?</h3><p>Invitation links are single-use and expire after seven days. Forge stores a SHA-256 hash of each token.</p></article>
         </div>
       </section>
-      <ClosingCTA title="See Forge with your team's work." body="Create a workspace and explore the capabilities in the product." />
+      <ClosingCTA title="See Forge with your team's work." body="Create a workspace and explore the capabilities in the product." action="Create a workspace" />
     </>
   );
 }
