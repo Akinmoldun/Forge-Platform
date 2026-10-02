@@ -273,6 +273,21 @@ createRoot(document.getElementById("root")!).render(
                 path="/about"
                 element={<MarketingReferencePage pageKey="about" />}
               />
+              {/* Short public aliases used by the marketing navigation. They
+                  render the same public pages, stay reachable while signed
+                  out, and never redirect to sign in. */}
+              <Route
+                path="/product"
+                element={<MarketingReferencePage pageKey="capabilities" />}
+              />
+              <Route
+                path="/workflow"
+                element={<MarketingReferencePage pageKey="workflows" />}
+              />
+              <Route
+                path="/teams"
+                element={<MarketingReferencePage pageKey="enterprise" />}
+              />
               <Route
                 path="/auth"
                 element={withConvexAuth(

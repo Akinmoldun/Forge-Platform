@@ -1,5 +1,5 @@
-import { Fragment, useState, type ReactNode } from "react";
-import { Link } from "react-router";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Link, useLocation } from "react-router";
 import {
   Activity,
   ArrowDownRight,
@@ -8,18 +8,25 @@ import {
   ArrowUpRight,
   Bell,
   Check,
+  ChevronRight,
   CircleHelp,
   Clock3,
   GitBranch,
+  Kanban,
   History,
+  LayoutGrid,
   LockKeyhole,
   Menu,
   MessageSquare,
   Network,
   Radio,
+  Search,
   Shield,
   ShieldAlert,
+  TrendingUp,
+  TriangleAlert,
   User,
+  Users,
   Workflow,
   X,
   Zap,
@@ -35,16 +42,42 @@ export type MarketingPageKey =
   | "capabilities"
   | "about";
 
-const PAGE_LINKS: { label: string; to: string; key: MarketingPageKey }[] = [
-  { label: "Product", to: "/capabilities", key: "capabilities" },
-  { label: "Workflow", to: "/workflows", key: "workflows" },
-  { label: "Analytics", to: "/analytics", key: "analytics" },
-  { label: "Teams", to: "/enterprise", key: "enterprise" },
-  { label: "About", to: "/about", key: "about" },
+const PAGE_LINKS: { label: string; to: string; key: MarketingPageKey; paths: string[] }[] = [
+  { label: "Product", to: "/product", key: "capabilities", paths: ["/product", "/capabilities"] },
+  { label: "Workflow", to: "/workflow", key: "workflows", paths: ["/workflow", "/workflows"] },
+  { label: "Analytics", to: "/analytics", key: "analytics", paths: ["/analytics"] },
+  { label: "Teams", to: "/teams", key: "enterprise", paths: ["/teams", "/enterprise"] },
+  { label: "About", to: "/about", key: "about", paths: ["/about"] },
 ];
+
+const AUTH_PATHS = new Set(["/auth", "/app", "/invite"]);
+
+function isActivePath(pathname: string, link: (typeof PAGE_LINKS)[number]) {
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return link.paths.includes(normalized) && !AUTH_PATHS.has(normalized);
+}
 
 function Header({ pageKey }: { pageKey: MarketingPageKey }) {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const pathname = location?.pathname ?? "";
+
+  // The mobile menu is a full screen surface, so the page behind it must not
+  // scroll while it is open. Escape closes it as well.
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
   return (
     <header className="fm-nav">
       <div className="fm-container fm-nav-inner">
@@ -67,21 +100,25 @@ function Header({ pageKey }: { pageKey: MarketingPageKey }) {
           className={`fm-links${open ? " fm-links-open" : ""}`}
           aria-label="Main navigation"
         >
-          {PAGE_LINKS.map((item) => (
-            <Link
-              key={item.key}
-              to={item.to}
-              aria-current={pageKey === item.key ? "page" : undefined}
-              onClick={() => setOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {PAGE_LINKS.map((item) => {
+            const active = pathname ? isActivePath(pathname, item) : item.key === pageKey;
+            return (
+              <Link
+                key={item.key}
+                to={item.to}
+                className={active ? "fm-link-active" : undefined}
+                aria-current={active ? "page" : undefined}
+                onClick={() => setOpen(false)}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="fm-nav-actions">
           <Link className="fm-button fm-button-quiet" to="/auth">Sign in</Link>
-          <Link className="fm-button fm-button-primary" to="/app">
-            Open Forge <ArrowUpRight size={12} />
+          <Link className="fm-button fm-button-primary" to="/auth">
+            Get started <ArrowUpRight size={12} />
           </Link>
         </div>
       </div>
@@ -100,26 +137,22 @@ function Footer() {
           <p>Engineering work, with its rules and history in one place.</p>
         </div>
         <div className="fm-footer-column">
-          <strong>Platform</strong>
-          <Link to="/capabilities">Product</Link>
-          <Link to="/workflows">Workflow</Link>
+          <strong>Product</strong>
+          <Link to="/product">Overview</Link>
+          <Link to="/workflow">Workflow</Link>
           <Link to="/analytics">Analytics</Link>
-        </div>
-        <div className="fm-footer-column">
-          <strong>Teams</strong>
-          <Link to="/enterprise">Workspace access</Link>
-          <Link to="/enterprise">Invitations</Link>
-          <Link to="/enterprise">Activity history</Link>
+          <Link to="/teams">Teams</Link>
+          <Link to="/about">About</Link>
         </div>
         <div className="fm-footer-column">
           <strong>Get started</strong>
-          <Link to="/auth">Create a workspace</Link>
+          <Link to="/auth">Create workspace</Link>
           <Link to="/auth">Sign in</Link>
           <Link to="/app">Open the app</Link>
         </div>
       </div>
       <div className="fm-container fm-footer-bottom">
-        <span>Forge · Engineering workflow platform</span>
+        <span>© 2026 Forge Labs, Inc.</span>
         <span>Work moves. The record stays.</span>
       </div>
     </footer>
@@ -148,6 +181,7 @@ function Hero({
   description,
   primary = "Create a workspace",
   secondary,
+  secondaryTo = "/app",
   aside,
   extra,
   className = "",
@@ -157,6 +191,7 @@ function Hero({
   description: string;
   primary?: string;
   secondary?: string;
+  secondaryTo?: string;
   aside?: React.ReactNode;
   extra?: React.ReactNode;
   className?: string;
@@ -171,7 +206,7 @@ function Hero({
           <p className="fm-body">{description}</p>
           <div className="fm-hero-actions">
             <ButtonLink to="/auth">{primary} <ArrowRight size={13} /></ButtonLink>
-            {secondary && <ButtonLink to="/app" quiet>{secondary} <ArrowUpRight size={12} /></ButtonLink>}
+            {secondary && <ButtonLink to={secondaryTo} quiet>{secondary} <ArrowUpRight size={12} /></ButtonLink>}
           </div>
           {extra && <div className="fm-hero-extra">{extra}</div>}
         </div>
@@ -181,25 +216,7 @@ function Hero({
   );
 }
 
-const proofItems = [
-  { icon: Shield, label: "Workspace access", sub: "Roles enforced server-side" },
-  { icon: Workflow, label: "Project workflows", sub: "Rules at every transition" },
-  { icon: GitBranch, label: "Issue dependencies", sub: "Circular blockers rejected" },
-  { icon: History, label: "Activity history", sub: "Append-only change record" },
-];
 
-function ProofStrip() {
-  return (
-    <div className="fm-container fm-proof-strip">
-      {proofItems.map(({ icon: Icon, label, sub }) => (
-        <div className="fm-proof" key={label}>
-          <Icon className="fm-proof-icon" size={15} strokeWidth={1.5} />
-          <div><strong>{label}</strong><span>{sub}</span></div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 const homeFeatures = [
   { icon: Workflow, title: "A workflow that holds", text: "Statuses and transitions belong to each project. Required fields and blocker rules are enforced when work moves." },
@@ -226,44 +243,7 @@ function FeatureGrid({ items = homeFeatures }: { items?: typeof homeFeatures }) 
   );
 }
 
-const issues = [
-  { id: "WEB-218", name: "Make retry state visible", person: "MC", tag: "High" },
-  { id: "WEB-224", name: "Document request limits", person: "AL", tag: "Normal" },
-  { id: "WEB-231", name: "Resolve session timeout", person: "JT", tag: "Urgent" },
-  { id: "WEB-237", name: "Add empty state to logs", person: "SK", tag: "Normal" },
-];
 
-function BoardWindow() {
-  const columns = [
-    { name: "Backlog", list: [issues[1]] },
-    { name: "In progress", list: [issues[0], issues[3]] },
-    { name: "Review", list: [issues[2]] },
-    { name: "Done", list: [{ id: "WEB-209", name: "Clarify response codes", person: "RS", tag: "Normal" }] },
-  ];
-  return (
-    <div className="fm-window" aria-label="Illustration of a Forge issue board">
-      <div className="fm-window-bar">
-        <i className="fm-window-dot" /><i className="fm-window-dot" /><i className="fm-window-dot" />
-        <span className="fm-window-title">forge / web platform / issues</span>
-        <span className="fm-window-state"><i /> current</span>
-      </div>
-      <div className="fm-board">
-        {columns.map((col) => (
-          <div className="fm-board-col" key={col.name}>
-            <div className="fm-board-head"><span>{col.name}</span><b>{col.list.length}</b></div>
-            {col.list.map((issue) => (
-              <div className="fm-issue" key={issue.id}>
-                <span className="fm-issue-id">{issue.id}</span>
-                <div className="fm-issue-name">{issue.name}</div>
-                <div className="fm-issue-meta"><span>{issue.tag}</span><span className="fm-avatar">{issue.person}</span></div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function TransitionWindow() {
   return (
@@ -320,57 +300,475 @@ function ClosingCTA({ title = "Put the work in motion.", body = "Start a workspa
   );
 }
 
+/* Home page (public) */
+
+type HomeCard = {
+  id: string;
+  name: string;
+  person: string;
+  tag: string;
+  age: string;
+  blocked?: boolean;
+};
+
+const homeColumns: { name: string; count: number; cards: HomeCard[] }[] = [
+  { name: "Backlog", count: 12, cards: [{ id: "WEB-224", name: "Document request limits", person: "AL", tag: "Normal", age: "3d" }] },
+  { name: "In progress", count: 8, cards: [
+    { id: "WEB-218", name: "Make retry state visible", person: "MC", tag: "High", age: "2h" },
+    { id: "WEB-233", name: "Backfill workspace invites", person: "RS", tag: "Normal", age: "1d" },
+  ] },
+  { name: "Review", count: 4, cards: [{ id: "WEB-231", name: "Resolve session timeout", person: "JT", tag: "Urgent", age: "4h", blocked: true }] },
+  { name: "Done", count: 19, cards: [{ id: "WEB-209", name: "Clarify response codes", person: "RS", tag: "Normal", age: "2d" }] },
+];
+
+const homeActivity = [
+  { who: "MC", text: "moved WEB-218 to In progress", time: "2h" },
+  { who: "AL", text: "commented on WEB-224", time: "5h" },
+  { who: "RS", text: "unblocked WEB-231", time: "1d" },
+];
+
+function HomeWorkspacePreview() {
+  return (
+    <div className="fm-hm-app" aria-label="Forge workspace preview">
+      <div className="fm-hm-app-bar">
+        <span className="fm-hm-app-mark"><ForgeLogo /></span>
+        <span className="fm-hm-app-path">acme-labs / web-platform</span>
+        <span className="fm-hm-app-search"><Search size={9} />Search</span>
+        <span className="fm-hm-app-face"><i>MC</i><i>JT</i><i>+3</i></span>
+      </div>
+      <div className="fm-hm-app-body">
+        <div className="fm-hm-app-side">
+          <span className="fm-hm-side-name">Acme Labs</span>
+          <div className="fm-hm-side-nav">
+            <span><LayoutGrid size={10} />Overview</span>
+            <span className="is-on"><Kanban size={10} />Web Platform<b>43</b></span>
+            <span><Workflow size={10} />Workflow</span>
+            <span><TrendingUp size={10} />Analytics</span>
+            <span><Users size={10} />Team</span>
+          </div>
+          <div className="fm-hm-side-foot">
+            <div className="fm-hm-health-head"><span>Project health</span><b>72</b></div>
+            <div className="fm-hm-health-track"><i style={{ width: "72%" }} /></div>
+            <span className="fm-hm-health-note">4 blocked · 2 overdue</span>
+          </div>
+        </div>
+        <div className="fm-hm-app-main">
+          <div className="fm-hm-proj">
+            <div className="fm-hm-proj-head">
+              <b>Web Platform</b>
+              <span className="fm-hm-key">WEB</span>
+              <span className="fm-hm-pill is-blue">In progress 8</span>
+              <span className="fm-hm-pill is-warn">Blocked 4</span>
+            </div>
+            <div className="fm-hm-progress">
+              <div className="fm-hm-progress-track"><i style={{ width: "64%" }} /></div>
+              <span>64% of 43 issues closed</span>
+            </div>
+          </div>
+          <div className="fm-hm-board">
+            {homeColumns.map((column) => (
+              <div className="fm-hm-col" key={column.name}>
+                <div className="fm-hm-col-head"><span>{column.name}</span><b>{column.count}</b></div>
+                {column.cards.map((card) => (
+                  <div
+                    className={`fm-hm-issue${card.id === "WEB-218" ? " is-selected" : ""}${card.blocked ? " is-blocked" : ""}`}
+                    key={card.id}
+                  >
+                    <span className="fm-hm-issue-id">{card.id}</span>
+                    <span className="fm-hm-issue-name">{card.name}</span>
+                    <span className="fm-hm-issue-meta">
+                      <span className={`fm-hm-tag is-${card.tag.toLowerCase()}`}>{card.tag}</span>
+                      <i className="fm-hm-face">{card.person}</i>
+                    </span>
+                    {card.blocked && (
+                      <span className="fm-hm-issue-warn"><TriangleAlert size={8} />Blocked by WEB-219</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="fm-hm-activity">
+            <span className="fm-hm-activity-label">Recent activity</span>
+            {homeActivity.map((item) => (
+              <span className="fm-hm-activity-row" key={item.text}>
+                <i className="fm-hm-face">{item.who}</i>
+                {item.text}
+                <b>{item.time}</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const homeCapabilities = [
+  { icon: Workflow, label: "Custom workflows", sub: "Statuses and rules per project" },
+  { icon: GitBranch, label: "Issue dependencies", sub: "Blocking chains that stay valid" },
+  { icon: ShieldAlert, label: "Explainable risk", sub: "Score with its factors shown" },
+  { icon: TrendingUp, label: "Engineering analytics", sub: "Throughput, cycle time, review wait" },
+  { icon: History, label: "Immutable activity history", sub: "Append-only record of every change" },
+];
+
+function HomeCapabilityStrip() {
+  return (
+    <div className="fm-hm-strip">
+      {homeCapabilities.map(({ icon: Icon, label, sub }) => (
+        <div className="fm-hm-strip-item" key={label}>
+          <Icon size={13} strokeWidth={1.5} />
+          <div><strong>{label}</strong><span>{sub}</span></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const homeThroughput = [38, 52, 44, 61, 57, 70, 66, 78];
+
+function ProjectsMini() {
+  return (
+    <div className="fm-hm-mini">
+      <div className="fm-hm-mini-head"><span>Web Platform</span><b className="is-ok">On track</b></div>
+      <div className="fm-hm-mini-track"><i style={{ width: "64%" }} /></div>
+      <div className="fm-hm-mini-row"><span>Milestones</span><b>7 / 11</b></div>
+      <div className="fm-hm-mini-row"><span>Open issues</span><b>43</b></div>
+      <div className="fm-hm-mini-row"><span>Blocked</span><b className="is-warn">4</b></div>
+    </div>
+  );
+}
+
+function WorkflowMini() {
+  const flow = [["Backlog", "12"], ["In progress", "8"], ["Review", "4"], ["Done", "19"]];
+  return (
+    <div className="fm-hm-mini">
+      <div className="fm-hm-mini-head"><span>Status flow</span><b>4 statuses</b></div>
+      <div className="fm-hm-mini-flow">
+        {flow.map(([name, count], index) => (
+          <span className="fm-hm-mini-flow-cell" key={name}>
+            {index > 0 && <ChevronRight size={9} />}
+            <span className="fm-hm-mini-chip"><b>{name}</b><i>{count}</i></span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsMini() {
+  return (
+    <div className="fm-hm-mini">
+      <div className="fm-hm-mini-head"><span>Throughput</span><b>34 / wk</b></div>
+      <div className="fm-hm-mini-bars">
+        {homeThroughput.map((value, index) => (
+          <i key={index} style={{ height: `${value}%` }} className={index >= 6 ? "is-recent" : undefined} />
+        ))}
+      </div>
+      <div className="fm-hm-mini-row"><span>Cycle time</span><b>3.2d</b></div>
+      <div className="fm-hm-mini-row"><span>Review wait</span><b>9h</b></div>
+    </div>
+  );
+}
+
+function TeamMini() {
+  const feed = [["MC", "assigned WEB-218", "2h"], ["AL", "commented on WEB-224", "5h"], ["RS", "blocked WEB-231", "1d"]];
+  return (
+    <div className="fm-hm-mini">
+      <div className="fm-hm-mini-head"><span>Team feed</span><b>Live</b></div>
+      {feed.map(([who, text, time]) => (
+        <div className="fm-hm-mini-row" key={text}>
+          <i className="fm-hm-face">{who}</i>
+          <span className="fm-hm-mini-text">{text}</span>
+          <b>{time}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const homeProducts = [
+  { icon: Kanban, title: "Projects", text: "Coordinate active work and milestones", to: "/product", preview: <ProjectsMini /> },
+  { icon: Workflow, title: "Workflow", text: "Make status changes and handoffs explicit", to: "/workflow", preview: <WorkflowMini /> },
+  { icon: TrendingUp, title: "Analytics", text: "Understand throughput, cycle time, and risk", to: "/analytics", preview: <AnalyticsMini /> },
+  { icon: Users, title: "Team activity", text: "Keep assignments, comments, and changes visible", to: "/teams", preview: <TeamMini /> },
+];
+
+function HomeProductGrid() {
+  return (
+    <div className="fm-hm-tiles">
+      {homeProducts.map(({ icon: Icon, title, text, to, preview }) => (
+        <Link className="fm-hm-tile" to={to} key={title}>
+          <div className="fm-hm-tile-top"><Icon size={14} strokeWidth={1.5} /><span>{title}</span></div>
+          <p>{text}</p>
+          {preview}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+type HomeFlowColumn = {
+  name: string;
+  count: number;
+  id: string;
+  text: string;
+  person: string;
+  tag: string;
+  active?: boolean;
+  warn?: boolean;
+};
+
+const homeFlow: HomeFlowColumn[] = [
+  { name: "Backlog", count: 12, id: "WEB-224", text: "Document request limits", person: "AL", tag: "Normal" },
+  { name: "In progress", count: 8, id: "WEB-218", text: "Make retry state visible", person: "MC", tag: "High", active: true },
+  { name: "Review", count: 4, id: "WEB-231", text: "Resolve session timeout", person: "JT", tag: "Urgent", warn: true },
+  { name: "Done", count: 19, id: "WEB-209", text: "Clarify response codes", person: "RS", tag: "Normal" },
+];
+
+const homeFlowRules = [
+  { key: "requires_assignee", label: "Requires assignee", value: "WEB-218 · Maya Chen", on: true },
+  { key: "requires_comment", label: "Requires comment", value: "Reviewed and ready", on: true },
+  { key: "no_open_blockers", label: "No open blockers", value: "0 unresolved", on: true },
+  { key: "notify_assignee", label: "Notify assignee", value: "On transition", on: false },
+];
+
+function HomeWorkflowPreview() {
+  return (
+    <div className="fm-window fm-hm-flowwin">
+      <div className="fm-window-bar">
+        <span className="fm-window-title">workflow / Web Platform</span>
+        <span className="fm-window-state"><i /> draft saved</span>
+      </div>
+      <div className="fm-hm-flow">
+        {homeFlow.map((column, index) => (
+          <div className="fm-hm-flow-cell" key={column.name}>
+            {index > 0 && (
+              <span className="fm-hm-flow-arrow"><ChevronRight size={10} /></span>
+            )}
+            <div className={`fm-hm-flow-col${column.active ? " is-active" : ""}`}>
+              <div className="fm-hm-flow-head"><span>{column.name}</span><b>{column.count}</b></div>
+              <div className={`fm-hm-flow-card${column.warn ? " is-warn" : ""}`}>
+                <span className="fm-hm-issue-id">{column.id}</span>
+                <span className="fm-hm-issue-name">{column.text}</span>
+                <span className="fm-hm-issue-meta">
+                  <span className={`fm-hm-tag is-${column.tag.toLowerCase()}`}>{column.tag}</span>
+                  <i className="fm-hm-face">{column.person}</i>
+                </span>
+                {column.warn && (
+                  <span className="fm-hm-issue-warn"><TriangleAlert size={8} />1 open blocker</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="fm-hm-rules">
+        <div className="fm-hm-rules-head">
+          <span className="fm-hm-rules-title"><Workflow size={11} />In progress → Review</span>
+          <span className="fm-hm-rules-state">Selected transition</span>
+        </div>
+        {homeFlowRules.map((rule) => (
+          <div className="fm-hm-rules-row" key={rule.key}>
+            <span className="fm-hm-rules-key">{rule.key}</span>
+            <span className="fm-hm-rules-label">{rule.label}</span>
+            <span className="fm-hm-rules-value">{rule.value}</span>
+            <span className={`fm-wf-toggle${rule.on ? " on" : " off"}`} aria-hidden="true" />
+          </div>
+        ))}
+        <div className="fm-hm-rules-warn">
+          <TriangleAlert size={9} />WEB-231 cannot move to Review while WEB-219 is open.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const homeMetrics = [
+  { label: "Open issues", value: "43", tone: "" },
+  { label: "Blocked issues", value: "4", tone: "warn" },
+  { label: "Overdue issues", value: "2", tone: "warn" },
+  { label: "Risk score", value: "50", tone: "risk" },
+];
+
+function HomeAnalyticsPreview() {
+  return (
+    <div className="fm-window fm-hm-dash">
+      <div className="fm-window-bar">
+        <span className="fm-window-title">analytics / Web Platform · last 8 weeks</span>
+        <span className="fm-window-state"><i /> synced</span>
+      </div>
+      <div className="fm-hm-metrics">
+        {homeMetrics.map((metric) => (
+          <div className="fm-hm-metric" key={metric.label}>
+            <span>{metric.label}</span>
+            <b className={metric.tone ? `is-${metric.tone}` : undefined}>{metric.value}</b>
+          </div>
+        ))}
+      </div>
+      <div className="fm-hm-panels">
+        <div className="fm-hm-panel">
+          <div className="fm-hm-panel-head"><span>Weekly throughput</span><b>34 / wk</b></div>
+          <div className="fm-hm-bars">
+            {homeThroughput.map((value, index) => (
+              <span className="fm-hm-bar" key={index}>
+                <i style={{ height: `${value}%` }} className={index >= 6 ? "is-recent" : undefined} />
+              </span>
+            ))}
+          </div>
+          <div className="fm-hm-panel-foot"><span>W1</span><span>W8</span></div>
+        </div>
+        <div className="fm-hm-panel">
+          <div className="fm-hm-panel-head"><span>Cycle time</span><b>3.2d</b></div>
+          <svg className="fm-hm-spark" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="0,26 17,22 34,27 51,16 68,19 85,11 102,13 120,5 120,34 0,34" fill="rgba(127,157,255,.12)" stroke="none" />
+            <polyline points="0,26 17,22 34,27 51,16 68,19 85,11 102,13 120,5" fill="none" stroke="#7f9dff" strokeWidth="1.4" />
+          </svg>
+          <div className="fm-hm-panel-foot"><span>started to completed</span><b>review wait 9h</b></div>
+        </div>
+      </div>
+      <div className="fm-hm-defs">
+        <span><b>Cycle time</b>average time from started to completed</span>
+        <span><b>Throughput</b>completed issues grouped by week</span>
+        <span><b>Review wait</b>time spent waiting for review</span>
+      </div>
+    </div>
+  );
+}
+
+const homeMembers = [
+  { initials: "MC", name: "Maya Chen", role: "Backend", load: "6 issues", width: "78%" },
+  { initials: "JT", name: "Jonah Tate", role: "Frontend", load: "4 issues", width: "54%" },
+  { initials: "RS", name: "Rina Shah", role: "Platform", load: "5 issues", width: "66%" },
+  { initials: "AL", name: "Alex Liu", role: "Product eng", load: "2 issues", width: "28%" },
+];
+
+const homeFeed = [
+  { who: "MC", event: "status change", ref: "WEB-218 → In progress", time: "2h" },
+  { who: "AL", event: "comment", ref: "WEB-224 · limits documented", time: "5h" },
+  { who: "RS", event: "assignment", ref: "WEB-233 → Maya Chen", time: "1d" },
+  { who: "JT", event: "blocking", ref: "WEB-231 blocked by WEB-219", time: "1d" },
+];
+
+function HomeTeamPreview() {
+  return (
+    <div className="fm-window fm-hm-team">
+      <div className="fm-window-bar">
+        <span className="fm-window-title">team / Acme Labs</span>
+        <span className="fm-window-state"><i /> 4 members</span>
+      </div>
+      <div className="fm-hm-team-body">
+        <div className="fm-hm-load">
+          <div className="fm-hm-panel-head"><span>Member workload</span><b>17 open</b></div>
+          {homeMembers.map((member) => (
+            <div className="fm-hm-load-row" key={member.name}>
+              <i className="fm-hm-face">{member.initials}</i>
+              <span className="fm-hm-load-name">{member.name}<em>{member.role}</em></span>
+              <span className="fm-hm-load-bar"><i style={{ width: member.width }} /></span>
+              <b>{member.load}</b>
+            </div>
+          ))}
+        </div>
+        <div className="fm-hm-feed">
+          <div className="fm-hm-panel-head"><span>Recent activity</span><b>immutable log</b></div>
+          {homeFeed.map((item) => (
+            <div className="fm-hm-feed-row" key={item.ref}>
+              <span className="fm-hm-feed-time">{item.time}</span>
+              <i className="fm-hm-face">{item.who}</i>
+              <span className="fm-hm-feed-body">
+                <b>{item.event}</b>
+                {item.ref}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HomePage() {
   return (
     <>
       <Hero
-        eyebrow="Engineering workflow platform"
-        title={<>Keep engineering<br />work in motion.</>}
-        description="Forge gives startup teams one place to shape project workflows, connect dependent issues, and understand what is slowing delivery."
-        secondary="Explore the workspace"
-        aside={<BoardWindow />}
-        className="fm-home-hero"
-      />
-      <section className="fm-section"><ProofStrip /></section>
-      <section className="fm-section fm-section-pad">
-        <div className="fm-container">
-          <SectionHeading label="One connected system" title="The work has rules. Forge keeps them in view." body="Bring daily execution and the context around it into a single workspace, built for the way small engineering teams actually move." />
-          <FeatureGrid />
-        </div>
-      </section>
-      <section className="fm-section fm-section-pad">
-        <div className="fm-container fm-split">
-          <div>
-            <div className="fm-kicker">Per-project workflows</div>
-            <h2 className="fm-heading-sm">Make every transition mean something.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>Set the statuses your project uses, then define the conditions for moving between them. Forge validates each transition and gives a readable reason when a rule is not met.</p>
-            <div className="fm-list">
-              {["Ordered statuses for each project", "Require an assignee or comment", "Prevent completion while blockers remain"].map((item) => <div className="fm-list-row" key={item}><Check size={13} />{item}</div>)}
-            </div>
-            <Link className="fm-button" to="/workflows" style={{ marginTop: 20 }}>See workflows <ArrowRight size={12} /></Link>
+        eyebrow="Engineering operations for startup teams"
+        title={<>Move important work<br />forward with less friction.</>}
+        description="Forge brings projects, workflows, dependencies, risk, analytics, and team activity into one focused workspace."
+        primary="Get started"
+        secondary="Explore the product"
+        secondaryTo="/product"
+        aside={<HomeWorkspacePreview />}
+        className="fm-home-hero fm-hm-hero"
+        extra={
+          <div className="fm-hm-hero-meta">
+            <span><Shield size={11} />Roles enforced</span>
+            <span><History size={11} />Append-only history</span>
+            <span><Zap size={11} />Rules on every transition</span>
           </div>
-          <TransitionWindow />
+        }
+      />
+      <section className="fm-section fm-hm-strip-section">
+        <div className="fm-container"><HomeCapabilityStrip /></div>
+      </section>
+      <section className="fm-section fm-section-pad fm-hm-sec">
+        <div className="fm-container">
+          <SectionHeading label="Product overview" title="One workspace for the work that matters." body="Projects, workflow rules, engineering signals, and team activity in one place." />
+          <HomeProductGrid />
         </div>
       </section>
-      <section className="fm-section fm-section-pad">
-        <div className="fm-container fm-split fm-split-reverse">
-          <RiskWindow />
+      <section className="fm-section fm-section-pad fm-hm-sec">
+        <div className="fm-container fm-split fm-hm-split">
           <div>
-            <div className="fm-kicker">Explainable project risk</div>
-            <h2 className="fm-heading-sm">A signal with its working shown.</h2>
-            <p className="fm-body" style={{ marginTop: 16 }}>The score is a transparent calculation, not a mysterious label. See how blocked, overdue, stale, and high-priority work contributes to a project's risk.</p>
+            <div className="fm-kicker">Workflow</div>
+            <h2 className="fm-heading-sm">Make every handoff visible.</h2>
+            <p className="fm-body" style={{ marginTop: 16 }}>Give teams a shared view of how work moves from backlog to completion, including the rules and blockers that affect progress.</p>
+            <div className="fm-list">
+              {["Custom status flows", "Transition rules", "Blocker protection", "Automation triggers"].map((item) => (
+                <div className="fm-list-row" key={item}><Check size={13} />{item}</div>
+              ))}
+            </div>
+            <Link className="fm-button" to="/workflow" style={{ marginTop: 20 }}>Explore workflow <ArrowRight size={12} /></Link>
+          </div>
+          <HomeWorkflowPreview />
+        </div>
+      </section>
+      <section className="fm-section fm-section-pad fm-hm-sec">
+        <div className="fm-container fm-split fm-split-reverse fm-hm-split">
+          <HomeAnalyticsPreview />
+          <div>
+            <div className="fm-kicker">Risk and analytics</div>
+            <h2 className="fm-heading-sm">Know what is slowing delivery, and why.</h2>
+            <p className="fm-body" style={{ marginTop: 16 }}>Open, blocked, and overdue work feed a risk score you can trace back to the issues behind it.</p>
+            <div className="fm-list">
+              {["Explainable risk factors", "Throughput by week", "Cycle time and review wait"].map((item) => (
+                <div className="fm-list-row" key={item}><Check size={13} />{item}</div>
+              ))}
+            </div>
             <Link className="fm-button" to="/analytics" style={{ marginTop: 20 }}>Explore analytics <ArrowRight size={12} /></Link>
           </div>
         </div>
       </section>
-      <section className="fm-section fm-section-pad">
-        <div className="fm-container">
-          <SectionHeading label="Inside a project" title="Issues, ownership, movement." body="A sample board view shows how project work is grouped by its own workflow statuses." />
-          <BoardWindow />
+      <section className="fm-section fm-section-pad fm-hm-sec">
+        <div className="fm-container fm-split fm-hm-split">
+          <div>
+            <div className="fm-kicker">Team and activity</div>
+            <h2 className="fm-heading-sm">Everyone sees the same state of the work.</h2>
+            <p className="fm-body" style={{ marginTop: 16 }}>See who is carrying what, and follow status changes, comments, assignments, and blocking events as they happen.</p>
+            <Link className="fm-button" to="/teams" style={{ marginTop: 20 }}>Explore teams <ArrowRight size={12} /></Link>
+          </div>
+          <HomeTeamPreview />
         </div>
       </section>
-      <div className="fm-container fm-quote"><blockquote>“A good workflow makes the next step obvious, and the last change easy to find.”</blockquote><cite>Forge · Built around the life of an issue</cite></div>
-      <ClosingCTA title="Move the work forward, together." />
+      <div className="fm-container fm-hm-final">
+        <div>
+          <h2>Give your team a clearer way to ship.</h2>
+          <p>Create a workspace and bring projects, workflow, and engineering insight together.</p>
+        </div>
+        <div className="fm-hm-final-actions">
+          <ButtonLink to="/auth">Create workspace <ArrowRight size={13} /></ButtonLink>
+          <ButtonLink to="/auth" quiet>Sign in</ButtonLink>
+        </div>
+      </div>
     </>
   );
 }
