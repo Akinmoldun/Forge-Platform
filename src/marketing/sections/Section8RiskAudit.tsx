@@ -22,7 +22,7 @@ export function Section8RiskAudit() {
               <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-2xl text-[#3B1500] leading-snug">
                 {copy.riskAudit.panelTitle}
               </h3>
-              <p className="mt-3 text-sm text-[#7A5A4A] leading-[1.55]">
+              <p className="mt-3 text-[14px] leading-[1.6] text-[#7A5A47]">
                 {copy.riskAudit.panelText}
               </p>
             </div>
@@ -31,31 +31,31 @@ export function Section8RiskAudit() {
             <div className="md:col-span-7 space-y-4">
               <div className="w-full h-[48px] rounded-xl overflow-hidden flex border border-[#E8D8CA] bg-white shadow-2xs">
                 <div
-                  className="bg-[#FF4801] h-full w-[30%] flex items-center justify-center text-white font-mono text-xs font-semibold"
+                  className="bg-[#F36421] h-full w-[30%] flex items-center justify-center text-white font-mono text-[11px] font-semibold tracking-[0.08em]"
                   title="Blocked 30%"
                 >
                   30%
                 </div>
                 <div
-                  className="bg-[#E03E00] h-full w-[25%] flex items-center justify-center text-white font-mono text-xs font-semibold"
+                  className="bg-[#E03E00] h-full w-[25%] flex items-center justify-center text-white font-mono text-[11px] font-semibold tracking-[0.08em]"
                   title="Overdue 25%"
                 >
                   25%
                 </div>
                 <div
-                  className="bg-[#3B1500] h-full w-[20%] flex items-center justify-center text-white font-mono text-xs font-semibold"
+                  className="bg-[#3B1500] h-full w-[20%] flex items-center justify-center text-white font-mono text-[11px] font-semibold tracking-[0.08em]"
                   title="Blockers 20%"
                 >
                   20%
                 </div>
                 <div
-                  className="bg-[#7A5A4A] h-full w-[15%] flex items-center justify-center text-white font-mono text-xs font-semibold"
+                  className="bg-[#7A5A4A] h-full w-[15%] flex items-center justify-center text-white font-mono text-[11px] font-semibold tracking-[0.08em]"
                   title="Backlog 15%"
                 >
                   15%
                 </div>
                 <div
-                  className="bg-[#FFE5D6] h-full w-[10%] flex items-center justify-center text-[#3B1500] font-mono text-xs font-semibold"
+                  className="bg-[#FFE5D6] h-full w-[10%] flex items-center justify-center text-[#3B1500] font-mono text-[11px] font-semibold tracking-[0.08em]"
                   title="Stale 10%"
                 >
                   10%
@@ -63,7 +63,7 @@ export function Section8RiskAudit() {
               </div>
 
               {/* Muted legend row */}
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-mono text-[#7A5A4A]">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.08em] text-[#7A5A47]">
                 <span>Blocked work (30%)</span>
                 <span>Overdue issues (25%)</span>
                 <span>Open blockers (20%)</span>
@@ -89,7 +89,7 @@ export function Section8RiskAudit() {
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[28px] text-[#3B1500] mb-2 leading-tight">
               {copy.riskAudit.includedTitle}
             </h3>
-            <p className="text-[14px] text-[#7A5A4A] mb-6">
+            <p className="text-[14px] leading-[1.6] text-[#7A5A47] mb-6">
               Every core primitive needed to coordinate multi-tenant engineering workflows without add-ons.
             </p>
 
@@ -126,7 +126,7 @@ export function Section8RiskAudit() {
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[28px] text-[#3B1500] mb-2 leading-tight">
               {copy.riskAudit.notBuiltTitle}
             </h3>
-            <p className="text-[14px] text-[#7A5A4A] mb-6">
+            <p className="text-[14px] leading-[1.6] text-[#7A5A47] mb-6">
               Intentionally omitted features that bloat software and slow down engineering velocity.
             </p>
 

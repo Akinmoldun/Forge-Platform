@@ -59,10 +59,10 @@ export function Section13CTA() {
   const duplicatedTicker = [...TICKER_ITEMS, ...TICKER_ITEMS];
 
   return (
-    <section className="py-20 px-4 sm:px-6 w-full">
-      <div className="max-w-[1100px] mx-auto">
-        {/* Panel: orange #FF4801, radius 24px, overflow hidden, min-height 460px */}
-        <div className="card-hover relative rounded-[24px] bg-[#FF4801] text-white overflow-hidden shadow-2xl min-h-[460px] pt-[96px] px-[40px] pb-[120px] flex flex-col items-center justify-center text-center">
+    <section className="py-[36px] lg:py-[60px] px-4 sm:px-6 w-full band-peach-gradient">
+      <div className="max-w-[1100px] mx-auto py-8">
+        {/* Panel: orange #F36421, radius 24px, overflow hidden, min-height 460px */}
+        <div className="card-hover relative rounded-[24px] bg-[#F36421] text-white overflow-hidden shadow-2xl min-h-[460px] pt-[96px] px-[40px] pb-[120px] flex flex-col items-center justify-center text-center">
           {/* Absolutely positioned layer that ends 56px above panel bottom so no tile touches ticker */}
           <div
             aria-hidden="true"
@@ -95,7 +95,7 @@ export function Section13CTA() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <TryDemoButton
                 variant="white"
-                className="rounded-full py-3 px-8 text-[15px] font-semibold bg-white text-[#FF4801] hover:bg-[#FFE5D6] hover:brightness-92 active:brightness-85 transition-all duration-200 select-none shadow-xs"
+                className="rounded-full py-3 px-8 text-[15px] font-semibold bg-white text-[#F36421] hover:bg-[#FFE5D6] hover:brightness-92 active:brightness-85 transition-all duration-200 select-none shadow-xs"
               >
                 Try the live demo
               </TryDemoButton>

@@ -5,6 +5,7 @@ import { SectionHeader } from '../SectionHeader';
 export function Section10WhyTeamsChoose() {
   return (
     <Section id="why-choose" ariaLabelledby="heading-why-choose">
+      <div id="pricing" className="relative -top-24 pointer-events-none" />
       <SectionHeader
         id="heading-why-choose"
         title={copy.whyTeamsChoose.h2}
@@ -26,7 +27,7 @@ export function Section10WhyTeamsChoose() {
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[36px] text-[#3B1500] leading-tight mb-3">
               {copy.whyTeamsChoose.leftTitle}
             </h3>
-            <p className="text-[16px] text-[#7A5A4A] leading-relaxed">
+            <p className="text-[16px] text-[#7A5A47] leading-[1.6]">
               {copy.whyTeamsChoose.leftSentence}
             </p>
           </div>
@@ -38,7 +39,7 @@ export function Section10WhyTeamsChoose() {
                 key={line}
                 className="h-[60px] border-t border-[#E8D8CA] flex items-center"
               >
-                <p className="text-[20px] text-[#7A5A4A] line-through leading-none">
+                <p className="text-[20px] text-[#7A5A47] line-through leading-none">
                   {line}
                 </p>
               </div>
@@ -46,10 +47,10 @@ export function Section10WhyTeamsChoose() {
           </div>
         </div>
 
-        {/* Right Panel: Solid orange #FF4801, white text */}
+        {/* Right Panel: Solid orange #F36421, white text */}
         <div
           data-reveal-card
-          className="p-10 rounded-[16px] bg-[#FF4801] text-white flex flex-col gap-8 shadow-xl card-hover reveal-init"
+          className="p-10 rounded-[16px] bg-[#F36421] text-white flex flex-col gap-8 shadow-xl card-hover reveal-init"
         >
           {/* Top: 36px/500 title and one 16px sentence */}
           <div>

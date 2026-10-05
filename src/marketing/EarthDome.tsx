@@ -74,13 +74,13 @@ export default function EarthDome() {
           <feGaussianBlur stdDeviation="14" />
         </filter>
       </defs>
-      <path d={path(SPHERE) ?? ''} fill="none" stroke="#FF4801"
+      <path d={path(SPHERE) ?? ''} fill="none" stroke="#F36421"
         strokeWidth="10" opacity="0.35" filter="url(#earthGlow)" />
-      <path d={path(SPHERE) ?? ''} fill="url(#earthOcean)" stroke="#FF4801" strokeWidth="2" />
-      <path d={path(grat) ?? ''} fill="none" stroke="#FF4801" strokeOpacity="0.12" />
-      <path d={path(land as any) ?? ''} fill="#FF7A33" stroke="#E8601F" strokeWidth="0.8" />
+      <path d={path(SPHERE) ?? ''} fill="url(#earthOcean)" stroke="#F36421" strokeWidth="2" />
+      <path d={path(grat) ?? ''} fill="none" stroke="#F36421" strokeOpacity="0.12" />
+      <path d={path(land as any) ?? ''} fill="#FF7A33" stroke="#D9531E" strokeWidth="0.8" />
       {LINKS.map(([a, b], i) => (
-        <path key={i} fill="none" stroke="#FF4801" strokeOpacity="0.55" strokeWidth="1.2"
+        <path key={i} fill="none" stroke="#F36421" strokeOpacity="0.55" strokeWidth="1.2"
           d={path({ type: 'LineString' as const, coordinates: [CITIES[a], CITIES[b]] }) ?? ''} />
       ))}
       {dots.map((p, i) => p && <circle key={i} cx={p[0]} cy={p[1]} r="4" fill="#3B1500" />)}

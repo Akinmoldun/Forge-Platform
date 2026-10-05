@@ -1,278 +1,253 @@
 import { useState } from 'react';
-import { copy } from '../copy';
 import { Section } from '../Section';
-import { SectionHeader } from '../SectionHeader';
-import { Panel } from '../Panel';
+import { Frame } from '../Frame';
 import {
+  Sparkles,
+  Video,
+  Layers,
+  Users,
+  Database,
+  Cpu,
   Workflow,
-  Link2,
-  ShieldAlert,
-  BarChart3,
-  Zap,
-  Check,
+  Server,
   ArrowRight,
-  ArrowDown,
-  LucideIcon,
 } from 'lucide-react';
 
-type TabKey = 'workflows' | 'dependencies' | 'risk' | 'analytics' | 'automation';
+type TabKey = 'agents' | 'webrtc' | 'platforms' | 'multiplayer' | 'data';
 
-interface TabContent {
+interface TabConfig {
   id: TabKey;
   label: string;
-  icon: LucideIcon;
-  input: string;
-  checks: string[];
-  outputs: string[];
-  caption: string;
+  icon: typeof Sparkles;
+  quote: string;
+  author: string;
+  company: string;
+  nodes: { label: string; sub: string; color: string; border: string; bg: string; icon: typeof Workflow }[];
 }
 
-const TAB_DATA: Record<TabKey, TabContent> = {
-  workflows: {
-    id: 'workflows',
-    label: copy.tabsDiagram.tabs.workflows,
-    icon: Workflow,
-    input: 'Transition request',
-    checks: [
-      'Requires assignee',
-      'Requires comment',
-      'No open blockers',
-      'Valid transition',
+const TABS: TabConfig[] = [
+  {
+    id: 'agents',
+    label: 'AI Agents',
+    icon: Sparkles,
+    quote:
+      'Cloudflare provided everything from OAuth to out-of-the-box remote MCP support so we could quickly build, secure, and scale a fully operational setup.',
+    author: 'Build AI agents on durable objects with code execution, inference, AI gateway all built-in.',
+    company: 'Atlassian',
+    nodes: [
+      { label: 'Workflow', sub: 'Event trigger', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Workflow },
+      { label: 'Compute', sub: 'Sandboxed v8', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
+      { label: 'Workers AI', sub: 'Inference model', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Sparkles },
+      { label: 'Storage', sub: 'Vector & KV', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Database },
     ],
-    outputs: ['Activity logged', 'Notifications sent'],
-    caption: copy.tabsDiagram.captions.workflows,
   },
-  dependencies: {
-    id: 'dependencies',
-    label: copy.tabsDiagram.tabs.dependencies,
-    icon: Link2,
-    input: 'Add dependency',
-    checks: ['No self-link', 'Same workspace', 'Cycle check (DFS)'],
-    outputs: ['Link saved', 'Blocker flagged'],
-    caption: copy.tabsDiagram.captions.dependencies,
-  },
-  risk: {
-    id: 'risk',
-    label: copy.tabsDiagram.tabs.risk,
-    icon: ShieldAlert,
-    input: 'Issue changes',
-    checks: [
-      'Blocked work',
-      'Overdue issues',
-      'Overdue blockers',
-      'Stale issues',
+  {
+    id: 'webrtc',
+    label: 'WebRTC',
+    icon: Video,
+    quote:
+      'Ultra low-latency media routing across global edge nodes with automated fallback and zero server maintenance.',
+    author: 'Real-time media pipelines with programmable tracks and selective forwarding.',
+    company: 'Discord',
+    nodes: [
+      { label: 'Ingest', sub: 'Edge POP', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Server },
+      { label: 'SFU Track', sub: 'Sub-50ms', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
+      { label: 'Transcode', sub: 'Opus / VP9', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Sparkles },
+      { label: 'Egress', sub: 'Multi-peer', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Users },
     ],
-    outputs: ['Score updated', 'Reasons shown'],
-    caption: copy.tabsDiagram.captions.risk,
   },
-  analytics: {
-    id: 'analytics',
-    label: copy.tabsDiagram.tabs.analytics,
-    icon: BarChart3,
-    input: 'Activity events',
-    checks: ['Cycle time', 'Throughput', 'Review wait'],
-    outputs: ['Charts updated', 'Workload view'],
-    caption: copy.tabsDiagram.captions.analytics,
+  {
+    id: 'platforms',
+    label: 'Platforms',
+    icon: Layers,
+    quote:
+      'Multi-tenant orchestration where customer code runs in micro-second isolated sandboxes with strict compliance.',
+    author: 'Tenant isolation with programmatic DNS, SSL, and instant rule deployments.',
+    company: 'Shopify',
+    nodes: [
+      { label: 'Tenant DNS', sub: 'Anycast', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Server },
+      { label: 'Dispatch', sub: 'Custom domain', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Workflow },
+      { label: 'Isolation', sub: 'Secure context', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Cpu },
+      { label: 'Analytics', sub: 'Real-time telemetry', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Database },
+    ],
   },
-  automation: {
-    id: 'automation',
-    label: copy.tabsDiagram.tabs.automation,
-    icon: Zap,
-    input: 'Status change',
-    checks: ['Rule matches', 'Condition passes'],
-    outputs: ['Notify assignee', 'Set priority'],
-    caption: copy.tabsDiagram.captions.automation,
+  {
+    id: 'multiplayer',
+    label: 'Multiplayer',
+    icon: Users,
+    quote:
+      'Stateful durable objects coordinate user cursors, delta diffs, and WebSocket persistence without Redis.',
+    author: 'Synchronized collaborative state machines with single-point authority globally.',
+    company: 'Figma',
+    nodes: [
+      { label: 'Client WS', sub: 'Persistent conn', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Users },
+      { label: 'Durable Obj', sub: 'Single-thread actor', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
+      { label: 'CRDT Sync', sub: 'Conflict-free', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Workflow },
+      { label: 'Snapshot', sub: 'Durable disk', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Database },
+    ],
   },
-};
-
-const TAB_KEYS: TabKey[] = [
-  'workflows',
-  'dependencies',
-  'risk',
-  'analytics',
-  'automation',
+  {
+    id: 'data',
+    label: 'Data Platform',
+    icon: Database,
+    quote:
+      'Distributed SQL and hyper-fast key-value storage queried globally with sub-millisecond edge read caches.',
+    author: 'Global consistency where you need it, edge caching where you want it.',
+    company: 'Stripe',
+    nodes: [
+      { label: 'Edge Query', sub: 'Read replica', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Server },
+      { label: 'Router', sub: 'Zero-latency query', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
+      { label: 'D1 / KV', sub: 'Transactional ACID', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Database },
+      { label: 'Replication', sub: 'Async pipeline', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Workflow },
+    ],
+  },
 ];
 
 export function Section2TabsDiagram() {
-  const [activeTab, setActiveTab] = useState<TabKey>('workflows');
-  const current = TAB_DATA[activeTab];
+  const [activeId, setActiveId] = useState<TabKey>('agents');
+  const current = TABS.find((t) => t.id === activeId) || TABS[0];
 
   return (
-    <Section id="how-it-works" ariaLabelledby="heading-tabs-diagram">
-      <SectionHeader
-        id="heading-tabs-diagram"
-        title={copy.tabsDiagram.h2}
-        subtext={copy.tabsDiagram.subtext}
-      />
+    <Section id="workflows" ariaLabelledby="heading-tabs-diagram">
+      {/* Centered H2 & Subtext matching screenshot */}
+      <div
+        data-reveal-header
+        className="reveal-init text-center max-w-3xl mx-auto mb-10"
+      >
+        <h2
+          id="heading-tabs-diagram"
+          className="font-['Hanken_Grotesk',sans-serif] font-medium text-[30px] md:text-[44px] text-[#1C130D] leading-[1.12] tracking-[-0.025em]"
+        >
+          The cloud that works for developers,
+          <br className="hidden sm:inline" /> not the other way around
+        </h2>
+        <p className="mt-3.5 text-[#7A5A47] text-[15px] sm:text-[16px] leading-[1.6] max-w-[580px] mx-auto text-center">
+          Deploy serverless functions, frontends, containers, and databases to 330+ cities with one command.
+        </p>
+      </div>
 
-      {/* 5 Pill Tabs: clicking swaps content; Active = orange #FF4801 with white text */}
+      {/* 5 Pill Tabs matching screenshot */}
       <div
         data-reveal-group
-        className="reveal-init flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-8"
+        className="reveal-init flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10"
       >
-        {TAB_KEYS.map((key) => {
-          const tab = TAB_DATA[key];
+        {TABS.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === key;
+          const isActive = tab.id === activeId;
           return (
             <button
-              key={key}
+              key={tab.id}
               type="button"
-              onClick={() => setActiveTab(key)}
-              className={`rounded-full py-2.5 px-5 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200 ease-out inline-flex items-center gap-2 cursor-pointer select-none ${
+              onClick={() => setActiveId(tab.id)}
+              className={`rounded-full py-2 px-4 sm:px-5 text-[13px] font-medium transition-all duration-200 inline-flex items-center gap-2 cursor-pointer select-none ${
                 isActive
-                  ? 'bg-[#FF4801] text-white shadow-xs'
-                  : 'bg-white border border-[#E8D8CA] text-[#7A5A4A] hover:text-[#3B1500] hover:border-[#3B1500]/50 hover:brightness-95'
+                  ? 'bg-[#F36421] text-white shadow-xs'
+                  : 'bg-white border border-[#E8D8CA] text-[#7A5A47] hover:text-[#1C130D] hover:border-[#1C130D]/40'
               }`}
             >
-              <Icon
-                size={14}
-                className={isActive ? 'text-white' : 'text-[#7A5A4A]'}
-              />
+              <Icon size={14} className={isActive ? 'text-white' : 'text-[#7A5A47]'} />
               <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Diagram Panel with Dotted Grid */}
-      <div data-reveal-card className="reveal-init">
-        <Panel className="p-6 sm:p-10 flex flex-col justify-between">
-        {/* Strict left-to-right grid, all nodes vertically centered on one center line */}
-        <div className="w-full max-w-[1000px] mx-auto py-8 sm:py-12">
-          {/* Desktop view (md+): Strict 3 columns + straight connector lines */}
-          <div className="hidden md:flex items-center justify-between gap-8 w-full">
-            {/* Column 1: One input node (pill, 1px #E8D8CA border, white bg) */}
-            <div className="shrink-0 flex items-center justify-center">
-              <div className="rounded-full border border-[#E8D8CA] bg-white px-6 py-3.5 shadow-2xs text-[14px] font-medium text-[#3B1500] whitespace-nowrap">
-                {current.input}
+      {/* Architecture Panel inside Frame with + markers */}
+      <Frame className="p-6 sm:p-10 lg:p-12 bg-white/70 backdrop-blur-xs">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          {/* Left: Interactive Diagram Flow */}
+          <div className="lg:col-span-8 flex flex-col justify-between">
+            {/* Horizontal connected node chain */}
+            <div className="py-6 overflow-x-auto">
+              <div className="flex items-center justify-between min-w-[520px] gap-3">
+                {current.nodes.map((node, i) => {
+                  const NodeIcon = node.icon;
+                  return (
+                    <div key={node.label} className="flex items-center flex-1">
+                      {/* Box node */}
+                      <div
+                        className={`flex-1 min-w-[100px] rounded-xl border-2 ${node.border} ${node.bg} p-3.5 flex flex-col items-center justify-center text-center shadow-2xs transition-all hover:scale-[1.03]`}
+                      >
+                        <NodeIcon size={20} style={{ color: node.color }} />
+                        <span className="mt-1.5 text-[13px] font-semibold text-[#1C130D] leading-tight">
+                          {node.label}
+                        </span>
+                        <span className="text-[10px] text-[#7A5A47] font-mono mt-0.5">
+                          {node.sub}
+                        </span>
+                      </div>
+
+                      {/* Connector arrow */}
+                      {i < current.nodes.length - 1 && (
+                        <div className="px-2 flex items-center justify-center text-[#E8D8CA]">
+                          <ArrowRight size={16} strokeWidth={2} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Straight connector line 1 with arrowhead */}
-            <div className="flex-1 flex items-center justify-center min-w-[48px] max-w-[96px] relative">
-              <div className="w-full h-px bg-[#E8D8CA]" />
-              <ArrowRight
-                size={14}
-                className="text-[#E8D8CA] absolute right-0 shrink-0 -mr-1"
-                strokeWidth={2}
-              />
-            </div>
+            {/* Description & Quote underneath matching screenshot */}
+            <div className="mt-6 pt-6 border-t border-[#E8D8CA]/60 text-left">
+              <p className="text-[14px] font-medium text-[#1C130D] leading-relaxed">
+                {current.author}
+              </p>
+              <blockquote className="mt-2 text-[13px] text-[#7A5A47] leading-relaxed italic">
+                &ldquo;{current.quote}&rdquo;
+              </blockquote>
 
-            {/* Column 2: One 'checks' card with 3-4 equal-height rows */}
-            <div className="flex-1 max-w-[340px] rounded-[16px] border border-[#E8D8CA] bg-white shadow-2xs overflow-hidden">
-              <div className="divide-y divide-[#E8D8CA]">
-                {current.checks.map((check) => (
-                  <div
-                    key={check}
-                    className="h-12 px-5 flex items-center gap-3 text-[14px] text-[#3B1500]"
-                  >
-                    <Check
-                      size={14}
-                      className="text-[#FF4801] shrink-0"
-                      strokeWidth={2.5}
-                    />
-                    <span className="truncate">{check}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Straight connector line 2 with arrowhead */}
-            <div className="flex-1 flex items-center justify-center min-w-[48px] max-w-[96px] relative">
-              <div className="w-full h-px bg-[#E8D8CA]" />
-              <ArrowRight
-                size={14}
-                className="text-[#E8D8CA] absolute right-0 shrink-0 -mr-1"
-                strokeWidth={2}
-              />
-            </div>
-
-            {/* Column 3: One output card with 2-3 equal rows */}
-            <div className="flex-1 max-w-[280px] rounded-[16px] border border-[#E8D8CA] bg-white shadow-2xs overflow-hidden">
-              <div className="divide-y divide-[#E8D8CA]">
-                {current.outputs.map((out) => (
-                  <div
-                    key={out}
-                    className="h-12 px-5 flex items-center gap-3 text-[14px] font-medium text-[#3B1500]"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-[#FF4801] shrink-0" />
-                    <span className="truncate">{out}</span>
-                  </div>
-                ))}
+              <div className="mt-4 flex items-center gap-2 text-[12px] font-semibold text-[#1C130D]">
+                <span className="text-[#7A5A47] font-normal">Architecture inspired by</span>
+                <span className="inline-flex items-center gap-1.5 text-blue-600 font-semibold">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 inline-block" />
+                  {current.company}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Mobile view (<768px): Vertical stack with vertical connector lines */}
-          <div className="flex md:hidden flex-col items-center w-full max-w-[320px] mx-auto">
-            {/* Column 1: Input node pill */}
-            <div className="w-full text-center">
-              <div className="rounded-full border border-[#E8D8CA] bg-white px-6 py-3 shadow-2xs text-[14px] font-medium text-[#3B1500]">
-                {current.input}
+          {/* Right: Floating Preview Window Card */}
+          <div className="lg:col-span-4 flex justify-center">
+            <div className="w-full max-w-[340px] rounded-[18px] border border-[#E8D8CA] bg-white p-4 shadow-sm">
+              {/* Window dots header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#E8D8CA]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
+                </div>
+                <div className="w-4 h-4 rounded bg-blue-500/20 flex items-center justify-center">
+                  <span className="w-2 h-2 rounded-xs bg-blue-600" />
+                </div>
               </div>
-            </div>
 
-            {/* Vertical connector 1 */}
-            <div className="h-8 w-px bg-[#E8D8CA] my-1 relative flex items-center justify-center">
-              <ArrowDown
-                size={14}
-                className="text-[#E8D8CA] absolute -bottom-1"
-                strokeWidth={2}
-              />
-            </div>
+              {/* Wireframe skeleton body matching screenshot */}
+              <div className="py-4 space-y-3">
+                <div className="w-3/4 h-3 rounded-full bg-[#E8D8CA]/60" />
+                <div className="w-1/2 h-2.5 rounded-full bg-[#E8D8CA]/40" />
 
-            {/* Column 2: Checks card */}
-            <div className="w-full rounded-[16px] border border-[#E8D8CA] bg-white shadow-2xs overflow-hidden">
-              <div className="divide-y divide-[#E8D8CA]">
-                {current.checks.map((check) => (
-                  <div
-                    key={check}
-                    className="h-11 px-4 flex items-center gap-2.5 text-[14px] text-[#3B1500]"
-                  >
-                    <Check
-                      size={14}
-                      className="text-[#FF4801] shrink-0"
-                      strokeWidth={2.5}
-                    />
-                    <span className="truncate">{check}</span>
+                <div className="pt-2 grid grid-cols-2 gap-2">
+                  <div className="h-14 rounded-lg border border-dashed border-[#E8D8CA] bg-[#FAF7F2] p-2 flex flex-col justify-between">
+                    <div className="w-8 h-2 rounded bg-cyan-400/40" />
+                    <div className="w-12 h-2 rounded bg-[#E8D8CA]" />
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Vertical connector 2 */}
-            <div className="h-8 w-px bg-[#E8D8CA] my-1 relative flex items-center justify-center">
-              <ArrowDown
-                size={14}
-                className="text-[#E8D8CA] absolute -bottom-1"
-                strokeWidth={2}
-              />
-            </div>
-
-            {/* Column 3: Output card */}
-            <div className="w-full rounded-[16px] border border-[#E8D8CA] bg-white shadow-2xs overflow-hidden">
-              <div className="divide-y divide-[#E8D8CA]">
-                {current.outputs.map((out) => (
-                  <div
-                    key={out}
-                    className="h-11 px-4 flex items-center gap-2.5 text-[14px] font-medium text-[#3B1500]"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-[#FF4801] shrink-0" />
-                    <span className="truncate">{out}</span>
+                  <div className="h-14 rounded-lg border border-dashed border-[#E8D8CA] bg-[#FAF7F2] p-2 flex flex-col justify-between">
+                    <div className="w-8 h-2 rounded bg-pink-400/40" />
+                    <div className="w-12 h-2 rounded bg-[#E8D8CA]" />
                   </div>
-                ))}
+                </div>
+
+                <div className="p-3 rounded-lg bg-orange-50/50 border border-orange-200/50 flex items-center justify-between text-[11px] font-mono text-[#F36421]">
+                  <span>Status: Operational</span>
+                  <span className="w-2 h-2 rounded-full bg-[#27C93F]" />
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Caption at panel bottom-left (13px muted plain sentence) */}
-        <div className="pt-4 border-t border-[#E8D8CA]/60 text-[13px] text-[#7A5A4A] font-sans">
-          {current.caption}
-        </div>
-      </Panel>
-      </div>
+      </Frame>
     </Section>
   );
 }

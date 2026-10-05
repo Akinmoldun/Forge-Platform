@@ -18,14 +18,16 @@ export function Cell({
   className = '',
   style,
 }: CellProps) {
+  const hasPadding = className.includes('p-') || className.includes('frame-cell');
+
   return (
     <div
       data-reveal-card
       style={style}
-      className={`group p-6 relative flex flex-col transition-colors duration-200 hover:bg-[#FF4801]/[0.04] reveal-init ${className}`}
+      className={`group ${hasPadding ? '' : 'p-6'} relative flex flex-col justify-start bg-transparent transition-colors duration-200 hover:bg-[#F36421]/[0.04] reveal-init ${className}`}
     >
       {Icon && (
-        <div className="mb-3 text-[#3B1500] group-hover:text-[#FF4801] transition-colors duration-200">
+        <div className="mb-3 text-[#3B1500] group-hover:text-[#F36421] transition-colors duration-200">
           <Icon className="w-4 h-4" strokeWidth={1.5} />
         </div>
       )}
@@ -37,7 +39,7 @@ export function Cell({
       )}
 
       {description && (
-        <p className="mt-2 text-[13px] leading-[1.5] text-[#7A5A47]">
+        <p className="mt-2 text-[14px] leading-[1.6] text-[#7A5A47]">
           {description}
         </p>
       )}

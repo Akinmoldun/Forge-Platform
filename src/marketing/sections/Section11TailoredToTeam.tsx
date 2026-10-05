@@ -1,6 +1,8 @@
 import { copy } from '../copy';
 import { Section } from '../Section';
 import { SectionHeader } from '../SectionHeader';
+import { Frame } from '../Frame';
+import { Cell } from '../Cell';
 
 export function Section11TailoredToTeam() {
   return (
@@ -32,7 +34,7 @@ export function Section11TailoredToTeam() {
                     className={
                       row.isAccepted
                         ? 'text-[14px] text-[#7A5A4A] text-right'
-                        : 'text-[14px] text-[#FF4801] font-medium text-right'
+                        : 'text-[14px] text-[#F36421] font-medium text-right'
                     }
                   >
                     {row.status}
@@ -45,7 +47,7 @@ export function Section11TailoredToTeam() {
           {/* Orange card: "Instant feedback loops" with two white lines about live updates */}
           <div
             data-reveal-card
-            className="lg:col-span-5 bg-[#FF4801] text-white rounded-[20px] p-7 sm:p-8 flex flex-col justify-center shadow-xl card-hover reveal-init"
+            className="lg:col-span-5 bg-[#F36421] text-white rounded-[20px] p-7 sm:p-8 flex flex-col justify-center shadow-xl card-hover reveal-init"
           >
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[24px] text-white leading-tight mb-4">
               {copy.tailoredToTeam.orangeCardTitle}
@@ -61,26 +63,22 @@ export function Section11TailoredToTeam() {
           </div>
         </div>
 
-        {/* Bottom Row: Three bordered text cards */}
-        <div
-          data-reveal-group
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          {copy.tailoredToTeam.bottomCards.map((card) => (
-            <div
-              key={card.title}
-              data-reveal-card
-              className="bg-white rounded-[20px] border border-[#E8D8CA] p-6 sm:p-7 shadow-2xs flex flex-col justify-center card-hover reveal-init"
-            >
-              <h4 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[20px] text-[#3B1500] mb-2">
-                {card.title}
-              </h4>
-              <p className="text-[14px] text-[#7A5A4A] leading-[1.5]">
-                {card.text}
-              </p>
-            </div>
-          ))}
-        </div>
+        {/* Bottom Row: Three cards wrapped in Frame */}
+        <Frame>
+          <div
+            data-reveal-group
+            className="frame-grid-3cols"
+          >
+            {copy.tailoredToTeam.bottomCards.map((card) => (
+              <Cell
+                key={card.title}
+                title={card.title}
+                description={card.text}
+                className="frame-cell"
+              />
+            ))}
+          </div>
+        </Frame>
       </div>
     </Section>
   );

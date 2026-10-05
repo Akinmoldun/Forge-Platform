@@ -1,5 +1,6 @@
 import { copy } from '../copy';
 import { Section } from '../Section';
+import { Frame } from '../Frame';
 
 // 1. Enforce transition flow: three pills in a row "Backlog" -> "Review" (highlighted gate) -> "Done"
 function EnforceFlowIllustration() {
@@ -51,7 +52,7 @@ function EnforceFlowIllustration() {
         height="48"
         rx="24"
         fill="#FFE5D6"
-        stroke="#FF4801"
+        stroke="#F36421"
         strokeWidth="2"
       />
       <text
@@ -61,7 +62,7 @@ function EnforceFlowIllustration() {
         fontFamily="'Hanken Grotesk', sans-serif"
         fontSize="13"
         fontWeight="600"
-        fill="#FF4801"
+        fill="#F36421"
       >
         Review
       </text>
@@ -247,7 +248,7 @@ function ExplainRiskIllustration() {
         </clipPath>
         <g clipPath="url(#riskBarClip)">
           {/* 30% Orange */}
-          <rect x="10" y="24" width="84" height="30" fill="#FF4801" />
+          <rect x="10" y="24" width="84" height="30" fill="#F36421" />
           <text
             x="52"
             y="43"
@@ -334,7 +335,7 @@ function ExplainRiskIllustration() {
         fontSize="10"
         fill="#7A5A4A"
       >
-        <circle cx="20" cy="78" r="3.5" fill="#FF4801" />
+        <circle cx="20" cy="78" r="3.5" fill="#F36421" />
         <text x="28" y="81">
           Blocked
         </text>
@@ -412,7 +413,7 @@ function MeasureActivityIllustration() {
       {/* Bar 3 */}
       <rect x="96" y="52" width="22" height="43" rx="3" fill="#E8D8CA" />
       {/* Bar 4: Highlighted Orange */}
-      <rect x="130" y="26" width="22" height="69" rx="3" fill="#FF4801" />
+      <rect x="130" y="26" width="22" height="69" rx="3" fill="#F36421" />
       {/* Bar 5 */}
       <rect x="164" y="48" width="22" height="47" rx="3" fill="#FFE5D6" />
       {/* Bar 6 */}
@@ -436,7 +437,7 @@ function MeasureActivityIllustration() {
         <text x="107" y="108">
           W
         </text>
-        <text x="141" y="108" fontWeight="bold" fill="#FF4801">
+        <text x="141" y="108" fontWeight="bold" fill="#F36421">
           T
         </text>
         <text x="175" y="108">
@@ -485,63 +486,61 @@ export function Section7YouCanUseForgeTo() {
           data-reveal-header
           className="reveal-init lg:col-span-4 flex flex-col items-start lg:sticky lg:top-24"
         >
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[#FFE5D6] text-[#FF4801] mb-4">
+          <span className="inline-flex items-center px-3 py-1 rounded-full font-mono text-[11px] uppercase tracking-[0.08em] bg-[#FFE5D6] text-[#F36421] mb-4">
             {copy.youCanUseForgeTo.tag}
           </span>
           <h2
             id="heading-you-can-use"
-            className="font-['Hanken_Grotesk',sans-serif] font-medium text-[32px] sm:text-[40px] text-[#3B1500] leading-tight mb-4"
+            className="font-['Hanken_Grotesk',sans-serif] font-medium text-[30px] md:text-[44px] text-[#3B1500] leading-[1.1] tracking-[-0.02em] mb-4"
           >
             {copy.youCanUseForgeTo.h2}
           </h2>
-          <p className="text-sm sm:text-base text-[#7A5A4A] leading-[1.55] mb-6">
+          <p className="text-[16px] leading-[1.6] text-[#7A5A47] mb-6">
             {copy.youCanUseForgeTo.headerText}
           </p>
           <a
             href="#primitives"
-            className="text-sm font-semibold text-[#FF4801] hover:text-[#E03E00] inline-flex items-center gap-1.5 transition-colors"
+            className="text-sm font-semibold text-[#F36421] hover:text-[#D9531E] inline-flex items-center gap-1.5 transition-colors"
           >
             <span>{copy.youCanUseForgeTo.exploreLink}</span>
           </a>
         </div>
 
-        {/* Right: 2x2 grid of equal-height cards (gap 0, 1px #E8D8CA borders, no radius, no overlap) */}
-        <div
-          data-reveal-group
-          className="lg:col-span-8 border border-[#E8D8CA] rounded-none bg-white shadow-2xs overflow-hidden grid grid-cols-1 sm:grid-cols-2"
-        >
-          {CARDS.map((card, idx) => {
-            const Illustration = card.Illustration;
-            const isRightCol = idx % 2 === 1;
-            const isBottomRow = idx >= 2;
+        {/* Right: 2x2 grid wrapped in Frame */}
+        <div className="lg:col-span-8">
+          <Frame>
+            <div
+              data-reveal-group
+              className="frame-grid-2cols"
+            >
+              {CARDS.map((card) => {
+                const Illustration = card.Illustration;
 
-            return (
-              <div
-                key={card.title}
-                data-reveal-card
-                className={`reveal-init card-hover flex flex-col justify-between bg-white ${
-                  !isRightCol ? 'sm:border-r border-[#E8D8CA]' : ''
-                } ${!isBottomRow ? 'border-b border-[#E8D8CA]' : ''} ${
-                  idx > 0 ? 'border-t sm:border-t-0 border-[#E8D8CA]' : ''
-                }`}
-              >
-                {/* 200px-tall illustration area with drawing centered */}
-                <div className="h-[200px] flex items-center justify-center p-4 bg-[#FFFBF5] border-b border-[#E8D8CA]">
-                  <Illustration />
-                </div>
+                return (
+                  <div
+                    key={card.title}
+                    data-reveal-card
+                    className="reveal-init group flex flex-col justify-between bg-transparent border-r border-b border-[#E8D8CA] transition-colors duration-200 hover:bg-[#F36421]/[0.04]"
+                  >
+                    {/* 200px-tall illustration area with drawing centered */}
+                    <div className="h-[200px] flex items-center justify-center p-6 border-b border-[#E8D8CA] bg-transparent">
+                      <Illustration />
+                    </div>
 
-                {/* Text area: 16px/600 title and 14px muted description */}
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-start">
-                  <h3 className="font-['Hanken_Grotesk',sans-serif] font-semibold text-[16px] text-[#3B1500] leading-snug">
-                    {card.title}
-                  </h3>
-                  <p className="mt-2 text-[14px] text-[#7A5A4A] leading-[1.5]">
-                    {card.text}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+                    {/* Text area: 15px/600 title and 14px/1.6 description, padding 24px (p-6) */}
+                    <div className="p-6 flex-1 flex flex-col justify-start">
+                      <h3 className="font-['Hanken_Grotesk',sans-serif] font-semibold text-[15px] text-[#3B1500] leading-snug">
+                        {card.title}
+                      </h3>
+                      <p className="mt-2 text-[14px] leading-[1.6] text-[#7A5A47]">
+                        {card.text}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Frame>
         </div>
       </div>
     </Section>

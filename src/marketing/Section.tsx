@@ -19,7 +19,7 @@ export function Section({
     <section
       id={id}
       aria-labelledby={ariaLabelledby}
-      className={`py-[72px] lg:py-[120px] px-4 sm:px-6 relative scroll-mt-[72px] ${className}`}
+      className={`py-[36px] lg:py-[60px] px-4 sm:px-6 relative scroll-mt-[72px] ${className}`}
     >
       <div className={`max-w-[1100px] mx-auto w-full ${containerClassName}`}>
         {children}

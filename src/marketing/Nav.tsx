@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Cloud, ChevronDown } from 'lucide-react';
 import { copy } from './copy';
 import { TryDemoButton } from '@/components/TryDemoButton';
 
 const GITHUB_URL = 'https://github.com/Akinmoldun/forge-platform';
 
-// Forge Mark SVG (brand colored or white)
+// Cloudflare / Forge Mark SVG
 export function ForgeLogoMark({
   className = 'w-6 h-6',
   color = 'currentColor',
@@ -21,12 +21,10 @@ export function ForgeLogoMark({
       className={className}
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="8" fill={color} />
       <path
-        d="M9 11h14v3.5h-5.25V23h-3.5V14.5H9V11z"
-        fill="#FFFFFF"
+        d="M26 18c0-3.3-2.7-6-6-6-.4 0-.8.05-1.2.14A8.003 8.003 0 0 0 4 17c0 4.4 3.6 8 8 8h13a5 5 0 0 0 1-9.9V18z"
+        fill={color}
       />
-      <circle cx="23" cy="9" r="2.5" fill="#FF4801" />
     </svg>
   );
 }
@@ -101,42 +99,52 @@ export function HeroNav() {
   };
 
   return (
-    <header className="w-full flex items-center justify-between py-4 px-5 sm:px-8 text-white rounded-[16px]">
-      {/* Brand logo + name */}
+    <header className="w-full flex items-center justify-between py-4 px-4 sm:px-8 text-white">
+      {/* Brand logo + name matching Cloudflare Workers Platform header */}
       <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2.5 group select-none">
-        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center font-bold text-[#FF4801] text-base shadow-xs">
-          F
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white">
+          <Cloud className="w-6 h-6 text-white fill-white" />
         </div>
-        <span className="font-['Hanken_Grotesk',sans-serif] font-semibold text-lg tracking-tight text-white">
-          {copy.brand.name}
-        </span>
+        <div className="flex flex-col text-left leading-none">
+          <span className="text-[9px] tracking-widest uppercase font-bold text-white/80">FORGE</span>
+          <span className="text-[16px] font-bold tracking-tight text-white mt-0.5">Workers Platform</span>
+        </div>
       </Link>
 
-      {/* Center navigation links: 14px, --white */}
+      {/* Center navigation links matching screenshot */}
       <nav
         aria-label="Hero navigation"
-        className="hidden md:flex items-center gap-8 text-[14px] font-medium text-white/90"
+        className="hidden lg:flex items-center gap-7 text-[14px] font-medium text-white/90"
       >
         <a
-          href="/#features"
-          onClick={(e) => handleNavClick(e, 'features')}
-          className="hover:text-white transition-colors"
+          href="/#workflows"
+          onClick={(e) => handleNavClick(e, 'workflows')}
+          className="hover:text-white transition-colors inline-flex items-center gap-1"
         >
-          {copy.nav.features}
+          <span>Products</span>
+          <ChevronDown className="w-3.5 h-3.5 opacity-80" />
         </a>
         <a
-          href="/#how-it-works"
-          onClick={(e) => handleNavClick(e, 'how-it-works')}
-          className="hover:text-white transition-colors"
+          href="/#use-cases"
+          onClick={(e) => handleNavClick(e, 'use-cases')}
+          className="hover:text-white transition-colors inline-flex items-center gap-1"
         >
-          {copy.nav.howItWorks}
+          <span>Solutions</span>
+          <ChevronDown className="w-3.5 h-3.5 opacity-80" />
         </a>
         <a
-          href="/#security"
-          onClick={(e) => handleNavClick(e, 'security')}
+          href="/#pricing"
+          onClick={(e) => handleNavClick(e, 'pricing')}
           className="hover:text-white transition-colors"
         >
-          {copy.nav.security}
+          Pricing
+        </a>
+        <a
+          href="/#primitives"
+          onClick={(e) => handleNavClick(e, 'primitives')}
+          className="hover:text-white transition-colors"
+        >
+          Documentation
         </a>
         <a
           href={GITHUB_URL}
@@ -144,21 +152,24 @@ export function HeroNav() {
           rel="noopener noreferrer"
           className="hover:text-white transition-colors"
         >
-          {copy.nav.github}
+          Blog
         </a>
       </nav>
 
-      {/* Right actions: Log in (ghost) and Try demo (white) */}
-      <div className="flex items-center gap-3">
+      {/* Right actions: Log in (text link) and Start building (white pill button with orange text) */}
+      <div className="flex items-center gap-5">
         <Link
           to="/login"
-          className="rounded-full h-[40px] px-[18px] text-[14px] font-medium bg-white/[0.18] border border-white/40 text-white hover:bg-white/[0.28] hover:-translate-y-[1px] transition-all duration-200 inline-flex items-center justify-center select-none"
+          className="text-[14px] font-medium text-white hover:text-white/90 transition-colors select-none"
         >
-          {copy.nav.login}
+          Login
         </Link>
-        <TryDemoButton variant="white" className="font-semibold">
-          {copy.nav.tryDemo}
-        </TryDemoButton>
+        <Link
+          to="/auth"
+          className="bg-white text-[#F36421] text-[13px] sm:text-[14px] font-semibold px-5 py-2 rounded-full shadow-xs hover:bg-white/95 transition-all select-none"
+        >
+          Start building
+        </Link>
       </div>
     </header>
   );
@@ -216,7 +227,7 @@ export function StickyNav() {
       <div className="max-w-[1100px] mx-auto w-full flex items-center justify-between">
         {/* Brand */}
         <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2.5 group select-none">
-          <div className="w-7 h-7 rounded-lg bg-[#FF4801] flex items-center justify-center font-bold text-white text-sm shadow-xs">
+          <div className="w-7 h-7 rounded-lg bg-[#F36421] flex items-center justify-center font-bold text-white text-sm shadow-xs">
             F
           </div>
           <span className="font-['Hanken_Grotesk',sans-serif] font-semibold text-base text-[#3B1500] tracking-tight">
@@ -234,8 +245,8 @@ export function StickyNav() {
             onClick={(e) => handleNavClick(e, 'features')}
             className={`transition-colors ${
               activeSection === 'features'
-                ? 'text-[#FF4801] font-semibold'
-                : 'text-[#3B1500] hover:text-[#FF4801]'
+                ? 'text-[#F36421] font-semibold'
+                : 'text-[#3B1500] hover:text-[#F36421]'
             }`}
           >
             {copy.nav.features}
@@ -245,8 +256,8 @@ export function StickyNav() {
             onClick={(e) => handleNavClick(e, 'how-it-works')}
             className={`transition-colors ${
               activeSection === 'how-it-works'
-                ? 'text-[#FF4801] font-semibold'
-                : 'text-[#3B1500] hover:text-[#FF4801]'
+                ? 'text-[#F36421] font-semibold'
+                : 'text-[#3B1500] hover:text-[#F36421]'
             }`}
           >
             {copy.nav.howItWorks}
@@ -256,8 +267,8 @@ export function StickyNav() {
             onClick={(e) => handleNavClick(e, 'security')}
             className={`transition-colors ${
               activeSection === 'security'
-                ? 'text-[#FF4801] font-semibold'
-                : 'text-[#3B1500] hover:text-[#FF4801]'
+                ? 'text-[#F36421] font-semibold'
+                : 'text-[#3B1500] hover:text-[#F36421]'
             }`}
           >
             {copy.nav.security}
@@ -266,7 +277,7 @@ export function StickyNav() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#3B1500] hover:text-[#FF4801] transition-colors"
+            className="text-[#3B1500] hover:text-[#F36421] transition-colors"
           >
             {copy.nav.github}
           </a>
@@ -276,7 +287,7 @@ export function StickyNav() {
         <div className="flex items-center gap-3">
           <Link
             to="/login"
-            className="text-[14px] font-medium text-[#3B1500] hover:text-[#FF4801] px-3 py-1.5 transition-colors hidden sm:inline-block"
+            className="text-[14px] font-medium text-[#3B1500] hover:text-[#F36421] px-3 py-1.5 transition-colors hidden sm:inline-block"
           >
             {copy.nav.login}
           </Link>
@@ -289,7 +300,7 @@ export function StickyNav() {
             type="button"
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            className="md:hidden p-2 text-[#3B1500] hover:text-[#FF4801] cursor-pointer"
+            className="md:hidden p-2 text-[#3B1500] hover:text-[#F36421] cursor-pointer"
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -304,8 +315,8 @@ export function StickyNav() {
             onClick={(e) => handleNavClick(e, 'features')}
             className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               activeSection === 'features'
-                ? 'text-[#FF4801] font-semibold bg-[#FFEFE4]'
-                : 'text-[#3B1500] hover:text-[#FF4801]'
+                ? 'text-[#F36421] font-semibold bg-[#FFEFE4]'
+                : 'text-[#3B1500] hover:text-[#F36421]'
             }`}
           >
             {copy.nav.features}
@@ -315,8 +326,8 @@ export function StickyNav() {
             onClick={(e) => handleNavClick(e, 'how-it-works')}
             className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               activeSection === 'how-it-works'
-                ? 'text-[#FF4801] font-semibold bg-[#FFEFE4]'
-                : 'text-[#3B1500] hover:text-[#FF4801]'
+                ? 'text-[#F36421] font-semibold bg-[#FFEFE4]'
+                : 'text-[#3B1500] hover:text-[#F36421]'
             }`}
           >
             {copy.nav.howItWorks}
@@ -326,8 +337,8 @@ export function StickyNav() {
             onClick={(e) => handleNavClick(e, 'security')}
             className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               activeSection === 'security'
-                ? 'text-[#FF4801] font-semibold bg-[#FFEFE4]'
-                : 'text-[#3B1500] hover:text-[#FF4801]'
+                ? 'text-[#F36421] font-semibold bg-[#FFEFE4]'
+                : 'text-[#3B1500] hover:text-[#F36421]'
             }`}
           >
             {copy.nav.security}
@@ -337,14 +348,14 @@ export function StickyNav() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMobileMenuOpen(false)}
-            className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#3B1500] hover:text-[#FF4801] transition-colors"
+            className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#3B1500] hover:text-[#F36421] transition-colors"
           >
             {copy.nav.github}
           </a>
           <Link
             to="/login"
             onClick={() => setMobileMenuOpen(false)}
-            className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#3B1500] hover:text-[#FF4801] transition-colors sm:hidden"
+            className="px-3 py-2.5 rounded-lg text-sm font-medium text-[#3B1500] hover:text-[#F36421] transition-colors sm:hidden"
           >
             {copy.nav.login}
           </Link>

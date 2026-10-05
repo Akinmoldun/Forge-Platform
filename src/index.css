@@ -181,7 +181,7 @@
   background-size: 12px 12px;
 }
 
-/* Card hover: lift 2px with faint orange border (#FF4801 at 40%) over 200ms */
+/* Card hover: lift 2px with faint orange border (#F36421 at 40%) over 200ms */
 .card-hover {
   transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
   will-change: transform;
@@ -189,7 +189,7 @@
 
 .card-hover:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 72, 1, 0.4) !important;
+  border-color: rgba(243, 100, 33, 0.4) !important;
 }
 
 /* Scroll reveal: opacity 0 -> 1 and translateY(24px) -> 0, 600ms ease-out, 80ms stagger */

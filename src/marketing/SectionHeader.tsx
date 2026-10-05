@@ -22,23 +22,23 @@ export function SectionHeader({
   return (
     <div
       data-reveal-header
-      className={`reveal-init mb-12 sm:mb-16 ${
+      className={`reveal-init mb-[56px] ${
         isCenter ? 'text-center max-w-3xl mx-auto' : 'max-w-2xl'
       } ${className}`}
     >
       {tag && (
-        <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-[#FF4801] text-white mb-3">
+        <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-[#F36421] text-white mb-3">
           {tag}
         </span>
       )}
       <h2
         id={id}
-        className="font-['Hanken_Grotesk',sans-serif] font-medium text-3xl sm:text-[44px] text-[#3B1500] leading-tight tracking-[-0.02em]"
+        className="font-['Hanken_Grotesk',sans-serif] font-medium text-[30px] md:text-[44px] text-[#3B1500] leading-[1.1] tracking-[-0.02em]"
       >
         {title}
       </h2>
       {subtext && (
-        <p className="mt-4 text-[#7A5A4A] text-base leading-[1.55]">
+        <p className="mt-[16px] text-[#7A5A47] text-[16px] leading-[1.6] max-w-[560px] mx-auto text-center">
           {subtext}
         </p>
       )}

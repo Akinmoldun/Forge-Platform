@@ -52,7 +52,7 @@ export function BrowserFrame({ className = '' }: BrowserFrameProps) {
               >
                 <span>{tab.label}</span>
                 {isActive && (
-                  <span className="absolute -bottom-2.5 left-0 right-0 h-[2px] bg-[#FF4801]" />
+                  <span className="absolute -bottom-2.5 left-0 right-0 h-[2px] bg-[#F36421]" />
                 )}
               </button>
             );
@@ -77,7 +77,7 @@ export function BrowserFrame({ className = '' }: BrowserFrameProps) {
           />
         ) : (
           <div className="py-24 px-6 text-center">
-            <p className="font-['JetBrains_Mono',monospace] text-xs sm:text-sm text-[#FF4801] bg-[#FFE5D6] py-3 px-6 rounded-lg inline-block border border-[#FF4801]/30">
+            <p className="font-['JetBrains_Mono',monospace] text-xs sm:text-sm text-[#F36421] bg-[#FFE5D6] py-3 px-6 rounded-lg inline-block border border-[#F36421]/30">
               add /public/screens/{currentTab.file}
             </p>
           </div>

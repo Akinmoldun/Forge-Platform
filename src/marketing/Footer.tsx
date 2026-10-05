@@ -41,12 +41,12 @@ export function Footer() {
           {/* Left: Logo & brand */}
           <div className="md:col-span-4 space-y-3">
             <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2.5">
-              <ForgeLogoMark className="w-7 h-7" color="#FF4801" />
+              <ForgeLogoMark className="w-7 h-7" color="#F36421" />
               <span className="font-['Hanken_Grotesk',sans-serif] font-semibold text-lg text-[#3B1500] tracking-tight">
                 {copy.brand.name}
               </span>
             </Link>
-            <p className="text-sm text-[#7A5A4A] max-w-xs leading-relaxed">
+            <p className="text-sm text-[#7A5A47] max-w-xs leading-[1.6]">
               {copy.brand.tagline}
             </p>
           </div>
@@ -58,7 +58,7 @@ export function Footer() {
               <h4 className="font-semibold text-[#3B1500]">
                 {copy.footer.gettingStarted}
               </h4>
-              <ul className="space-y-2 text-[#7A5A4A]">
+              <ul className="space-y-2 text-[#7A5A47]">
                 <li>
                   <TryDemoButton
                     variant="link"
@@ -90,7 +90,7 @@ export function Footer() {
               <h4 className="font-semibold text-[#3B1500]">
                 {copy.footer.resources}
               </h4>
-              <ul className="space-y-2 text-[#7A5A4A]">
+              <ul className="space-y-2 text-[#7A5A47]">
                 <li>
                   <a
                     href={`${GITHUB_URL}#readme`}
@@ -139,7 +139,7 @@ export function Footer() {
               <h4 className="font-semibold text-[#3B1500]">
                 {copy.footer.features}
               </h4>
-              <ul className="space-y-2 text-[#7A5A4A]">
+              <ul className="space-y-2 text-[#7A5A47]">
                 <li>
                   <a
                     href="/#how-it-works"
@@ -191,7 +191,7 @@ export function Footer() {
         </div>
 
         {/* Bottom copyright row */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#7A5A4A]">
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#7A5A47]">
           <p>{copy.brand.copyright}</p>
           <p className="mt-2 sm:mt-0">All rights reserved.</p>
         </div>

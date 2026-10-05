@@ -40,7 +40,7 @@ export function CodePanel({
       {/* File Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#E8D8CA] bg-white/70">
         <span className="font-mono text-xs text-[#7A5A4A] flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#FF4801]" />
+          <span className="w-2 h-2 rounded-full bg-[#F36421]" />
           {filename}
         </span>
         <button

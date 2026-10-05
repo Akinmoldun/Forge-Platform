@@ -117,7 +117,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FFFBF5] text-[#3B1500] font-sans antialiased selection:bg-[#FFE5D6] selection:text-[#FF4801] overflow-x-hidden w-full">
+    <div className="min-h-screen bg-[#FFFBF5] page-dotted-grid text-[#3B1500] font-sans antialiased selection:bg-[#FFE5D6] selection:text-[#F36421] overflow-x-hidden w-full relative">
       {/* Sticky nav that appears on scroll */}
       <StickyNav />
 

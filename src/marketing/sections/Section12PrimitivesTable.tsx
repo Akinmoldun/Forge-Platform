@@ -100,7 +100,7 @@ export function Section12PrimitivesTable() {
         {CATEGORIES.map((cat, colIdx) => (
           <div
             key={cat.header}
-            className={`p-[16px_20px] font-['JetBrains_Mono',monospace] text-[11px] uppercase tracking-wider text-[#7A5A4A] bg-[#FFFBF5] border-b border-[#E8D8CA] ${
+            className={`p-[16px_20px] font-['JetBrains_Mono',monospace] text-[11px] uppercase tracking-[0.08em] text-[#7A5A47] bg-[#FFFBF5] border-b border-[#E8D8CA] ${
               colIdx < 4 ? 'border-r border-[#E8D8CA]' : ''
             }`}
           >
@@ -166,7 +166,7 @@ export function Section12PrimitivesTable() {
             }`}
           >
             {/* Header */}
-            <div className="p-[16px_20px] font-['JetBrains_Mono',monospace] text-[11px] uppercase tracking-wider text-[#7A5A4A] bg-[#FFFBF5] border-b border-[#E8D8CA]">
+            <div className="p-[16px_20px] font-['JetBrains_Mono',monospace] text-[11px] uppercase tracking-[0.08em] text-[#7A5A47] bg-[#FFFBF5] border-b border-[#E8D8CA]">
               {cat.header}
             </div>
 
@@ -183,14 +183,14 @@ export function Section12PrimitivesTable() {
                     >
                       <div className="flex items-center gap-2">
                         <Icon
-                          className="w-4 h-4 text-[#7A5A4A] shrink-0"
+                          className="w-4 h-4 text-[#7A5A47] shrink-0"
                           strokeWidth={1.5}
                         />
                         <span className="font-['Hanken_Grotesk',sans-serif] font-semibold text-[14px] text-[#3B1500] leading-tight">
                           {item.name}
                         </span>
                       </div>
-                      <p className="mt-1.5 text-[12px] text-[#7A5A4A] leading-[1.5]">
+                      <p className="mt-1.5 text-[12px] text-[#7A5A47] leading-[1.5]">
                         {item.desc}
                       </p>
                     </div>

@@ -1,7 +1,7 @@
 :root {
-  --orange: #FF4801;
-  --orange-dark: #E8601F;
-  --brown: #3B1500;
+  --orange: #F36421;
+  --orange-dark: #D9531E;
+  --brown: #1C130D;
   --brown-muted: #7A5A47;
   --tan: #E8D8CA;
   --cream: #FFFBF5;
@@ -20,16 +20,74 @@
   --color-orange-hover: var(--orange-dark);
 }
 
-/* Page background: --cream with a faint dotted grid */
+/* Page background: --cream with a fixed dotted grid */
 .page-dotted-grid {
-  background-color: var(--cream);
-  background-image: radial-gradient(rgba(59, 21, 0, 0.07) 1px, transparent 1px);
+  background-color: #FFFBF5;
+  background-image: radial-gradient(rgba(59, 21, 0, 0.09) 1px, transparent 1px);
   background-size: 24px 24px;
+  background-attachment: fixed;
 }
 
-/* Soft vertical gradient bands (cream -> peach -> cream) */
+/* Soft vertical gradient bands (#FFFBF5 -> #FFEFE4 -> #FFFBF5) */
 .band-peach-gradient {
-  background: linear-gradient(180deg, var(--cream) 0%, var(--peach) 50%, var(--cream) 100%);
+  background: linear-gradient(180deg, #FFFBF5 0%, #FFEFE4 50%, #FFFBF5 100%);
+}
+
+/* Frame Grid & Cells pattern */
+.frame-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  border-top: 1px solid #E8D8CA;
+  border-left: 1px solid #E8D8CA;
+  background: rgba(255, 251, 245, 0.6);
+}
+.frame-cell {
+  padding: 28px 24px;
+  min-height: 190px;
+  border-right: 1px solid #E8D8CA;
+  border-bottom: 1px solid #E8D8CA;
+  background: transparent;
+}
+@media (max-width: 1023px) {
+  .frame-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .frame-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 3-column frame grid (globe cells, tailored to team) */
+.frame-grid-3cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  border-top: 1px solid #E8D8CA;
+  border-left: 1px solid #E8D8CA;
+  background: rgba(255, 251, 245, 0.6);
+}
+@media (max-width: 768px) {
+  .frame-grid-3cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 2-column frame grid (signup-shipping bento, use-cases 2x2) */
+.frame-grid-2cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  border-top: 1px solid #E8D8CA;
+  border-left: 1px solid #E8D8CA;
+  background: rgba(255, 251, 245, 0.6);
+}
+@media (max-width: 768px) {
+  .frame-grid-2cols {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Micro-labels */
@@ -77,13 +135,11 @@
 }
 .logo-slot {
   flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 40px;
   height: 28px;
   margin-right: 72px;
-  color: var(--brown);
+  background: #3B1500;
   opacity: 0.85;
 }
 @keyframes logo-scroll {
@@ -138,20 +194,34 @@
   animation-play-state: paused;
 }
 
-/* Hero Shimmer Animation */
-@keyframes heroShimmer {
-  0%, 100% {
-    background-position: 0% 0%;
+/* Hero Diagonal Pattern: faint 1px diagonal lines at 6% white */
+.hero-diagonal-pattern {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.06) 0,
+    rgba(255, 255, 255, 0.06) 1px,
+    transparent 0,
+    transparent 12px
+  );
+}
+
+/* Hero Slow Radial Highlight (white, 10%) drifting over 12s ease-in-out infinite alternate */
+@keyframes heroHighlightDrift {
+  0% {
+    background-position: 15% 20%;
   }
   50% {
-    background-position: 10% 10%;
+    background-position: 75% 65%;
+  }
+  100% {
+    background-position: 30% 80%;
   }
 }
 
-.hero-shimmer {
-  background: radial-gradient(circle 800px at 50% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  background-size: 140% 140%;
-  animation: heroShimmer 12s ease-in-out infinite alternate;
+.hero-highlight {
+  background: radial-gradient(circle 800px at 50% 40%, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  background-size: 160% 160%;
+  animation: heroHighlightDrift 12s ease-in-out infinite alternate;
 }
 
 /* Reduced motion adjustments */
@@ -163,7 +233,7 @@
   .animate-cta-tile-3,
   .animate-cta-tile-4,
   .animate-cta-tile-5,
-  .hero-shimmer {
+  .hero-highlight {
     animation: none !important;
   }
   .card-hover:hover {

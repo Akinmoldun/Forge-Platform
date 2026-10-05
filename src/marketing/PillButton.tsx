@@ -19,19 +19,19 @@ export function PillButton({
   onClick,
 }: PillButtonProps) {
   const baseStyles =
-    'rounded-full h-[40px] px-[18px] text-[14px] font-medium transition-all duration-200 inline-flex items-center justify-center gap-2 select-none text-center cursor-pointer focus-visible:outline-2 focus-visible:outline-[#FF4801] focus-visible:outline-offset-2';
+    'rounded-full h-[40px] px-[18px] text-[14px] font-medium transition-all duration-200 inline-flex items-center justify-center gap-2 select-none text-center cursor-pointer focus-visible:outline-2 focus-visible:outline-[#F36421] focus-visible:outline-offset-2';
 
   const resolvedVariant = variant === 'secondary' ? 'outline' : variant;
 
   const variantStyles = {
     primary:
-      'bg-[#FF4801] hover:bg-[#E8601F] text-white hover:-translate-y-[1px] shadow-xs active:translate-y-0',
+      'bg-[#F36421] hover:bg-[#D9531E] text-white hover:-translate-y-[1px] shadow-xs active:translate-y-0',
     white:
-      'bg-white text-[#FF4801] hover:bg-[#FFEFE4] hover:-translate-y-[1px] shadow-xs active:translate-y-0',
+      'bg-white text-[#F36421] hover:bg-[#FFEFE4] hover:-translate-y-[1px] shadow-xs active:translate-y-0',
     ghost:
       'bg-white/[0.18] border border-white/40 text-white hover:bg-white/[0.28] hover:-translate-y-[1px] active:translate-y-0',
     outline:
-      'border border-[#E8D8CA] bg-transparent text-[#3B1500] hover:border-[#FF4801] hover:text-[#FF4801] active:translate-y-0',
+      'border border-[#E8D8CA] bg-transparent text-[#3B1500] hover:border-[#F36421] hover:text-[#F36421] active:translate-y-0',
   }[resolvedVariant];
 
   const fullClassName = `${baseStyles} ${variantStyles} ${className}`.trim();
