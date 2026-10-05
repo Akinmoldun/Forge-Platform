@@ -202,8 +202,10 @@ export const copy = {
     subtext:
       "Clear boundaries between process enforcement and day-to-day execution.",
     leftTitle: "Fighting status meetings",
+    leftSentence: "Chasing updates across spreadsheets, chat threads and meetings.",
     leftLines: ["Who is blocked?", "Is this overdue?", "What changed?"],
     rightTitle: "Shipping with Forge",
+    rightSentence: "One workspace where rules, blockers and risk are always visible.",
     rightLines: [
       "Blockers visible on every issue",
       "A risk score with reasons",
