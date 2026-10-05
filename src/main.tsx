@@ -37,7 +37,8 @@ const RequireAuth = safeLazy(() =>
     default: module.RequireAuth,
   })),
 );
-const AuthPage = safeLazy(() => import("./pages/Auth"));
+const LoginPage = safeLazy(() => import("./pages/LoginPage"));
+const SignupPage = safeLazy(() => import("./pages/SignupPage"));
 const AppHome = safeLazy(() => import("./pages/AppHome"));
 const OverviewPage = safeLazy(() => import("./pages/OverviewPage"));
 const ProjectsPage = safeLazy(() => import("./pages/ProjectsPage"));
@@ -310,9 +311,21 @@ createRoot(document.getElementById("root")!).render(
                 element={<HomePage />}
               />
               <Route
+                path="/login"
+                element={withConvexAuth(
+                  <LoginPage redirectAfterAuth="/app" />,
+                )}
+              />
+              <Route
+                path="/signup"
+                element={withConvexAuth(
+                  <SignupPage redirectAfterAuth="/app" />,
+                )}
+              />
+              <Route
                 path="/auth"
                 element={withConvexAuth(
-                  <AuthPage redirectAfterAuth="/app" />,
+                  <LoginPage redirectAfterAuth="/app" />,
                 )}
               />
               <Route

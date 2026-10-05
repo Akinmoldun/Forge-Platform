@@ -320,9 +320,10 @@ export const copy = {
       securityChecklist: "Security checklist",
       workflows: "Workflows",
       dependencies: "Dependencies",
-      riskEngine: "Risk engine",
+      riskEngine: "Risk scoring",
       analytics: "Analytics",
-      activityHistory: "Activity history",
+      notifications: "Notifications",
+      activityHistory: "Notifications",
     },
   },
 };

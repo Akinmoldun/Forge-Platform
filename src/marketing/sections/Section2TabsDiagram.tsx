@@ -98,7 +98,7 @@ export function Section2TabsDiagram() {
   const current = TAB_DATA[activeTab];
 
   return (
-    <Section id="diagram" ariaLabelledby="heading-tabs-diagram">
+    <Section id="how-it-works" ariaLabelledby="heading-tabs-diagram">
       <SectionHeader
         id="heading-tabs-diagram"
         title={copy.tabsDiagram.h2}
@@ -106,7 +106,10 @@ export function Section2TabsDiagram() {
       />
 
       {/* 5 Pill Tabs: clicking swaps content; Active = orange #FF4801 with white text */}
-      <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-8">
+      <div
+        data-reveal-group
+        className="reveal-init flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-8"
+      >
         {TAB_KEYS.map((key) => {
           const tab = TAB_DATA[key];
           const Icon = tab.icon;
@@ -116,10 +119,10 @@ export function Section2TabsDiagram() {
               key={key}
               type="button"
               onClick={() => setActiveTab(key)}
-              className={`rounded-full py-2.5 px-5 text-sm font-medium transition-all duration-200 inline-flex items-center gap-2 cursor-pointer select-none ${
+              className={`rounded-full py-2.5 px-5 text-sm font-medium transition-[background-color,border-color,color,box-shadow] duration-200 ease-out inline-flex items-center gap-2 cursor-pointer select-none ${
                 isActive
                   ? 'bg-[#FF4801] text-white shadow-xs'
-                  : 'bg-white border border-[#E8D8CA] text-[#7A5A4A] hover:text-[#3B1500] hover:border-[#3B1500]/50'
+                  : 'bg-white border border-[#E8D8CA] text-[#7A5A4A] hover:text-[#3B1500] hover:border-[#3B1500]/50 hover:brightness-95'
               }`}
             >
               <Icon
@@ -133,7 +136,8 @@ export function Section2TabsDiagram() {
       </div>
 
       {/* Diagram Panel with Dotted Grid */}
-      <Panel className="p-6 sm:p-10 flex flex-col justify-between">
+      <div data-reveal-card className="reveal-init">
+        <Panel className="p-6 sm:p-10 flex flex-col justify-between">
         {/* Strict left-to-right grid, all nodes vertically centered on one center line */}
         <div className="w-full max-w-[1000px] mx-auto py-8 sm:py-12">
           {/* Desktop view (md+): Strict 3 columns + straight connector lines */}
@@ -268,6 +272,7 @@ export function Section2TabsDiagram() {
           {current.caption}
         </div>
       </Panel>
+      </div>
     </Section>
   );
 }

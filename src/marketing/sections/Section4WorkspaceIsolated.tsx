@@ -9,7 +9,7 @@ const cardIcons = [ShieldCheck, UserCheck, Radio];
 export function Section4WorkspaceIsolated() {
   return (
     <Section
-      id="security"
+      id="workspace-isolated"
       ariaLabelledby="heading-workspace-isolated"
     >
       <SectionHeader
@@ -32,6 +32,7 @@ export function Section4WorkspaceIsolated() {
 
       {/* Three cells overlap its faded bottom with margin-top -120px, position relative, z-index 1 */}
       <div
+        data-reveal-group
         className="relative z-1 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-[1050px] mx-auto"
         style={{ marginTop: '-120px' }}
       >
@@ -40,7 +41,8 @@ export function Section4WorkspaceIsolated() {
           return (
             <div
               key={card.title}
-              className="rounded-[16px] border border-[#E8D8CA] bg-white/95 backdrop-blur-sm p-6 shadow-sm flex flex-col justify-start gap-3"
+              data-reveal-card
+              className="rounded-[16px] border border-[#E8D8CA] bg-white/95 backdrop-blur-sm p-6 shadow-sm flex flex-col justify-start gap-3 card-hover reveal-init"
             >
               <div className="text-[#7A5A4A]">
                 <Icon size={16} strokeWidth={1.5} />

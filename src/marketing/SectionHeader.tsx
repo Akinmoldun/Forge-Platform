@@ -21,7 +21,8 @@ export function SectionHeader({
 
   return (
     <div
-      className={`mb-12 sm:mb-16 ${
+      data-reveal-header
+      className={`reveal-init mb-12 sm:mb-16 ${
         isCenter ? 'text-center max-w-3xl mx-auto' : 'max-w-2xl'
       } ${className}`}
     >

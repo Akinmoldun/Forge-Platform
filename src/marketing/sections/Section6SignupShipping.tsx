@@ -3,7 +3,7 @@ import { copy } from '../copy';
 import { Section } from '../Section';
 import { Cell } from '../Cell';
 import { CodePanel } from '../CodePanel';
-import { PillButton } from '../PillButton';
+import { TryDemoButton } from '@/components/TryDemoButton';
 
 const terminalLines = [
   '$ move FORGE-42 to Done',
@@ -43,7 +43,10 @@ export function Section6SignupShipping() {
   return (
     <Section id="bento" ariaLabelledby="heading-signup-shipping">
       {/* Centered H2: "Go from sign-up -> shipping in minutes" */}
-      <div className="text-center max-w-2xl mx-auto mb-14">
+      <div
+        data-reveal-header
+        className="reveal-init text-center max-w-2xl mx-auto mb-14"
+      >
         <h2
           id="heading-signup-shipping"
           className="font-['Hanken_Grotesk',sans-serif] font-medium text-3xl sm:text-[44px] text-[#3B1500] leading-tight tracking-[-0.02em]"
@@ -63,7 +66,10 @@ export function Section6SignupShipping() {
       </div>
 
       {/* 2-Column Bento Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <div
+        data-reveal-group
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
+      >
         {/* Left Column: Bento Cell 1 (Text cell + outlined pill) + Code Panel */}
         <div className="flex flex-col gap-6">
           {/* Text Cell 1 */}
@@ -77,9 +83,9 @@ export function Section6SignupShipping() {
               </p>
             </div>
             <div className="mt-6">
-              <PillButton to="/auth" variant="secondary" className="text-xs py-2 px-5">
+              <TryDemoButton variant="secondary" className="text-xs py-2 px-5">
                 {copy.signupToShipping.bento1Cta}
-              </PillButton>
+              </TryDemoButton>
             </div>
           </Cell>
 

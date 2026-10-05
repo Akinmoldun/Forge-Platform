@@ -15,7 +15,7 @@ export function Panel({
 }: PanelProps) {
   return (
     <div
-      className={`border border-[#E8D8CA] rounded-[20px] bg-[#FFFBF5] relative ${
+      className={`border border-[#E8D8CA] rounded-[20px] bg-[#FFFBF5] relative card-hover ${
         withDottedGrid ? 'bg-dotted-grid' : ''
       } ${className}`}
     >

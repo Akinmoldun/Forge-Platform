@@ -13,9 +13,15 @@ export function Section11TailoredToTeam() {
 
       <div className="space-y-6">
         {/* Top Row: Wide bordered card (left) + solid orange card (right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <div
+          data-reveal-group
+          className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"
+        >
           {/* Wide bordered card with 3 hairline-separated rows */}
-          <div className="lg:col-span-7 bg-white rounded-[20px] border border-[#E8D8CA] p-7 sm:p-8 flex flex-col justify-center shadow-2xs">
+          <div
+            data-reveal-card
+            className="lg:col-span-7 bg-white rounded-[20px] border border-[#E8D8CA] p-7 sm:p-8 flex flex-col justify-center shadow-2xs card-hover reveal-init"
+          >
             <div className="divide-y divide-[#E8D8CA] border-t border-b border-[#E8D8CA]">
               {copy.tailoredToTeam.wideCardRows.map((row) => (
                 <div key={row.action} className="py-4 flex items-center justify-between gap-4">
@@ -37,7 +43,10 @@ export function Section11TailoredToTeam() {
           </div>
 
           {/* Orange card: "Instant feedback loops" with two white lines about live updates */}
-          <div className="lg:col-span-5 bg-[#FF4801] text-white rounded-[20px] p-7 sm:p-8 flex flex-col justify-center shadow-xl">
+          <div
+            data-reveal-card
+            className="lg:col-span-5 bg-[#FF4801] text-white rounded-[20px] p-7 sm:p-8 flex flex-col justify-center shadow-xl card-hover reveal-init"
+          >
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[24px] text-white leading-tight mb-4">
               {copy.tailoredToTeam.orangeCardTitle}
             </h3>
@@ -53,11 +62,15 @@ export function Section11TailoredToTeam() {
         </div>
 
         {/* Bottom Row: Three bordered text cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div
+          data-reveal-group
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
           {copy.tailoredToTeam.bottomCards.map((card) => (
             <div
               key={card.title}
-              className="bg-white rounded-[20px] border border-[#E8D8CA] p-6 sm:p-7 shadow-2xs flex flex-col justify-center"
+              data-reveal-card
+              className="bg-white rounded-[20px] border border-[#E8D8CA] p-6 sm:p-7 shadow-2xs flex flex-col justify-center card-hover reveal-init"
             >
               <h4 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[20px] text-[#3B1500] mb-2">
                 {card.title}

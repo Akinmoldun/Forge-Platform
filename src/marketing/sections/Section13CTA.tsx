@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { TryDemoButton } from '@/components/TryDemoButton';
 import {
   Box,
   Database,
@@ -62,47 +62,7 @@ export function Section13CTA() {
     <section className="py-20 px-4 sm:px-6 w-full">
       <div className="max-w-[1100px] mx-auto">
         {/* Panel: orange #FF4801, radius 24px, overflow hidden, min-height 460px */}
-        <div className="relative rounded-[24px] bg-[#FF4801] text-white overflow-hidden shadow-2xl min-h-[460px] pt-[96px] px-[40px] pb-[120px] flex flex-col items-center justify-center text-center">
-          <style>{`
-            @keyframes ctaTileFloat {
-              0%, 100% {
-                translate: 0 0;
-              }
-              50% {
-                translate: 0 -10px;
-              }
-            }
-            .animate-cta-tile-1 { animation: ctaTileFloat 6s ease-in-out infinite; }
-            .animate-cta-tile-2 { animation: ctaTileFloat 8s ease-in-out 1s infinite; }
-            .animate-cta-tile-3 { animation: ctaTileFloat 7s ease-in-out 0.5s infinite; }
-            .animate-cta-tile-4 { animation: ctaTileFloat 9s ease-in-out 1.5s infinite; }
-            .animate-cta-tile-5 { animation: ctaTileFloat 7.5s ease-in-out 2s infinite; }
-
-            @keyframes ctaTickerScroll {
-              from { transform: translateX(0); }
-              to { transform: translateX(-50%); }
-            }
-            .cta-ticker-track {
-              display: flex;
-              align-items: center;
-              flex-wrap: nowrap;
-              width: max-content;
-              animation: ctaTickerScroll 28s linear infinite;
-            }
-            .cta-ticker-track:hover {
-              animation-play-state: paused;
-            }
-            @media (prefers-reduced-motion: reduce) {
-              .animate-cta-tile-1,
-              .animate-cta-tile-2,
-              .animate-cta-tile-3,
-              .animate-cta-tile-4,
-              .animate-cta-tile-5 {
-                animation: none !important;
-              }
-            }
-          `}</style>
-
+        <div className="card-hover relative rounded-[24px] bg-[#FF4801] text-white overflow-hidden shadow-2xl min-h-[460px] pt-[96px] px-[40px] pb-[120px] flex flex-col items-center justify-center text-center">
           {/* Absolutely positioned layer that ends 56px above panel bottom so no tile touches ticker */}
           <div
             aria-hidden="true"
@@ -123,7 +83,7 @@ export function Section13CTA() {
           </div>
 
           {/* Centered Text */}
-          <div className="relative z-10 max-w-2xl mx-auto">
+          <div data-reveal-header className="reveal-init relative z-10 max-w-2xl mx-auto">
             <h2 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[36px] sm:text-[48px] lg:text-[56px] text-white leading-tight tracking-[-0.02em]">
               Build with rules that hold
             </h2>
@@ -133,17 +93,17 @@ export function Section13CTA() {
 
             {/* Two Pills */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                to="/auth"
-                className="rounded-full py-3 px-8 text-[15px] font-semibold bg-white text-[#FF4801] hover:bg-[#FFE5D6] transition-colors select-none shadow-xs"
+              <TryDemoButton
+                variant="white"
+                className="rounded-full py-3 px-8 text-[15px] font-semibold bg-white text-[#FF4801] hover:bg-[#FFE5D6] hover:brightness-92 active:brightness-85 transition-all duration-200 select-none shadow-xs"
               >
-                Start for free
-              </Link>
+                Try the live demo
+              </TryDemoButton>
               <a
                 href="https://github.com/Akinmoldun/forge-platform"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full py-3 px-8 text-[15px] font-medium text-white bg-white/[0.18] border border-white/40 hover:bg-white/[0.28] transition-colors select-none"
+                className="rounded-full py-3 px-8 text-[15px] font-medium text-white bg-white/[0.18] border border-white/40 hover:bg-white/[0.28] hover:brightness-92 active:brightness-85 transition-all duration-200 select-none"
               >
                 View on GitHub
               </a>

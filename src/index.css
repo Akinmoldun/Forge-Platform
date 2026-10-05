@@ -127,6 +127,15 @@
   html {
     color-scheme: dark;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  section[id],
+  [id] {
+    scroll-margin-top: 72px;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "cv11";
@@ -166,22 +175,135 @@
   }
 }
 
-/* Respect reduced motion for CSS-driven animation too (tw-animate-css, skeletons) */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 /* Dot grid pattern for Forge panels */
 .bg-forge-dots {
   background-image: radial-gradient(rgba(80, 30, 0, 0.08) 1px, transparent 1px);
   background-size: 12px 12px;
+}
+
+/* Card hover: lift 2px with faint orange border (#FF4801 at 40%) over 200ms */
+.card-hover {
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  will-change: transform;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 72, 1, 0.4) !important;
+}
+
+/* Scroll reveal: opacity 0 -> 1 and translateY(24px) -> 0, 600ms ease-out, 80ms stagger */
+.reveal-init {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+html.js-reveal .reveal-pending {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+html.js-reveal .reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* Hero subtle 12s radial shimmer drifting 10% */
+@keyframes heroShimmer {
+  0%, 100% {
+    background-position: 45% 45%;
+    opacity: 0.75;
+  }
+  50% {
+    background-position: 55% 55%;
+    opacity: 1;
+  }
+}
+
+.hero-shimmer {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.08) 35%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  background-size: 140% 140%;
+  animation: heroShimmer 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Logo track marquee */
+@keyframes logo-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.logo-track {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: max-content;
+  will-change: transform;
+  animation: logo-scroll 32s linear infinite;
+}
+
+.logo-marquee:hover .logo-track {
+  animation-play-state: paused;
+}
+
+/* CTA tile float */
+@keyframes ctaTileFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-cta-tile-1 {
+  animation: ctaTileFloat 6s ease-in-out infinite;
+}
+.animate-cta-tile-2 {
+  animation: ctaTileFloat 8s ease-in-out 1s infinite;
+}
+.animate-cta-tile-3 {
+  animation: ctaTileFloat 7s ease-in-out 0.5s infinite;
+}
+.animate-cta-tile-4 {
+  animation: ctaTileFloat 9s ease-in-out 1.5s infinite;
+}
+.animate-cta-tile-5 {
+  animation: ctaTileFloat 7.5s ease-in-out 2s infinite;
+}
+
+/* CTA ticker */
+@keyframes ctaTickerScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.cta-ticker-track {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: max-content;
+  will-change: transform;
+  animation: ctaTickerScroll 28s linear infinite;
+}
+
+.cta-ticker-track:hover {
+  animation-play-state: paused;
 }
 
 @keyframes float-gentle-1 {
@@ -257,15 +379,17 @@
   animation-play-state: paused;
 }
 
+/* Reduced motion: shorten motion, stop marquee, ticker, tile float, and hero shimmer.
+   Keep content visible without globally killing animations. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+  .logo-track,
+  .cta-ticker-track,
+  .animate-cta-tile-1,
+  .animate-cta-tile-2,
+  .animate-cta-tile-3,
+  .animate-cta-tile-4,
+  .animate-cta-tile-5,
+  .hero-shimmer,
   .animate-marquee,
   .animate-tilt-1,
   .animate-tilt-2,
@@ -274,6 +398,13 @@
   .animate-float-2,
   .animate-slow-spin {
     animation: none !important;
+  }
+
+  html.js-reveal .reveal-pending,
+  html.js-reveal .reveal-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 

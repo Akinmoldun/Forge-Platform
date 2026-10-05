@@ -1,88 +1,62 @@
 :root {
-  --color-cream: #FFFBF5;
+  --orange: #FF4801;
+  --orange-dark: #E8601F;
+  --brown: #3B1500;
+  --brown-muted: #7A5A47;
+  --tan: #E8D8CA;
+  --cream: #FFFBF5;
+  --peach: #FFEFE4;
+  --peach-2: #FFD2B3;
+  --white: #FFFFFF;
+
+  /* Legacy aliases for backward compatibility */
+  --color-cream: var(--cream);
   --color-band: #FFF4EA;
-  --color-text: #3B1500;
-  --color-muted: #7A5A4A;
-  --color-border: #E8D8CA;
-  --color-peach: #FFE5D6;
-  --color-orange: #FF4801;
-  --color-orange-hover: #E03E00;
+  --color-text: var(--brown);
+  --color-muted: var(--brown-muted);
+  --color-border: var(--tan);
+  --color-peach: var(--peach);
+  --color-orange: var(--orange);
+  --color-orange-hover: var(--orange-dark);
 }
 
-.bg-cream {
-  background-color: var(--color-cream);
+/* Page background: --cream with a faint dotted grid */
+.page-dotted-grid {
+  background-color: var(--cream);
+  background-image: radial-gradient(rgba(59, 21, 0, 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-.bg-band {
-  background-color: var(--color-band);
+/* Soft vertical gradient bands (cream -> peach -> cream) */
+.band-peach-gradient {
+  background: linear-gradient(180deg, var(--cream) 0%, var(--peach) 50%, var(--cream) 100%);
 }
 
-.text-brand-dark {
-  color: var(--color-text);
+/* Micro-labels */
+.mono-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brown-muted);
 }
 
-.text-brand-muted {
-  color: var(--color-muted);
+/* Universal focus-visible: 2px orange ring, 2px offset */
+:focus-visible {
+  outline: 2px solid var(--orange) !important;
+  outline-offset: 2px !important;
 }
 
-.border-brand {
-  border-color: var(--color-border);
+/* Hover transitions on cards */
+.card-hover {
+  transition: transform 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 72, 1, 0.4);
 }
 
-.bg-dotted-grid {
-  background-image: radial-gradient(rgba(80, 30, 0, 0.08) 1px, transparent 1px);
-  background-size: 12px 12px;
-}
-
-@keyframes floatCTA {
-  0%, 100% {
-    transform: translateY(0px) rotate(12deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(12deg);
-  }
-}
-
-@keyframes floatCTAAlt {
-  0%, 100% {
-    transform: translateY(0px) rotate(-10deg);
-  }
-  50% {
-    transform: translateY(8px) rotate(-10deg);
-  }
-}
-
-.animate-float-cta-1 {
-  animation: floatCTA 8s ease-in-out infinite;
-}
-
-.animate-float-cta-2 {
-  animation: floatCTAAlt 9s ease-in-out infinite;
-}
-
-.animate-float-cta-3 {
-  animation: floatCTA 7.5s ease-in-out infinite reverse;
-}
-
-.animate-float-cta-4 {
-  animation: floatCTAAlt 8.5s ease-in-out infinite reverse;
-}
-
-@keyframes tickerScroll {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-ticker {
-  display: inline-flex;
-  white-space: nowrap;
-  animation: tickerScroll 24s linear infinite;
-}
-
+/* Logo Marquee */
 .logo-marquee {
   overflow: hidden;
   height: 56px;
@@ -103,21 +77,21 @@
 }
 .logo-slot {
   flex: none;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   height: 28px;
   margin-right: 72px;
-  background: #3B1500;
-  opacity: .85;
+  color: var(--brown);
+  opacity: 0.85;
 }
 @keyframes logo-scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .logo-track { animation: none; }
-}
 
+/* CTA Tiles Float Animation */
 @keyframes ctaTileFloat {
   0%, 100% {
     translate: 0 0;
@@ -143,6 +117,7 @@
   animation: ctaTileFloat 7.5s ease-in-out 2s infinite;
 }
 
+/* CTA Ticker */
 @keyframes ctaTickerScroll {
   from {
     transform: translateX(0);
@@ -159,20 +134,39 @@
   width: max-content;
   animation: ctaTickerScroll 28s linear infinite;
 }
-
 .cta-ticker-track:hover {
   animation-play-state: paused;
 }
 
+/* Hero Shimmer Animation */
+@keyframes heroShimmer {
+  0%, 100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 10% 10%;
+  }
+}
+
+.hero-shimmer {
+  background: radial-gradient(circle 800px at 50% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  background-size: 140% 140%;
+  animation: heroShimmer 12s ease-in-out infinite alternate;
+}
+
+/* Reduced motion adjustments */
 @media (prefers-reduced-motion: reduce) {
+  .logo-track,
+  .cta-ticker-track,
   .animate-cta-tile-1,
   .animate-cta-tile-2,
   .animate-cta-tile-3,
   .animate-cta-tile-4,
   .animate-cta-tile-5,
-  .cta-ticker-track {
+  .hero-shimmer {
     animation: none !important;
   }
+  .card-hover:hover {
+    transform: none !important;
+  }
 }
-
-

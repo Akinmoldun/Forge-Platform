@@ -92,7 +92,10 @@ export function Section12PrimitivesTable() {
       />
 
       {/* 1. Desktop: CSS Grid with 5 columns (repeat(5, minmax(0, 1fr))) and 5 rows (1 header + 4 item rows) */}
-      <div className="hidden lg:grid grid-cols-5 border border-[#E8D8CA] rounded-none bg-white shadow-2xs">
+      <div
+        data-reveal-card
+        className="reveal-init card-hover hidden lg:grid grid-cols-5 border border-[#E8D8CA] rounded-none bg-white shadow-2xs"
+      >
         {/* Header Row */}
         {CATEGORIES.map((cat, colIdx) => (
           <div

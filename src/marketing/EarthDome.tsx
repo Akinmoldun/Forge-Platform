@@ -18,10 +18,42 @@ const LINKS: [number, number][] = [
 
 export default function EarthDome() {
   const [rot, setRot] = useState(60);
+
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const id = window.setInterval(() => setRot((r) => (r + 0.16) % 360), 40);
-    return () => window.clearInterval(id);
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mediaQuery.matches) {
+      setRot(60);
+      return;
+    }
+
+    let frameId: number;
+    let lastTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const delta = Math.min(currentTime - lastTime, 100);
+      lastTime = currentTime;
+      setRot((r) => (r + delta * 0.004) % 360);
+      frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
+
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        cancelAnimationFrame(frameId);
+        setRot(60);
+      } else {
+        lastTime = performance.now();
+        frameId = requestAnimationFrame(animate);
+      }
+    };
+
+    mediaQuery.addEventListener?.('change', handleMediaChange);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      mediaQuery.removeEventListener?.('change', handleMediaChange);
+    };
   }, []);
 
   const W = 1600, H = 620;

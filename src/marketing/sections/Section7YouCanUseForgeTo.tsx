@@ -481,7 +481,10 @@ export function Section7YouCanUseForgeTo() {
     <Section id="use-cases" ariaLabelledby="heading-you-can-use">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
         {/* Left Column: chip, H2, short paragraph, and link */}
-        <div className="lg:col-span-4 flex flex-col items-start lg:sticky lg:top-24">
+        <div
+          data-reveal-header
+          className="reveal-init lg:col-span-4 flex flex-col items-start lg:sticky lg:top-24"
+        >
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[#FFE5D6] text-[#FF4801] mb-4">
             {copy.youCanUseForgeTo.tag}
           </span>
@@ -503,7 +506,10 @@ export function Section7YouCanUseForgeTo() {
         </div>
 
         {/* Right: 2x2 grid of equal-height cards (gap 0, 1px #E8D8CA borders, no radius, no overlap) */}
-        <div className="lg:col-span-8 border border-[#E8D8CA] rounded-none bg-white shadow-2xs overflow-hidden grid grid-cols-1 sm:grid-cols-2">
+        <div
+          data-reveal-group
+          className="lg:col-span-8 border border-[#E8D8CA] rounded-none bg-white shadow-2xs overflow-hidden grid grid-cols-1 sm:grid-cols-2"
+        >
           {CARDS.map((card, idx) => {
             const Illustration = card.Illustration;
             const isRightCol = idx % 2 === 1;
@@ -512,7 +518,8 @@ export function Section7YouCanUseForgeTo() {
             return (
               <div
                 key={card.title}
-                className={`flex flex-col justify-between bg-white ${
+                data-reveal-card
+                className={`reveal-init card-hover flex flex-col justify-between bg-white ${
                   !isRightCol ? 'sm:border-r border-[#E8D8CA]' : ''
                 } ${!isBottomRow ? 'border-b border-[#E8D8CA]' : ''} ${
                   idx > 0 ? 'border-t sm:border-t-0 border-[#E8D8CA]' : ''

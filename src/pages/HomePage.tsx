@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StickyNav } from '../marketing/Nav';
 import { Footer } from '../marketing/Footer';
 import { Section1Hero } from '../marketing/sections/Section1Hero';
@@ -15,6 +16,106 @@ import { Section12PrimitivesTable } from '../marketing/sections/Section12Primiti
 import { Section13CTA } from '../marketing/sections/Section13CTA';
 
 export default function HomePage() {
+  useEffect(() => {
+    // Content is visible by default. If reduced motion is requested, keep visible and skip animation.
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mediaQuery.matches) return;
+
+    // Enable reveal transitions only after JS has executed
+    document.documentElement.classList.add('js-reveal');
+
+    // Observe section headings
+    const headerTargets = document.querySelectorAll<HTMLElement>('[data-reveal-header]');
+    headerTargets.forEach((el) => {
+      el.classList.add('reveal-pending');
+    });
+
+    const headerObserver = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const el = entry.target as HTMLElement;
+            el.classList.remove('reveal-pending');
+            el.classList.add('reveal-visible');
+            obs.unobserve(el);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    headerTargets.forEach((el) => headerObserver.observe(el));
+
+    // Observe card groups with 80ms stagger
+    const groupTargets = document.querySelectorAll<HTMLElement>('[data-reveal-group]');
+    groupTargets.forEach((group) => {
+      const cards = group.querySelectorAll<HTMLElement>('[data-reveal-card]');
+      cards.forEach((card, idx) => {
+        card.style.setProperty('--reveal-delay', `${idx * 80}ms`);
+        card.classList.add('reveal-pending');
+      });
+    });
+
+    const groupObserver = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const group = entry.target as HTMLElement;
+            const cards = group.querySelectorAll<HTMLElement>('[data-reveal-card]');
+            cards.forEach((card) => {
+              card.classList.remove('reveal-pending');
+              card.classList.add('reveal-visible');
+            });
+            obs.unobserve(group);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    groupTargets.forEach((group) => groupObserver.observe(group));
+
+    // Standalone cards not inside a group
+    const standaloneCards = document.querySelectorAll<HTMLElement>(
+      ':not([data-reveal-group]) > [data-reveal-card], [data-reveal-card]:not([data-reveal-group] [data-reveal-card])'
+    );
+    standaloneCards.forEach((card) => {
+      card.classList.add('reveal-pending');
+    });
+
+    const cardObserver = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const card = entry.target as HTMLElement;
+            card.classList.remove('reveal-pending');
+            card.classList.add('reveal-visible');
+            obs.unobserve(card);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    standaloneCards.forEach((card) => cardObserver.observe(card));
+
+    return () => {
+      headerObserver.disconnect();
+      groupObserver.disconnect();
+      cardObserver.disconnect();
+      document.documentElement.classList.remove('js-reveal');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash) {
+      const id = window.location.hash.slice(1);
+      const target = document.getElementById(id);
+      if (target) {
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FFFBF5] text-[#3B1500] font-sans antialiased selection:bg-[#FFE5D6] selection:text-[#FF4801] overflow-x-hidden w-full">
       {/* Sticky nav that appears on scroll */}

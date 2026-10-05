@@ -1,6 +1,7 @@
 import { copy } from '../copy';
 import { Section } from '../Section';
 import { SectionHeader } from '../SectionHeader';
+import { Frame } from '../Frame';
 import { Cell } from '../Cell';
 import {
   Workflow,
@@ -22,41 +23,27 @@ export function Section3FeatureGrid() {
         subtext={copy.featureGrid.subtext}
       />
 
-      {/* 3x2 bordered grid with + marks at outer corners */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 -space-y-px sm:space-y-0 sm:-space-x-px relative border border-[#E8D8CA]">
-        {copy.featureGrid.items.map((item, index) => {
-          const Icon = icons[index % icons.length];
-          const isTopLeft = index === 0;
-          const isTopRight = index === 2;
-          const isBottomLeft = index === 3;
-          const isBottomRight = index === 5;
+      {/* 3x2 bordered grid inside Frame with + marks at outer corners */}
+      <Frame>
+        <div
+          data-reveal-group
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 relative"
+        >
+          {copy.featureGrid.items.map((item, index) => {
+            const Icon = icons[index % icons.length];
 
-          return (
-            <Cell
-              key={item.title}
-              className="p-6 sm:p-7 min-h-[190px] justify-start gap-4 border-0 border-b lg:border-b-0 lg:border-r border-[#E8D8CA] last:border-b-0 last:border-r-0"
-              withPlusTopLeft={isTopLeft}
-              withPlusTopRight={isTopRight}
-              withPlusBottomLeft={isBottomLeft}
-              withPlusBottomRight={isBottomRight}
-            >
-              {/* 16px outline icon (stroke 1.5, color #7A5A4A) at top-left, NO tile */}
-              <div className="text-[#7A5A4A]">
-                <Icon size={16} strokeWidth={1.5} />
-              </div>
-
-              <div>
-                <h3 className="font-['Hanken_Grotesk',sans-serif] font-semibold text-[15px] sm:text-[16px] text-[#3B1500] leading-snug">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm text-[#7A5A4A] leading-[1.55]">
-                  {item.text}
-                </p>
-              </div>
-            </Cell>
-          );
-        })}
-      </div>
+            return (
+              <Cell
+                key={item.title}
+                icon={Icon}
+                title={item.title}
+                description={item.text}
+                className="border-b md:border-b-0 border-[#E8D8CA] last:border-b-0 md:[&:nth-child(odd)]:border-r md:[&:nth-child(-n+4)]:border-b lg:[&:nth-child(n)]:border-r-0 lg:[&:nth-child(n)]:border-b-0 lg:[&:not(:nth-child(3n))]:border-r lg:[&:not(:nth-child(3n))]:border-[#E8D8CA] lg:[&:nth-child(-n+3)]:border-b lg:[&:nth-child(-n+3)]:border-[#E8D8CA]"
+              />
+            );
+          })}
+        </div>
+      </Frame>
     </Section>
   );
 }

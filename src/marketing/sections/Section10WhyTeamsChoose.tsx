@@ -12,9 +12,15 @@ export function Section10WhyTeamsChoose() {
       />
 
       {/* Two equal panels side by side, no fixed/min height, padding 40px, flex column, gap 32px, radius 16px */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+      <div
+        data-reveal-group
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch"
+      >
         {/* Left Panel: Cream #FFFBF5, 1px dashed #E8D8CA border */}
-        <div className="p-10 rounded-[16px] border border-dashed border-[#E8D8CA] bg-[#FFFBF5] flex flex-col gap-8 shadow-2xs">
+        <div
+          data-reveal-card
+          className="p-10 rounded-[16px] border border-dashed border-[#E8D8CA] bg-[#FFFBF5] flex flex-col gap-8 shadow-2xs card-hover reveal-init"
+        >
           {/* Top: 36px/500 title and one 16px sentence */}
           <div>
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[36px] text-[#3B1500] leading-tight mb-3">
@@ -41,7 +47,10 @@ export function Section10WhyTeamsChoose() {
         </div>
 
         {/* Right Panel: Solid orange #FF4801, white text */}
-        <div className="p-10 rounded-[16px] bg-[#FF4801] text-white flex flex-col gap-8 shadow-xl">
+        <div
+          data-reveal-card
+          className="p-10 rounded-[16px] bg-[#FF4801] text-white flex flex-col gap-8 shadow-xl card-hover reveal-init"
+        >
           {/* Top: 36px/500 title and one 16px sentence */}
           <div>
             <h3 className="font-['Hanken_Grotesk',sans-serif] font-medium text-[36px] text-white leading-tight mb-3">

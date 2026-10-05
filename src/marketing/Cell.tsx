@@ -1,46 +1,47 @@
 import React from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 interface CellProps {
-  children: React.ReactNode;
+  icon?: LucideIcon | React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
-  withPlusTopLeft?: boolean;
-  withPlusTopRight?: boolean;
-  withPlusBottomLeft?: boolean;
-  withPlusBottomRight?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function Cell({
+  icon: Icon,
+  title,
+  description,
   children,
   className = '',
-  withPlusTopLeft,
-  withPlusTopRight,
-  withPlusBottomLeft,
-  withPlusBottomRight,
+  style,
 }: CellProps) {
   return (
     <div
-      className={`border border-[#E8D8CA] bg-white p-6 relative flex flex-col justify-between ${className}`}
+      data-reveal-card
+      style={style}
+      className={`group p-6 relative flex flex-col transition-colors duration-200 hover:bg-[#FF4801]/[0.04] reveal-init ${className}`}
     >
-      {withPlusTopLeft && (
-        <span className="absolute -top-2.5 -left-2.5 text-[#E8D8CA] font-mono text-xs select-none pointer-events-none">
-          +
-        </span>
+      {Icon && (
+        <div className="mb-3 text-[#3B1500] group-hover:text-[#FF4801] transition-colors duration-200">
+          <Icon className="w-4 h-4" strokeWidth={1.5} />
+        </div>
       )}
-      {withPlusTopRight && (
-        <span className="absolute -top-2.5 -right-2.5 text-[#E8D8CA] font-mono text-xs select-none pointer-events-none">
-          +
-        </span>
+
+      {title && (
+        <h3 className="font-['Hanken_Grotesk',sans-serif] text-[15px] font-semibold text-[#3B1500] leading-snug">
+          {title}
+        </h3>
       )}
-      {withPlusBottomLeft && (
-        <span className="absolute -bottom-2.5 -left-2.5 text-[#E8D8CA] font-mono text-xs select-none pointer-events-none">
-          +
-        </span>
+
+      {description && (
+        <p className="mt-2 text-[13px] leading-[1.5] text-[#7A5A47]">
+          {description}
+        </p>
       )}
-      {withPlusBottomRight && (
-        <span className="absolute -bottom-2.5 -right-2.5 text-[#E8D8CA] font-mono text-xs select-none pointer-events-none">
-          +
-        </span>
-      )}
+
       {children}
     </div>
   );
