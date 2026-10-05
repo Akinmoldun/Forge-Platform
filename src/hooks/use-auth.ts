@@ -18,7 +18,9 @@ const AUTH_TIMEOUT_MS = 8000;
 // hold steady for this long before anything treats it as real.
 const SIGN_OUT_CONFIRM_MS = 2500;
 
-export function useAuth() {
+const isConvexConfigured = Boolean(import.meta.env.VITE_CONVEX_URL);
+
+function useConvexAuthReal() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
   const user = useQuery(api.users.currentUser);
   const { signIn, signOut } = useAuthActions();
@@ -87,27 +89,29 @@ export function useAuth() {
 
   return {
     isLoading,
-    /**
-     * True only once Convex has reported the session state. Route guards must
-     * check this before treating `isAuthenticated: false` as "signed out".
-     */
     authResolved,
-    /** Meaningful only while `authResolved` is true. */
     isAuthenticated: authResolved && isAuthenticated,
-    /**
-     * True while the session is still being established, or while the client
-     * reports "no access token" and a refresh may still be in flight. Route
-     * guards show a loading state here instead of acting on a sign-out that has
-     * not been confirmed. This depends on the session only, never on the
-     * profile query, so a slow `currentUser` cannot stall a protected route.
-     */
     isSessionPending:
       (!authResolved || (reportedSignedOut && !resolvedSignOut.confirmed)) &&
       !settled.timedOut,
-    /** True only for a sign-out that has held steady, so it is trustworthy. */
     isSignedOut: resolvedSignOut.confirmed,
     user: user ?? null,
     signIn,
     signOut,
   };
 }
+
+function useMockAuth() {
+  return {
+    isLoading: false,
+    authResolved: true,
+    isAuthenticated: false,
+    isSessionPending: false,
+    isSignedOut: true,
+    user: null,
+    signIn: async () => {},
+    signOut: async () => {},
+  };
+}
+
+export const useAuth = isConvexConfigured ? useConvexAuthReal : useMockAuth;
