@@ -16,36 +16,32 @@ const TILES = [
   {
     icon: Box,
     rotate: '-12deg',
-    top: '14%',
-    left: '8%',
+    style: { top: '10%', left: '8%', rotate: '-12deg' },
     animationClass: 'animate-cta-tile-1',
   },
   {
     icon: Database,
     rotate: '8deg',
-    top: '62%',
-    left: '14%',
+    style: { top: '52%', left: '10%', rotate: '8deg' },
     animationClass: 'animate-cta-tile-2',
   },
   {
     icon: Globe,
     rotate: '-6deg',
-    top: '12%',
-    right: '10%',
+    style: { top: '10%', right: '10%', rotate: '-6deg' },
     animationClass: 'animate-cta-tile-3',
   },
   {
     icon: ShieldCheck,
     rotate: '14deg',
-    top: '55%',
-    right: '6%',
+    style: { top: '48%', right: '6%', rotate: '14deg' },
     animationClass: 'animate-cta-tile-4',
   },
   {
     icon: Workflow,
     rotate: '10deg',
-    top: '78%',
-    right: '16%',
+    // Bottom-right tile sits at least 24px above that layer's bottom edge (bottom: 28px)
+    style: { bottom: '28px', right: '12%', rotate: '10deg' },
     animationClass: 'animate-cta-tile-5',
   },
 ];
@@ -67,25 +63,64 @@ export function Section13CTA() {
       <div className="max-w-[1100px] mx-auto">
         {/* Panel: orange #FF4801, radius 24px, overflow hidden, min-height 460px */}
         <div className="relative rounded-[24px] bg-[#FF4801] text-white overflow-hidden shadow-2xl min-h-[460px] pt-[96px] px-[40px] pb-[120px] flex flex-col items-center justify-center text-center">
-          {/* Five tilted tiles in the corners and edges (64px squares, radius 16px, 1.5px border) */}
-          {TILES.map((tile, i) => {
-            const Icon = tile.icon;
-            return (
-              <div
-                key={i}
-                aria-hidden="true"
-                className={`hidden md:flex absolute w-[64px] h-[64px] rounded-[16px] border-[1.5px] border-white/55 bg-white/[0.08] items-center justify-center pointer-events-none select-none ${tile.animationClass}`}
-                style={{
-                  top: tile.top,
-                  left: tile.left,
-                  right: tile.right,
-                  rotate: tile.rotate,
-                }}
-              >
-                <Icon className="w-6 h-6 text-white/85" strokeWidth={1.5} />
-              </div>
-            );
-          })}
+          <style>{`
+            @keyframes ctaTileFloat {
+              0%, 100% {
+                translate: 0 0;
+              }
+              50% {
+                translate: 0 -10px;
+              }
+            }
+            .animate-cta-tile-1 { animation: ctaTileFloat 6s ease-in-out infinite; }
+            .animate-cta-tile-2 { animation: ctaTileFloat 8s ease-in-out 1s infinite; }
+            .animate-cta-tile-3 { animation: ctaTileFloat 7s ease-in-out 0.5s infinite; }
+            .animate-cta-tile-4 { animation: ctaTileFloat 9s ease-in-out 1.5s infinite; }
+            .animate-cta-tile-5 { animation: ctaTileFloat 7.5s ease-in-out 2s infinite; }
+
+            @keyframes ctaTickerScroll {
+              from { transform: translateX(0); }
+              to { transform: translateX(-50%); }
+            }
+            .cta-ticker-track {
+              display: flex;
+              align-items: center;
+              flex-wrap: nowrap;
+              width: max-content;
+              animation: ctaTickerScroll 28s linear infinite;
+            }
+            .cta-ticker-track:hover {
+              animation-play-state: paused;
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .animate-cta-tile-1,
+              .animate-cta-tile-2,
+              .animate-cta-tile-3,
+              .animate-cta-tile-4,
+              .animate-cta-tile-5 {
+                animation: none !important;
+              }
+            }
+          `}</style>
+
+          {/* Absolutely positioned layer that ends 56px above panel bottom so no tile touches ticker */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 bottom-[56px] pointer-events-none select-none overflow-hidden"
+          >
+            {TILES.map((tile, i) => {
+              const Icon = tile.icon;
+              return (
+                <div
+                  key={i}
+                  className={`hidden md:flex absolute w-[64px] h-[64px] rounded-[16px] border-[1.5px] border-white/55 bg-white/[0.08] items-center justify-center pointer-events-none select-none ${tile.animationClass}`}
+                  style={tile.style}
+                >
+                  <Icon className="w-6 h-6 text-white/85" strokeWidth={1.5} />
+                </div>
+              );
+            })}
+          </div>
 
           {/* Centered Text */}
           <div className="relative z-10 max-w-2xl mx-auto">
@@ -135,10 +170,10 @@ export function Section13CTA() {
                     style={{ marginRight: '48px' }}
                   >
                     <Icon
-                      className="w-[14px] h-[14px] text-white/85 mr-2 shrink-0"
+                      className="w-[14px] h-[14px] text-white/85 mr-2 shrink-0 inline-block"
                       strokeWidth={1.5}
                     />
-                    <span className="text-[13px] text-white font-medium whitespace-nowrap">
+                    <span className="text-[13px] text-white font-medium whitespace-nowrap leading-none inline-block">
                       {item.text}
                     </span>
                   </div>
