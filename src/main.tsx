@@ -7,34 +7,51 @@ import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "@fontsource/jetbrains-mono/700.css";
+import "@fontsource/hanken-grotesk/400.css";
+import "@fontsource/hanken-grotesk/500.css";
+import "@fontsource/hanken-grotesk/600.css";
+import "@fontsource/hanken-grotesk/700.css";
 import "./index.css";
+import HomePage from "./pages/HomePage";
 
-// Lazy load route components for better code splitting. Relative,
-// extensionless paths — Vite compiles these into hashed /assets/*.js chunks;
-// the raw /src/*.tsx URLs never exist in a production build.
-const MarketingReferencePage = lazy(
-  () => import("./pages/marketing-reference/MarketingReferencePage"),
-);
-const RequireAuth = lazy(() =>
+/** Safe lazy loader that auto-retries failed dynamic imports (e.g. dev server restarts) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeLazy<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+) {
+  return lazy(() =>
+    factory().catch((err) => {
+      console.warn("[Router] Retrying dynamic import...", err);
+      return new Promise<{ default: T }>((resolve) =>
+        setTimeout(resolve, 800),
+      ).then(factory);
+    }),
+  );
+}
+
+const RequireAuth = safeLazy(() =>
   import("./components/RequireAuth").then((module) => ({
     default: module.RequireAuth,
   })),
 );
-const AuthPage = lazy(() => import("./pages/Auth"));
-const AppHome = lazy(() => import("./pages/AppHome"));
-const OverviewPage = lazy(() => import("./pages/OverviewPage"));
-const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
-const WorkflowPage = lazy(() => import("./pages/WorkflowPage"));
-const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
-const TeamsPage = lazy(() => import("./pages/TeamsPage"));
-const ActivityPage = lazy(() => import("./pages/ActivityPage"));
-const ProjectPage = lazy(() => import("./pages/ProjectPage"));
-const IssuePage = lazy(() => import("./pages/IssuePage"));
-const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
-const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
-const InvitePage = lazy(() => import("./pages/InvitePage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const AuthPage = safeLazy(() => import("./pages/Auth"));
+const AppHome = safeLazy(() => import("./pages/AppHome"));
+const OverviewPage = safeLazy(() => import("./pages/OverviewPage"));
+const ProjectsPage = safeLazy(() => import("./pages/ProjectsPage"));
+const WorkflowPage = safeLazy(() => import("./pages/WorkflowPage"));
+const AnalyticsPage = safeLazy(() => import("./pages/AnalyticsPage"));
+const TeamsPage = safeLazy(() => import("./pages/TeamsPage"));
+const ActivityPage = safeLazy(() => import("./pages/ActivityPage"));
+const ProjectPage = safeLazy(() => import("./pages/ProjectPage"));
+const IssuePage = safeLazy(() => import("./pages/IssuePage"));
+const ProjectSettings = safeLazy(() => import("./pages/ProjectSettings"));
+const WorkspaceSettings = safeLazy(() => import("./pages/WorkspaceSettings"));
+const NotificationsPage = safeLazy(() => import("./pages/NotificationsPage"));
+const InvitePage = safeLazy(() => import("./pages/InvitePage"));
+const NotFound = safeLazy(() => import("./pages/NotFound"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -189,7 +206,15 @@ class RouteErrorBoundary extends React.Component<
             <div className="mt-4 flex gap-2">
               <Button
                 size="sm"
-                onClick={() => this.setState({ error: null })}
+                onClick={() => {
+                  if (
+                    this.state.error?.message?.includes("dynamically imported module")
+                  ) {
+                    window.location.reload();
+                  } else {
+                    this.setState({ error: null });
+                  }
+                }}
               >
                 Try again
               </Button>
@@ -250,45 +275,39 @@ createRoot(document.getElementById("root")!).render(
               <Routes>
               <Route
                 path="/"
-                element={<MarketingReferencePage pageKey="home" />}
+                element={<HomePage />}
               />
-              {/* Public product page. It must stay reachable without signing in:
-                  the public navigation links here. The authenticated workflow
-                  editor lives at /app/workspaces/:workspaceId/workflow. */}
               <Route
                 path="/workflows"
-                element={<MarketingReferencePage pageKey="workflows" />}
+                element={<HomePage />}
               />
               <Route
                 path="/analytics"
-                element={<MarketingReferencePage pageKey="analytics" />}
+                element={<HomePage />}
               />
               <Route
                 path="/enterprise"
-                element={<MarketingReferencePage pageKey="enterprise" />}
+                element={<HomePage />}
               />
               <Route
                 path="/capabilities"
-                element={<MarketingReferencePage pageKey="capabilities" />}
+                element={<HomePage />}
               />
               <Route
                 path="/about"
-                element={<MarketingReferencePage pageKey="about" />}
+                element={<HomePage />}
               />
-              {/* Short public aliases used by the marketing navigation. They
-                  render the same public pages, stay reachable while signed
-                  out, and never redirect to sign in. */}
               <Route
                 path="/product"
-                element={<MarketingReferencePage pageKey="capabilities" />}
+                element={<HomePage />}
               />
               <Route
                 path="/workflow"
-                element={<MarketingReferencePage pageKey="workflows" />}
+                element={<HomePage />}
               />
               <Route
                 path="/teams"
-                element={<MarketingReferencePage pageKey="enterprise" />}
+                element={<HomePage />}
               />
               <Route
                 path="/auth"

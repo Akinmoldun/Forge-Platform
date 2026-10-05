@@ -1,0 +1,84 @@
+:root {
+  --color-cream: #FFFBF5;
+  --color-band: #FFF4EA;
+  --color-text: #3B1500;
+  --color-muted: #7A5A4A;
+  --color-border: #E8D8CA;
+  --color-peach: #FFE5D6;
+  --color-orange: #FF4801;
+  --color-orange-hover: #E03E00;
+}
+
+.bg-cream {
+  background-color: var(--color-cream);
+}
+
+.bg-band {
+  background-color: var(--color-band);
+}
+
+.text-brand-dark {
+  color: var(--color-text);
+}
+
+.text-brand-muted {
+  color: var(--color-muted);
+}
+
+.border-brand {
+  border-color: var(--color-border);
+}
+
+.bg-dotted-grid {
+  background-image: radial-gradient(rgba(80, 30, 0, 0.08) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+@keyframes floatCTA {
+  0%, 100% {
+    transform: translateY(0px) rotate(12deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(12deg);
+  }
+}
+
+@keyframes floatCTAAlt {
+  0%, 100% {
+    transform: translateY(0px) rotate(-10deg);
+  }
+  50% {
+    transform: translateY(8px) rotate(-10deg);
+  }
+}
+
+.animate-float-cta-1 {
+  animation: floatCTA 8s ease-in-out infinite;
+}
+
+.animate-float-cta-2 {
+  animation: floatCTAAlt 9s ease-in-out infinite;
+}
+
+.animate-float-cta-3 {
+  animation: floatCTA 7.5s ease-in-out infinite reverse;
+}
+
+.animate-float-cta-4 {
+  animation: floatCTAAlt 8.5s ease-in-out infinite reverse;
+}
+
+@keyframes tickerScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: tickerScroll 24s linear infinite;
+}

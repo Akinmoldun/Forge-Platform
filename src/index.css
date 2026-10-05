@@ -1,12 +1,15 @@
 /* DO NOT CHANGE */
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./marketing/tokens.css";
 @source not "../.cache";
 @source not "../.config";
 @custom-variant dark (&:is(.dark *));
 
 /* DO NOT CHANGE */
 @theme inline {
+  --font-sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -174,3 +177,125 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Dot grid pattern for Forge panels */
+.bg-forge-dots {
+  background-image: radial-gradient(rgba(80, 30, 0, 0.08) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+@keyframes float-gentle-1 {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes float-gentle-2 {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(4px); }
+}
+
+@keyframes float-tilt-1 {
+  0%, 100% { transform: translateY(0px) rotate(-6deg); }
+  50% { transform: translateY(-10px) rotate(-2deg); }
+}
+
+@keyframes float-tilt-2 {
+  0%, 100% { transform: translateY(0px) rotate(6deg); }
+  50% { transform: translateY(-12px) rotate(10deg); }
+}
+
+@keyframes float-tilt-3 {
+  0%, 100% { transform: translateY(0px) rotate(-4deg); }
+  50% { transform: translateY(8px) rotate(-8deg); }
+}
+
+@keyframes slow-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-float-1 {
+  animation: float-gentle-1 6s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-gentle-2 7s ease-in-out infinite;
+}
+
+.animate-tilt-1 {
+  animation: float-tilt-1 8s ease-in-out infinite;
+}
+
+.animate-tilt-2 {
+  animation: float-tilt-2 9s ease-in-out infinite;
+}
+
+.animate-tilt-3 {
+  animation: float-tilt-3 7.5s ease-in-out infinite;
+}
+
+.animate-slow-spin {
+  animation: slow-spin 90s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-marquee,
+  .animate-tilt-1,
+  .animate-tilt-2,
+  .animate-tilt-3,
+  .animate-float-1,
+  .animate-float-2,
+  .animate-slow-spin {
+    animation: none !important;
+  }
+}
+
+/* React Flow node and handle resets */
+.react-flow__node {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.react-flow__node.selectable:focus,
+.react-flow__node.selectable.selected,
+.react-flow__node:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.react-flow__handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
