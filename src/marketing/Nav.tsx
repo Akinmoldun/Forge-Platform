@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Menu, X, Cloud, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import { copy } from './copy';
 import { TryDemoButton } from '@/components/TryDemoButton';
 
 const GITHUB_URL = 'https://github.com/Akinmoldun/forge-platform';
 
-// Cloudflare / Forge Mark SVG
+// Forge Brand Logo Mark SVG
 export function ForgeLogoMark({
   className = 'w-6 h-6',
   color = 'currentColor',
@@ -21,10 +21,12 @@ export function ForgeLogoMark({
       className={className}
       aria-hidden="true"
     >
+      <rect width="32" height="32" rx="7" fill={color} />
       <path
-        d="M26 18c0-3.3-2.7-6-6-6-.4 0-.8.05-1.2.14A8.003 8.003 0 0 0 4 17c0 4.4 3.6 8 8 8h13a5 5 0 0 0 1-9.9V18z"
-        fill={color}
+        d="M8 11h16v3.2h-6.4V24h-3.2V14.2H8V11z"
+        fill="#FFFFFF"
       />
+      <circle cx="24" cy="9" r="2.4" fill="#FFE5D6" />
     </svg>
   );
 }
@@ -73,7 +75,7 @@ function useActiveSection() {
   return activeSection;
 }
 
-// Hero navigation bar (sits at top inside the hero margin, rounded 16px bar)
+// Hero navigation bar (sits at top inside the hero orange panel)
 export function HeroNav() {
   const location = useLocation();
 
@@ -99,52 +101,52 @@ export function HeroNav() {
   };
 
   return (
-    <header className="w-full flex items-center justify-between py-4 px-4 sm:px-8 text-white">
-      {/* Brand logo + name matching Cloudflare Workers Platform header */}
+    <header className="w-full flex items-center justify-between py-3 px-4 sm:px-8 text-white">
+      {/* Brand logo + name */}
       <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2.5 group select-none">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white">
-          <Cloud className="w-6 h-6 text-white fill-white" />
+          <ForgeLogoMark className="w-7 h-7" color="#3B1500" />
         </div>
         <div className="flex flex-col text-left leading-none">
-          <span className="text-[9px] tracking-widest uppercase font-bold text-white/80">FORGE</span>
-          <span className="text-[16px] font-bold tracking-tight text-white mt-0.5">Workers Platform</span>
+          <span className="text-[10px] tracking-widest uppercase font-bold text-white/80">FORGE</span>
+          <span className="text-[16px] font-bold tracking-tight text-white mt-0.5">Platform</span>
         </div>
       </Link>
 
-      {/* Center navigation links matching screenshot */}
+      {/* Center navigation links matching reference */}
       <nav
         aria-label="Hero navigation"
         className="hidden lg:flex items-center gap-7 text-[14px] font-medium text-white/90"
       >
         <a
-          href="/#workflows"
-          onClick={(e) => handleNavClick(e, 'workflows')}
-          className="hover:text-white transition-colors inline-flex items-center gap-1"
+          href="/#how-it-works"
+          onClick={(e) => handleNavClick(e, 'how-it-works')}
+          className="hover:text-white transition-colors inline-flex items-center gap-1 cursor-pointer"
         >
-          <span>Products</span>
+          <span>Features</span>
           <ChevronDown className="w-3.5 h-3.5 opacity-80" />
         </a>
         <a
-          href="/#use-cases"
-          onClick={(e) => handleNavClick(e, 'use-cases')}
-          className="hover:text-white transition-colors inline-flex items-center gap-1"
+          href="/#how-it-works"
+          onClick={(e) => handleNavClick(e, 'how-it-works')}
+          className="hover:text-white transition-colors inline-flex items-center gap-1 cursor-pointer"
         >
-          <span>Solutions</span>
+          <span>Workflows</span>
           <ChevronDown className="w-3.5 h-3.5 opacity-80" />
         </a>
         <a
-          href="/#pricing"
-          onClick={(e) => handleNavClick(e, 'pricing')}
-          className="hover:text-white transition-colors"
+          href="/#security"
+          onClick={(e) => handleNavClick(e, 'security')}
+          className="hover:text-white transition-colors cursor-pointer"
         >
-          Pricing
+          Security
         </a>
         <a
           href="/#primitives"
           onClick={(e) => handleNavClick(e, 'primitives')}
-          className="hover:text-white transition-colors"
+          className="hover:text-white transition-colors cursor-pointer"
         >
-          Documentation
+          Primitives
         </a>
         <a
           href={GITHUB_URL}
@@ -152,24 +154,24 @@ export function HeroNav() {
           rel="noopener noreferrer"
           className="hover:text-white transition-colors"
         >
-          Blog
+          GitHub
         </a>
       </nav>
 
-      {/* Right actions: Log in (text link) and Start building (white pill button with orange text) */}
-      <div className="flex items-center gap-5">
+      {/* Right actions: Log in (ghost) and Try demo (white pill) */}
+      <div className="flex items-center gap-4 sm:gap-5">
         <Link
           to="/login"
-          className="text-[14px] font-medium text-white hover:text-white/90 transition-colors select-none"
+          className="text-[14px] font-medium text-white hover:text-white/80 transition-colors select-none"
         >
-          Login
+          Log in
         </Link>
-        <Link
-          to="/auth"
-          className="bg-white text-[#F36421] text-[13px] sm:text-[14px] font-semibold px-5 py-2 rounded-full shadow-xs hover:bg-white/95 transition-all select-none"
+        <TryDemoButton
+          variant="white"
+          className="!text-[#F36421] !bg-white hover:!bg-white/90 !font-semibold !text-[13px] sm:!text-[14px] !h-[38px] !px-5 !rounded-full shadow-xs"
         >
-          Start building
-        </Link>
+          Try demo
+        </TryDemoButton>
       </div>
     </header>
   );

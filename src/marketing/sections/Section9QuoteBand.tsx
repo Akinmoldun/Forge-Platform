@@ -1,26 +1,30 @@
-import { copy } from '../copy';
 import { ForgeLogoMark } from '../Nav';
 
 export function Section9QuoteBand() {
   return (
-    <section className="py-[96px] px-4 sm:px-6 bg-transparent">
+    <section className="py-[72px] sm:py-[96px] px-4 sm:px-6 bg-transparent relative">
       <div
         data-reveal-header
-        className="reveal-init max-w-[1100px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8"
+        className="reveal-init max-w-[860px] mx-auto flex flex-col items-center text-center"
       >
-        {/* Left: Quote text + caption */}
-        <div className="max-w-3xl text-left">
-          <blockquote className="font-['Hanken_Grotesk',sans-serif] font-medium text-2xl sm:text-[28px] leading-[1.3] text-[#3B1500] tracking-[-0.015em]">
-            &ldquo;{copy.quoteBand.quote}&rdquo;
-          </blockquote>
-          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.08em] text-[#7A5A47]">
-            {copy.quoteBand.attribution}
-          </p>
+        {/* Orange Forge Icon Badge above quote */}
+        <div className="w-14 h-14 rounded-[16px] bg-[#F36421] flex items-center justify-center shadow-md mb-8">
+          <ForgeLogoMark className="w-8 h-8" color="#3B1500" />
         </div>
 
-        {/* Right: small orange icon tile */}
-        <div className="shrink-0 self-start md:self-center">
-          <ForgeLogoMark className="w-14 h-14" color="#F36421" />
+        {/* Large Centered Quote directly on dotted page */}
+        <blockquote className="font-['Hanken_Grotesk',sans-serif] font-medium text-2xl sm:text-[34px] leading-[1.25] text-[#3B1500] tracking-[-0.02em]">
+          &ldquo;The best issue tracker is the one that prevents the bugs from being mismanaged in the first place.&rdquo;
+        </blockquote>
+
+        {/* Author and Title Below */}
+        <div className="mt-6 flex flex-col items-center">
+          <span className="font-semibold text-sm sm:text-base text-[#3B1500]">
+            Marcus Sterling
+          </span>
+          <span className="mt-0.5 font-mono text-[11px] sm:text-[12px] uppercase tracking-[0.06em] text-[#7A5A47]">
+            VP of Engineering, HyperScale Systems
+          </span>
         </div>
       </div>
     </section>

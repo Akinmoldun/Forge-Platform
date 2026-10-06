@@ -479,7 +479,8 @@ const CARDS = [
 
 export function Section7YouCanUseForgeTo() {
   return (
-    <Section id="use-cases" ariaLabelledby="heading-you-can-use">
+    <Section id="features" ariaLabelledby="heading-you-can-use">
+      <div id="use-cases" className="relative -top-24 pointer-events-none" />
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
         {/* Left Column: chip, H2, short paragraph, and link */}
         <div

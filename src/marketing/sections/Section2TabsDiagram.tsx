@@ -1,114 +1,305 @@
 import { useState } from 'react';
 import { Section } from '../Section';
 import { Frame } from '../Frame';
+import { ForgeLogoMark } from '../Nav';
+import { copy } from '../copy';
 import {
-  Sparkles,
-  Video,
-  Layers,
-  Users,
-  Database,
-  Cpu,
   Workflow,
-  Server,
-  ArrowRight,
+  GitBranch,
+  ShieldAlert,
+  BarChart3,
+  Zap,
+  CheckCircle2,
+  FileCheck2,
+  Activity,
+  Bell,
+  Lock,
 } from 'lucide-react';
 
-type TabKey = 'agents' | 'webrtc' | 'platforms' | 'multiplayer' | 'data';
+type TabKey = 'workflows' | 'dependencies' | 'risk' | 'analytics' | 'automations';
 
-interface TabConfig {
-  id: TabKey;
+interface DiagramGroup {
   label: string;
-  icon: typeof Sparkles;
-  quote: string;
-  author: string;
-  company: string;
-  nodes: { label: string; sub: string; color: string; border: string; bg: string; icon: typeof Workflow }[];
+  borderColor: string;
+  badgeBg: string;
+  badgeColor: string;
+  type: 'single' | 'grid2x2' | 'stacked';
+  nodes: Array<{ title: string; sub?: string; icon?: typeof Workflow }>;
 }
 
-const TABS: TabConfig[] = [
-  {
-    id: 'agents',
-    label: 'AI Agents',
-    icon: Sparkles,
-    quote:
-      'Cloudflare provided everything from OAuth to out-of-the-box remote MCP support so we could quickly build, secure, and scale a fully operational setup.',
-    author: 'Build AI agents on durable objects with code execution, inference, AI gateway all built-in.',
-    company: 'Atlassian',
-    nodes: [
-      { label: 'Workflow', sub: 'Event trigger', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Workflow },
-      { label: 'Compute', sub: 'Sandboxed v8', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
-      { label: 'Workers AI', sub: 'Inference model', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Sparkles },
-      { label: 'Storage', sub: 'Vector & KV', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Database },
+interface TabData {
+  id: TabKey;
+  label: string;
+  icon: typeof Workflow;
+  caption: string;
+  groups: [DiagramGroup, DiagramGroup, DiagramGroup, DiagramGroup];
+  previewStatus: string;
+}
+
+const TAB_DATA: Record<TabKey, TabData> = {
+  workflows: {
+    id: 'workflows',
+    label: 'Workflows',
+    icon: Workflow,
+    caption: copy.tabsDiagram.captions.workflows,
+    previewStatus: 'Validated & Committed',
+    groups: [
+      {
+        label: 'Request',
+        borderColor: 'border-cyan-300',
+        badgeBg: 'bg-cyan-50',
+        badgeColor: 'text-cyan-700',
+        type: 'single',
+        nodes: [{ title: 'Transition request', sub: 'POST /issues/move', icon: Workflow }],
+      },
+      {
+        label: 'Rules',
+        borderColor: 'border-blue-300',
+        badgeBg: 'bg-blue-50',
+        badgeColor: 'text-blue-700',
+        type: 'grid2x2',
+        nodes: [
+          { title: 'Requires assignee', icon: CheckCircle2 },
+          { title: 'Requires comment', icon: CheckCircle2 },
+          { title: 'No open blockers', icon: CheckCircle2 },
+          { title: 'Valid transition', icon: CheckCircle2 },
+        ],
+      },
+      {
+        label: 'Risk engine',
+        borderColor: 'border-emerald-300',
+        badgeBg: 'bg-emerald-50',
+        badgeColor: 'text-emerald-700',
+        type: 'single',
+        nodes: [{ title: 'Score recomputed', sub: 'Deterministic weights', icon: ShieldAlert }],
+      },
+      {
+        label: 'History',
+        borderColor: 'border-fuchsia-300',
+        badgeBg: 'bg-fuchsia-50',
+        badgeColor: 'text-fuchsia-700',
+        type: 'stacked',
+        nodes: [
+          { title: 'Activity logged', icon: FileCheck2 },
+          { title: 'Notifications sent', icon: Bell },
+          { title: 'Automations run', icon: Zap },
+        ],
+      },
     ],
   },
-  {
-    id: 'webrtc',
-    label: 'WebRTC',
-    icon: Video,
-    quote:
-      'Ultra low-latency media routing across global edge nodes with automated fallback and zero server maintenance.',
-    author: 'Real-time media pipelines with programmable tracks and selective forwarding.',
-    company: 'Discord',
-    nodes: [
-      { label: 'Ingest', sub: 'Edge POP', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Server },
-      { label: 'SFU Track', sub: 'Sub-50ms', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
-      { label: 'Transcode', sub: 'Opus / VP9', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Sparkles },
-      { label: 'Egress', sub: 'Multi-peer', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Users },
+  dependencies: {
+    id: 'dependencies',
+    label: 'Dependencies',
+    icon: GitBranch,
+    caption: copy.tabsDiagram.captions.dependencies,
+    previewStatus: 'Cycle DFS Clean',
+    groups: [
+      {
+        label: 'Link request',
+        borderColor: 'border-cyan-300',
+        badgeBg: 'bg-cyan-50',
+        badgeColor: 'text-cyan-700',
+        type: 'single',
+        nodes: [{ title: 'Add dependency', sub: 'Parent -> Child block', icon: GitBranch }],
+      },
+      {
+        label: 'Cycle check',
+        borderColor: 'border-blue-300',
+        badgeBg: 'bg-blue-50',
+        badgeColor: 'text-blue-700',
+        type: 'grid2x2',
+        nodes: [
+          { title: 'DFS traversal', icon: CheckCircle2 },
+          { title: 'Back-edge test', icon: CheckCircle2 },
+          { title: 'Depth clamp', icon: CheckCircle2 },
+          { title: 'No self-ref', icon: CheckCircle2 },
+        ],
+      },
+      {
+        label: 'Graph engine',
+        borderColor: 'border-emerald-300',
+        badgeBg: 'bg-emerald-50',
+        badgeColor: 'text-emerald-700',
+        type: 'single',
+        nodes: [{ title: 'Adjacency list', sub: 'In-memory DAG', icon: Lock }],
+      },
+      {
+        label: 'Cascade sync',
+        borderColor: 'border-fuchsia-300',
+        badgeBg: 'bg-fuchsia-50',
+        badgeColor: 'text-fuchsia-700',
+        type: 'stacked',
+        nodes: [
+          { title: 'Issue locks updated', icon: Lock },
+          { title: 'Blocked alerts queued', icon: Bell },
+          { title: 'DAG state persisted', icon: FileCheck2 },
+        ],
+      },
     ],
   },
-  {
-    id: 'platforms',
-    label: 'Platforms',
-    icon: Layers,
-    quote:
-      'Multi-tenant orchestration where customer code runs in micro-second isolated sandboxes with strict compliance.',
-    author: 'Tenant isolation with programmatic DNS, SSL, and instant rule deployments.',
-    company: 'Shopify',
-    nodes: [
-      { label: 'Tenant DNS', sub: 'Anycast', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Server },
-      { label: 'Dispatch', sub: 'Custom domain', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Workflow },
-      { label: 'Isolation', sub: 'Secure context', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Cpu },
-      { label: 'Analytics', sub: 'Real-time telemetry', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Database },
+  risk: {
+    id: 'risk',
+    label: 'Risk',
+    icon: ShieldAlert,
+    caption: copy.tabsDiagram.captions.risk,
+    previewStatus: 'Health Score: 92/100',
+    groups: [
+      {
+        label: 'Evaluation trigger',
+        borderColor: 'border-cyan-300',
+        badgeBg: 'bg-cyan-50',
+        badgeColor: 'text-cyan-700',
+        type: 'single',
+        nodes: [{ title: 'State mutation', sub: 'Due date / Blocker', icon: Activity }],
+      },
+      {
+        label: 'Factor matrix',
+        borderColor: 'border-blue-300',
+        badgeBg: 'bg-blue-50',
+        badgeColor: 'text-blue-700',
+        type: 'grid2x2',
+        nodes: [
+          { title: 'Blocked work (+30)', icon: CheckCircle2 },
+          { title: 'Overdue items (+25)', icon: CheckCircle2 },
+          { title: 'Stale issues (+15)', icon: CheckCircle2 },
+          { title: 'P1 backlog (+20)', icon: CheckCircle2 },
+        ],
+      },
+      {
+        label: 'Scoring model',
+        borderColor: 'border-emerald-300',
+        badgeBg: 'bg-emerald-50',
+        badgeColor: 'text-emerald-700',
+        type: 'single',
+        nodes: [{ title: 'Sum & clamp', sub: 'Bounded 0–100 scale', icon: ShieldAlert }],
+      },
+      {
+        label: 'Audit output',
+        borderColor: 'border-fuchsia-300',
+        badgeBg: 'bg-fuchsia-50',
+        badgeColor: 'text-fuchsia-700',
+        type: 'stacked',
+        nodes: [
+          { title: 'Factor weights saved', icon: FileCheck2 },
+          { title: 'Risk tier assigned', icon: Bell },
+          { title: 'Snapshot published', icon: Zap },
+        ],
+      },
     ],
   },
-  {
-    id: 'multiplayer',
-    label: 'Multiplayer',
-    icon: Users,
-    quote:
-      'Stateful durable objects coordinate user cursors, delta diffs, and WebSocket persistence without Redis.',
-    author: 'Synchronized collaborative state machines with single-point authority globally.',
-    company: 'Figma',
-    nodes: [
-      { label: 'Client WS', sub: 'Persistent conn', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Users },
-      { label: 'Durable Obj', sub: 'Single-thread actor', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
-      { label: 'CRDT Sync', sub: 'Conflict-free', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Workflow },
-      { label: 'Snapshot', sub: 'Durable disk', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Database },
+  analytics: {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChart3,
+    caption: copy.tabsDiagram.captions.analytics,
+    previewStatus: 'Live Metrics Stream',
+    groups: [
+      {
+        label: 'Event intake',
+        borderColor: 'border-cyan-300',
+        badgeBg: 'bg-cyan-50',
+        badgeColor: 'text-cyan-700',
+        type: 'single',
+        nodes: [{ title: 'Activity log stream', sub: 'Append-only ledger', icon: Activity }],
+      },
+      {
+        label: 'Aggregation',
+        borderColor: 'border-blue-300',
+        badgeBg: 'bg-blue-50',
+        badgeColor: 'text-blue-700',
+        type: 'grid2x2',
+        nodes: [
+          { title: 'Cycle time median', icon: CheckCircle2 },
+          { title: 'Throughput by week', icon: CheckCircle2 },
+          { title: 'Review wait average', icon: CheckCircle2 },
+          { title: 'WIP limits audit', icon: CheckCircle2 },
+        ],
+      },
+      {
+        label: 'Window rolls',
+        borderColor: 'border-emerald-300',
+        badgeBg: 'bg-emerald-50',
+        badgeColor: 'text-emerald-700',
+        type: 'single',
+        nodes: [{ title: 'Rolling 30d stats', sub: 'Sub-second recalculation', icon: BarChart3 }],
+      },
+      {
+        label: 'Delivery',
+        borderColor: 'border-fuchsia-300',
+        badgeBg: 'bg-fuchsia-50',
+        badgeColor: 'text-fuchsia-700',
+        type: 'stacked',
+        nodes: [
+          { title: 'Dashboard re-rendered', icon: FileCheck2 },
+          { title: 'Charts refreshed', icon: Activity },
+          { title: 'SLA alerts evaluated', icon: Bell },
+        ],
+      },
     ],
   },
-  {
-    id: 'data',
-    label: 'Data Platform',
-    icon: Database,
-    quote:
-      'Distributed SQL and hyper-fast key-value storage queried globally with sub-millisecond edge read caches.',
-    author: 'Global consistency where you need it, edge caching where you want it.',
-    company: 'Stripe',
-    nodes: [
-      { label: 'Edge Query', sub: 'Read replica', color: '#06B6D4', border: 'border-cyan-400', bg: 'bg-cyan-50/60', icon: Server },
-      { label: 'Router', sub: 'Zero-latency query', color: '#3B82F6', border: 'border-blue-500', bg: 'bg-blue-50/60', icon: Cpu },
-      { label: 'D1 / KV', sub: 'Transactional ACID', color: '#EC4899', border: 'border-pink-500', bg: 'bg-pink-50/60', icon: Database },
-      { label: 'Replication', sub: 'Async pipeline', color: '#A855F7', border: 'border-purple-500', bg: 'bg-purple-50/60', icon: Workflow },
+  automations: {
+    id: 'automations',
+    label: 'Automations',
+    icon: Zap,
+    caption: copy.tabsDiagram.captions.automation,
+    previewStatus: 'Rules Triggered: 3',
+    groups: [
+      {
+        label: 'Trigger',
+        borderColor: 'border-cyan-300',
+        badgeBg: 'bg-cyan-50',
+        badgeColor: 'text-cyan-700',
+        type: 'single',
+        nodes: [{ title: 'Transition committed', sub: 'issue.status_changed', icon: Zap }],
+      },
+      {
+        label: 'Conditions',
+        borderColor: 'border-blue-300',
+        badgeBg: 'bg-blue-50',
+        badgeColor: 'text-blue-700',
+        type: 'grid2x2',
+        nodes: [
+          { title: 'Target status match', icon: CheckCircle2 },
+          { title: 'Assignee present', icon: CheckCircle2 },
+          { title: 'Priority threshold', icon: CheckCircle2 },
+          { title: 'Workspace scoped', icon: CheckCircle2 },
+        ],
+      },
+      {
+        label: 'Action pipeline',
+        borderColor: 'border-emerald-300',
+        badgeBg: 'bg-emerald-50',
+        badgeColor: 'text-emerald-700',
+        type: 'single',
+        nodes: [{ title: 'Action executor', sub: 'Auto-assign & tag', icon: Workflow }],
+      },
+      {
+        label: 'Effects',
+        borderColor: 'border-fuchsia-300',
+        badgeBg: 'bg-fuchsia-50',
+        badgeColor: 'text-fuchsia-700',
+        type: 'stacked',
+        nodes: [
+          { title: 'Assignee notified', icon: Bell },
+          { title: 'Labels synchronized', icon: FileCheck2 },
+          { title: 'Audit log appended', icon: Lock },
+        ],
+      },
     ],
   },
-];
+};
+
+const TAB_KEYS: TabKey[] = ['workflows', 'dependencies', 'risk', 'analytics', 'automations'];
 
 export function Section2TabsDiagram() {
-  const [activeId, setActiveId] = useState<TabKey>('agents');
-  const current = TABS.find((t) => t.id === activeId) || TABS[0];
+  const [activeTab, setActiveTab] = useState<TabKey>('workflows');
+  const data = TAB_DATA[activeTab];
 
   return (
-    <Section id="workflows" ariaLabelledby="heading-tabs-diagram">
+    <Section id="how-it-works" ariaLabelledby="heading-tabs-diagram">
+      {/* Anchor for backward compatibility */}
+      <div id="workflows" className="relative -top-24 pointer-events-none" />
+
       {/* Centered H2 & Subtext matching screenshot */}
       <div
         data-reveal-header
@@ -116,33 +307,33 @@ export function Section2TabsDiagram() {
       >
         <h2
           id="heading-tabs-diagram"
-          className="font-['Hanken_Grotesk',sans-serif] font-medium text-[30px] md:text-[44px] text-[#1C130D] leading-[1.12] tracking-[-0.025em]"
+          className="font-['Hanken_Grotesk',sans-serif] font-medium text-[30px] md:text-[44px] text-[#3B1500] leading-[1.12] tracking-[-0.025em]"
         >
-          The cloud that works for developers,
-          <br className="hidden sm:inline" /> not the other way around
+          {copy.tabsDiagram.h2}
         </h2>
-        <p className="mt-3.5 text-[#7A5A47] text-[15px] sm:text-[16px] leading-[1.6] max-w-[580px] mx-auto text-center">
-          Deploy serverless functions, frontends, containers, and databases to 330+ cities with one command.
+        <p className="mt-3.5 text-[#7A5A47] text-[15px] sm:text-[16px] leading-[1.6] max-w-[560px] mx-auto text-center">
+          {copy.tabsDiagram.subtext}
         </p>
       </div>
 
-      {/* 5 Pill Tabs matching screenshot */}
+      {/* Row of 5 Tab Pills matching screenshot */}
       <div
         data-reveal-group
         className="reveal-init flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10"
       >
-        {TABS.map((tab) => {
+        {TAB_KEYS.map((key) => {
+          const tab = TAB_DATA[key];
           const Icon = tab.icon;
-          const isActive = tab.id === activeId;
+          const isActive = activeTab === key;
           return (
             <button
-              key={tab.id}
+              key={key}
               type="button"
-              onClick={() => setActiveId(tab.id)}
+              onClick={() => setActiveTab(key)}
               className={`rounded-full py-2 px-4 sm:px-5 text-[13px] font-medium transition-all duration-200 inline-flex items-center gap-2 cursor-pointer select-none ${
                 isActive
                   ? 'bg-[#F36421] text-white shadow-xs'
-                  : 'bg-white border border-[#E8D8CA] text-[#7A5A47] hover:text-[#1C130D] hover:border-[#1C130D]/40'
+                  : 'bg-white border border-[#E8D8CA] text-[#7A5A47] hover:text-[#3B1500] hover:border-[#3B1500]/40'
               }`}
             >
               <Icon size={14} className={isActive ? 'text-white' : 'text-[#7A5A47]'} />
@@ -152,98 +343,134 @@ export function Section2TabsDiagram() {
         })}
       </div>
 
-      {/* Architecture Panel inside Frame with + markers */}
-      <Frame className="p-6 sm:p-10 lg:p-12 bg-white/70 backdrop-blur-xs">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          {/* Left: Interactive Diagram Flow */}
-          <div className="lg:col-span-8 flex flex-col justify-between">
-            {/* Horizontal connected node chain */}
-            <div className="py-6 overflow-x-auto">
-              <div className="flex items-center justify-between min-w-[520px] gap-3">
-                {current.nodes.map((node, i) => {
-                  const NodeIcon = node.icon;
-                  return (
-                    <div key={node.label} className="flex items-center flex-1">
-                      {/* Box node */}
-                      <div
-                        className={`flex-1 min-w-[100px] rounded-xl border-2 ${node.border} ${node.bg} p-3.5 flex flex-col items-center justify-center text-center shadow-2xs transition-all hover:scale-[1.03]`}
-                      >
-                        <NodeIcon size={20} style={{ color: node.color }} />
-                        <span className="mt-1.5 text-[13px] font-semibold text-[#1C130D] leading-tight">
-                          {node.label}
-                        </span>
-                        <span className="text-[10px] text-[#7A5A47] font-mono mt-0.5">
-                          {node.sub}
-                        </span>
-                      </div>
+      {/* Architecture Panel inside Frame with + markers and faint oversized Forge logo watermark */}
+      <Frame className="p-6 sm:p-8 lg:p-10 bg-white/70 backdrop-blur-xs relative overflow-hidden">
+        {/* Faint oversized Forge logo watermark in top-right */}
+        <div
+          className="absolute -top-12 -right-12 w-64 h-64 text-[#3B1500]/[0.035] pointer-events-none select-none z-0"
+          aria-hidden="true"
+        >
+          <ForgeLogoMark className="w-full h-full" color="#3B1500" />
+        </div>
 
-                      {/* Connector arrow */}
-                      {i < current.nodes.length - 1 && (
-                        <div className="px-2 flex items-center justify-center text-[#E8D8CA]">
-                          <ArrowRight size={16} strokeWidth={2} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Description & Quote underneath matching screenshot */}
-            <div className="mt-6 pt-6 border-t border-[#E8D8CA]/60 text-left">
-              <p className="text-[14px] font-medium text-[#1C130D] leading-relaxed">
-                {current.author}
-              </p>
-              <blockquote className="mt-2 text-[13px] text-[#7A5A47] leading-relaxed italic">
-                &ldquo;{current.quote}&rdquo;
-              </blockquote>
-
-              <div className="mt-4 flex items-center gap-2 text-[12px] font-semibold text-[#1C130D]">
-                <span className="text-[#7A5A47] font-normal">Architecture inspired by</span>
-                <span className="inline-flex items-center gap-1.5 text-blue-600 font-semibold">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-600 inline-block" />
-                  {current.company}
+        {/* Content with 250ms crossfade transition */}
+        <div
+          key={activeTab}
+          className="relative z-10 transition-opacity duration-250 ease-in-out opacity-100 flex flex-col justify-between"
+        >
+          {/* Main Connected Multi-Group Architecture Diagram spanning full width */}
+          <div className="w-full py-6 overflow-x-auto">
+            <div className="flex items-center justify-between min-w-[840px] gap-3 py-4">
+              {/* Group 1: Request (Single Node) */}
+              <div className="relative rounded-xl border border-dashed border-cyan-400/80 bg-cyan-50/30 p-3.5 pt-7 min-w-[150px] flex-1 flex flex-col items-center">
+                <span className="absolute -top-2.5 left-3.5 px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 font-mono text-[10px] uppercase tracking-wider font-semibold">
+                  {data.groups[0].label}
                 </span>
+                <div className="w-full rounded-lg border border-cyan-200 bg-white p-3 text-center shadow-2xs">
+                  <Workflow className="w-5 h-5 mx-auto text-cyan-600 mb-1.5" />
+                  <span className="block text-[12px] font-semibold text-[#3B1500] leading-tight">
+                    {data.groups[0].nodes[0].title}
+                  </span>
+                  <span className="block text-[10px] text-[#7A5A47] font-mono mt-0.5">
+                    {data.groups[0].nodes[0].sub}
+                  </span>
+                </div>
+              </div>
+
+              {/* Straight Connector 1 with traveling dot */}
+              <div className="relative w-10 h-[2px] bg-[#E8D8CA] shrink-0">
+                <span className="absolute -top-1 w-2.5 h-2.5 rounded-full bg-[#F36421] animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] opacity-75" />
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#F36421]" />
+              </div>
+
+              {/* Group 2: Rules (2x2 Grid) */}
+              <div className="relative rounded-xl border border-dashed border-blue-400/80 bg-blue-50/30 p-3.5 pt-7 flex-2 min-w-[280px]">
+                <span className="absolute -top-2.5 left-3.5 px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono text-[10px] uppercase tracking-wider font-semibold">
+                  {data.groups[1].label}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {data.groups[1].nodes.map((node, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg border border-blue-200/80 bg-white p-2 px-2.5 flex items-center gap-2 shadow-2xs"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span className="text-[11px] font-medium text-[#3B1500] leading-tight">
+                        {node.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Straight Connector 2 with traveling dot */}
+              <div className="relative w-10 h-[2px] bg-[#E8D8CA] shrink-0">
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#F36421]" />
+              </div>
+
+              {/* Group 3: Risk Engine (Single Node) */}
+              <div className="relative rounded-xl border border-dashed border-emerald-400/80 bg-emerald-50/30 p-3.5 pt-7 min-w-[150px] flex-1 flex flex-col items-center">
+                <span className="absolute -top-2.5 left-3.5 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono text-[10px] uppercase tracking-wider font-semibold">
+                  {data.groups[2].label}
+                </span>
+                <div className="w-full rounded-lg border border-emerald-200 bg-white p-3 text-center shadow-2xs">
+                  <ShieldAlert className="w-5 h-5 mx-auto text-emerald-600 mb-1.5" />
+                  <span className="block text-[12px] font-semibold text-[#3B1500] leading-tight">
+                    {data.groups[2].nodes[0].title}
+                  </span>
+                  <span className="block text-[10px] text-[#7A5A47] font-mono mt-0.5">
+                    {data.groups[2].nodes[0].sub}
+                  </span>
+                </div>
+              </div>
+
+              {/* Straight Connector 3 with traveling dot */}
+              <div className="relative w-10 h-[2px] bg-[#E8D8CA] shrink-0">
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#F36421]" />
+              </div>
+
+              {/* Group 4: History (3 Stacked Nodes) */}
+              <div className="relative rounded-xl border border-dashed border-fuchsia-400/80 bg-fuchsia-50/30 p-3.5 pt-7 min-w-[200px] flex-1">
+                <span className="absolute -top-2.5 left-3.5 px-2 py-0.5 rounded bg-fuchsia-100 text-fuchsia-800 font-mono text-[10px] uppercase tracking-wider font-semibold">
+                  {data.groups[3].label}
+                </span>
+                <div className="space-y-1.5">
+                  {data.groups[3].nodes.map((node, i) => (
+                    <div
+                      key={i}
+                      className="rounded border border-fuchsia-200/80 bg-white p-1.5 px-2 flex items-center gap-2 shadow-2xs"
+                    >
+                      <FileCheck2 className="w-3.5 h-3.5 text-fuchsia-600 shrink-0" />
+                      <span className="text-[11px] font-medium text-[#3B1500] truncate leading-tight">
+                        {node.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Straight Connector 4 -> End Circle Node */}
+              <div className="relative w-8 h-[2px] bg-[#E8D8CA] shrink-0" />
+              <div className="w-6 h-6 rounded-full border-2 border-[#F36421] bg-white flex items-center justify-center shrink-0 shadow-xs">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F36421]" />
               </div>
             </div>
           </div>
 
-          {/* Right: Floating Preview Window Card */}
-          <div className="lg:col-span-4 flex justify-center">
-            <div className="w-full max-w-[340px] rounded-[18px] border border-[#E8D8CA] bg-white p-4 shadow-sm">
-              {/* Window dots header */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#E8D8CA]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F]" />
-                </div>
-                <div className="w-4 h-4 rounded bg-blue-500/20 flex items-center justify-center">
-                  <span className="w-2 h-2 rounded-xs bg-blue-600" />
-                </div>
+          {/* Bottom-left caption matching Forge copy & status pill on right */}
+          <div className="mt-6 pt-5 border-t border-[#E8D8CA]/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left">
+            <div>
+              <p className="text-[14px] text-[#7A5A47] leading-relaxed max-w-2xl">
+                {data.caption}
+              </p>
+              <div className="mt-1.5 flex items-center gap-2 text-[11px] font-mono text-[#7A5A47]">
+                <span>Engineered with Convex typed transactional queries</span>
               </div>
+            </div>
 
-              {/* Wireframe skeleton body matching screenshot */}
-              <div className="py-4 space-y-3">
-                <div className="w-3/4 h-3 rounded-full bg-[#E8D8CA]/60" />
-                <div className="w-1/2 h-2.5 rounded-full bg-[#E8D8CA]/40" />
-
-                <div className="pt-2 grid grid-cols-2 gap-2">
-                  <div className="h-14 rounded-lg border border-dashed border-[#E8D8CA] bg-[#FAF7F2] p-2 flex flex-col justify-between">
-                    <div className="w-8 h-2 rounded bg-cyan-400/40" />
-                    <div className="w-12 h-2 rounded bg-[#E8D8CA]" />
-                  </div>
-                  <div className="h-14 rounded-lg border border-dashed border-[#E8D8CA] bg-[#FAF7F2] p-2 flex flex-col justify-between">
-                    <div className="w-8 h-2 rounded bg-pink-400/40" />
-                    <div className="w-12 h-2 rounded bg-[#E8D8CA]" />
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-lg bg-orange-50/50 border border-orange-200/50 flex items-center justify-between text-[11px] font-mono text-[#F36421]">
-                  <span>Status: Operational</span>
-                  <span className="w-2 h-2 rounded-full bg-[#27C93F]" />
-                </div>
-              </div>
+            <div className="shrink-0 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200/70 font-mono text-[11px] text-[#F36421] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#27C93F] animate-pulse" />
+              <span>{data.previewStatus}</span>
             </div>
           </div>
         </div>

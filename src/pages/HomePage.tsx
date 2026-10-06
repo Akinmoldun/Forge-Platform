@@ -3,7 +3,6 @@ import { StickyNav } from '../marketing/Nav';
 import { Footer } from '../marketing/Footer';
 import { Section1Hero } from '../marketing/sections/Section1Hero';
 import { Section2TabsDiagram } from '../marketing/sections/Section2TabsDiagram';
-import { Section3FeatureGrid } from '../marketing/sections/Section3FeatureGrid';
 import { Section4WorkspaceIsolated } from '../marketing/sections/Section4WorkspaceIsolated';
 import { Section5StackBrowser } from '../marketing/sections/Section5StackBrowser';
 import { Section6SignupShipping } from '../marketing/sections/Section6SignupShipping';
@@ -127,10 +126,7 @@ export default function HomePage() {
       {/* 2. Tabs + diagram: H2, 5 pill tabs, dotted panel with inline SVG diagram & SMIL dots */}
       <Section2TabsDiagram />
 
-      {/* 3. 3x2 feature grid with 16px outline icons */}
-      <Section3FeatureGrid />
-
-      {/* 4. "Workspace: Isolated": half-globe SVG fading out + 3 overlapping cells */}
+      {/* 3. "Workspace: Isolated": half-globe SVG fading out + 3 overlapping cells */}
       <Section4WorkspaceIsolated />
 
       {/* 5. "Built on a modern stack": 8 logos in dark brown + browser frame */}
