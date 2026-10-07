@@ -1,42 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
-import { Loader2, Menu, X, ArrowUpRight } from 'lucide-react';
+import { Menu, X, ArrowUpRight } from 'lucide-react';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
 export function Section1Nav() {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleGetStarted = async () => {
-    setError(null);
-    if (isAuthenticated) {
-      navigate('/app');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await signIn('anonymous');
-      navigate('/app');
-    } catch (err) {
-      console.error('Anonymous sign-in error:', err);
-      setError('Could not start demo. Try again.');
-      setIsLoading(false);
-    }
-  };
 
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -53,19 +32,17 @@ export function Section1Nav() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-3 sm:py-4 px-4 sm:px-6">
-      <div
-        className={`max-w-[1120px] mx-auto rounded-full transition-all duration-200 px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between border ${
-          isScrolled
-            ? 'bg-white/85 backdrop-blur-md border-black/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)]'
-            : 'bg-white/95 backdrop-blur-sm border-black/6 shadow-[0_2px_8px_rgba(0,0,0,0.03)]'
-        }`}
-      >
-        {/* Logo left */}
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 h-16 w-full bg-white/80 backdrop-blur-md border-b border-black/[0.06] transition-shadow duration-200 ${
+        isScrolled ? 'shadow-[0_2px_12px_rgba(0,0,0,0.04)]' : 'shadow-none'
+      }`}
+    >
+      <div className="max-w-[1200px] h-full mx-auto px-4 sm:px-6 flex items-center justify-between relative">
+        {/* Logo (small dark rounded square with the Forge mark plus the word "Forge") on the left */}
         <a
           href="#hero"
           onClick={scrollToTop}
-          className="flex items-center gap-2.5 text-[#0D0D0D] font-medium text-[16px] tracking-tight hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 text-[#0D0D0D] font-medium text-[16px] tracking-tight hover:opacity-80 transition-opacity z-10"
         >
           <div className="w-7 h-7 rounded-lg bg-[#0D0D0D] text-white flex items-center justify-center font-bold text-xs select-none">
             F
@@ -73,8 +50,8 @@ export function Section1Nav() {
           <span>Forge</span>
         </a>
 
-        {/* Links center (desktop) */}
-        <nav className="hidden md:flex items-center gap-6 text-[14px] text-[#575657]">
+        {/* Links centered (desktop) */}
+        <nav className="hidden md:flex items-center gap-6 text-[14px] text-[#575657] absolute left-1/2 -translate-x-1/2">
           {navLinks.map((link) =>
             link.external ? (
               <a
@@ -99,40 +76,30 @@ export function Section1Nav() {
           )}
         </nav>
 
-        {/* Right action */}
-        <div className="flex items-center gap-2">
-          {error && (
-            <span className="hidden sm:inline text-xs text-red-600 mr-2">{error}</span>
-          )}
+        {/* Right: Black pill "Get Started" + mobile hamburger */}
+        <div className="flex items-center gap-2 z-10">
           <button
-            onClick={handleGetStarted}
-            disabled={isLoading}
-            className="landing-btn-primary h-9 px-4 sm:px-5 text-[13px] sm:text-[14px]"
+            onClick={() => navigate('/login')}
+            className="landing-btn-primary h-9 px-4 sm:px-5 text-[13px] sm:text-[14px] select-none"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Starting...</span>
-              </>
-            ) : (
-              <span>Get Started</span>
-            )}
+            Get Started
           </button>
 
-          {/* Hamburger mobile */}
+          {/* Hamburger under 768px with min 44px tap target that closes on tap */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 text-[#0D0D0D] transition-colors"
+            className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-black/5 text-[#0D0D0D] transition-colors select-none"
             aria-label="Toggle navigation"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer: tap targets at least 44px, closes on tap */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-2 max-w-[1120px] mx-auto bg-white rounded-2xl border border-black/8 shadow-xl p-5 flex flex-col gap-3">
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-white/95 backdrop-blur-md border-b border-black/[0.06] p-4 flex flex-col gap-1 shadow-[0_8px_16px_rgba(0,0,0,0.04)]">
           {navLinks.map((link) => (
             <a
               key={link.label}
@@ -140,22 +107,21 @@ export function Section1Nav() {
               target={link.external ? '_blank' : undefined}
               rel={link.external ? 'noreferrer' : undefined}
               onClick={() => setMobileMenuOpen(false)}
-              className="text-[15px] font-medium text-[#575657] hover:text-[#0D0D0D] py-1.5 flex items-center justify-between"
+              className="min-h-[44px] px-3 rounded-lg text-[15px] font-medium text-[#575657] hover:text-[#0D0D0D] hover:bg-black/5 flex items-center justify-between transition-colors"
             >
               <span>{link.label}</span>
               {link.external && <ArrowUpRight className="w-4 h-4 opacity-50" />}
             </a>
           ))}
-          <div className="pt-2 border-t border-black/6">
+          <div className="pt-2 border-t border-black/5 mt-1">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
-                handleGetStarted();
+                navigate('/login');
               }}
-              disabled={isLoading}
-              className="w-full landing-btn-primary h-10 text-[14px]"
+              className="w-full min-h-[44px] landing-btn-primary justify-center text-[14px]"
             >
-              {isLoading ? 'Starting...' : 'Get Started'}
+              Get Started
             </button>
           </div>
         </div>

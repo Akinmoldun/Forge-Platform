@@ -10,7 +10,7 @@ export function Section3FeaturesBento() {
             <span>Productivity Features</span>
           </div>
 
-          <h2>Made for how your team actually works.</h2>
+          <h2>Built for how engineering teams actually work.</h2>
           <p className="subtext">
             From fast-moving startups to structured engineering organizations, Forge adapts to your team’s
             real-world workflows — not the other way around.
@@ -36,7 +36,7 @@ export function Section3FeaturesBento() {
 
               {/* Visual element with soft pastel green aura */}
               <div className="relative rounded-2xl bg-gradient-to-br from-[#9FDA85]/15 via-[#BED390]/10 to-transparent p-6 border border-black/5 overflow-hidden min-h-[190px] flex flex-col justify-center">
-                <div className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-black/6 shadow-xs">
+                <div className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-black/[0.06]">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[#83DD79]/20 text-[#0D0D0D] flex items-center justify-center font-bold text-xs">
                       DAG
@@ -55,7 +55,7 @@ export function Section3FeaturesBento() {
                   <div className="h-4 w-0.5 bg-black/20" />
                 </div>
 
-                <div className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-black/6 shadow-xs">
+                <div className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-black/[0.06]">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[#BED390]/30 text-[#0D0D0D] flex items-center justify-center font-bold text-xs">
                       BLOCKED
@@ -90,7 +90,7 @@ export function Section3FeaturesBento() {
 
               {/* Visual element with soft purple/pink backdrop */}
               <div className="relative rounded-2xl bg-gradient-to-br from-[#7957EC]/12 via-[#D78FC6]/10 to-transparent p-6 border border-black/5 overflow-hidden min-h-[190px] flex flex-col justify-center">
-                <div className="bg-white p-4 rounded-xl border border-black/6 shadow-xs space-y-3">
+                <div className="bg-white p-4 rounded-xl border border-black/[0.06] space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-[#0D0D0D] flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#7957EC] animate-pulse" />
@@ -125,16 +125,16 @@ export function Section3FeaturesBento() {
               {/* Visual element with soft sand/olive backdrop */}
               <div className="relative rounded-2xl bg-gradient-to-br from-[#D6C6A1]/20 via-[#BED390]/15 to-transparent p-6 border border-black/5 overflow-hidden min-h-[190px] flex flex-col justify-center">
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div className="bg-white p-3 rounded-lg border border-black/6 shadow-xs font-medium text-[#0D0D0D]">
+                  <div className="bg-white p-3 rounded-lg border border-black/[0.06] font-medium text-[#0D0D0D]">
                     Board
                   </div>
-                  <div className="bg-white p-3 rounded-lg border border-black/6 shadow-xs font-medium text-[#0D0D0D]">
+                  <div className="bg-white p-3 rounded-lg border border-black/[0.06] font-medium text-[#0D0D0D]">
                     Graph
                   </div>
-                  <div className="bg-white p-3 rounded-lg border border-black/6 shadow-xs font-medium text-[#0D0D0D]">
+                  <div className="bg-white p-3 rounded-lg border border-black/[0.06] font-medium text-[#0D0D0D]">
                     Lists
                   </div>
-                  <div className="bg-white p-3 rounded-lg border border-black/6 shadow-xs font-medium text-[#0D0D0D]">
+                  <div className="bg-white p-3 rounded-lg border border-black/[0.06] font-medium text-[#0D0D0D]">
                     Audit
                   </div>
                 </div>
@@ -159,7 +159,7 @@ export function Section3FeaturesBento() {
 
               {/* Visual element with soft blue/green backdrop */}
               <div className="relative rounded-2xl bg-gradient-to-br from-[#6E94CB]/15 via-[#9FDA85]/15 to-transparent p-6 border border-black/5 overflow-hidden min-h-[190px] flex flex-col justify-center">
-                <div className="bg-white p-4 rounded-xl border border-black/6 shadow-xs">
+                <div className="bg-white p-4 rounded-xl border border-black/[0.06]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-[#0D0D0D]">Deterministic Risk Matrix</span>
                     <span className="font-mono text-xs text-[#0D0D0D] font-bold">Health: 98/100</span>

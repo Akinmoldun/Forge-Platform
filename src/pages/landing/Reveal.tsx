@@ -1,23 +1,37 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-interface RevealProps {
+interface RevealProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
   delayMs?: number;
+  index?: number;
   className?: string;
+  as?: React.ElementType;
 }
 
-export function Reveal({ children, delayMs = 0, className = '' }: RevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(() => {
-    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return true;
-    }
-    return false;
-  });
+export function Reveal({
+  children,
+  delayMs,
+  index,
+  className = '',
+  as: Component = 'div',
+  style,
+  ...rest
+}: RevealProps) {
+  const ref = useRef<HTMLElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [isIn, setIsIn] = useState(false);
+
+  const computedDelay =
+    delayMs !== undefined ? delayMs : index !== undefined ? index * 80 : 0;
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setIsVisible(true);
+    // Hidden state applies only after observer is mounted
+    setMounted(true);
+
+    if (!ref.current) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsIn(true);
       return;
     }
 
@@ -25,37 +39,39 @@ export function Reveal({ children, delayMs = 0, className = '' }: RevealProps) {
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting) {
-          setIsVisible(true);
+          setIsIn(true);
           if (ref.current) {
             observer.unobserve(ref.current);
           }
         }
       },
-      { threshold: 0.15 }
+      {
+        threshold: 0.15,
+        rootMargin: '0px 0px -8% 0px',
+      }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
+    observer.observe(ref.current);
 
     return () => {
       observer.disconnect();
     };
   }, []);
 
+  // Before mount, content is fully visible (prevents content being stuck hidden if JS/observer fails)
+  const revealClasses = mounted ? `reveal ${isIn ? 'is-in' : ''}` : '';
+
   return (
-    <div
+    <Component
       ref={ref}
       style={{
-        transitionDuration: '600ms',
-        transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
-        transitionDelay: `${delayMs}ms`,
+        ...style,
+        ...(computedDelay > 0 ? { transitionDelay: `${computedDelay}ms` } : {}),
       }}
-      className={`transition-[opacity,transform] ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-      } ${className}`}
+      className={`${revealClasses} ${className}`.trim()}
+      {...rest}
     >
       {children}
-    </div>
+    </Component>
   );
 }

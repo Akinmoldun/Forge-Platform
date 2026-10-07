@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
-import { ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Reveal } from '../Reveal';
 
 export function Section12FinalCTA() {
   const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleStart = async () => {
+  const handleDemo = async () => {
+    setError(null);
     if (isAuthenticated) {
       navigate('/app');
       return;
@@ -18,78 +20,70 @@ export function Section12FinalCTA() {
     try {
       await signIn('anonymous');
       navigate('/app');
-    } catch {
+    } catch (err) {
+      console.error('Guest sign-in error:', err);
+      setError('Failed to start demo. Please try again.');
       setIsLoading(false);
     }
   };
 
-  const ticker = [
-    'Server-side rules',
-    'DFS cycle detection',
-    'Explainable risk scoring',
-    'Real-time WebSocket sync',
-    'Strict tenant isolation',
-  ];
-
   return (
-    <section className="py-12 sm:py-14 bg-[#EFEFEF]">
+    <section className="py-16 sm:py-20 bg-[#EFEFEF]">
       <div className="landing-container">
-        <div className="max-w-[1040px] mx-auto relative">
-          {/* Subtle pastel aura backdrop */}
-          <div className="absolute -inset-4 sm:-inset-6 rounded-[36px] bg-gradient-to-r from-[#BED390]/25 via-[#9FDA85]/20 to-[#6E94CB]/25 blur-2xl -z-10 pointer-events-none" />
-
+        <div className="max-w-[1040px] mx-auto">
           <Reveal>
-            <div className="landing-card p-6 sm:p-10 text-center bg-white border border-black/8 shadow-xl relative overflow-hidden">
-              {/* Eyebrow Pill */}
-              <div className="landing-pill mx-auto mb-5">
-                <span>Get Started Today</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-5xl font-medium tracking-tight text-[#0D0D0D] mb-3">
+            {/* Card with a soft palette gradient, radius 28px, padding 64px 24px */}
+            <div className="landing-card rounded-[28px] border border-black/[0.06] bg-gradient-to-b from-white via-[#F7F9F4] to-[#EEF3F7] py-[64px] px-[24px] text-center relative overflow-hidden">
+              {/* H3 Heading */}
+              <h3 className="text-2xl sm:text-4xl font-medium tracking-tight text-[#0D0D0D] mb-[16px]">
                 Ready to eliminate workflow chaos?
-              </h2>
+              </h3>
 
-              <p className="subtext text-[#575657] max-w-[600px] mb-7 mx-auto">
+              {/* Exact spacing: H3 to sentence 16px, sentence to buttons 24px */}
+              <p className="text-sm sm:text-base text-[#575657] max-w-[560px] mx-auto mb-[24px] leading-relaxed">
                 Experience deterministic engineering management with live dependency graphs,
                 automated risk enforcement, and append-only auditability.
               </p>
 
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8">
+              {/* Buttons: same height 48px everywhere, 12px gap */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] mb-2">
                 <button
-                  onClick={handleStart}
+                  onClick={handleDemo}
                   disabled={isLoading}
-                  className="w-full sm:w-auto landing-btn-primary h-12 px-8 text-[15px]"
+                  className="w-full sm:w-auto landing-btn-primary h-[48px] px-7 text-[15px] select-none"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Launching demo...</span>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>Starting...</span>
                     </>
                   ) : (
-                    <>
-                      <span>Launch Instant Workspace</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                    <span>Try demo</span>
                   )}
                 </button>
 
                 <a
-                  href="#decisions"
-                  className="w-full sm:w-auto landing-btn-secondary h-12 px-8 text-[15px]"
+                  href="https://github.com/Akinmoldun/forge-platform"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full sm:w-auto landing-btn-secondary h-[48px] px-7 text-[15px] border border-black/[0.06] select-none"
                 >
-                  Explore Architecture
+                  View on GitHub
                 </a>
               </div>
 
-              {/* Bottom feature line */}
-              <div className="pt-5 border-t border-black/6 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-[#575657]">
-                {ticker.map((item) => (
-                  <div key={item} className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#83DD79]" />
-                    <span>{item}</span>
-                  </div>
-                ))}
+              {/* Inline error line if guest sign-in fails */}
+              {error && (
+                <p className="text-xs text-red-600 font-medium mt-2 mb-2">{error}</p>
+              )}
+
+              {/* Real app-board.png peeks up from bottom edge of card, cropped, radius 20px */}
+              <div className="mt-10 overflow-hidden max-h-[220px] sm:max-h-[300px] w-full max-w-[820px] mx-auto rounded-t-[20px] -mb-[64px] border-t border-x border-black/[0.06] bg-white">
+                <img
+                  src="/screens/app-board.png"
+                  alt="Forge Kanban Board"
+                  className="w-full h-auto block object-cover object-top rounded-t-[20px]"
+                />
               </div>
             </div>
           </Reveal>

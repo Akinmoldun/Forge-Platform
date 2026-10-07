@@ -69,7 +69,7 @@ export function Section8RolesComparison() {
           <div className="landing-pill">
             <span>Access & Governance</span>
           </div>
-          <h2>Roles comparison & permission matrix.</h2>
+          <h2>Roles at a glance.</h2>
           <p className="subtext">
             Granular separation of duties across Forge's four native roles: Viewer, Member, Admin, and Owner.
           </p>
@@ -100,8 +100,13 @@ export function Section8RolesComparison() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 text-xs text-[#0D0D0D]">
-                  {rows.map((row) => (
-                    <tr key={row.feature} className="hover:bg-black/[0.01] transition-colors">
+                  {rows.map((row, idx) => (
+                    <Reveal
+                      as="tr"
+                      key={row.feature}
+                      index={idx}
+                      className="hover:bg-black/[0.01] transition-colors"
+                    >
                       <td className="py-3.5 px-6 font-medium text-[#0D0D0D]">{row.feature}</td>
 
                       {/* Viewer */}
@@ -143,7 +148,7 @@ export function Section8RolesComparison() {
                           <Minus className="w-4 h-4 text-black/20 mx-auto" />
                         )}
                       </td>
-                    </tr>
+                    </Reveal>
                   ))}
                 </tbody>
               </table>

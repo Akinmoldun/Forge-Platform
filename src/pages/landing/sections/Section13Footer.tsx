@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
 import { ArrowUpRight } from 'lucide-react';
+import { Reveal } from '../Reveal';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
@@ -30,7 +31,7 @@ export function Section13Footer() {
       <div className="landing-container">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-6 border-b border-black/6">
           {/* Col 1 & 2: Brand & Tagline */}
-          <div className="md:col-span-2 space-y-3">
+          <Reveal index={0} className="md:col-span-2 space-y-3">
             <button
               onClick={scrollToTop}
               className="flex items-center gap-2.5 text-[#0D0D0D] font-medium text-[16px] tracking-tight hover:opacity-80 transition-opacity"
@@ -44,10 +45,10 @@ export function Section13Footer() {
             <p className="text-xs text-[#575657] max-w-[320px] leading-relaxed">
               Deterministic workflow orchestration, cycle-free dependency graphs, and explainable risk evaluation for engineering teams.
             </p>
-          </div>
+          </Reveal>
 
           {/* Col 3: Product */}
-          <div className="space-y-2.5">
+          <Reveal index={1} className="space-y-2.5">
             <h4 className="text-xs font-mono uppercase tracking-wider text-[#0D0D0D]">Product</h4>
             <ul className="space-y-1.5 text-xs text-[#575657]">
               <li>
@@ -71,10 +72,10 @@ export function Section13Footer() {
                 </a>
               </li>
             </ul>
-          </div>
+          </Reveal>
 
           {/* Col 4: Platform */}
-          <div className="space-y-2.5">
+          <Reveal index={2} className="space-y-2.5">
             <h4 className="text-xs font-mono uppercase tracking-wider text-[#0D0D0D]">Platform</h4>
             <ul className="space-y-1.5 text-xs text-[#575657]">
               <li>
@@ -102,10 +103,10 @@ export function Section13Footer() {
                 </a>
               </li>
             </ul>
-          </div>
+          </Reveal>
 
           {/* Col 5: Security */}
-          <div className="space-y-2.5">
+          <Reveal index={3} className="space-y-2.5">
             <h4 className="text-xs font-mono uppercase tracking-wider text-[#0D0D0D]">Security</h4>
             <ul className="space-y-1.5 text-xs text-[#575657]">
               <li>
@@ -121,7 +122,7 @@ export function Section13Footer() {
                 <span className="text-[#575657]">Role-Based Access Control</span>
               </li>
             </ul>
-          </div>
+          </Reveal>
         </div>
 
         {/* Bottom bar */}

@@ -33,6 +33,7 @@ export function Section11FAQAccordion() {
   ];
 
   const handleToggle = (idx: number) => {
+    // Only one item open at a time
     setOpenIndex(openIndex === idx ? null : idx);
   };
 
@@ -55,8 +56,8 @@ export function Section11FAQAccordion() {
           {faqs.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
-              <Reveal key={faq.q} delayMs={idx * 60}>
-                <div className="landing-card border border-black/6 overflow-hidden transition-all duration-200">
+              <Reveal key={faq.q} delayMs={idx * 80}>
+                <div className="landing-card border border-black/[0.06] overflow-hidden">
                   <button
                     type="button"
                     onClick={() => handleToggle(idx)}
@@ -75,15 +76,16 @@ export function Section11FAQAccordion() {
                       {faq.q}
                     </span>
                     <div
-                      className={`w-7 h-7 rounded-full bg-black/5 flex items-center justify-center shrink-0 transition-transform duration-250 ease-out ${
-                        isOpen ? 'rotate-180 bg-[#0D0D0D] text-white' : 'text-[#575657]'
+                      style={{ transitionDuration: '300ms', transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)' }}
+                      className={`w-7 h-7 rounded-full bg-black/5 flex items-center justify-center shrink-0 transition-transform ${
+                        isOpen ? 'rotate-180 bg-[#0D0D0D] text-white' : 'rotate-0 text-[#575657]'
                       }`}
                     >
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </button>
 
-                  {/* Smooth height transition with grid-template-rows 0fr -> 1fr */}
+                  {/* Smooth height transition using grid-template-rows 0fr to 1fr */}
                   <div
                     id={`faq-answer-${idx}`}
                     role="region"
@@ -92,7 +94,11 @@ export function Section11FAQAccordion() {
                   >
                     <div className="overflow-hidden">
                       <div
-                        className={`px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-[14px] text-[#575657] leading-relaxed border-t border-black/5 bg-[#FAFAFA] transition-opacity duration-250 ease-out ${
+                        style={{
+                          transitionDuration: '300ms',
+                          transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+                        }}
+                        className={`px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-[14px] text-[#575657] leading-relaxed border-t border-black/5 bg-[#FAFAFA] transition-opacity ${
                           isOpen ? 'opacity-100' : 'opacity-0'
                         }`}
                       >

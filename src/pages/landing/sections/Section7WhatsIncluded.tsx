@@ -17,8 +17,8 @@ export function Section7WhatsIncluded() {
       bg: 'from-[#9FDA85]/15 to-transparent',
     },
     {
-      title: 'Team Orchestration & Gates',
-      description: 'Coordinate multiple teams with enforced review invariants and alerts.',
+      title: 'Workspaces & Permissions',
+      description: 'Multi-tenant workspace boundaries with enforced review invariants and role checks.',
       features: [
         'Multi-tenant workspace isolation',
         'Mandatory transition approval gates',
@@ -53,7 +53,7 @@ export function Section7WhatsIncluded() {
           <div className="landing-pill">
             <span>Platform Capabilities</span>
           </div>
-          <h2>Everything included in every deployment.</h2>
+          <h2>What's in the box.</h2>
           <p className="subtext">
             No artificial feature gating, no hidden tiers. Forge delivers the complete workflow
             orchestration and security suite out of the box.

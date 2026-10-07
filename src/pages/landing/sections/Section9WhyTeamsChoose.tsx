@@ -55,7 +55,7 @@ export function Section9WhyTeamsChoose() {
           <div className="landing-pill">
             <span>Why Teams Choose Forge</span>
           </div>
-          <h2>Boost clarity, speed, and governance.</h2>
+          <h2>Boost clarity, speed and team flow.</h2>
           <p className="subtext">
             Engineered for teams that outgrew chaotic spreadsheets, brittle ticket trackers, and endless status meetings.
           </p>

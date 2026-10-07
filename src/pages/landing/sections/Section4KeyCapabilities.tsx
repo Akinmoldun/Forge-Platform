@@ -112,7 +112,7 @@ export function Section4KeyCapabilities() {
           <div className="landing-pill">
             <span>Key Capabilities</span>
           </div>
-          <h2>Smarter workflow management, built for teams.</h2>
+          <h2>Everything a delivery team needs, built in.</h2>
           <p className="subtext">
             From task planning to automated validation gates, Forge gives your team the controls to move
             fast, stay focused, and prevent regressions.
@@ -123,7 +123,7 @@ export function Section4KeyCapabilities() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start max-w-[1120px] mx-auto">
           {/* Left Column: Sticky Left Card with 5 items */}
           <div className="lg:col-span-5 lg:sticky lg:top-24">
-            <div className="landing-card p-6 bg-white border border-black/8 shadow-md space-y-3">
+            <div className="landing-card p-6 bg-white border border-black/[0.06] space-y-3">
               <div className="pb-3 border-b border-black/6">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-[#575657]">
                   Architecture Overview
@@ -145,7 +145,7 @@ export function Section4KeyCapabilities() {
                       }}
                       className={`p-3.5 rounded-xl cursor-pointer transition-all duration-200 border text-left flex items-center justify-between ${
                         isActive
-                          ? 'bg-[#F8F8F8] border-black/12 shadow-2xs translate-x-1'
+                          ? 'bg-[#F8F8F8] border-black/[0.14] translate-x-1'
                           : 'bg-transparent border-transparent hover:bg-black/2'
                       }`}
                     >
@@ -205,7 +205,7 @@ export function Section4KeyCapabilities() {
                   }}
                   className="lg:sticky lg:top-24 transition-all duration-300 transform-gpu"
                 >
-                  <div className="landing-card p-6 sm:p-8 bg-white border border-black/8 shadow-lg relative overflow-hidden">
+                  <div className="landing-card p-6 sm:p-8 bg-white border border-black/[0.06] relative overflow-hidden">
                     {/* Pastel gradient backdrop */}
                     <div
                       className={`absolute inset-0 bg-gradient-to-br ${item.paletteGradient} -z-10 pointer-events-none`}
@@ -238,7 +238,7 @@ export function Section4KeyCapabilities() {
                     </div>
 
                     {/* Floating White Mini-UI Preview Box */}
-                    <div className="bg-white rounded-xl p-4 sm:p-5 border border-black/8 shadow-sm">
+                    <div className="bg-white rounded-xl p-4 sm:p-5 border border-black/[0.06]">
                       <div className="flex items-center justify-between pb-3 border-b border-black/5 mb-3">
                         <span className="font-mono text-xs font-medium text-[#0D0D0D]">
                           {item.preview.header}

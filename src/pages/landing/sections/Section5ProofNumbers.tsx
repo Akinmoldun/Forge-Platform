@@ -11,20 +11,19 @@ interface MetricItemProps {
   hasTriggered: boolean;
 }
 
-function MetricItem({ target, suffix, label, desc, highlight, bgGlow, hasTriggered }: MetricItemProps) {
-  const isReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const [count, setCount] = useState(() => (isReducedMotion ? target : 0));
+function MetricItem({
+  target,
+  suffix,
+  label,
+  desc,
+  highlight,
+  bgGlow,
+  hasTriggered,
+}: MetricItemProps) {
+  // Always show "0" before it starts (per spec: do not show final value before animation starts)
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (isReducedMotion) {
-      setCount(target);
-      return;
-    }
-
     if (!hasTriggered) return;
 
     let startTimestamp: number | null = null;
@@ -34,7 +33,7 @@ function MetricItem({ target, suffix, label, desc, highlight, bgGlow, hasTrigger
       if (!startTimestamp) startTimestamp = timestamp;
       const elapsed = timestamp - startTimestamp;
       const progress = Math.min(elapsed / 1200, 1);
-      // easeOutCubic
+      // ease-out: 1 - (1-t)^3
       const ease = 1 - Math.pow(1 - progress, 3);
       setCount(Math.round(target * ease));
 
@@ -47,14 +46,14 @@ function MetricItem({ target, suffix, label, desc, highlight, bgGlow, hasTrigger
 
     frameId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frameId);
-  }, [hasTriggered, target, isReducedMotion]);
+  }, [hasTriggered, target]);
 
   return (
-    <div className="landing-card p-6 sm:p-8 flex flex-col justify-between text-left relative overflow-hidden h-full">
+    <div className="landing-card p-6 sm:p-8 flex flex-col justify-between text-left relative overflow-hidden h-full border border-black/[0.06]">
       <div className={`absolute inset-0 bg-gradient-to-br ${bgGlow} -z-10 pointer-events-none`} />
 
       <div>
-        <div className="text-5xl sm:text-6xl font-medium tracking-tight text-[#0D0D0D] mb-3">
+        <div className="text-5xl sm:text-6xl font-medium tracking-tight text-[#0D0D0D] mb-3 tabular-nums select-none">
           {count}
           {suffix}
         </div>
@@ -75,6 +74,11 @@ export function Section5ProofNumbers() {
   const [hasTriggered, setHasTriggered] = useState(false);
 
   useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      setHasTriggered(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
@@ -85,7 +89,7 @@ export function Section5ProofNumbers() {
           }
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.15, rootMargin: '0px 0px -8% 0px' }
     );
 
     if (sectionRef.current) {
