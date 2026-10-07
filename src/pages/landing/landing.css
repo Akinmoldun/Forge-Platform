@@ -1,0 +1,210 @@
+/* ReadyLaunch Theme & Tokens for Forge Landing Page */
+.landing {
+  --bg: #EFEFEF;
+  --text-muted: #575657;
+  --ink: #0D0D0D;
+  --white: #FFFFFF;
+  --border-card: rgba(0, 0, 0, 0.06);
+  --border-btn: rgba(0, 0, 0, 0.08);
+
+  /* Pastel accents (strictly for gradient backdrops & subtle badges) */
+  --sand: #D6C6A1;
+  --green-1: #9FDA85;
+  --green-2: #83DD79;
+  --green-3: #85E378;
+  --olive: #BED390;
+  --purple: #7957EC;
+  --pink: #D78FC6;
+  --blue: #6E94CB;
+
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.landing * {
+  box-sizing: border-box;
+}
+
+/* Headings */
+.landing h1,
+.landing h2,
+.landing h3 {
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.landing h1 {
+  font-size: clamp(34px, 4.2vw, 64px);
+  line-height: 1.08;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.landing h2 {
+  font-size: clamp(28px, 3.2vw, 48px);
+  line-height: 1.1;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.landing h3 {
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.landing p.subtext {
+  color: var(--text-muted);
+  font-size: clamp(15px, 1.3vw, 18px);
+  line-height: 1.5;
+  text-align: center;
+  max-width: 680px;
+  margin: 16px auto 0;
+}
+
+/* Container */
+.landing-container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+@media (max-width: 768px) {
+  .landing-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Section Spacing */
+.landing-section {
+  padding-top: 100px;
+  padding-bottom: 100px;
+}
+
+@media (max-width: 768px) {
+  .landing-section {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+}
+
+/* Section Eyebrow Pill */
+.landing-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  background-color: var(--white);
+  border: 1px solid var(--border-btn);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+.landing-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--ink);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.landing-btn-primary:hover {
+  background-color: #222222;
+  transform: translateY(-1px);
+}
+
+.landing-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--white);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-btn);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.landing-btn-secondary:hover {
+  background-color: #F7F7F7;
+  transform: translateY(-1px);
+}
+
+/* Cards */
+.landing-card {
+  background-color: var(--white);
+  border-radius: 20px;
+  border: 1px solid var(--border-card);
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+  overflow: hidden;
+}
+
+.landing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-card:hover {
+    transform: none;
+  }
+}
+
+/* Soft pastel gradient backdrops for mockups & media */
+.gradient-backdrop-green {
+  background: radial-gradient(circle at 50% 50%, rgba(159, 218, 133, 0.22) 0%, rgba(131, 221, 121, 0.08) 60%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Smooth Accordion Height Animation */
+.faq-accordion-grid {
+  display: grid;
+  transition: grid-template-rows 250ms ease;
+}
+
+.faq-accordion-grid.open {
+  grid-template-rows: 1fr;
+}
+
+.faq-accordion-grid.closed {
+  grid-template-rows: 0fr;
+}
+
+.gradient-backdrop-purple {
+  background: radial-gradient(circle at 50% 50%, rgba(121, 87, 236, 0.18) 0%, rgba(215, 143, 198, 0.07) 60%, rgba(255, 255, 255, 0) 100%);
+}
+
+.gradient-backdrop-sand {
+  background: radial-gradient(circle at 50% 50%, rgba(214, 198, 161, 0.25) 0%, rgba(190, 211, 144, 0.1) 60%, rgba(255, 255, 255, 0) 100%);
+}
+
+.gradient-backdrop-blue {
+  background: radial-gradient(circle at 50% 50%, rgba(110, 148, 203, 0.2) 0%, rgba(159, 218, 133, 0.08) 60%, rgba(255, 255, 255, 0) 100%);
+}

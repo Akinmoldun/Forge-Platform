@@ -250,7 +250,7 @@ html.js-reveal .reveal-visible {
   flex-wrap: nowrap;
   width: max-content;
   will-change: transform;
-  animation: logo-scroll 32s linear infinite;
+  animation: logo-scroll 40s linear infinite;
 }
 
 .logo-marquee:hover .logo-track {

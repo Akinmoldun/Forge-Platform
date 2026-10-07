@@ -97,6 +97,7 @@ export default defineConfig({
     // Bind to all interfaces so the browser runtime's server-ready event fires.
     host: '0.0.0.0',
     port: 3000,
+    strictPort: true,
     allowedHosts: true,
     watch: {
       // Replit and Bun keep large package/browser caches in the workspace root.
