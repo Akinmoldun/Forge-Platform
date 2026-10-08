@@ -155,7 +155,7 @@ export function Section4KeyCapabilities() {
       if (el) observer.observe(el);
     });
 
-    // 2. Active card proximity tracking: update active pill & highlight active card cleanly
+    // 2. Active card proximity tracking: updates active item on left as right column scrolls
     const handleScroll = () => {
       if (window.innerWidth < 1024) {
         setActiveCardIndex(-1);
@@ -202,7 +202,7 @@ export function Section4KeyCapabilities() {
           <div className="w-full lg:w-[44%] shrink-0 lg:sticky lg:top-[100px] flex flex-col items-start text-left">
             {/* Small rounded pill label with icon at the top */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.08] text-[13px] font-medium text-[#0D0D0D] shadow-xs mb-3">
-              <Layers className="w-3.5 h-3.5 text-[#0D0D0D]" strokeWidth={1.8} />
+              <Layers className="w-3.5 h-3.5 text-[#2563eb]" strokeWidth={1.8} />
               <span>Core Capabilities</span>
             </div>
 
@@ -223,8 +223,8 @@ export function Section4KeyCapabilities() {
               stay focused, and prevent regressions.
             </p>
 
-            {/* Outlined pill tags in a clean horizontal wrap with unified black icon styling */}
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {/* Vertically stacked pill tags: Cycle-free DAGs, Automated gates under it, Real-time sync under that */}
+            <div className="flex flex-col items-start gap-2.5 pt-1">
               {pillTags.map((tag) => {
                 const Icon = tag.icon;
                 const isCurrent = activeCardIndex === tag.cardIndex;
@@ -233,14 +233,14 @@ export function Section4KeyCapabilities() {
                     key={tag.label}
                     type="button"
                     onClick={() => scrollToCard(tag.cardIndex)}
-                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[12.5px] font-medium transition-all duration-200 cursor-pointer ${
+                    className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-full border text-[13px] font-medium transition-all duration-200 cursor-pointer ${
                       isCurrent
-                        ? 'bg-[#0D0D0D] text-white border-[#0D0D0D] shadow-xs'
-                        : 'bg-white text-[#0D0D0D] border-black/[0.08] hover:border-black/25 hover:bg-black/[0.02]'
+                        ? 'bg-white text-[#0D0D0D] border-black/20 shadow-xs ring-1 ring-black/5'
+                        : 'bg-white/80 text-[#575657] border-black/[0.08] hover:text-[#0D0D0D] hover:border-black/20 hover:bg-white'
                     }`}
                   >
                     <Icon
-                      className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-white' : 'text-[#0D0D0D]'}`}
+                      className="w-4 h-4 shrink-0 text-[#2563eb]"
                       strokeWidth={1.8}
                     />
                     <span>{tag.label}</span>
@@ -277,9 +277,9 @@ export function Section4KeyCapabilities() {
                       : 'bg-[#fafafa] border-black/[0.06]'
                   }`}
                 >
-                  {/* Card top row: unified black icon matching reference + bold title */}
+                  {/* Card top row: small blue outline icon + bold title */}
                   <div className="flex items-center gap-2.5 mb-2">
-                    <item.icon className="w-5 h-5 text-[#0D0D0D] shrink-0" strokeWidth={1.8} />
+                    <item.icon className="w-5 h-5 text-[#2563eb] shrink-0" strokeWidth={1.8} />
                     <h3 className="text-[18px] sm:text-[19px] font-semibold text-[#0D0D0D] tracking-tight">
                       {item.title}
                     </h3>
