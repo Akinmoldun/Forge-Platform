@@ -1,690 +1,461 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Reveal } from '../Reveal';
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 
 export function Section3FeaturesBento() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isReducedMotion, setIsReducedMotion] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
-  // Card A: 6s loop (pass 0-3s, fail 3-6s)
-  const [cardAStep, setCardAStep] = useState(4); // default: accepted (for reduced motion)
+  // Scroll progress through the bento section container:
+  // "motion must follow the scroll and reverse cleanly"
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start end', 'end start'],
+  });
 
-  // Card B: 5s loop for drawing the arc (900ms) and pill (250ms)
-  const [cardBState, setCardBState] = useState<'drawing' | 'drawn' | 'reset'>('drawn');
+  // Smooth scroll transformations for the mini-UIs inside each card
+  // Card 1: subtle tilt and slight vertical float matching ReadyLaunch Bento Card 1
+  const card1Y = useTransform(scrollYProgress, [0, 0.45, 0.85, 1], [40, 0, -10, -25]);
+  const card1Rotate = useTransform(scrollYProgress, [0, 0.5, 1], [4, 0, -2]);
 
-  // Card C: 4s loop sliding comment rows
-  const [cardCRowIndex, setCardCRowIndex] = useState(0);
+  // Card 2: vertical upward scroll parallax
+  const card2Y = useTransform(scrollYProgress, [0, 0.45, 0.85, 1], [60, 0, -20, -35]);
 
-  // Card D: 4s loop sliding audit activity rows
-  const [cardDRowIndex, setCardDRowIndex] = useState(0);
+  // Card 3: two floating sub-cards with staggered scroll response
+  const card3Sub1Y = useTransform(scrollYProgress, [0, 0.45, 0.85, 1], [50, 0, -15, -30]);
+  const card3Sub2Y = useTransform(scrollYProgress, [0, 0.45, 0.85, 1], [30, 0, -10, -15]);
 
-  // Check prefers-reduced-motion
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      setIsReducedMotion(mediaQuery.matches);
-      const listener = (e: MediaQueryListEvent) => setIsReducedMotion(e.matches);
-      mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
-    }
-  }, []);
-
-  // IntersectionObserver to start loops when visible and pause off-screen
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
-      { threshold: 0.1 }
-    );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Card A: 6s animation loop (only when visible and not reduced motion)
-  useEffect(() => {
-    if (!isVisible || isReducedMotion) {
-      setCardAStep(4); // static passing state
-      return;
-    }
-
-    let currentTick = 0;
-    setCardAStep(0);
-
-    const interval = setInterval(() => {
-      currentTick = (currentTick + 1) % 15; // 15 intervals of 400ms = 6000ms
-      if (currentTick === 0) setCardAStep(0);
-      else if (currentTick === 1) setCardAStep(1);
-      else if (currentTick === 2) setCardAStep(2);
-      else if (currentTick === 3) setCardAStep(3);
-      else if (currentTick === 4) setCardAStep(4); // Accepted
-      else if (currentTick === 8) setCardAStep(5); // Reset for fail
-      else if (currentTick === 9) setCardAStep(6);
-      else if (currentTick === 10) setCardAStep(7);
-      else if (currentTick === 11) setCardAStep(8); // Rejected
-    }, 400);
-
-    return () => clearInterval(interval);
-  }, [isVisible, isReducedMotion]);
-
-  // Card B: 5s loop (arc draws in 900ms, pill fades in 250ms, stays until 5s, then resets)
-  useEffect(() => {
-    if (!isVisible || isReducedMotion) {
-      setCardBState('drawn');
-      return;
-    }
-
-    let timeoutDraw: NodeJS.Timeout;
-    let timeoutDrawn: NodeJS.Timeout;
-
-    const runLoop = () => {
-      setCardBState('reset');
-      timeoutDraw = setTimeout(() => {
-        setCardBState('drawing');
-      }, 50);
-
-      timeoutDrawn = setTimeout(() => {
-        setCardBState('drawn');
-      }, 950);
-    };
-
-    runLoop();
-    const interval = setInterval(runLoop, 5000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeoutDraw);
-      clearTimeout(timeoutDrawn);
-    };
-  }, [isVisible, isReducedMotion]);
-
-  // Card C: 4s loop shifting rows
-  useEffect(() => {
-    if (!isVisible || isReducedMotion) return;
-
-    const interval = setInterval(() => {
-      setCardCRowIndex((prev) => (prev + 1) % 4);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [isVisible, isReducedMotion]);
-
-  // Card D: 4s loop shifting audit rows
-  useEffect(() => {
-    if (!isVisible || isReducedMotion) return;
-
-    const interval = setInterval(() => {
-      setCardDRowIndex((prev) => (prev + 1) % 4);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [isVisible, isReducedMotion]);
-
-  // Sample data for Card C comments
-  const allComments = [
-    { initial: 'A', name: 'Alex', time: 'just now', text: 'Merged dependency gate fix' },
-    { initial: 'S', name: 'Sam', time: '1m ago', text: 'Approval comment added' },
-    { initial: 'M', name: 'Morgan', time: '2m ago', text: 'Assigned review to lead' },
-    { initial: 'T', name: 'Taylor', time: '3m ago', text: 'Cleared blocking issue' },
-    { initial: 'A', name: 'Alex', time: '4m ago', text: 'Triggered production rollout' },
-    { initial: 'S', name: 'Sam', time: '5m ago', text: 'Reviewed transition invariants' },
-  ];
-  const visibleComments = [
-    allComments[(cardCRowIndex + 0) % allComments.length],
-    allComments[(cardCRowIndex + 1) % allComments.length],
-    allComments[(cardCRowIndex + 2) % allComments.length],
-  ];
-
-  // Sample data for Card D audit activity
-  const allActivities = [
-    { text: 'Status changed: Review to Done', time: '14:02 UTC', color: '#83DD79' },
-    { text: 'Comment added', time: '14:00 UTC', color: '#6E94CB' },
-    { text: 'Assignee set', time: '13:45 UTC', color: '#7957EC' },
-    { text: 'Issue created', time: '13:30 UTC', color: '#9A9A9A' },
-    { text: 'Blocking link cleared', time: '13:15 UTC', color: '#83DD79' },
-    { text: 'Transition gate checked', time: '13:00 UTC', color: '#6E94CB' },
-  ];
-  const visibleActivities = [
-    allActivities[(cardDRowIndex + 0) % allActivities.length],
-    allActivities[(cardDRowIndex + 1) % allActivities.length],
-    allActivities[(cardDRowIndex + 2) % allActivities.length],
-    allActivities[(cardDRowIndex + 3) % allActivities.length],
-  ];
+  // Card 4: wide horizon timeline sliding smoothly into view
+  const card4Y = useTransform(scrollYProgress, [0.1, 0.5, 0.9, 1], [50, 0, -15, -25]);
 
   return (
-    <section id="features" ref={sectionRef} className="landing-section bg-[#EFEFEF]">
-      <style>{`
-        .features-bento-grid {
-          display: grid;
-          grid-template-columns: repeat(6, 1fr);
-          grid-auto-rows: 1fr;
-          gap: 20px;
-        }
-        .bento-card-a {
-          grid-column: 1 / 5;
-          grid-row: 1;
-          min-height: 420px;
-        }
-        .bento-card-b {
-          grid-column: 5 / 7;
-          grid-row: 1;
-          min-height: 420px;
-        }
-        .bento-card-c {
-          grid-column: 1 / 3;
-          grid-row: 2;
-          min-height: 420px;
-        }
-        .bento-card-d {
-          grid-column: 3 / 7;
-          grid-row: 2;
-          min-height: 420px;
-        }
-        @media (max-width: 899px) {
-          .features-bento-grid {
-            grid-template-columns: 1fr;
-            grid-auto-rows: auto;
-          }
-          .bento-card-a,
-          .bento-card-b,
-          .bento-card-c,
-          .bento-card-d {
-            grid-column: 1 !important;
-            grid-row: auto !important;
-            min-height: auto !important;
-          }
-        }
-        .bento-card {
-          background-color: #FFFFFF;
-          border-radius: 24px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          padding: 28px;
-          box-shadow: none !important;
-          filter: none !important;
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          transition: border-color 200ms ease;
-        }
-        .bento-card:hover {
-          border-color: rgba(0, 0, 0, 0.18);
-          box-shadow: none !important;
-          filter: none !important;
-          transform: none !important;
-        }
-      `}</style>
-
-      <div className="landing-container max-w-[1200px] mx-auto">
-        {/* Header */}
-        <Reveal className="text-center">
-          <div className="landing-pill">
+    <section
+      id="features"
+      ref={sectionRef}
+      className="landing-section bg-[#EFEFEF] py-[72px] md:py-[120px] select-none"
+    >
+      <div className="landing-container max-w-[1200px] mx-auto px-4 md:px-6">
+        {/* Header - Kept exactly as required */}
+        <div className="text-center">
+          <div className="landing-pill inline-flex items-center text-[13px] font-[500] bg-white border border-black/[0.08] px-[14px] py-[6px] rounded-full mb-4">
             <span>Productivity Features</span>
           </div>
 
-          <h2 className="text-[32px] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4">
+          <h2 className="text-[30px] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4">
             Built for how engineering teams actually work.
           </h2>
 
-          <p className="text-[17px] text-[#575657] max-w-[560px] mx-auto leading-relaxed">
+          <p className="text-[15px] sm:text-[17px] text-[#575657] max-w-[560px] mx-auto leading-relaxed">
             From fast-moving startups to structured engineering organizations, Forge adapts to your team’s
             real-world workflows — not the other way around.
           </p>
-        </Reveal>
+        </div>
 
-        {/* Bento Grid (56px below header) */}
-        <div className="features-bento-grid mt-14">
-          {/* CARD A: columns 1-4, row 1 */}
-          <div className="bento-card-a">
-            <Reveal delayMs={0} className="h-full">
-              <div className="bento-card">
-                {/* Illustration Area on Top */}
-                <div
-                  style={{
-                    background:
-                      'linear-gradient(135deg, rgba(159, 218, 133, 0.35) 0%, rgba(190, 211, 144, 0.35) 100%)',
-                  }}
-                  className="flex-1 rounded-[16px] overflow-hidden flex items-center justify-center p-4 min-h-[240px]"
-                >
-                  {/* Mini-UI: 360px wide panel with borders only, no shadow */}
-                  <div className="w-full max-w-[340px] bg-white rounded-[16px] border border-black/[0.08] p-4 text-left select-none">
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.08]">
-                      <span className="text-[14px] font-medium text-[#0D0D0D]">Move to Done</span>
-                      <span className="text-[13px] font-medium text-[#575657] bg-black/5 border border-black/[0.08] px-2.5 py-0.5 rounded-full">
-                        PROJ-142
+        {/* BENTO GRID: 3 equal columns, Row 1 600px, Row 2 340px, under 900px 1 col */}
+        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* ================================================================= */}
+          {/* CARD 1: Stay organized, effortlessly. */}
+          {/* ================================================================= */}
+          <div className="group relative bg-[#EFEFEF]/55 rounded-[16px] border border-black/[0.08] hover:border-black/[0.16] transition-colors duration-200 overflow-hidden flex flex-col h-auto md:h-[600px] min-h-[460px]">
+            {/* Text block top-left */}
+            <div className="p-6 text-left shrink-0 z-10">
+              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+                Stay organized, effortlessly.
+              </h3>
+              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
+                Easily track tasks, assignees, and statuses in one place.
+              </p>
+            </div>
+
+            {/* Visual: Task Inspector Panel overflowing bottom-right */}
+            <div className="relative flex-1 w-full overflow-hidden flex items-end justify-end">
+              <motion.div
+                style={
+                  shouldReduceMotion
+                    ? {}
+                    : {
+                        y: card1Y,
+                        rotate: card1Rotate,
+                      }
+                }
+                className="relative w-[340px] sm:w-[360px] bg-white rounded-tl-[16px] rounded-tr-[16px] md:rounded-tr-none md:rounded-bl-none border border-black/[0.08] p-5 mr-[-24px] mb-[-36px] sm:mr-[-16px] sm:mb-[-24px]"
+              >
+                {/* Header row */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-black/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#83DD79]" />
+                    <span className="text-[13px] font-[500] text-[#0D0D0D]">FORGE-842</span>
+                  </div>
+                  <span className="text-[12px] font-medium text-[#575657] bg-black/[0.04] border border-black/[0.06] px-2.5 py-0.5 rounded-full">
+                    Deterministic DAG
+                  </span>
+                </div>
+
+                <div className="mt-3.5">
+                  <div className="text-[14px] font-[500] text-[#0D0D0D]">
+                    Enforce zero-cycle gate on production merge
+                  </div>
+                  <div className="text-[12px] text-[#575657] mt-1">
+                    Release engineering pipeline • Sprint 24
+                  </div>
+                </div>
+
+                {/* Properties Table */}
+                <div className="mt-4 space-y-2.5 border-t border-black/[0.06] pt-3.5 text-[13px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#575657]">Status</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#6E94CB]/10 border border-[#6E94CB]/30 text-[#0D0D0D] font-[500]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#6E94CB]" />
+                      In Progress
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#575657]">Assignee</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-[#7957EC]/15 border border-[#7957EC]/30 text-[11px] font-medium text-[#7957EC] flex items-center justify-center">
+                        AL
                       </span>
+                      <span className="font-[500] text-[#0D0D0D]">Alex Liu</span>
                     </div>
+                  </div>
 
-                    {/* Three Rows (44px high) */}
-                    <div className="divide-y divide-black/[0.06] my-1">
-                      {/* Row 1: Requires assignee */}
-                      <div className="h-[44px] flex items-center justify-between text-[14px]">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-[20px] h-[20px] rounded-full flex items-center justify-center transition-colors duration-250 ${
-                              cardAStep >= 1 && cardAStep !== 5
-                                ? 'bg-[#83DD79] text-white'
-                                : 'bg-[#EFEFEF] border border-black/[0.1]'
-                            }`}
-                          >
-                            {cardAStep >= 1 && cardAStep !== 5 && (
-                              <svg className="w-3 h-3 stroke-current stroke-2 fill-none" viewBox="0 0 24 24">
-                                <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            )}
-                          </div>
-                          <span className="text-[#0D0D0D]">Requires assignee</span>
-                        </div>
-                        <span className="text-[13px] text-[#575657]">
-                          {cardAStep >= 1 && cardAStep !== 5 ? 'Passed' : 'Pending'}
-                        </span>
-                      </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#575657]">Priority</span>
+                    <span className="inline-flex items-center gap-1 font-[500] text-[#0D0D0D]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D78FC6]" />
+                      P1 - High
+                    </span>
+                  </div>
 
-                      {/* Row 2: Requires comment */}
-                      <div className="h-[44px] flex items-center justify-between text-[14px]">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-[20px] h-[20px] rounded-full flex items-center justify-center transition-colors duration-250 ${
-                              cardAStep >= 2 && cardAStep <= 4
-                                ? 'bg-[#83DD79] text-white'
-                                : cardAStep >= 7
-                                  ? 'bg-[#83DD79] text-white'
-                                  : 'bg-[#EFEFEF] border border-black/[0.1]'
-                            }`}
-                          >
-                            {(cardAStep >= 2 && cardAStep <= 4) || cardAStep >= 7 ? (
-                              <svg className="w-3 h-3 stroke-current stroke-2 fill-none" viewBox="0 0 24 24">
-                                <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            ) : null}
-                          </div>
-                          <span className="text-[#0D0D0D]">Requires comment</span>
-                        </div>
-                        <span className="text-[13px] text-[#575657]">
-                          {(cardAStep >= 2 && cardAStep <= 4) || cardAStep >= 7 ? 'Passed' : 'Pending'}
-                        </span>
-                      </div>
-
-                      {/* Row 3: No open blockers */}
-                      <div className="h-[44px] flex items-center justify-between text-[14px]">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-[20px] h-[20px] rounded-full flex items-center justify-center transition-colors duration-250 ${
-                              cardAStep === 3 || cardAStep === 4
-                                ? 'bg-[#83DD79] text-white'
-                                : cardAStep >= 7
-                                  ? 'bg-[#D78FC6] text-white'
-                                  : 'bg-[#EFEFEF] border border-black/[0.1]'
-                            }`}
-                          >
-                            {cardAStep === 3 || cardAStep === 4 ? (
-                              <svg className="w-3 h-3 stroke-current stroke-2 fill-none" viewBox="0 0 24 24">
-                                <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            ) : cardAStep >= 7 ? (
-                              <svg className="w-3 h-3 stroke-current stroke-2 fill-none" viewBox="0 0 24 24">
-                                <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            ) : null}
-                          </div>
-                          <span className="text-[#0D0D0D]">No open blockers</span>
-                        </div>
-                        <span className="text-[13px] text-[#575657]">
-                          {cardAStep === 3 || cardAStep === 4
-                            ? 'Passed'
-                            : cardAStep >= 7
-                              ? 'Failed'
-                              : 'Pending'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Result Bar (48px high, border only, no shadow) */}
-                    <div
-                      className={`h-[48px] rounded-xl flex items-center justify-center font-medium text-[14px] mt-2 transition-all duration-250 ${
-                        cardAStep === 4
-                          ? 'bg-[#83DD79]/20 text-[#0D0D0D] border border-[#83DD79]/40'
-                          : cardAStep === 8
-                            ? 'bg-[#D78FC6]/20 text-[#0D0D0D] border border-[#D78FC6]/40'
-                            : 'bg-black/5 text-[#575657] border border-black/[0.08]'
-                      }`}
-                    >
-                      {cardAStep === 4
-                        ? 'Transition accepted'
-                        : cardAStep === 8
-                          ? 'Rejected: 1 open blocker'
-                          : 'Evaluating transition gates...'}
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#575657]">Blocking Tasks</span>
+                    <span className="text-[12px] font-mono text-[#575657] bg-black/[0.04] border border-black/[0.06] px-2 py-0.5 rounded">
+                      0 open blockers
+                    </span>
                   </div>
                 </div>
 
-                {/* Text 20px below illustration */}
-                <div className="mt-5 text-left">
-                  <h3 className="text-[20px] font-[500] text-[#0D0D0D] tracking-[-0.02em]">
-                    Rules enforced on every transition
-                  </h3>
-                  <p className="text-[15px] leading-[1.5] text-[#575657] mt-1.5">
-                    Requires assignee, requires comment, no open blockers. Checked on the server every time.
-                  </p>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* CARD B: columns 5-6, row 1 */}
-          <div className="bento-card-b">
-            <Reveal delayMs={80} className="h-full">
-              <div className="bento-card">
-                {/* Illustration Area on Top: One inline SVG with exactly specified coordinates */}
-                <div
-                  style={{
-                    background:
-                      'linear-gradient(135deg, rgba(110, 148, 203, 0.25) 0%, rgba(121, 87, 236, 0.25) 100%)',
-                  }}
-                  className="flex-1 rounded-[16px] overflow-hidden flex items-center justify-center p-4 min-h-[240px] select-none"
-                >
-                  <svg
-                    viewBox="0 0 260 200"
-                    width="100%"
-                    height="100%"
-                    preserveAspectRatio="xMidYMid meet"
-                    style={{ display: 'block' }}
-                  >
-                    <defs>
-                      {/* Straight arrow marker pointing right */}
-                      <marker
-                        id="bento-arrow-right"
-                        viewBox="0 0 6 6"
-                        refX="5"
-                        refY="3"
-                        markerWidth="6"
-                        markerHeight="6"
-                        orient="auto"
-                      >
-                        <polygon points="0 0, 6 3, 0 6" fill="#575657" />
-                      </marker>
-
-                      {/* Mask to progressively draw the dashed return arc from C to A */}
-                      <mask id="bento-arc-mask">
-                        <rect x="0" y="0" width="260" height="200" fill="black" />
-                        <path
-                          d="M212 74 C212 16, 48 16, 48 74"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="12"
-                          strokeDasharray="280"
-                          style={{
-                            strokeDashoffset: cardBState === 'reset' ? 280 : 0,
-                            transition:
-                              isReducedMotion || cardBState === 'reset'
-                                ? 'none'
-                                : 'stroke-dashoffset 900ms cubic-bezier(0.2, 0.7, 0.2, 1)',
-                          }}
-                        />
-                      </mask>
-                    </defs>
-
-                    {/* Arrows between nodes: straight lines 2px #575657 from x=76 to x=102 and x=158 to x=184 at y=100 */}
-                    <line
-                      x1="76"
-                      y1="100"
-                      x2="102"
-                      y2="100"
-                      stroke="#575657"
-                      strokeWidth="2"
-                      markerEnd="url(#bento-arrow-right)"
-                    />
-                    <line
-                      x1="158"
-                      y1="100"
-                      x2="184"
-                      y2="100"
-                      stroke="#575657"
-                      strokeWidth="2"
-                      markerEnd="url(#bento-arrow-right)"
-                    />
-
-                    {/* Return arc: dashed path (stroke-dasharray 5 5, 1.5px, stroke #D78FC6) from C to A */}
-                    <path
-                      d="M212 74 C212 16, 48 16, 48 74"
-                      fill="none"
-                      stroke="#D78FC6"
-                      strokeWidth="1.5"
-                      strokeDasharray="5 5"
-                      mask="url(#bento-arc-mask)"
-                    />
-
-                    {/* Arrowhead pointing down into A at (48, 74) */}
-                    <polygon
-                      points="43 65, 53 65, 48 74"
-                      fill="#D78FC6"
-                      style={{
-                        opacity: cardBState === 'drawn' ? 1 : 0,
-                        transition: isReducedMotion ? 'none' : 'opacity 200ms ease',
-                      }}
-                    />
-
-                    {/* Nodes: three circles r=26, white fill, 1.5px stroke #575657, at cx=48, 130, 212 and cy=100 */}
-                    <circle cx="48" cy="100" r="26" fill="#FFFFFF" stroke="#575657" strokeWidth="1.5" />
-                    <text
-                      x="48"
-                      y="100"
-                      fill="#0D0D0D"
-                      fontSize="14"
-                      fontWeight="600"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                    >
-                      A
-                    </text>
-
-                    <circle cx="130" cy="100" r="26" fill="#FFFFFF" stroke="#575657" strokeWidth="1.5" />
-                    <text
-                      x="130"
-                      y="100"
-                      fill="#0D0D0D"
-                      fontSize="14"
-                      fontWeight="600"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                    >
-                      B
-                    </text>
-
-                    <circle cx="212" cy="100" r="26" fill="#FFFFFF" stroke="#575657" strokeWidth="1.5" />
-                    <text
-                      x="212"
-                      y="100"
-                      fill="#0D0D0D"
-                      fontSize="14"
-                      fontWeight="600"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                    >
-                      C
-                    </text>
-
-                    {/* Pill: rect x=70 y=148 width=120 height=30 rx=15, white fill, 1px stroke rgba(0,0,0,.12) */}
-                    <g
-                      style={{
-                        opacity: cardBState === 'drawn' ? 1 : 0,
-                        transition: isReducedMotion ? 'none' : 'opacity 250ms ease',
-                      }}
-                    >
-                      <rect
-                        x="70"
-                        y="148"
-                        width="120"
-                        height="30"
-                        rx="15"
-                        fill="#FFFFFF"
-                        stroke="rgba(0,0,0,.12)"
-                        strokeWidth="1"
-                      />
-                      <text
-                        x="130"
-                        y="164"
-                        fill="#0D0D0D"
-                        fontSize="13"
-                        fontWeight="500"
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                      >
-                        Cycle rejected
-                      </text>
-                    </g>
-                  </svg>
-                </div>
-
-                {/* Text 20px below illustration */}
-                <div className="mt-5 text-left">
-                  <h3 className="text-[20px] font-[500] text-[#0D0D0D] tracking-[-0.02em]">
-                    Dependencies without loops
-                  </h3>
-                  <p className="text-[15px] leading-[1.5] text-[#575657] mt-1.5">
-                    Circular blocking chains are rejected before they are saved.
-                  </p>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* CARD C: columns 1-2, row 2 */}
-          <div className="bento-card-c">
-            <Reveal delayMs={160} className="h-full">
-              <div className="bento-card">
-                {/* Illustration Area on Top */}
-                <div
-                  style={{
-                    background:
-                      'linear-gradient(135deg, rgba(214, 198, 161, 0.25) 0%, rgba(215, 143, 198, 0.25) 100%)',
-                  }}
-                  className="flex-1 rounded-[16px] overflow-hidden flex items-center justify-center p-4 min-h-[240px]"
-                >
-                  {/* Mini-UI Panel with 3 comment rows, border only, no shadow */}
-                  <div className="w-full max-w-[280px] bg-white rounded-[16px] border border-black/[0.08] p-4 text-left select-none">
-                    {/* Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] mb-2.5">
-                      <span className="text-[13px] font-medium text-[#575657]">Activity stream</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#83DD79] animate-pulse" />
-                        <span className="text-[13px] font-medium text-[#0D0D0D]">Live</span>
-                      </div>
+                {/* Subtasks checklist */}
+                <div className="mt-4 border-t border-black/[0.06] pt-3">
+                  <div className="text-[11px] uppercase tracking-wider font-semibold text-[#575657] mb-2">
+                    Checklist (3 / 3 complete)
+                  </div>
+                  <div className="space-y-1.5 text-[12px]">
+                    <div className="flex items-center gap-2 text-[#0D0D0D]">
+                      <span className="w-4 h-4 rounded bg-[#83DD79] flex items-center justify-center text-white text-[10px]">✓</span>
+                      <span>Tarjan cycle detection invariant check</span>
                     </div>
-
-                    {/* 3 Comment rows */}
-                    <div className="space-y-2.5 overflow-hidden">
-                      {visibleComments.map((comment, idx) => (
-                        <div
-                          key={`${comment.name}-${comment.text}-${idx}`}
-                          style={{
-                            transition: isReducedMotion ? 'none' : 'opacity 250ms ease, transform 250ms ease',
-                          }}
-                          className="flex items-start gap-2.5"
-                        >
-                          <div className="w-[24px] h-[24px] rounded-full bg-black/5 text-[13px] font-medium text-[#0D0D0D] flex items-center justify-center shrink-0">
-                            {comment.initial}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[14px] text-[#0D0D0D] leading-tight truncate">
-                              {comment.text}
-                            </p>
-                            <span className="text-[13px] text-[#575657]">
-                              {comment.name} • {comment.time}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center gap-2 text-[#0D0D0D]">
+                      <span className="w-4 h-4 rounded bg-[#83DD79] flex items-center justify-center text-white text-[10px]">✓</span>
+                      <span>Reviewer sign-off on transition gate</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#0D0D0D]">
+                      <span className="w-4 h-4 rounded bg-[#83DD79] flex items-center justify-center text-white text-[10px]">✓</span>
+                      <span>Cryptographic audit entry committed</span>
                     </div>
                   </div>
                 </div>
-
-                {/* Text 20px below illustration */}
-                <div className="mt-5 text-left">
-                  <h3 className="text-[20px] font-[500] text-[#0D0D0D] tracking-[-0.02em]">
-                    Real-time everywhere
-                  </h3>
-                  <p className="text-[15px] leading-[1.5] text-[#575657] mt-1.5">
-                    Comments and status changes appear in every open session.
-                  </p>
-                </div>
-              </div>
-            </Reveal>
+              </motion.div>
+            </div>
           </div>
 
-          {/* CARD D: columns 3-6, row 2 */}
-          <div className="bento-card-d">
-            <Reveal delayMs={240} className="h-full">
-              <div className="bento-card">
-                {/* Illustration Area on Top */}
-                <div
-                  style={{
-                    background:
-                      'linear-gradient(135deg, rgba(131, 221, 121, 0.30) 0%, rgba(133, 227, 120, 0.30) 100%)',
-                  }}
-                  className="flex-1 rounded-[16px] overflow-hidden flex items-center justify-center p-4 min-h-[240px]"
-                >
-                  {/* Mini-UI Panel with 4 activity rows, border only, no shadow */}
-                  <div className="w-full max-w-[420px] bg-white rounded-[16px] border border-black/[0.08] p-4 text-left select-none">
-                    {/* Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] mb-2">
-                      <span className="text-[14px] font-medium text-[#0D0D0D]">Audit trail ledger</span>
-                      <div className="flex items-center gap-1.5 text-[#575657]">
-                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-                        </svg>
-                        <span className="text-[13px] font-medium">Append-only</span>
-                      </div>
-                    </div>
+          {/* ================================================================= */}
+          {/* CARD 2: Built for fast-moving teams. */}
+          {/* ================================================================= */}
+          <div className="group relative bg-[#EFEFEF]/55 rounded-[16px] border border-black/[0.08] hover:border-black/[0.16] transition-colors duration-200 overflow-hidden flex flex-col h-auto md:h-[600px] min-h-[460px]">
+            {/* Text block top-left */}
+            <div className="p-6 text-left shrink-0 z-10">
+              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+                Built for fast-moving teams.
+              </h3>
+              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
+                Collaborate in real time with live edits and comments.
+              </p>
+            </div>
 
-                    {/* 4 Activity rows */}
-                    <div className="divide-y divide-black/[0.06]">
-                      {visibleActivities.map((act, idx) => (
-                        <div
-                          key={`${act.text}-${act.time}-${idx}`}
-                          style={{
-                            transition: isReducedMotion ? 'none' : 'opacity 250ms ease, transform 250ms ease',
-                          }}
-                          className="h-[38px] flex items-center justify-between text-[14px]"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span
-                              style={{ backgroundColor: act.color }}
-                              className="w-[7px] h-[7px] rounded-full shrink-0"
-                            />
-                            <span className="text-[#0D0D0D] font-medium truncate max-w-[240px] sm:max-w-none">
-                              {act.text}
-                            </span>
-                          </div>
-                          <span className="text-[13px] text-[#575657] font-mono shrink-0 ml-3">
-                            {act.time}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+            {/* Visual: Live collaboration discussion card with avatars & typing badge */}
+            <div className="relative flex-1 w-full overflow-hidden flex items-end justify-end">
+              <motion.div
+                style={
+                  shouldReduceMotion
+                    ? {}
+                    : {
+                        y: card2Y,
+                      }
+                }
+                className="relative w-[340px] sm:w-[360px] bg-white rounded-tl-[16px] rounded-tr-[16px] md:rounded-tr-none md:rounded-bl-none border border-black/[0.08] p-5 mr-[-20px] mb-[-24px] sm:mr-[-12px] sm:mb-[-18px]"
+              >
+                {/* Header with live presence bubbles */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-black/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#83DD79] animate-pulse" />
+                    <span className="text-[13px] font-[500] text-[#0D0D0D]">Activity Stream</span>
+                  </div>
+
+                  {/* Active avatars pile */}
+                  <div className="flex -space-x-1.5 items-center">
+                    <span className="w-6 h-6 rounded-full bg-[#6E94CB] text-white text-[11px] font-semibold flex items-center justify-center border-2 border-white">
+                      S
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-[#7957EC] text-white text-[11px] font-semibold flex items-center justify-center border-2 border-white">
+                      M
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-[#83DD79] text-white text-[11px] font-semibold flex items-center justify-center border-2 border-white">
+                      T
+                    </span>
                   </div>
                 </div>
 
-                {/* Text 20px below illustration */}
-                <div className="mt-5 text-left">
-                  <h3 className="text-[20px] font-[500] text-[#0D0D0D] tracking-[-0.02em]">
-                    A history that can't be edited
-                  </h3>
-                  <p className="text-[15px] leading-[1.5] text-[#575657] mt-1.5">
-                    Every create, update and transition is appended to the audit trail. Nothing is overwritten.
-                  </p>
+                {/* Thread of live comments */}
+                <div className="mt-4 space-y-3.5">
+                  {/* Comment 1 */}
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-[#6E94CB]/15 border border-[#6E94CB]/30 text-[12px] font-medium text-[#6E94CB] flex items-center justify-center shrink-0">
+                      SA
+                    </span>
+                    <div className="flex-1 bg-black/[0.02] border border-black/[0.05] rounded-[12px] p-2.5 text-left">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[12px] font-[500] text-[#0D0D0D]">Sam Altman</span>
+                        <span className="text-[11px] text-[#575657]">2m ago</span>
+                      </div>
+                      <p className="text-[13px] text-[#0D0D0D] leading-snug">
+                        Approved transition to Review. Dependency graph verified cycle-free.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Comment 2 */}
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-[#7957EC]/15 border border-[#7957EC]/30 text-[12px] font-medium text-[#7957EC] flex items-center justify-center shrink-0">
+                      MK
+                    </span>
+                    <div className="flex-1 bg-black/[0.02] border border-black/[0.05] rounded-[12px] p-2.5 text-left">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[12px] font-[500] text-[#0D0D0D]">Morgan Kim</span>
+                        <span className="text-[11px] text-[#575657]">just now</span>
+                      </div>
+                      <p className="text-[13px] text-[#0D0D0D] leading-snug">
+                        Deploying preview container to staging cluster...
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Comment input mockup */}
+                  <div className="pt-2 border-t border-black/[0.06] flex items-center gap-2">
+                    <div className="flex-1 bg-black/[0.03] border border-black/[0.06] rounded-full px-3 py-1.5 text-[12px] text-[#575657] flex items-center justify-between">
+                      <span>Write a reply...</span>
+                      <span className="text-[10px] text-[#575657]/70 font-mono">⌘↵</span>
+                    </div>
+                    <span className="w-6 h-6 rounded-full bg-[#0D0D0D] text-white flex items-center justify-center text-[12px]">
+                      ↑
+                    </span>
+                  </div>
                 </div>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* ================================================================= */}
+          {/* CARD 3: Precision-Driven Portfolio Growth (Multiple Views) */}
+          {/* ================================================================= */}
+          <div className="group relative bg-[#EFEFEF]/55 rounded-[16px] border border-black/[0.08] hover:border-black/[0.16] transition-colors duration-200 overflow-hidden flex flex-col h-auto md:h-[600px] min-h-[460px]">
+            {/* Text block top-left */}
+            <div className="p-6 text-left shrink-0 z-10">
+              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+                Precision-Driven Portfolio Growth
+              </h3>
+              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
+                View tasks as lists, boards, calendars, or timelines.
+              </p>
+            </div>
+
+            {/* Visual: Dual layered panels showcasing multi-view switcher & Kanban columns */}
+            <div className="relative flex-1 w-full overflow-hidden flex items-end justify-end">
+              <div className="relative w-full h-full flex flex-col items-end justify-end">
+                {/* Floating View Switcher Pills */}
+                <motion.div
+                  style={
+                    shouldReduceMotion
+                      ? {}
+                      : {
+                          y: card3Sub2Y,
+                        }
+                  }
+                  className="w-[280px] sm:w-[320px] bg-white rounded-tl-[14px] rounded-tr-[14px] border border-black/[0.08] p-2.5 mr-3 mb-2 flex items-center justify-between text-[12px]"
+                >
+                  <span className="px-3 py-1 rounded-full bg-[#0D0D0D] text-white font-[500]">
+                    Board
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-[#575657] hover:text-[#0D0D0D]">
+                    Graph (DAG)
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-[#575657] hover:text-[#0D0D0D]">
+                    Timeline
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-[#575657] hover:text-[#0D0D0D]">
+                    List
+                  </span>
+                </motion.div>
+
+                {/* Overlapping mini Kanban board card */}
+                <motion.div
+                  style={
+                    shouldReduceMotion
+                      ? {}
+                      : {
+                          y: card3Sub1Y,
+                        }
+                  }
+                  className="w-[330px] sm:w-[360px] bg-white rounded-tl-[16px] rounded-tr-[16px] md:rounded-tr-none md:rounded-bl-none border border-black/[0.08] p-4 mr-[-20px] mb-[-30px] sm:mr-[-12px] sm:mb-[-20px]"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Column 1: In Progress */}
+                    <div className="bg-[#EFEFEF]/50 rounded-[12px] p-2.5 border border-black/[0.06]">
+                      <div className="flex items-center justify-between text-[11px] font-[500] text-[#575657] mb-2">
+                        <span>IN PROGRESS</span>
+                        <span className="px-1.5 py-0.5 rounded-full bg-white border border-black/[0.08]">2</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="bg-white rounded-[8px] p-2 border border-black/[0.06] text-left">
+                          <div className="text-[12px] font-[500] text-[#0D0D0D]">Tarjan Cycle Detection</div>
+                          <div className="flex items-center justify-between mt-2 text-[10px] text-[#575657]">
+                            <span className="text-[#6E94CB] font-mono">FORGE-831</span>
+                            <span className="w-4 h-4 rounded-full bg-[#6E94CB] text-white flex items-center justify-center font-bold">A</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-[8px] p-2 border border-black/[0.06] text-left">
+                          <div className="text-[12px] font-[500] text-[#0D0D0D]">Audit Chain Hashing</div>
+                          <div className="flex items-center justify-between mt-2 text-[10px] text-[#575657]">
+                            <span className="text-[#83DD79] font-mono">FORGE-834</span>
+                            <span className="w-4 h-4 rounded-full bg-[#83DD79] text-white flex items-center justify-center font-bold">M</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Column 2: Done */}
+                    <div className="bg-[#EFEFEF]/50 rounded-[12px] p-2.5 border border-black/[0.06]">
+                      <div className="flex items-center justify-between text-[11px] font-[500] text-[#575657] mb-2">
+                        <span>DONE</span>
+                        <span className="px-1.5 py-0.5 rounded-full bg-white border border-black/[0.08]">4</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="bg-white rounded-[8px] p-2 border border-black/[0.06] text-left">
+                          <div className="text-[12px] font-[500] text-[#0D0D0D]">Convex Sync Schema</div>
+                          <div className="flex items-center justify-between mt-2 text-[10px] text-[#575657]">
+                            <span className="text-[#83DD79] font-mono">FORGE-820</span>
+                            <span className="w-4 h-4 rounded-full bg-[#7957EC] text-white flex items-center justify-center font-bold">S</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-[8px] p-2 border border-black/[0.06] text-left">
+                          <div className="text-[12px] font-[500] text-[#0D0D0D]">RBAC Permission Model</div>
+                          <div className="flex items-center justify-between mt-2 text-[10px] text-[#575657]">
+                            <span className="text-[#83DD79] font-mono">FORGE-815</span>
+                            <span className="w-4 h-4 rounded-full bg-[#6E94CB] text-white flex items-center justify-center font-bold">T</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
-            </Reveal>
+            </div>
+          </div>
+
+          {/* ================================================================= */}
+          {/* CARD 4: Row 2 Spans all 3 columns (height 340px desktop) */}
+          {/* Precision-Driven Portfolio Growth / AI suggestions */}
+          {/* ================================================================= */}
+          <div className="md:col-span-3 group relative bg-[#EFEFEF]/55 rounded-[16px] border border-black/[0.08] hover:border-black/[0.16] transition-colors duration-200 overflow-hidden flex flex-col md:flex-row h-auto md:h-[340px] min-h-[460px] md:min-h-[340px]">
+            {/* Text block top-left */}
+            <div className="p-6 md:p-8 text-left shrink-0 z-10 md:w-[380px]">
+              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+                Precision-Driven Portfolio Growth
+              </h3>
+              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
+                Let AI suggest assignments, priorities, and deadlines.
+              </p>
+            </div>
+
+            {/* Visual: Horizontal Timeline & AI Suggestion Matrix */}
+            <div className="relative flex-1 w-full overflow-hidden flex items-end justify-end md:items-center md:justify-end">
+              <motion.div
+                style={
+                  shouldReduceMotion
+                    ? {}
+                    : {
+                        y: card4Y,
+                      }
+                }
+                className="w-full max-w-[760px] bg-white rounded-tl-[16px] md:rounded-bl-[16px] border border-black/[0.08] p-5 mr-[-24px] mb-[-24px] md:mr-[-16px] md:mb-0"
+              >
+                {/* AI Suggestion Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-black/[0.06] gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#7957EC]/10 border border-[#7957EC]/30 text-[#7957EC] flex items-center justify-center text-[12px] font-bold">
+                      ✦
+                    </span>
+                    <span className="text-[13px] font-[500] text-[#0D0D0D]">
+                      Intelligent workload balancing suggested for Sprint 25
+                    </span>
+                  </div>
+
+                  <span className="text-[12px] font-[500] text-[#7957EC] bg-[#7957EC]/10 border border-[#7957EC]/20 px-2.5 py-1 rounded-full w-fit">
+                    AI Auto-Triage Active
+                  </span>
+                </div>
+
+                {/* Timeline Gantt / Priority items */}
+                <div className="mt-4 space-y-3">
+                  {/* Task 1 */}
+                  <div className="flex items-center justify-between text-[13px] gap-3">
+                    <div className="w-[180px] shrink-0 font-[500] text-[#0D0D0D] truncate">
+                      Core State Machine Sync
+                    </div>
+                    <div className="flex-1 bg-black/[0.04] rounded-full h-5 relative overflow-hidden flex items-center px-2">
+                      <div className="absolute left-0 top-0 bottom-0 w-[70%] bg-[#83DD79]/30 rounded-full border border-[#83DD79]/60" />
+                      <span className="relative z-10 text-[11px] font-medium text-[#0D0D0D]">70% completed</span>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 text-[12px] text-[#575657]">
+                      <span className="w-4 h-4 rounded-full bg-[#6E94CB] text-white text-[10px] flex items-center justify-center font-bold">A</span>
+                      <span>Due Oct 12</span>
+                    </div>
+                  </div>
+
+                  {/* Task 2 */}
+                  <div className="flex items-center justify-between text-[13px] gap-3">
+                    <div className="w-[180px] shrink-0 font-[500] text-[#0D0D0D] truncate">
+                      Automated Risk Gate Engine
+                    </div>
+                    <div className="flex-1 bg-black/[0.04] rounded-full h-5 relative overflow-hidden flex items-center px-2">
+                      <div className="absolute left-0 top-0 bottom-0 w-[45%] bg-[#6E94CB]/30 rounded-full border border-[#6E94CB]/60" />
+                      <span className="relative z-10 text-[11px] font-medium text-[#0D0D0D]">45% completed</span>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 text-[12px] text-[#575657]">
+                      <span className="w-4 h-4 rounded-full bg-[#7957EC] text-white text-[10px] flex items-center justify-center font-bold">M</span>
+                      <span>Due Oct 15</span>
+                    </div>
+                  </div>
+
+                  {/* Task 3 */}
+                  <div className="flex items-center justify-between text-[13px] gap-3">
+                    <div className="w-[180px] shrink-0 font-[500] text-[#0D0D0D] truncate">
+                      Cryptographic Audit Storage
+                    </div>
+                    <div className="flex-1 bg-black/[0.04] rounded-full h-5 relative overflow-hidden flex items-center px-2">
+                      <div className="absolute left-0 top-0 bottom-0 w-[90%] bg-[#BED390]/30 rounded-full border border-[#BED390]/60" />
+                      <span className="relative z-10 text-[11px] font-medium text-[#0D0D0D]">90% completed</span>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 text-[12px] text-[#575657]">
+                      <span className="w-4 h-4 rounded-full bg-[#83DD79] text-white text-[10px] flex items-center justify-center font-bold">T</span>
+                      <span>Due Oct 18</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </div>
