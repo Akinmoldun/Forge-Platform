@@ -1,12 +1,30 @@
 import { vlyPlugin } from "@vly-ai/integrations";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import fs from "fs";
 import path from "path";
 import { defineConfig } from "vite";
 
+function copyBuildArtifacts() {
+  return {
+    name: "copy-build-artifacts",
+    closeBundle() {
+      try {
+        const distDir = path.resolve(__dirname, "dist");
+        const buildDir = path.resolve(__dirname, "build");
+        if (fs.existsSync(distDir)) {
+          fs.cpSync(distDir, buildDir, { recursive: true, force: true });
+        }
+      } catch (err) {
+        console.warn("Could not mirror artifacts to build directory:", err);
+      }
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), vlyPlugin(), tailwindcss()],
+  plugins: [react(), vlyPlugin(), tailwindcss(), copyBuildArtifacts()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -17,6 +35,8 @@ export default defineConfig({
     dedupe: ["react", "react/jsx-runtime", "react-dom", "react-dom/client"],
   },
   build: {
+    outDir: "dist",
+    emptyOutDir: true,
     // Enable source maps for better debugging (disable in production if needed)
     sourcemap: false,
     // Optimize chunk splitting
