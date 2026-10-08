@@ -75,7 +75,6 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   );
   const board = useQuery(api.issues.getBoard, { projectId: projectId as never });
   const risk = useQuery(api.analytics.getProjectRisk, { projectId: projectId as never });
-  const analyticsTab = tab === "analytics";
   const summary = useQuery(api.analytics.getProjectSummary, {
     projectId: projectId as never,
   });
@@ -167,8 +166,6 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
       </AppShell>
     );
   }
-
-  const analyticsData = { summary, risk };
 
   const memberName = (id: string | undefined) =>
     members?.find((m) => m.userId === id)?.name ?? null;
@@ -661,7 +658,7 @@ function AnalyticsTab({
 
 function ActivityTab({
   activity,
-  keyName,
+  keyName: _keyName,
 }: {
   activity:
     | Array<{

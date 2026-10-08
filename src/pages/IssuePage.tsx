@@ -74,7 +74,7 @@ export default function IssuePage() {
   const transitionIssue = useMutation(api.issues.transitionIssue);
   const addComment = useMutation(api.collaboration.addComment);
   const addDependency = useMutation(api.collaboration.addDependency);
-  const removeDependency = useMutation(api.collaboration.removeDependency);
+  const _removeDependency = useMutation(api.collaboration.removeDependency);
 
   const [commentDraft, setCommentDraft] = useState("");
   const [transitionComment, setTransitionComment] = useState("");
