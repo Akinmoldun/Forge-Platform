@@ -3,7 +3,9 @@ import { Section1Nav } from './sections/Section1Nav';
 import { Section2Hero } from './sections/Section2Hero';
 import { Section3FeaturesBento } from './sections/Section3FeaturesBento';
 import { Section4KeyCapabilities } from './sections/Section4KeyCapabilities';
+import { RiskBreakdown } from './RiskBreakdown';
 import { Section5ProofNumbers } from './sections/Section5ProofNumbers';
+import { ActivityHeatmap } from './ActivityHeatmap';
 import { Section6HandleWorkflows } from './sections/Section6HandleWorkflows';
 import { Section7WhatsIncluded } from './sections/Section7WhatsIncluded';
 import { Section8RolesComparison } from './sections/Section8RolesComparison';
@@ -24,14 +26,20 @@ export default function ForgeLanding() {
         {/* 2. Hero */}
         <Section2Hero />
 
-        {/* 3. Features bento */}
+        {/* 3. Features bento (Interactive Workflow Diagram) */}
         <Section3FeaturesBento />
 
         {/* 4. Key Capabilities (sticky list on left, sticky card pile on right) */}
         <Section4KeyCapabilities />
 
+        {/* Explainable Risk breakdown with horizontal bars */}
+        <RiskBreakdown />
+
         {/* 5. Proof in the numbers */}
         <Section5ProofNumbers />
+
+        {/* Activity heatmap audit trail */}
+        <ActivityHeatmap />
 
         {/* 6. Handle complex workflows */}
         <Section6HandleWorkflows />

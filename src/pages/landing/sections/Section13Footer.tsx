@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
 import { ArrowUpRight } from 'lucide-react';
 import { Reveal } from '../Reveal';
+import { ForgeLogo } from '../ForgeLogo';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
@@ -22,7 +23,8 @@ export function Section13Footer() {
     }
   };
 
-  const scrollToTop = () => {
+  const scrollToTop = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -31,16 +33,8 @@ export function Section13Footer() {
       <div className="landing-container">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-6 border-b border-black/6">
           {/* Col 1 & 2: Brand & Tagline */}
-          <Reveal index={0} className="md:col-span-2 space-y-3">
-            <button
-              onClick={scrollToTop}
-              className="flex items-center gap-2.5 text-[#0D0D0D] font-medium text-[16px] tracking-tight hover:opacity-80 transition-opacity"
-            >
-              <div className="w-7 h-7 rounded-lg bg-[#0D0D0D] text-white flex items-center justify-center font-bold text-xs select-none">
-                F
-              </div>
-              <span>Forge</span>
-            </button>
+          <Reveal index={0} className="md:col-span-2 space-y-4">
+            <ForgeLogo onClick={scrollToTop} />
 
             <p className="text-xs text-[#575657] max-w-[320px] leading-relaxed">
               Deterministic workflow orchestration, cycle-free dependency graphs, and explainable risk evaluation for engineering teams.
