@@ -113,6 +113,20 @@ export function Section4KeyCapabilities() {
     },
   ];
 
+  const pillTags = [
+    { label: 'Cycle-free DAGs', icon: GitBranch, cardIndex: 0 },
+    { label: 'Automated gates', icon: ShieldCheck, cardIndex: 1 },
+    { label: 'Real-time sync', icon: Zap, cardIndex: 2 },
+  ];
+
+  const scrollToCard = (index: number) => {
+    const el = cardRefs.current[index];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setActiveCardIndex(index);
+    }
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -141,10 +155,9 @@ export function Section4KeyCapabilities() {
       if (el) observer.observe(el);
     });
 
-    // 2. Active card proximity tracking: card closest to viewport center has 100% opacity, others dim to 60%
+    // 2. Active card proximity tracking: update active pill & highlight active card cleanly
     const handleScroll = () => {
       if (window.innerWidth < 1024) {
-        // Under 1024px: keep all cards fully visible
         setActiveCardIndex(-1);
         return;
       }
@@ -179,24 +192,24 @@ export function Section4KeyCapabilities() {
   }, []);
 
   return (
-    <section id="capabilities" className="landing-section bg-[#EFEFEF] py-[48px] lg:py-[80px]">
+    <section id="capabilities" className="bg-[#EFEFEF] py-[36px] lg:py-[56px] select-none">
       <div className="landing-container max-w-[1200px] mx-auto px-4 sm:px-6">
-        {/* Two-column container: sticky left (44%), scrolling right (56%), gap 48px */}
-        <div className="flex flex-col lg:flex-row gap-[32px] lg:gap-[48px] items-start">
+        {/* Two-column container: sticky left (44%), scrolling right (56%), gap 40px */}
+        <div className="flex flex-col lg:flex-row gap-[24px] lg:gap-[40px] items-start">
           {/* ================================================================= */}
           {/* LEFT COLUMN (sticky on desktop at top: 100px, flush left)        */}
           {/* ================================================================= */}
           <div className="w-full lg:w-[44%] shrink-0 lg:sticky lg:top-[100px] flex flex-col items-start text-left">
             {/* Small rounded pill label with icon at the top */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.08] text-[13px] font-medium text-[#0D0D0D] shadow-xs mb-4">
-              <Layers className="w-3.5 h-3.5 text-[#2f6df6]" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.08] text-[13px] font-medium text-[#0D0D0D] shadow-xs mb-3">
+              <Layers className="w-3.5 h-3.5 text-[#0D0D0D]" strokeWidth={1.8} />
               <span>Core Capabilities</span>
             </div>
 
             {/* Big bold heading (strictly left-aligned, eliminating unnecessary empty space) */}
             <h2
               style={{ textAlign: 'left', marginLeft: 0, marginRight: 0 }}
-              className="text-[32px] sm:text-[42px] lg:text-[52px] font-[600] tracking-[-0.035em] leading-[1.06] text-[#0D0D0D] text-left mb-4 w-full"
+              className="text-[32px] sm:text-[40px] lg:text-[48px] font-[600] tracking-[-0.03em] leading-[1.08] text-[#0D0D0D] text-left mb-3 w-full"
             >
               Everything a delivery team needs, built in.
             </h2>
@@ -204,33 +217,43 @@ export function Section4KeyCapabilities() {
             {/* Short gray description paragraph */}
             <p
               style={{ textAlign: 'left', marginLeft: 0, marginRight: 0 }}
-              className="text-[15px] sm:text-[16px] text-[#575657] leading-relaxed mb-6 max-w-[420px] text-left"
+              className="text-[15px] sm:text-[16px] text-[#575657] leading-relaxed mb-5 max-w-[420px] text-left"
             >
               From task planning to automated validation gates, Forge gives your team the controls to move fast,
               stay focused, and prevent regressions.
             </p>
 
-            {/* 3 small outlined pill tags with icons under the description */}
-            <div className="flex flex-wrap gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/[0.1] bg-white text-[12px] font-medium text-[#0D0D0D] shadow-xs">
-                <GitBranch className="w-3.5 h-3.5 text-[#2f6df6]" />
-                <span>Cycle-free DAGs</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/[0.1] bg-white text-[12px] font-medium text-[#0D0D0D] shadow-xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#2f6df6]" />
-                <span>Automated gates</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/[0.1] bg-white text-[12px] font-medium text-[#0D0D0D] shadow-xs">
-                <Zap className="w-3.5 h-3.5 text-[#2f6df6]" />
-                <span>Real-time sync</span>
-              </span>
+            {/* Outlined pill tags in a clean horizontal wrap with unified black icon styling */}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {pillTags.map((tag) => {
+                const Icon = tag.icon;
+                const isCurrent = activeCardIndex === tag.cardIndex;
+                return (
+                  <button
+                    key={tag.label}
+                    type="button"
+                    onClick={() => scrollToCard(tag.cardIndex)}
+                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[12.5px] font-medium transition-all duration-200 cursor-pointer ${
+                      isCurrent
+                        ? 'bg-[#0D0D0D] text-white border-[#0D0D0D] shadow-xs'
+                        : 'bg-white text-[#0D0D0D] border-black/[0.08] hover:border-black/25 hover:bg-black/[0.02]'
+                    }`}
+                  >
+                    <Icon
+                      className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-white' : 'text-[#0D0D0D]'}`}
+                      strokeWidth={1.8}
+                    />
+                    <span>{tag.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* ================================================================= */}
-          {/* RIGHT COLUMN (scrolling stack of 4 cards, 16px gap, no wasted space)*/}
+          {/* RIGHT COLUMN (scrolling stack of 4 cards, compact, no wasted space)*/}
           {/* ================================================================= */}
-          <div className="w-full lg:w-[56%] flex-1 flex flex-col gap-[12px] lg:gap-[16px]">
+          <div className="w-full lg:w-[56%] flex-1 flex flex-col gap-[14px] lg:gap-[16px]">
             {cards.map((item, index) => {
               const isVisible = visibleCards[index] ?? false;
               const isFocused = activeCardIndex === -1 || activeCardIndex === index;
@@ -243,41 +266,45 @@ export function Section4KeyCapabilities() {
                     cardRefs.current[index] = el;
                   }}
                   style={{
-                    opacity: isVisible ? (isFocused ? 1 : 0.6) : 0,
+                    opacity: isVisible ? 1 : 0,
                     transform: isVisible ? 'translateY(0)' : 'translateY(16px)',
                     transition:
                       'opacity 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
-                  className="bg-[#fafafa] border border-black/[0.06] rounded-[16px] p-[24px] text-left hover:opacity-100 transition-opacity"
+                  className={`rounded-[16px] p-5 sm:p-6 text-left transition-all duration-200 border ${
+                    isFocused
+                      ? 'bg-white border-black/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.04)]'
+                      : 'bg-[#fafafa] border-black/[0.06]'
+                  }`}
                 >
-                  {/* Card top row: small blue outline icon at top-left + bold title */}
+                  {/* Card top row: unified black icon matching reference + bold title */}
                   <div className="flex items-center gap-2.5 mb-2">
-                    <item.icon className="w-5 h-5 text-[#2f6df6] shrink-0" strokeWidth={2} />
-                    <h3 className="text-[18px] sm:text-[20px] font-semibold text-[#0D0D0D] tracking-tight">
+                    <item.icon className="w-5 h-5 text-[#0D0D0D] shrink-0" strokeWidth={1.8} />
+                    <h3 className="text-[18px] sm:text-[19px] font-semibold text-[#0D0D0D] tracking-tight">
                       {item.title}
                     </h3>
                   </div>
 
                   {/* Gray description text below */}
-                  <p className="text-[14px] text-[#575657] leading-relaxed mb-4">
+                  <p className="text-[13.5px] sm:text-[14px] text-[#575657] leading-relaxed mb-3.5">
                     {item.description}
                   </p>
 
-                  {/* Polished Micro-UI Preview Box (replaced raw monospace dump) */}
-                  <div className="bg-white rounded-[12px] p-4 border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-left">
+                  {/* Polished Micro-UI Preview Box */}
+                  <div className="bg-[#ffffff] rounded-[12px] p-3.5 sm:p-4 border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-left">
                     {/* Header Row */}
-                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] mb-3">
+                    <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.05] mb-2.5">
                       <span className="text-[12.5px] font-semibold text-[#111418]">
                         {item.previewHeader}
                       </span>
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#eceef1] text-[10.5px] font-medium text-[#4b5563]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#2f6df6]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0D0D0D]" />
                         <span>{item.previewBadge}</span>
                       </span>
                     </div>
 
                     {/* Content Rows */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {item.id === 0 &&
                         (item.previewItems as Array<{
                           from: string;
@@ -287,7 +314,7 @@ export function Section4KeyCapabilities() {
                         }>).map((row, rIdx) => (
                           <div
                             key={rIdx}
-                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-1.5"
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-[11px] font-semibold bg-white px-1.5 py-0.5 rounded border border-black/[0.06] text-[#111418]">
@@ -299,8 +326,8 @@ export function Section4KeyCapabilities() {
                               </span>
                               <span className="text-[10.5px] text-[#6b7280]">({row.relation})</span>
                             </div>
-                            <div className="flex items-center gap-1 text-[#166534] text-[11px] font-medium">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-[#166534]" />
+                            <div className="flex items-center gap-1 text-[#111418] text-[11px] font-medium">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#111418]" strokeWidth={1.8} />
                               <span>{row.result}</span>
                             </div>
                           </div>
@@ -314,7 +341,7 @@ export function Section4KeyCapabilities() {
                         }>).map((row, rIdx) => (
                           <div
                             key={rIdx}
-                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-1.5"
                           >
                             <div className="flex flex-col">
                               <span className="font-medium text-[#111418] text-[12px]">
@@ -323,7 +350,7 @@ export function Section4KeyCapabilities() {
                               <span className="text-[10.5px] text-[#6b7280]">{row.detail}</span>
                             </div>
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-black/[0.06] text-[10.5px] font-medium text-[#111418]">
-                              <Check className="w-3 h-3 text-[#2f6df6]" />
+                              <Check className="w-3 h-3 text-[#111418]" strokeWidth={2} />
                               <span>{row.result}</span>
                             </span>
                           </div>
@@ -337,7 +364,7 @@ export function Section4KeyCapabilities() {
                         }>).map((row, rIdx) => (
                           <div
                             key={rIdx}
-                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-1.5"
                           >
                             <div className="flex flex-col">
                               <span className="font-medium text-[#111418] text-[12px]">
@@ -345,7 +372,7 @@ export function Section4KeyCapabilities() {
                               </span>
                               <span className="text-[10.5px] text-[#6b7280]">{row.detail}</span>
                             </div>
-                            <span className="font-mono text-[10.5px] font-medium bg-white px-2 py-0.5 rounded border border-black/[0.06] text-[#2f6df6]">
+                            <span className="font-mono text-[10.5px] font-medium bg-white px-2 py-0.5 rounded border border-black/[0.06] text-[#111418]">
                               {row.result}
                             </span>
                           </div>
@@ -359,7 +386,7 @@ export function Section4KeyCapabilities() {
                         }>).map((row, rIdx) => (
                           <div
                             key={rIdx}
-                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-1.5"
                           >
                             <div className="flex flex-col">
                               <span className="font-medium text-[#111418] text-[12px]">
@@ -376,7 +403,7 @@ export function Section4KeyCapabilities() {
                     </div>
 
                     {/* Footer Row */}
-                    <div className="mt-3 pt-2.5 border-t border-black/[0.05] text-[11px] text-[#6b7280] flex items-center justify-between">
+                    <div className="mt-2.5 pt-2 border-t border-black/[0.05] text-[11px] text-[#6b7280] flex items-center justify-between">
                       <span>{item.footerText}</span>
                       <span className="font-medium text-[#111418]">{item.footerStatus}</span>
                     </div>

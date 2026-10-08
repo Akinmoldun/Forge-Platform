@@ -127,7 +127,7 @@ export function Section5ProofNumbers() {
   ];
 
   return (
-    <section ref={sectionRef} className="landing-section bg-[#EFEFEF]">
+    <section ref={sectionRef} className="landing-section bg-[#EFEFEF] pt-[40px] md:pt-[56px]">
       <div className="landing-container">
         {/* Section Header */}
         <Reveal className="text-center mb-16">

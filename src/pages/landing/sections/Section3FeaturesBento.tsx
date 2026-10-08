@@ -51,7 +51,7 @@ export function Section3FeaturesBento() {
   return (
     <section
       id="features"
-      className="landing-section bg-[#EFEFEF] pt-[72px] md:pt-[120px] pb-[120px] select-none overflow-x-clip"
+      className="landing-section bg-[#EFEFEF] pt-[72px] md:pt-[100px] pb-[40px] md:pb-[56px] select-none overflow-x-clip"
     >
       <div className="landing-container max-w-[1040px] mx-auto px-4 md:px-6">
         {/* Section Header: fade up 16px with blur(6px) -> blur(0), 0.7s, 80ms stagger */}
