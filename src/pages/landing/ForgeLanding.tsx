@@ -3,7 +3,6 @@ import { Section1Nav } from './sections/Section1Nav';
 import { Section2Hero } from './sections/Section2Hero';
 import { Section3FeaturesBento } from './sections/Section3FeaturesBento';
 import { Section4KeyCapabilities } from './sections/Section4KeyCapabilities';
-import { RiskBreakdown } from './RiskBreakdown';
 import { Section5ProofNumbers } from './sections/Section5ProofNumbers';
 import { ActivityHeatmap } from './ActivityHeatmap';
 import { Section6HandleWorkflows } from './sections/Section6HandleWorkflows';
@@ -31,9 +30,6 @@ export default function ForgeLanding() {
 
         {/* 4. Key Capabilities (sticky list on left, sticky card pile on right) */}
         <Section4KeyCapabilities />
-
-        {/* Explainable Risk breakdown with horizontal bars */}
-        <RiskBreakdown />
 
         {/* 5. Proof in the numbers */}
         <Section5ProofNumbers />
