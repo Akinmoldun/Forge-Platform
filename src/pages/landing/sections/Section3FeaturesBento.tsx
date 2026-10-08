@@ -1,630 +1,1030 @@
-import React, { useRef } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export function Section3FeaturesBento() {
-  const sectionRef = useRef<HTMLElement>(null);
   const shouldReduceMotion = useReducedMotion();
+  const cardARef = useRef<HTMLDivElement>(null);
 
-  // Scroll progress for continuous scrubbed pop-out interaction
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start end', 'end start'],
-  });
+  // Easing specified: cubic-bezier(.16, 1, .3, 1)
+  const customEase = [0.16, 1, 0.3, 1] as const;
 
-  // Scroll-linked transforms that reverse cleanly when scrolling back up
-  const card1Y = useTransform(scrollYProgress, [0.08, 0.45], [24, 0]);
-  const card2Y = useTransform(scrollYProgress, [0.08, 0.45], [28, 0]);
-  const card3Y = useTransform(scrollYProgress, [0.08, 0.45], [22, 0]);
-  const card4Y = useTransform(scrollYProgress, [0.15, 0.52], [20, 0]);
+  // Card A scroll-linked interaction: computes progress p from 0 to 1
+  // as the card moves from 85% down the viewport to its center, set as CSS variable --p.
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      if (cardARef.current) {
+        cardARef.current.style.setProperty('--p', '1');
+      }
+      return;
+    }
+
+    const el = cardARef.current;
+    if (!el) return;
+
+    let rafId: number;
+    const updateScroll = () => {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || 800;
+      const start = vh * 0.85;
+      const end = vh * 0.5 - rect.height * 0.5;
+      const rawP = (start - rect.top) / (start - end);
+      const p = Math.max(0, Math.min(1, rawP));
+      el.style.setProperty('--p', p.toFixed(4));
+    };
+
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateScroll);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    updateScroll();
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      cancelAnimationFrame(rafId);
+    };
+  }, [shouldReduceMotion]);
 
   return (
     <section
       id="features"
-      ref={sectionRef}
-      style={{ overflowX: 'clip' }}
-      className="landing-section bg-[#EFEFEF] py-[72px] md:py-[120px] select-none overflow-x-clip"
+      className="landing-section bg-[#EFEFEF] pt-[72px] md:pt-[120px] pb-[120px] select-none overflow-x-clip"
     >
-      {/* Scroll-driven timeline styles matching animation-timeline: view() */}
-      <style>{`
-        @keyframes bentoPopOut {
-          0% {
-            transform: translateY(24px);
-            opacity: 0.9;
-          }
-          100% {
-            transform: translateY(0px);
-            opacity: 1;
-          }
-        }
-        @supports (animation-timeline: view()) {
-          .bento-scroll-pop {
-            animation: bentoPopOut linear both;
-            animation-timeline: view();
-            animation-range: entry 10% cover 50%;
-          }
-        }
-      `}</style>
-
-      <div className="landing-container max-w-[1200px] mx-auto px-4 md:px-6">
-        {/* Header - Kept exactly as required (eyebrow chip, H2, subtext) */}
+      <div className="landing-container max-w-[1040px] mx-auto px-4 md:px-6">
+        {/* Section Header: fade up 16px with blur(6px) -> blur(0), 0.7s, 80ms stagger */}
         <div className="text-center">
-          <div className="landing-pill inline-flex items-center text-[13px] font-[500] bg-white border border-black/[0.08] px-[14px] py-[6px] rounded-full mb-4">
+          <motion.div
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
+            whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.7, delay: 0, ease: customEase }}
+            className="landing-pill inline-flex items-center text-[13px] font-[500] bg-white border border-black/[0.08] px-[14px] py-[6px] rounded-full mb-4"
+          >
             <span>Productivity Features</span>
-          </div>
+          </motion.div>
 
-          <h2 className="text-[30px] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4">
+          <motion.h2
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
+            whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.7, delay: 0.08, ease: customEase }}
+            className="text-[30px] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4"
+          >
             Built for how engineering teams actually work.
-          </h2>
+          </motion.h2>
 
-          <p className="text-[15px] sm:text-[17px] text-[#575657] max-w-[560px] mx-auto leading-relaxed">
+          <motion.p
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
+            whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.7, delay: 0.16, ease: customEase }}
+            className="text-[15px] sm:text-[17px] text-[#575657] max-w-[560px] mx-auto leading-relaxed"
+          >
             From fast-moving startups to structured engineering organizations, Forge adapts to your team’s
             real-world workflows — not the other way around.
-          </p>
+          </motion.p>
         </div>
 
-        {/* 4-Card Bento Grid */}
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-[16px] md:gap-[20px]">
+        {/* 
+          GRID:
+          max-w-[1040px] mx-auto
+          3 columns x 2 rows of 340px each, gap: 12px
+          Card A: spans both rows (692px tall)
+          Card B & C: row 1 (340px tall)
+          Card D: row 2 (688px wide, 340px tall)
+          Under 1060px: one column, cards 340px tall (A: 692px)
+        */}
+        <div className="mt-14 grid grid-cols-1 min-[1060px]:grid-cols-3 min-[1060px]:grid-rows-[340px_340px] gap-[12px]">
           {/* ================================================================= */}
-          {/* CARD 1: Rules enforced on every transition */}
+          {/* CARD A "Rules enforced on every transition" (338 × 692)           */}
           {/* ================================================================= */}
-          <div className="bento-scroll-pop group relative rounded-[24px] overflow-visible flex flex-col h-auto md:h-[560px] min-h-[460px]">
-            {/* Separate background layer z-0 */}
-            <div className="absolute inset-0 rounded-[24px] overflow-hidden z-0 bg-[#F8F8F9] border border-black/10 group-hover:border-black/[0.18] transition-colors duration-200" />
-
-            {/* Text block top-left z-20 */}
-            <div className="p-6 text-left shrink-0 relative z-20 min-h-[140px]">
-              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+          <div
+            ref={cardARef}
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: '14px',
+              border: '1px solid rgba(0,0,0,.06)',
+              background: '#f7f8fa',
+            }}
+            className="w-full min-[1060px]:col-start-1 min-[1060px]:col-end-2 min-[1060px]:row-start-1 min-[1060px]:row-end-3 h-[692px]"
+          >
+            {/* Card text block: top: 24, left: 24, right: 24 */}
+            <div className="absolute top-[24px] left-[24px] right-[24px] z-30 pointer-events-none text-left">
+              <h3 className="text-[20px] leading-[24px] font-semibold text-[#111418] tracking-tight">
                 Rules enforced on every transition
               </h3>
-              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
-                Requires assignee, requires comment, no open blockers. Checked on the server every time.
+              <p className="text-[14px] leading-[18px] text-[#5f6368] max-w-[270px] line-clamp-2 mt-1">
+                Assignee, comment, and blocker checks verified on every server transition.
               </p>
             </div>
 
-            {/* Mock UI: container below text (mt-6), relative, no overflow clipping z-10 */}
-            <div className="relative z-10 mt-6 flex-1 overflow-visible pb-8">
-              <motion.div
-                style={shouldReduceMotion ? {} : { y: card1Y }}
-                className="relative w-full overflow-visible"
+            {/* Mock stage: animates as single unit when 20% in view (0ms delay) */}
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 36, filter: 'blur(6px)' }}
+              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.9, delay: 0, ease: customEase }}
+              className="absolute inset-0 pointer-events-none select-none"
+            >
+              {/* Panel 1 "In progress": left 40, top 124, scroll-linked rotation & translateY */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '40px',
+                  top: '124px',
+                  width: '330px',
+                  height: '166px',
+                  borderRadius: '14px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  background: '#ffffff',
+                  transformOrigin: 'left center',
+                  transform: shouldReduceMotion
+                    ? 'rotate(-4deg)'
+                    : 'rotate(calc(-8deg + var(--p, 1) * 4deg)) translateY(calc((1 - var(--p, 1)) * 24px))',
+                  filter: 'blur(0.5px)',
+                  zIndex: 10,
+                }}
+                className="pl-[16px] pr-[46px] flex flex-col justify-between py-1"
               >
-                {/* Panel 1: In progress (tilted -3deg) */}
-                <div
-                  style={{
-                    transform: 'rotate(-3deg)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
-                  }}
-                  className="relative z-10 w-[92%] sm:w-[320px] md:w-[330px] ml-3 sm:ml-4 bg-white border border-black/[0.06] rounded-[12px] p-4 select-none"
-                >
-                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#83DD79]" />
-                      <span className="text-[13px] font-[500] text-[#0D0D0D]">In progress</span>
-                    </div>
-                    <span className="text-[12px] font-medium text-[#575657]">Priority</span>
+                {/* Header row 44px: neutral dot + title, label */}
+                <div className="h-[44px] flex items-center justify-between border-b border-black/[0.05]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#111418]" />
+                    <span className="text-[14px] font-semibold text-[#111418]">In progress</span>
                   </div>
+                  <span className="text-[11px] font-medium text-[#6b7280]">3 tasks</span>
+                </div>
 
-                  <div className="space-y-2.5">
-                    {/* Row 1 */}
-                    <div className="flex items-center justify-between gap-3 text-[13px]">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-4 h-4 rounded border border-black/[0.22] flex items-center justify-center shrink-0">
-                          <span className="w-2 h-2 rounded-[2px] bg-[#0D0D0D]" />
-                        </span>
-                        <span className="font-normal text-[#0D0D0D] truncate">Define rollout plan</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[12px] font-medium bg-[#D78FC6]/25 text-[#4A1D43] shrink-0">
-                        High
-                      </span>
-                    </div>
+                {/* Row 1: Define rollout plan (checked) with pill "Assignee" */}
+                <div className="h-[38px] flex items-center justify-between border-b border-black/[0.03]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] bg-[#111418] flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Define rollout plan</span>
+                  </div>
+                  <span className="h-[22px] px-2 rounded-full text-[10.5px] font-medium bg-[#eceef1] text-[#4b5563] flex items-center justify-center shrink-0 whitespace-nowrap">
+                    Assignee
+                  </span>
+                </div>
 
-                    {/* Row 2 */}
-                    <div className="flex items-center justify-between gap-3 text-[13px]">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-4 h-4 rounded border border-black/[0.22] flex items-center justify-center shrink-0">
-                          <span className="w-2 h-2 rounded-[2px] bg-[#0D0D0D]" />
-                        </span>
-                        <span className="font-normal text-[#0D0D0D] truncate">Review access rules</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[12px] font-medium bg-[#D6C6A1]/40 text-[#4A3D1B] shrink-0">
-                        Medium
-                      </span>
-                    </div>
+                {/* Row 2: Review access with pill "Comment" */}
+                <div className="h-[38px] flex items-center justify-between border-b border-black/[0.03]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] border border-[#d1d5db] bg-white flex items-center justify-center shrink-0" />
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Review access</span>
+                  </div>
+                  <span className="h-[22px] px-2 rounded-full text-[10.5px] font-medium bg-[#eceef1] text-[#4b5563] flex items-center justify-center shrink-0 whitespace-nowrap">
+                    Comment
+                  </span>
+                </div>
 
-                    {/* Row 3 */}
-                    <div className="flex items-center justify-between gap-3 text-[13px]">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-4 h-4 rounded border border-black/[0.22] flex items-center justify-center shrink-0" />
-                        <span className="font-normal text-[#0D0D0D] truncate">Close open blockers</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[12px] font-medium bg-[#83DD79]/30 text-[#1B4A1D] shrink-0">
-                        Low
-                      </span>
+                {/* Row 3: Close blockers with pill "No blockers" */}
+                <div className="h-[38px] flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] border border-[#d1d5db] bg-white flex items-center justify-center shrink-0" />
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Close blockers</span>
+                  </div>
+                  <span className="h-[22px] px-2 rounded-full text-[10.5px] font-medium bg-[#eceef1] text-[#4b5563] flex items-center justify-center shrink-0 whitespace-nowrap">
+                    No blockers
+                  </span>
+                </div>
+              </div>
+
+              {/* Panel 2 "Review": left 32, top 292, scroll-linked rotation & translateY */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '32px',
+                  top: '292px',
+                  width: '330px',
+                  height: '166px',
+                  borderRadius: '14px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  background: '#ffffff',
+                  transformOrigin: 'left center',
+                  transform: shouldReduceMotion
+                    ? 'rotate(-2deg)'
+                    : 'rotate(calc(-4deg + var(--p, 1) * 2deg)) translateY(calc((1 - var(--p, 1)) * 14px))',
+                  zIndex: 15,
+                }}
+                className="pl-[16px] pr-[46px] flex flex-col justify-between py-1"
+              >
+                {/* Header row 44px: neutral dot + Review, label Sign-off */}
+                <div className="h-[44px] flex items-center justify-between border-b border-black/[0.05]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#111418]" />
+                    <span className="text-[14px] font-semibold text-[#111418]">Review</span>
+                  </div>
+                  <span className="text-[11px] font-medium text-[#6b7280]">Sign-off</span>
+                </div>
+
+                {/* Row 1: Verify audit trails + neutral avatar A */}
+                <div className="h-[38px] flex items-center justify-between border-b border-black/[0.03]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] border border-[#d1d5db] bg-white flex items-center justify-center shrink-0" />
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Verify audit trails</span>
+                  </div>
+                  <span className="w-[22px] h-[22px] rounded-full bg-[#e5e7eb] text-[#374151] text-[11px] font-semibold flex items-center justify-center shrink-0">
+                    A
+                  </span>
+                </div>
+
+                {/* Row 2: Security clearance sign-off + neutral avatar S */}
+                <div className="h-[38px] flex items-center justify-between border-b border-black/[0.03]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] border border-[#d1d5db] bg-white flex items-center justify-center shrink-0" />
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Security clearance sign-off</span>
+                  </div>
+                  <span className="w-[22px] h-[22px] rounded-full bg-[#e5e7eb] text-[#374151] text-[11px] font-semibold flex items-center justify-center shrink-0">
+                    S
+                  </span>
+                </div>
+
+                {/* Row 3: Validate DAG transitions + neutral avatar M */}
+                <div className="h-[38px] flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] border border-[#d1d5db] bg-white flex items-center justify-center shrink-0" />
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Validate DAG transitions</span>
+                  </div>
+                  <span className="w-[22px] h-[22px] rounded-full bg-[#e5e7eb] text-[#374151] text-[11px] font-semibold flex items-center justify-center shrink-0">
+                    M
+                  </span>
+                </div>
+              </div>
+
+              {/* Panel 3 "Done": left 24, top 460, flat, highest z-index */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '24px',
+                  top: '460px',
+                  width: '330px',
+                  height: '166px',
+                  borderRadius: '14px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  background: '#ffffff',
+                  zIndex: 20,
+                }}
+                className="pl-[16px] pr-[46px] flex flex-col justify-between py-1"
+              >
+                {/* Header row 44px: neutral dot + Done, label Progress */}
+                <div className="h-[44px] flex items-center justify-between border-b border-black/[0.05]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#111418]" />
+                    <span className="text-[14px] font-semibold text-[#111418]">Done</span>
+                  </div>
+                  <span className="text-[11px] font-medium text-[#6b7280]">Progress</span>
+                </div>
+
+                {/* Row 1: Deploy canary (checked) + 56px #111418 bar on #eceef1 track (60%) */}
+                <div className="h-[38px] flex items-center justify-between border-b border-black/[0.03]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] bg-[#111418] flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Deploy canary</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="w-[56px] h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                      <div className="h-full bg-[#111418] rounded-full w-[60%]" />
                     </div>
+                    <span className="text-[10px] font-mono text-[#6b7280] w-[26px] text-right">60%</span>
                   </div>
                 </div>
 
-                {/* Panel 2: Review (tilted +2deg, sits lower-right and in front with higher z-index, bleeding past bottom-right corner) */}
-                <div
-                  style={{
-                    transform: 'rotate(2deg)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
-                  }}
-                  className="relative z-20 -mt-6 ml-6 sm:ml-8 md:ml-10 w-[92%] sm:w-[320px] md:w-[330px] translate-x-2 md:translate-x-6 translate-y-3 md:translate-y-6 bg-white border border-black/[0.06] rounded-[12px] p-4 select-none"
-                >
-                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#6E94CB]" />
-                      <span className="text-[13px] font-[500] text-[#0D0D0D]">Review</span>
-                    </div>
-                    <span className="text-[12px] font-medium text-[#575657]">Assignee</span>
+                {/* Row 2: Review & Launch (checked) + 56px #111418 bar on #eceef1 track (90%) */}
+                <div className="h-[38px] flex items-center justify-between border-b border-black/[0.03]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] bg-[#111418] flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Review & Launch</span>
                   </div>
-
-                  <div className="space-y-2.5 text-[13px]">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[#0D0D0D] truncate">Verify audit trails</span>
-                      <span className="w-6 h-6 rounded-full bg-[#6E94CB]/20 text-[#2B4E85] text-[12px] font-medium flex items-center justify-center shrink-0">
-                        A
-                      </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="w-[56px] h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                      <div className="h-full bg-[#111418] rounded-full w-[90%]" />
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[#0D0D0D] truncate">Security clearance sign-off</span>
-                      <span className="w-6 h-6 rounded-full bg-[#7957EC]/20 text-[#4A2CA0] text-[12px] font-medium flex items-center justify-center shrink-0">
-                        S
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[#0D0D0D] truncate">Validate DAG transitions</span>
-                      <span className="w-6 h-6 rounded-full bg-[#83DD79]/30 text-[#1B4A1D] text-[12px] font-medium flex items-center justify-center shrink-0">
-                        M
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-mono text-[#6b7280] w-[26px] text-right">90%</span>
                   </div>
                 </div>
-              </motion.div>
-            </div>
+
+                {/* Row 3: Publish release notes (unchecked) + 56px #111418 bar on #eceef1 track (20%) */}
+                <div className="h-[38px] flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-[18px] h-[18px] rounded-[5px] border border-[#d1d5db] bg-white flex items-center justify-center shrink-0" />
+                    <span className="text-[14px] text-[#111418] font-normal whitespace-nowrap">Publish release notes</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="w-[56px] h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                      <div className="h-full bg-[#111418] rounded-full w-[20%]" />
+                    </div>
+                    <span className="text-[10px] font-mono text-[#6b7280] w-[26px] text-right">20%</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
 
           {/* ================================================================= */}
-          {/* CARD 2: Real-time everywhere */}
+          {/* CARD B "Real-time everywhere" (338 × 340)                         */}
           {/* ================================================================= */}
-          <div className="bento-scroll-pop group relative rounded-[24px] overflow-visible flex flex-col h-auto md:h-[560px] min-h-[460px]">
-            {/* Separate background layer z-0 with radial dot pattern masked at all edges */}
-            <div className="absolute inset-0 rounded-[24px] overflow-hidden z-0 bg-[#F8F8F9] border border-black/10 group-hover:border-black/[0.18] transition-colors duration-200">
-              <div
-                style={{
-                  backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.12) 1px, transparent 1px)',
-                  backgroundSize: '16px 16px',
-                  maskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 30%, transparent 100%)',
-                  WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 30%, transparent 100%)',
-                }}
-                className="absolute inset-0 pointer-events-none"
-              />
-            </div>
+          <div
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: '14px',
+              border: '1px solid rgba(0,0,0,.06)',
+              background: '#f7f8fa',
+            }}
+            className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-3 min-[1060px]:row-start-1 min-[1060px]:row-end-2 h-[340px]"
+          >
+            {/* Dot background (z0) */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: 'radial-gradient(circle, rgba(0,0,0,.16) 1px, transparent 1px)',
+                backgroundSize: '12px 12px',
+                maskImage: 'radial-gradient(ellipse at 65% 75%, #000 15%, transparent 70%)',
+                WebkitMaskImage: 'radial-gradient(ellipse at 65% 75%, #000 15%, transparent 70%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
+            />
 
-            {/* Text block top-left z-20 */}
-            <div className="p-6 text-left shrink-0 relative z-20 min-h-[140px]">
-              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+            {/* Card text block */}
+            <div className="absolute top-[24px] left-[24px] right-[24px] z-30 pointer-events-none text-left">
+              <h3 className="text-[20px] leading-[24px] font-semibold text-[#111418] tracking-tight">
                 Real-time everywhere
               </h3>
-              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
-                Comments and status changes appear in every open session.
+              <p className="text-[14px] leading-[18px] text-[#5f6368] max-w-[270px] line-clamp-2 mt-1">
+                Comments and status changes appear live in every open session.
               </p>
             </div>
 
-            {/* Mock UI: relative z-10, no overflow clipping */}
-            <div className="relative z-10 mt-4 flex-1 overflow-visible pl-3 sm:pl-6 pb-8">
-              <motion.div
-                style={shouldReduceMotion ? {} : { y: card2Y }}
-                className="relative overflow-visible"
+            {/* Mock stage: animates as single unit when 20% in view (90ms delay) */}
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 36, filter: 'blur(6px)' }}
+              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.9, delay: 0.09, ease: customEase }}
+              className="absolute inset-0 pointer-events-none select-none"
+            >
+              {/* Notification pill: 292px wide, 12.5px text, fully readable without ellipsis */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '23px',
+                  top: '116px',
+                  width: '292px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  zIndex: 10,
+                }}
+                className="flex items-center justify-between pl-[12px] pr-[14px]"
               >
-                {/* Notification toast pill overlapping top edge of table (z-30) with shadow */}
-                <div
-                  style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                  className="relative z-30 mb-[-14px] ml-2 inline-flex items-center justify-between gap-3 bg-white border border-black/[0.06] rounded-full px-4 py-2 select-none"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-6 h-6 rounded-full bg-[#7957EC]/15 flex items-center justify-center shrink-0">
-                      <svg className="w-3.5 h-3.5 text-[#7957EC]" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                      </svg>
-                    </div>
-                    <span className="text-[13px] font-medium text-[#0D0D0D] truncate">
-                      Alex moved PROJ-142 to Review
-                    </span>
+                <div className="flex items-center min-w-0">
+                  <div className="w-[28px] h-[28px] rounded-[8px] bg-[#eceef1] text-[#111418] flex items-center justify-center shrink-0">
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                    </svg>
                   </div>
-                  <span className="text-[13px] font-semibold text-[#575657] shrink-0 tracking-wider">•••</span>
+                  <span className="text-[12.5px] text-[#111418] ml-2.5 whitespace-nowrap">
+                    <strong className="font-semibold text-[#111418]">Alex</strong> moved PROJ-142 to Review
+                  </span>
+                </div>
+                <span className="text-[14px] font-bold text-[#9ca3af] tracking-widest shrink-0 ml-1">···</span>
+              </div>
+
+              {/* Table card: 292px wide, white, radius 14, shadow */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '23px',
+                  top: '174px',
+                  width: '292px',
+                  height: '104px',
+                  borderRadius: '14px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  zIndex: 10,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Header row 34px: "1 Project" with chevron */}
+                <div className="h-[34px] px-3 flex items-center justify-between border-b border-black/[0.05]">
+                  <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#111418]">
+                    <span>1 Project</span>
+                    <svg className="w-3 h-3 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
 
-                {/* White table panel bleeding past right edge with soft shadow */}
-                <div
-                  style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                  className="relative z-10 w-[96%] sm:w-[340px] md:w-[360px] translate-x-2 md:translate-x-6 bg-white border border-black/[0.06] rounded-[12px] p-4 select-none"
-                >
-                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] mb-3">
-                    <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#0D0D0D]">
-                      <span>1 Project</span>
-                      <svg className="w-3.5 h-3.5 text-[#575657]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                    <div className="grid grid-cols-2 gap-6 text-[12px] font-medium text-[#575657] pr-4">
-                      <span>Owner</span>
-                      <span>Assignee</span>
-                    </div>
+                {/* Column label row 26px */}
+                <div className="h-[26px] px-3 flex items-center justify-between text-[11px] text-[#6b7280] font-medium border-b border-black/[0.04]">
+                  <span>Task Name</span>
+                  <div className="flex items-center gap-6 pr-1">
+                    <span>Owner</span>
+                    <span>Assignee</span>
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    {/* Highlighted row */}
-                    <div className="relative bg-[#6E94CB]/10 border border-[#6E94CB]/25 rounded-[8px] p-2.5 flex items-center justify-between">
-                      <div className="text-[13px] font-[500] text-[#0D0D0D]">
-                        Plan release
-                      </div>
-                      <div className="flex items-center gap-4 pr-2">
-                        {/* Two initial circles Alex and Sam */}
-                        <div className="flex items-center -space-x-1.5">
-                          <span className="w-6 h-6 rounded-full bg-[#6E94CB] text-white text-[11px] font-semibold flex items-center justify-center border-2 border-white">
-                            A
-                          </span>
-                          <span className="w-6 h-6 rounded-full bg-[#7957EC] text-white text-[11px] font-semibold flex items-center justify-center border-2 border-white">
-                            S
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Small #6E94CB cursor chip labelled "Sam" overlapping row */}
-                      <div className="absolute -bottom-3 right-3 z-20 flex items-center gap-1 bg-[#6E94CB] text-white text-[11px] font-medium px-2 py-0.5 rounded shadow-sm">
-                        <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
-                          <path d="M3 3l7 18 3-7 7-3L3 3z" />
-                        </svg>
-                        <span>Sam</span>
-                      </div>
+                {/* Highlighted row 44px with #eef3ff accent tint */}
+                <div className="h-[44px] px-3 bg-[#eef3ff] flex items-center justify-between">
+                  <span className="text-[13px] font-medium text-[#111418] truncate">
+                    Plan release
+                  </span>
+                  <div className="flex items-center gap-5 pr-1">
+                    {/* Owner: neutral avatar circle + Alex */}
+                    <div className="flex items-center gap-1">
+                      <span className="w-[18px] h-[18px] rounded-full bg-[#e5e7eb] text-[#374151] text-[10px] font-semibold flex items-center justify-center">
+                        A
+                      </span>
+                      <span className="text-[11px] font-medium text-[#111418]">Alex</span>
                     </div>
-
-                    {/* Standard rows */}
-                    <div className="p-2.5 flex items-center justify-between text-[13px] border-b border-black/[0.04]">
-                      <span className="text-[#0D0D0D]">Telemetry ingestion</span>
-                      <div className="flex items-center gap-6 text-[12px] text-[#575657] pr-2">
-                        <span className="w-5 h-5 rounded-full bg-black/5 text-[#0D0D0D] flex items-center justify-center font-medium">S</span>
-                        <span className="w-5 h-5 rounded-full bg-black/5 text-[#0D0D0D] flex items-center justify-center font-medium">M</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 flex items-center justify-between text-[13px] border-b border-black/[0.04]">
-                      <span className="text-[#0D0D0D]">Consensus gate audit</span>
-                      <div className="flex items-center gap-6 text-[12px] text-[#575657] pr-2">
-                        <span className="w-5 h-5 rounded-full bg-black/5 text-[#0D0D0D] flex items-center justify-center font-medium">M</span>
-                        <span className="w-5 h-5 rounded-full bg-black/5 text-[#0D0D0D] flex items-center justify-center font-medium">A</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 flex items-center justify-between text-[13px]">
-                      <span className="text-[#0D0D0D]">Cycle prevention check</span>
-                      <div className="flex items-center gap-6 text-[12px] text-[#575657] pr-2">
-                        <span className="w-5 h-5 rounded-full bg-black/5 text-[#0D0D0D] flex items-center justify-center font-medium">A</span>
-                        <span className="w-5 h-5 rounded-full bg-black/5 text-[#0D0D0D] flex items-center justify-center font-medium">S</span>
-                      </div>
+                    {/* Assignee: neutral avatar circle + Sam */}
+                    <div className="flex items-center gap-1">
+                      <span className="w-[18px] h-[18px] rounded-full bg-[#e5e7eb] text-[#374151] text-[10px] font-semibold flex items-center justify-center">
+                        S
+                      </span>
+                      <span className="text-[11px] font-medium text-[#111418]">Sam</span>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Sam cursor tag: glides from (-28px, -18px) to (200, 268) over 0.8s after stage lands */}
+              <motion.div
+                initial={shouldReduceMotion ? false : { x: -28, y: -18, opacity: 0 }}
+                whileInView={shouldReduceMotion ? {} : { x: 0, y: 0, opacity: 1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.8, delay: 0.5, ease: customEase }}
+                style={{
+                  position: 'absolute',
+                  left: '200px',
+                  top: '268px',
+                  zIndex: 30,
+                }}
+                className="flex items-center gap-1"
+              >
+                <svg className="w-3 h-3 text-[#2f6df6] fill-current drop-shadow-sm" viewBox="0 0 24 24">
+                  <path d="M3 3l7 18 3-7 7-3L3 3z" />
+                </svg>
+                <span className="h-[22px] px-2 rounded-full bg-[#2f6df6] text-white text-[11px] font-semibold flex items-center shadow-md">
+                  Sam
+                </span>
               </motion.div>
-            </div>
+            </motion.div>
           </div>
 
           {/* ================================================================= */}
-          {/* CARD 3: Explainable risk */}
+          {/* CARD C "Explainable risk" (338 × 340)                              */}
           {/* ================================================================= */}
-          <div className="bento-scroll-pop group relative rounded-[24px] overflow-visible flex flex-col h-auto md:h-[560px] min-h-[460px]">
-            {/* Separate background layer z-0 with radial dot pattern masked at all edges */}
-            <div className="absolute inset-0 rounded-[24px] overflow-hidden z-0 bg-[#F8F8F9] border border-black/10 group-hover:border-black/[0.18] transition-colors duration-200">
-              <div
-                style={{
-                  backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.12) 1px, transparent 1px)',
-                  backgroundSize: '16px 16px',
-                  maskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 30%, transparent 100%)',
-                  WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 60%, black 30%, transparent 100%)',
-                }}
-                className="absolute inset-0 pointer-events-none"
-              />
-            </div>
-
-            {/* Text block top-left z-20 */}
-            <div className="p-6 text-left shrink-0 relative z-20 min-h-[140px]">
-              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+          <div
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: '14px',
+              border: '1px solid rgba(0,0,0,.06)',
+              background: '#f7f8fa',
+            }}
+            className="w-full min-[1060px]:col-start-3 min-[1060px]:col-end-4 min-[1060px]:row-start-1 min-[1060px]:row-end-2 h-[340px]"
+          >
+            {/* Card text block */}
+            <div className="absolute top-[24px] left-[24px] right-[24px] z-30 pointer-events-none text-left">
+              <h3 className="text-[20px] leading-[24px] font-semibold text-[#111418] tracking-tight">
                 Explainable risk
               </h3>
-              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[320px]">
+              <p className="text-[14px] leading-[18px] text-[#5f6368] max-w-[270px] line-clamp-2 mt-1">
                 Every factor and weight behind a score is shown, never hidden.
               </p>
             </div>
 
-            {/* Mock UI: centered floating card with matching shadow and border z-10 */}
-            <div className="relative z-10 mt-4 flex-1 overflow-visible px-4 sm:px-6 pb-8 flex items-start justify-center">
-              <motion.div
-                style={shouldReduceMotion ? {} : { y: card3Y }}
-                className="relative w-full max-w-[340px] translate-x-2 md:translate-x-4 translate-y-2 md:translate-y-4"
+            {/* Mock stage: animates as single unit when 20% in view (180ms delay) */}
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 36, filter: 'blur(6px)' }}
+              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.9, delay: 0.18, ease: customEase }}
+              className="absolute inset-0 pointer-events-none select-none"
+            >
+              {/* Back panel behind it: clean peeking card, lower opacity */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '150px',
+                  top: '190px',
+                  width: '234px',
+                  height: '180px',
+                  borderRadius: '14px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  padding: '12px',
+                  opacity: 0.45,
+                  filter: 'blur(0.8px)',
+                  zIndex: 10,
+                }}
               >
-                {/* Second faded card offset 14px down-right behind it */}
-                <div
-                  style={{
-                    transform: 'translate(14px, 14px)',
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.06)',
-                  }}
-                  className="absolute inset-0 bg-white/70 border border-black/[0.06] rounded-[12px] opacity-45 pointer-events-none"
-                />
-
-                {/* Front Card with soft shadow */}
-                <div
-                  style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                  className="relative bg-white border border-black/[0.06] rounded-[12px] p-5 select-none z-10"
-                >
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#6E94CB]/20 text-[#2B4E85] text-[12px] font-medium flex items-center justify-center">
-                        A
-                      </span>
-                      <span className="text-[13px] font-[500] text-[#0D0D0D]">PROJ-142</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[12px] font-medium bg-[#D6C6A1]/35 text-[#5C4D1D]">
-                      Medium
+                <div className="flex items-center justify-between pb-1.5 border-b border-black/[0.05]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-[22px] h-[22px] rounded-full bg-[#e5e7eb] text-[#374151] text-[10.5px] font-semibold flex items-center justify-center">
+                      B
                     </span>
+                    <span className="font-mono text-[12px] text-[#6b7280] font-medium">PROJ-103</span>
                   </div>
-
-                  {/* Issue Title */}
-                  <div className="mt-3 text-[14px] font-[600] text-[#0D0D0D]">
-                    Design wireframes
-                  </div>
-
-                  {/* 3 Real Factor rows from src/convex/analytics.ts */}
-                  <div className="mt-4 space-y-3">
-                    {/* Factor 1: Blocked work (max 30 pts in risk engine) */}
-                    <div>
-                      <div className="flex items-center justify-between text-[13px] mb-1.5">
-                        <span className="text-[#0D0D0D] font-normal">Blocked work</span>
-                        <span className="text-[12px] font-medium text-[#575657]">30 pts</span>
-                      </div>
-                      <div className="w-full h-[6px] rounded-full bg-black/[0.06] overflow-hidden">
-                        <div
-                          style={{ width: '60%' }}
-                          className="h-full rounded-full bg-[#83DD79]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Factor 2: Overdue (max 30 pts in risk engine) */}
-                    <div>
-                      <div className="flex items-center justify-between text-[13px] mb-1.5">
-                        <span className="text-[#0D0D0D] font-normal">Overdue</span>
-                        <span className="text-[12px] font-medium text-[#575657]">30 pts</span>
-                      </div>
-                      <div className="w-full h-[6px] rounded-full bg-black/[0.06] overflow-hidden">
-                        <div
-                          style={{ width: '50%' }}
-                          className="h-full rounded-full bg-[#D6C6A1]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Factor 3: Stale (max 10 pts in risk engine) */}
-                    <div>
-                      <div className="flex items-center justify-between text-[13px] mb-1.5">
-                        <span className="text-[#0D0D0D] font-normal">Stale</span>
-                        <span className="text-[12px] font-medium text-[#575657]">10 pts</span>
-                      </div>
-                      <div className="w-full h-[6px] rounded-full bg-black/[0.06] overflow-hidden">
-                        <div
-                          style={{ width: '40%' }}
-                          className="h-full rounded-full bg-[#D78FC6]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Full-width black button */}
-                  <button
-                    type="button"
-                    className="w-full mt-5 bg-[#0D0D0D] text-white text-[13px] font-medium py-2.5 rounded-[8px] hover:bg-[#262626] transition-colors"
-                  >
-                    View explanation
-                  </button>
+                  <span className="h-[20px] px-2 rounded-full text-[10.5px] font-medium bg-[#e2e4e8] text-[#1f2937] flex items-center">
+                    High
+                  </span>
                 </div>
-              </motion.div>
-            </div>
+                <div className="mt-2 text-[14px] font-semibold text-[#111418]">
+                  Audit chain commit
+                </div>
+                <div className="mt-2.5">
+                  <div className="w-full h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                    <div className="h-full bg-[#111418] rounded-full w-[40%]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Front panel: fully visible with #111418 button */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '52px',
+                  top: '108px',
+                  width: '234px',
+                  height: '198px',
+                  borderRadius: '14px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  padding: '12px',
+                  zIndex: 20,
+                }}
+                className="flex flex-col justify-between"
+              >
+                {/* Header: neutral avatar + PROJ-142 + neutral Medium pill */}
+                <div className="flex items-center justify-between pb-1.5 border-b border-black/[0.05]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-[22px] h-[22px] rounded-full bg-[#e5e7eb] text-[#374151] text-[10.5px] font-semibold flex items-center justify-center">
+                      A
+                    </span>
+                    <span className="font-mono text-[12px] text-[#6b7280] font-medium">PROJ-142</span>
+                  </div>
+                  <span className="h-[20px] px-2 rounded-full text-[10.5px] font-medium bg-[#eceef1] text-[#4b5563] flex items-center">
+                    Medium
+                  </span>
+                </div>
+
+                {/* Title */}
+                <div className="text-[14px] font-semibold text-[#111418] leading-tight">
+                  Design wireframes
+                </div>
+
+                {/* 3 risk rows with #111418 fill on #eceef1 track, scaleX animation on scroll */}
+                <div className="space-y-1">
+                  {/* Row 1: Blocked work */}
+                  <div className="h-[24px] flex flex-col justify-center">
+                    <div className="flex items-center justify-between text-[11px] text-[#111418] mb-0.5">
+                      <span>Blocked work</span>
+                      <span className="text-[10.5px] text-[#6b7280] font-medium">30 pts</span>
+                    </div>
+                    <div className="w-full h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                      <motion.div
+                        initial={shouldReduceMotion ? false : { scaleX: 0 }}
+                        whileInView={shouldReduceMotion ? {} : { scaleX: 1 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={{ duration: 0.8, delay: 0.4, ease: customEase }}
+                        style={{ transformOrigin: 'left' }}
+                        className="h-full bg-[#111418] rounded-full w-[60%]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Overdue */}
+                  <div className="h-[24px] flex flex-col justify-center">
+                    <div className="flex items-center justify-between text-[11px] text-[#111418] mb-0.5">
+                      <span>Overdue</span>
+                      <span className="text-[10.5px] text-[#6b7280] font-medium">30 pts</span>
+                    </div>
+                    <div className="w-full h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                      <motion.div
+                        initial={shouldReduceMotion ? false : { scaleX: 0 }}
+                        whileInView={shouldReduceMotion ? {} : { scaleX: 1 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={{ duration: 0.8, delay: 0.46, ease: customEase }}
+                        style={{ transformOrigin: 'left' }}
+                        className="h-full bg-[#111418] rounded-full w-[50%]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Stale */}
+                  <div className="h-[24px] flex flex-col justify-center">
+                    <div className="flex items-center justify-between text-[11px] text-[#111418] mb-0.5">
+                      <span>Stale</span>
+                      <span className="text-[10.5px] text-[#6b7280] font-medium">10 pts</span>
+                    </div>
+                    <div className="w-full h-[5px] rounded-full bg-[#eceef1] overflow-hidden">
+                      <motion.div
+                        initial={shouldReduceMotion ? false : { scaleX: 0 }}
+                        whileInView={shouldReduceMotion ? {} : { scaleX: 1 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={{ duration: 0.8, delay: 0.52, ease: customEase }}
+                        style={{ transformOrigin: 'left' }}
+                        className="h-full bg-[#111418] rounded-full w-[35%]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Primary dark #111418 button */}
+                <button
+                  type="button"
+                  style={{
+                    width: '100%',
+                    height: '32px',
+                    backgroundColor: '#111418',
+                    color: '#ffffff',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                  }}
+                  className="flex items-center justify-center cursor-pointer hover:bg-[#262626] transition-colors"
+                >
+                  View explanation
+                </button>
+              </div>
+            </motion.div>
           </div>
 
           {/* ================================================================= */}
-          {/* CARD 4: Dependencies without loops (Row 2 Spans all 3 columns) */}
+          {/* CARD D "Dependencies without loops" (688 × 340)                   */}
           {/* ================================================================= */}
-          <div className="bento-scroll-pop md:col-span-3 group relative rounded-[24px] overflow-visible flex flex-col md:flex-row h-auto md:h-[340px] min-h-[480px] md:min-h-[340px]">
-            {/* Single background layer covering full card width z-0 with faint grid masked by radial gradient */}
-            <div className="absolute inset-0 rounded-[24px] overflow-hidden z-0 bg-[#F8F8F9] border border-black/10 group-hover:border-black/[0.18] transition-colors duration-200">
-              <div
-                style={{
-                  backgroundImage:
-                    'linear-gradient(to right, rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px)',
-                  backgroundSize: '24px 24px',
-                  maskImage:
-                    'radial-gradient(ellipse 75% 70% at 65% 50%, black 25%, transparent 100%)',
-                  WebkitMaskImage:
-                    'radial-gradient(ellipse 75% 70% at 65% 50%, black 25%, transparent 100%)',
-                }}
-                className="absolute inset-0 pointer-events-none"
-              />
-            </div>
+          <div
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: '14px',
+              border: '1px solid rgba(0,0,0,.06)',
+              background: '#f7f8fa',
+            }}
+            className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-4 min-[1060px]:row-start-2 min-[1060px]:row-end-3 h-[340px]"
+          >
+            {/* Seamless faint grid background across the whole card with soft radial fade */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage:
+                  'linear-gradient(to right, rgba(0,0,0,.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.045) 1px, transparent 1px)',
+                backgroundSize: '24px 24px',
+                maskImage: 'radial-gradient(ellipse at 50% 50%, #000 30%, transparent 80%)',
+                WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 30%, transparent 80%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
+            />
 
-            {/* Text block top-left z-20 (does not overlap diagram) */}
-            <div className="p-6 md:p-8 text-left shrink-0 relative z-20 md:w-[320px] pointer-events-none">
-              <h3 className="text-[22px] font-[500] text-[#0D0D0D] tracking-[-0.02em] leading-snug">
+            {/* Card text block: max-width 360px, max 2 lines, does not touch diagram heading */}
+            <div className="absolute top-[24px] left-[24px] right-[24px] z-30 pointer-events-none text-left">
+              <h3 className="text-[20px] leading-[24px] font-semibold text-[#111418] tracking-tight">
                 Dependencies without loops
               </h3>
-              <p className="text-[15px] leading-[1.45] text-[#575657] mt-2 max-w-[300px]">
-                Circular blocking chains are rejected before they are saved.
+              <p className="text-[14px] leading-[18px] text-[#5f6368] max-w-[360px] line-clamp-2 mt-1">
+                Circular blocking chains are rejected before they are saved into the DAG.
               </p>
             </div>
 
-            {/* Diagram: separate layer on top of background spanning full width z-10 */}
-            <div className="relative md:absolute md:inset-0 z-10 w-full h-[290px] md:h-full overflow-visible flex items-center">
-              <motion.div
-                style={shouldReduceMotion ? {} : { y: card4Y }}
-                className="relative w-full h-full overflow-visible"
+            {/* Heading at left 28, top 108: 7px #111418 square bullet + Release 2.4 (15px semibold) & Due Jun 30 (10.5px muted) */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '28px',
+                top: '108px',
+                zIndex: 15,
+              }}
+              className="pointer-events-none select-none text-left"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="w-[7px] h-[7px] rounded-[1.5px] bg-[#111418] inline-block shrink-0" />
+                <span className="text-[15px] font-semibold text-[#111418] leading-none">Release 2.4</span>
+              </div>
+              <span className="text-[10.5px] text-[#6b7280] mt-1 block pl-[13px]">Due Jun 30</span>
+            </div>
+
+            {/* Mock stage: animates as single unit when 20% in view (270ms delay) */}
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 36, filter: 'blur(6px)' }}
+              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.9, delay: 0.27, ease: customEase }}
+              className="w-[688px] h-[340px] origin-top-left scale-[0.46] min-[390px]:scale-[0.52] min-[480px]:scale-[0.66] sm:scale-[0.85] min-[1060px]:scale-100 min-[1060px]:inset-0 min-[1060px]:absolute pointer-events-none select-none"
+            >
+              {/* SVG Connectors: stroke #c3c7ce, 1.25px, small arrowheads; dashed loop in #6b7280 */}
+              <svg
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '688px',
+                  height: '340px',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+                viewBox="0 0 688 340"
+                fill="none"
               >
-                {/* SVG Connectors across the entire card */}
-                <svg
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                  viewBox="0 0 1000 300"
-                  preserveAspectRatio="none"
-                >
-                  <defs>
-                    <marker
-                      id="workflow-arrow"
-                      markerWidth="8"
-                      markerHeight="8"
-                      refX="6"
-                      refY="3"
-                      orient="auto"
-                    >
-                      <polygon points="0 0, 6 3, 0 6" fill="#575657" />
-                    </marker>
-                    <marker
-                      id="workflow-arrow-rejected"
-                      markerWidth="8"
-                      markerHeight="8"
-                      refX="6"
-                      refY="3"
-                      orient="auto"
-                    >
-                      <polygon points="0 0, 6 3, 0 6" fill="#D78FC6" />
-                    </marker>
-                  </defs>
+                <defs>
+                  <marker
+                    id="diagram-arrowhead-neutral"
+                    markerWidth="6"
+                    markerHeight="6"
+                    refX="5"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <path d="M0,0.5 L6,3 L0,5.5 Z" fill="#c3c7ce" />
+                  </marker>
+                  <marker
+                    id="diagram-arrowhead-loop"
+                    markerWidth="6"
+                    markerHeight="6"
+                    refX="5"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <path d="M0,0.5 L6,3 L0,5.5 Z" fill="#6b7280" />
+                  </marker>
+                </defs>
 
-                  {/* Start -> Node 1 */}
-                  <path
-                    d="M 290 150 C 320 150, 335 85, 365 85"
-                    fill="none"
-                    stroke="#575657"
-                    strokeWidth="1.5"
-                    vectorEffect="non-scaling-stroke"
-                    markerEnd="url(#workflow-arrow)"
-                  />
+                {/* 1. Root (148, 206) -> PROJ-101 (190, 168) S-curve */}
+                <motion.path
+                  d="M 148 206 C 170 206, 168 168, 190 168"
+                  stroke="#c3c7ce"
+                  strokeWidth="1.25"
+                  markerEnd="url(#diagram-arrowhead-neutral)"
+                  initial={shouldReduceMotion ? false : { pathLength: 0 }}
+                  whileInView={shouldReduceMotion ? {} : { pathLength: 1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.7, delay: 0.45, ease: customEase }}
+                />
 
-                  {/* Node 1 -> Node 2 */}
-                  <path
-                    d="M 525 85 C 545 85, 545 165, 565 165"
-                    fill="none"
-                    stroke="#575657"
-                    strokeWidth="1.5"
-                    vectorEffect="non-scaling-stroke"
-                    markerEnd="url(#workflow-arrow)"
-                  />
+                {/* 2. PROJ-101 (390, 168) -> PROJ-102 (450, 168) Straight horizontal */}
+                <motion.path
+                  d="M 390 168 L 450 168"
+                  stroke="#c3c7ce"
+                  strokeWidth="1.25"
+                  markerEnd="url(#diagram-arrowhead-neutral)"
+                  initial={shouldReduceMotion ? false : { pathLength: 0 }}
+                  whileInView={shouldReduceMotion ? {} : { pathLength: 1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.7, delay: 0.65, ease: customEase }}
+                />
 
-                  {/* Node 2 -> Node 3 */}
-                  <path
-                    d="M 725 165 C 745 165, 745 85, 765 85"
-                    fill="none"
-                    stroke="#575657"
-                    strokeWidth="1.5"
-                    vectorEffect="non-scaling-stroke"
-                    markerEnd="url(#workflow-arrow)"
-                  />
+                {/* 3. PROJ-102 bottom (550, 206) -> PROJ-103 right edge (520, 270) Curve down and left */}
+                <motion.path
+                  d="M 550 206 C 550 250, 545 270, 520 270"
+                  stroke="#c3c7ce"
+                  strokeWidth="1.25"
+                  markerEnd="url(#diagram-arrowhead-neutral)"
+                  initial={shouldReduceMotion ? false : { pathLength: 0 }}
+                  whileInView={shouldReduceMotion ? {} : { pathLength: 1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.7, delay: 0.85, ease: customEase }}
+                />
 
-                  {/* Dashed connector back: Node 3 -> Node 1 (Cycle Rejected loop) */}
-                  <path
-                    d="M 845 125 C 845 268, 445 268, 445 125"
-                    fill="none"
-                    stroke="#D78FC6"
-                    strokeWidth="1.5"
-                    strokeDasharray="6 6"
-                    vectorEffect="non-scaling-stroke"
-                    markerEnd="url(#workflow-arrow-rejected)"
-                  />
-                </svg>
+                {/* 4. Dashed (4 4) curve in #6b7280 from PROJ-103 left (320, 270) up to PROJ-101 bottom (290, 206) */}
+                <motion.path
+                  d="M 320 270 C 240 295, 230 240, 290 206"
+                  stroke="#6b7280"
+                  strokeWidth="1.25"
+                  strokeDasharray="4 4"
+                  markerEnd="url(#diagram-arrowhead-loop)"
+                  initial={shouldReduceMotion ? false : { pathLength: 0 }}
+                  whileInView={shouldReduceMotion ? {} : { pathLength: 1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.7, delay: 1.05, ease: customEase }}
+                />
+              </svg>
 
-                {/* Workflow Nodes with soft shadows */}
-                <div className="relative w-full h-full overflow-visible">
-                  {/* Start Chip: at about 28-30% from the left */}
-                  <div className="absolute left-[2%] md:left-[27%] top-[125px] md:top-[135px] z-20">
-                    <div
-                      style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                      className="bg-white border border-black/[0.06] rounded-full px-3 py-1 flex items-center gap-1.5 select-none"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-[#83DD79]" />
-                      <span className="text-[12px] font-medium text-[#0D0D0D]">Start</span>
-                    </div>
-                  </div>
-
-                  {/* Node 1: PROJ-101 */}
-                  <div className="absolute left-[16%] md:left-[36%] top-[30px] md:top-[45px] z-20 w-[125px] sm:w-[150px] md:w-[170px]">
-                    <div
-                      style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                      className="bg-white border border-black/[0.06] rounded-[12px] p-3 select-none"
-                    >
-                      <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] mb-2">
-                        <span className="text-[12px] font-mono text-[#575657]">PROJ-101</span>
-                        <span className="px-1.5 py-0.5 rounded text-[12px] font-medium bg-[#83DD79]/25 text-[#1B4A1D]">
-                          Passed
-                        </span>
-                      </div>
-                      <div className="text-[13px] font-[500] text-[#0D0D0D] truncate">
-                        Define schema rules
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Node 2: PROJ-102 */}
-                  <div className="absolute left-[44%] md:left-[56%] top-[110px] md:top-[125px] z-20 w-[125px] sm:w-[150px] md:w-[170px]">
-                    <div
-                      style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                      className="bg-white border border-black/[0.06] rounded-[12px] p-3 select-none"
-                    >
-                      <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] mb-2">
-                        <span className="text-[12px] font-mono text-[#575657]">PROJ-102</span>
-                        <span className="px-1.5 py-0.5 rounded text-[12px] font-medium bg-[#6E94CB]/25 text-[#2B4E85]">
-                          Running
-                        </span>
-                      </div>
-                      <div className="text-[13px] font-[500] text-[#0D0D0D] truncate">
-                        Transition gate check
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Node 3: PROJ-103 (fully visible with room before the right edge) */}
-                  <div className="absolute left-[70%] md:left-[76%] top-[30px] md:top-[45px] z-20 w-[125px] sm:w-[150px] md:w-[170px]">
-                    <div
-                      style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                      className="bg-white border border-black/[0.06] rounded-[12px] p-3 select-none"
-                    >
-                      <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] mb-2">
-                        <span className="text-[12px] font-mono text-[#575657]">PROJ-103</span>
-                        <span className="px-1.5 py-0.5 rounded text-[12px] font-medium bg-[#D78FC6]/25 text-[#4A1D43]">
-                          Blocked
-                        </span>
-                      </div>
-                      <div className="text-[13px] font-[500] text-[#0D0D0D] truncate">
-                        Audit chain commit
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cycle rejected pill on dashed return path (opaque white pill with shadow) */}
-                  <div className="absolute left-[44%] md:left-[56%] top-[215px] md:top-[235px] z-20">
-                    <div
-                      style={{ boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
-                      className="bg-white border border-[#D78FC6]/60 rounded-full px-3.5 py-1 flex items-center gap-1.5 select-none"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D78FC6]" />
-                      <span className="text-[12px] font-medium text-[#4A1D43] whitespace-nowrap">
-                        Cycle rejected
-                      </span>
-                    </div>
-                  </div>
+              {/* Root pill at left 28, top 186 (120 × 40, white, rounded-full, shadow-sm) */}
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97 }}
+                whileInView={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: 0.35, ease: customEase }}
+                style={{
+                  position: 'absolute',
+                  left: '28px',
+                  top: '186px',
+                  width: '120px',
+                  height: '40px',
+                  borderRadius: '9999px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  zIndex: 20,
+                }}
+                className="flex items-center pl-2 pr-3 gap-2"
+              >
+                <div className="w-[24px] h-[24px] rounded-full bg-[#e5e7eb] text-[#374151] text-[11px] font-semibold flex items-center justify-center shrink-0">
+                  A
+                </div>
+                <div className="flex flex-col text-left leading-tight">
+                  <span className="text-[12.5px] font-semibold text-[#111418]">Alex</span>
+                  <span className="text-[10px] text-[#6b7280]">Eng lead</span>
                 </div>
               </motion.div>
-            </div>
+
+              {/* Node PROJ-101 "Define schema rules": left 190, top 130 (200 × 76) */}
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97 }}
+                whileInView={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: 0.45, ease: customEase }}
+                style={{
+                  position: 'absolute',
+                  left: '190px',
+                  top: '130px',
+                  width: '200px',
+                  height: '76px',
+                  borderRadius: '12px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  padding: '8px',
+                  zIndex: 20,
+                }}
+                className="flex flex-col justify-between text-left"
+              >
+                {/* Row 1: gray icon + ticket id + Passed pill */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-[20px] h-[20px] rounded-[5px] bg-[#f3f4f6] text-[#6b7280] flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                      </svg>
+                    </div>
+                    <span className="font-mono text-[10.5px] text-[#6b7280]">PROJ-101</span>
+                  </div>
+                  {/* Passed: white with gray border and small check icon */}
+                  <span className="h-[18px] px-1.5 rounded-full text-[10px] font-medium bg-white border border-[#d1d5db] text-[#111418] flex items-center gap-1">
+                    <svg className="w-2.5 h-2.5 text-[#111418]" viewBox="0 0 12 12" fill="none">
+                      <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span>Passed</span>
+                  </span>
+                </div>
+                {/* Row 2: title at 13px semibold */}
+                <div className="text-[13px] font-semibold text-[#111418] truncate leading-tight">
+                  Define schema rules
+                </div>
+                {/* Row 3: #f3f4f6 inner box (20px tall) with 10.5px muted detail */}
+                <div className="h-[20px] bg-[#f3f4f6] rounded px-1.5 flex items-center text-[10.5px] text-[#6b7280] truncate">
+                  Blocks PROJ-102
+                </div>
+              </motion.div>
+
+              {/* Node PROJ-102 "Transition gate check": left 450, top 130 (200 × 76) */}
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97 }}
+                whileInView={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: 0.55, ease: customEase }}
+                style={{
+                  position: 'absolute',
+                  left: '450px',
+                  top: '130px',
+                  width: '200px',
+                  height: '76px',
+                  borderRadius: '12px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  padding: '8px',
+                  zIndex: 20,
+                }}
+                className="flex flex-col justify-between text-left"
+              >
+                {/* Row 1: gray icon + ticket id + Running pill with #2f6df6 accent dot */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-[20px] h-[20px] rounded-[5px] bg-[#f3f4f6] text-[#6b7280] flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="9" />
+                      </svg>
+                    </div>
+                    <span className="font-mono text-[10.5px] text-[#6b7280]">PROJ-102</span>
+                  </div>
+                  {/* Running: gray fill with small accent dot #2f6df6 */}
+                  <span className="h-[18px] px-1.5 rounded-full text-[10px] font-medium bg-[#eceef1] text-[#111418] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2f6df6]" />
+                    <span>Running</span>
+                  </span>
+                </div>
+                {/* Row 2: title at 13px semibold */}
+                <div className="text-[13px] font-semibold text-[#111418] truncate leading-tight">
+                  Transition gate check
+                </div>
+                {/* Row 3: #f3f4f6 inner box with detail */}
+                <div className="h-[20px] bg-[#f3f4f6] rounded px-1.5 flex items-center text-[10.5px] text-[#6b7280] truncate">
+                  Blocks PROJ-103
+                </div>
+              </motion.div>
+
+              {/* Node PROJ-103 "Audit chain commit": left 320, top 232 (200 × 76) */}
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97 }}
+                whileInView={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: 0.65, ease: customEase }}
+                style={{
+                  position: 'absolute',
+                  left: '320px',
+                  top: '232px',
+                  width: '200px',
+                  height: '76px',
+                  borderRadius: '12px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,.06)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  padding: '8px',
+                  zIndex: 20,
+                }}
+                className="flex flex-col justify-between text-left"
+              >
+                {/* Row 1: gray icon + ticket id + Blocked pill (solid #111418 with white text) */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-[20px] h-[20px] rounded-[5px] bg-[#f3f4f6] text-[#6b7280] flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <span className="font-mono text-[10.5px] text-[#6b7280]">PROJ-103</span>
+                  </div>
+                  {/* Blocked: solid #111418 with white text */}
+                  <span className="h-[18px] px-2 rounded-full text-[10px] font-medium bg-[#111418] text-white flex items-center">
+                    Blocked
+                  </span>
+                </div>
+                {/* Row 2: title at 13px semibold */}
+                <div className="text-[13px] font-semibold text-[#111418] truncate leading-tight">
+                  Audit chain commit
+                </div>
+                {/* Row 3: #f3f4f6 inner box with detail */}
+                <div className="h-[20px] bg-[#f3f4f6] rounded px-1.5 flex items-center text-[10.5px] text-[#6b7280] truncate">
+                  Requires PROJ-101
+                </div>
+              </motion.div>
+
+              {/* Opaque white pill "✕ Cycle rejected" centered on the curve: left 207, top 252 */}
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95 }}
+                whileInView={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: 1.15, ease: customEase }}
+                style={{
+                  position: 'absolute',
+                  left: '207px',
+                  top: '252px',
+                  height: '24px',
+                  borderRadius: '9999px',
+                  background: '#ffffff',
+                  border: '1px solid #d1d5db',
+                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  zIndex: 25,
+                }}
+                className="px-2.5 flex items-center gap-1.5"
+              >
+                <span className="text-[11px] font-medium text-[#111418] whitespace-nowrap">
+                  ✕ Cycle rejected
+                </span>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </div>
     </section>
   );
 }
-

@@ -1,267 +1,384 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check } from 'lucide-react';
-import { Reveal } from '../Reveal';
+import {
+  Check,
+  Layers,
+  GitBranch,
+  ShieldCheck,
+  Zap,
+  History,
+  ArrowRight,
+  Lock,
+  CheckCircle2,
+} from 'lucide-react';
 
 export function Section4KeyCapabilities() {
-  const [activeItem, setActiveItem] = useState(0);
+  const [activeCardIndex, setActiveCardIndex] = useState<number>(0);
+  const [visibleCards, setVisibleCards] = useState<Record<number, boolean>>({});
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const listItems = [
-    { id: 0, label: 'Deterministic Dependency Graphs', tag: 'DAG Logic', color: '#83DD79' },
-    { id: 1, label: 'Automated Transition Gates', tag: 'Rule Invariants', color: '#7957EC' },
-    { id: 2, label: 'Reactive State Synchronization', tag: 'Convex Sync', color: '#D6C6A1' },
-    { id: 3, label: 'Append-Only Audit Ledger', tag: 'Immutable Log', color: '#6E94CB' },
-    { id: 4, label: 'Multi-Tenant RBAC Governance', tag: 'Permissions', color: '#D78FC6' },
-  ];
 
   const cards = [
     {
       id: 0,
-      eyebrow: 'Graph Architecture',
       title: 'Deterministic Dependency Graphs',
+      icon: GitBranch,
       description:
         'Issue blocking links prevent premature moves, backed by depth-first search cycle checks that reject circular dependencies before database commit.',
-      paletteGradient: 'from-[#9FDA85]/25 via-[#83DD79]/15 to-transparent',
-      borderColor: 'border-[#83DD79]/30',
-      dotColor: '#83DD79',
-      preview: {
-        header: 'Circular Blocking Check',
-        line1: 'FORGE-101 -> FORGE-102 (Blocks)',
-        line2: 'FORGE-102 -> FORGE-103 (Blocks)',
-        status: 'Pass: Directed Acyclic Graph valid',
-      },
+      previewHeader: 'Circular Blocking Validation',
+      previewBadge: '0 Cycles Detected',
+      previewItems: [
+        {
+          from: 'FORGE-101',
+          to: 'FORGE-102',
+          relation: 'Blocks',
+          result: 'Acyclic Valid',
+        },
+        {
+          from: 'FORGE-102',
+          to: 'FORGE-103',
+          relation: 'Blocks',
+          result: 'Acyclic Valid',
+        },
+      ],
+      footerText: 'Depth-first search cycle check verified',
+      footerStatus: 'Status: Cycle-free DAG',
     },
     {
       id: 1,
-      eyebrow: 'Rule Invariants',
       title: 'Automated Transition Gates',
+      icon: ShieldCheck,
       description:
         'Rules like required assignees, review comment gates, and cleared blockers execute automatically on every state transition. Unvalidated mutations fail fast.',
-      paletteGradient: 'from-[#7957EC]/20 via-[#D78FC6]/12 to-transparent',
-      borderColor: 'border-[#7957EC]/30',
-      dotColor: '#7957EC',
-      preview: {
-        header: 'Transition Invariant Rules',
-        line1: 'Rule 1: Assignee required [OK]',
-        line2: 'Rule 2: Review approval comment [OK]',
-        status: 'Invariant checks passed (0 warnings)',
-      },
+      previewHeader: 'Transition Invariant Rules',
+      previewBadge: '2 Gates Enforced',
+      previewItems: [
+        {
+          rule: 'Assignee Invariant',
+          detail: 'Verified on in-progress state transitions',
+          result: 'Enforced',
+        },
+        {
+          rule: 'Review Sign-Off',
+          detail: 'Approval comment verified prior to merge',
+          result: 'Enforced',
+        },
+      ],
+      footerText: 'Pre-commit validation across state changes',
+      footerStatus: 'Status: 0 Invariant Warnings',
     },
     {
       id: 2,
-      eyebrow: 'Real-Time Sync',
       title: 'Reactive State Synchronization',
+      icon: Zap,
       description:
         'Every client query is a live reactive subscription backed by Convex. Issue movements, assignees, and status changes propagate without client polling.',
-      paletteGradient: 'from-[#BED390]/25 via-[#D6C6A1]/15 to-transparent',
-      borderColor: 'border-[#BED390]/30',
-      dotColor: '#BED390',
-      preview: {
-        header: 'Reactive Subscription Stream',
-        line1: 'Convex WebSocket subscription live',
-        line2: 'Real-time schema-validated mutations',
-        status: 'Live connection established',
-      },
+      previewHeader: 'Reactive Subscription Stream',
+      previewBadge: 'Live WebSocket',
+      previewItems: [
+        {
+          action: 'Issue State Mutated',
+          detail: 'FORGE-142 moved to Review',
+          result: '<12ms latency',
+        },
+        {
+          action: 'Client Subscriber Broadcast',
+          detail: 'All open sessions synchronized instantly',
+          result: 'Synchronized',
+        },
+      ],
+      footerText: 'Zero client polling • Reactive push sync',
+      footerStatus: 'Status: Connected',
     },
     {
       id: 3,
-      eyebrow: 'Audit Trail',
       title: 'Append-Only Audit Ledger',
+      icon: History,
       description:
         'An immutable activity log captures every state change, actor, and timestamp. System history cannot be modified, reordered, or deleted.',
-      paletteGradient: 'from-[#6E94CB]/22 via-[#9FDA85]/12 to-transparent',
-      borderColor: 'border-[#6E94CB]/30',
-      dotColor: '#6E94CB',
-      preview: {
-        header: 'Immutable Activity History',
-        line1: 'Action: FORGE-42 moved to Done',
-        line2: 'Actor: usr_lead_09 • 14:02:11 UTC',
-        status: 'State transition logged permanently',
-      },
+      previewHeader: 'Immutable Activity History',
+      previewBadge: 'Tamper-Proof',
+      previewItems: [
+        {
+          event: 'FORGE-42 moved to Done',
+          detail: 'Actor: usr_lead_09 • 14:02:11 UTC',
+          result: 'Permanent',
+        },
+        {
+          event: 'Transition gate invariant check',
+          detail: 'Ledger block #89420 verified',
+          result: 'Verified',
+        },
+      ],
+      footerText: 'Cryptographic append-only activity log',
+      footerStatus: 'Status: Immutable',
     },
   ];
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Respect prefers-reduced-motion
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mediaQuery.matches) {
+      setVisibleCards({ 0: true, 1: true, 2: true, 3: true });
+      setActiveCardIndex(-1);
+      return;
+    }
+
+    // 1. IntersectionObserver for fade-in and slide-up as cards enter viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = Number(entry.target.getAttribute('data-index'));
+            setVisibleCards((prev) => ({ ...prev, [index]: true }));
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    cardRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    // 2. Active card proximity tracking: card closest to viewport center has 100% opacity, others dim to 60%
     const handleScroll = () => {
-      // Find which card is closest to top of viewport
-      let closestIndex = 0;
+      if (window.innerWidth < 1024) {
+        // Under 1024px: keep all cards fully visible
+        setActiveCardIndex(-1);
+        return;
+      }
+
+      const viewportCenter = window.innerHeight / 2;
+      let closestIdx = 0;
       let minDistance = Infinity;
 
-      cardRefs.current.forEach((el, index) => {
+      cardRefs.current.forEach((el, idx) => {
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        const distance = Math.abs(rect.top - 120);
-        if (rect.top <= window.innerHeight * 0.6 && distance < minDistance) {
+        const cardCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(cardCenter - viewportCenter);
+        if (distance < minDistance) {
           minDistance = distance;
-          closestIndex = index;
+          closestIdx = idx;
         }
       });
 
-      setActiveItem(closestIndex);
+      setActiveCardIndex(closestIdx);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, []);
 
   return (
-    <section id="capabilities" className="landing-section bg-[#EFEFEF]">
-      <div className="landing-container">
-        {/* Section Header */}
-        <Reveal className="text-center mb-16">
-          <div className="landing-pill">
-            <span>Key Capabilities</span>
-          </div>
-          <h2>Everything a delivery team needs, built in.</h2>
-          <p className="subtext">
-            From task planning to automated validation gates, Forge gives your team the controls to move
-            fast, stay focused, and prevent regressions.
-          </p>
-        </Reveal>
+    <section id="capabilities" className="landing-section bg-[#EFEFEF] py-[48px] lg:py-[80px]">
+      <div className="landing-container max-w-[1200px] mx-auto px-4 sm:px-6">
+        {/* Two-column container: sticky left (44%), scrolling right (56%), gap 48px */}
+        <div className="flex flex-col lg:flex-row gap-[32px] lg:gap-[48px] items-start">
+          {/* ================================================================= */}
+          {/* LEFT COLUMN (sticky on desktop at top: 100px, flush left)        */}
+          {/* ================================================================= */}
+          <div className="w-full lg:w-[44%] shrink-0 lg:sticky lg:top-[100px] flex flex-col items-start text-left">
+            {/* Small rounded pill label with icon at the top */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.08] text-[13px] font-medium text-[#0D0D0D] shadow-xs mb-4">
+              <Layers className="w-3.5 h-3.5 text-[#2f6df6]" />
+              <span>Core Capabilities</span>
+            </div>
 
-        {/* Sticky Split Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start max-w-[1120px] mx-auto">
-          {/* Left Column: Sticky Left Card with 5 items */}
-          <div className="lg:col-span-5 lg:sticky lg:top-24">
-            <div className="landing-card p-6 bg-white border border-black/[0.06] space-y-3">
-              <div className="pb-3 border-b border-black/6">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-[#575657]">
-                  Architecture Overview
-                </span>
-                <h3 className="text-lg font-medium text-[#0D0D0D] mt-0.5">Core Guarantees</h3>
-              </div>
+            {/* Big bold heading (strictly left-aligned, eliminating unnecessary empty space) */}
+            <h2
+              style={{ textAlign: 'left', marginLeft: 0, marginRight: 0 }}
+              className="text-[32px] sm:text-[42px] lg:text-[52px] font-[600] tracking-[-0.035em] leading-[1.06] text-[#0D0D0D] text-left mb-4 w-full"
+            >
+              Everything a delivery team needs, built in.
+            </h2>
 
-              <div className="space-y-2 pt-1">
-                {listItems.map((item, idx) => {
-                  const isActive = activeItem === idx;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        setActiveItem(idx);
-                        if (cardRefs.current[idx]) {
-                          cardRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                      }}
-                      className={`p-3.5 rounded-xl cursor-pointer transition-all duration-200 border text-left flex items-center justify-between ${
-                        isActive
-                          ? 'bg-[#F8F8F8] border-black/[0.14] translate-x-1'
-                          : 'bg-transparent border-transparent hover:bg-black/2'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-2 h-2 rounded-full transition-colors ${
-                              isActive ? 'scale-125' : 'opacity-40'
-                            }`}
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <span
-                            className={`text-xs font-mono uppercase tracking-wider ${
-                              isActive ? 'text-[#0D0D0D] font-medium' : 'text-[#575657]'
-                            }`}
-                          >
-                            {item.tag}
-                          </span>
-                        </div>
-                        <h4
-                          className={`text-[14px] font-medium mt-1 ${
-                            isActive ? 'text-[#0D0D0D]' : 'text-[#575657]'
-                          }`}
-                        >
-                          {item.label}
-                        </h4>
-                      </div>
+            {/* Short gray description paragraph */}
+            <p
+              style={{ textAlign: 'left', marginLeft: 0, marginRight: 0 }}
+              className="text-[15px] sm:text-[16px] text-[#575657] leading-relaxed mb-6 max-w-[420px] text-left"
+            >
+              From task planning to automated validation gates, Forge gives your team the controls to move fast,
+              stay focused, and prevent regressions.
+            </p>
 
-                      {isActive && (
-                        <span
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+            {/* 3 small outlined pill tags with icons under the description */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/[0.1] bg-white text-[12px] font-medium text-[#0D0D0D] shadow-xs">
+                <GitBranch className="w-3.5 h-3.5 text-[#2f6df6]" />
+                <span>Cycle-free DAGs</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/[0.1] bg-white text-[12px] font-medium text-[#0D0D0D] shadow-xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#2f6df6]" />
+                <span>Automated gates</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/[0.1] bg-white text-[12px] font-medium text-[#0D0D0D] shadow-xs">
+                <Zap className="w-3.5 h-3.5 text-[#2f6df6]" />
+                <span>Real-time sync</span>
+              </span>
             </div>
           </div>
 
-          {/* Right Column: 4 Large Feature Cards (Sticky pile on desktop) */}
-          <div className="lg:col-span-7 space-y-8 lg:space-y-12">
+          {/* ================================================================= */}
+          {/* RIGHT COLUMN (scrolling stack of 4 cards, 16px gap, no wasted space)*/}
+          {/* ================================================================= */}
+          <div className="w-full lg:w-[56%] flex-1 flex flex-col gap-[12px] lg:gap-[16px]">
             {cards.map((item, index) => {
-              const zIndex = 10 + index * 5;
-              const isPrevious = index < activeItem;
+              const isVisible = visibleCards[index] ?? false;
+              const isFocused = activeCardIndex === -1 || activeCardIndex === index;
+
               return (
                 <div
                   key={item.id}
+                  data-index={index}
                   ref={(el) => {
                     cardRefs.current[index] = el;
                   }}
                   style={{
-                    zIndex,
-                    transform: isPrevious ? 'scale(0.96)' : 'scale(1)',
-                    transformOrigin: 'top center',
+                    opacity: isVisible ? (isFocused ? 1 : 0.6) : 0,
+                    transform: isVisible ? 'translateY(0)' : 'translateY(16px)',
+                    transition:
+                      'opacity 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
-                  className="lg:sticky lg:top-24 transition-all duration-300 transform-gpu"
+                  className="bg-[#fafafa] border border-black/[0.06] rounded-[16px] p-[24px] text-left hover:opacity-100 transition-opacity"
                 >
-                  <div className="landing-card p-6 sm:p-8 bg-white border border-black/[0.06] relative overflow-hidden">
-                    {/* Pastel gradient backdrop */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${item.paletteGradient} -z-10 pointer-events-none`}
-                    />
+                  {/* Card top row: small blue outline icon at top-left + bold title */}
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <item.icon className="w-5 h-5 text-[#2f6df6] shrink-0" strokeWidth={2} />
+                    <h3 className="text-[18px] sm:text-[20px] font-semibold text-[#0D0D0D] tracking-tight">
+                      {item.title}
+                    </h3>
+                  </div>
 
-                    {/* Top Row: Eyebrow chip + Index */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="landing-pill mb-0 py-1 px-3 text-[12px]">
-                        <span>{item.eyebrow}</span>
-                      </div>
-                      <span className="font-mono text-xs text-[#575657]">0{index + 1} / 04</span>
+                  {/* Gray description text below */}
+                  <p className="text-[14px] text-[#575657] leading-relaxed mb-4">
+                    {item.description}
+                  </p>
+
+                  {/* Polished Micro-UI Preview Box (replaced raw monospace dump) */}
+                  <div className="bg-white rounded-[12px] p-4 border border-black/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-left">
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] mb-3">
+                      <span className="text-[12.5px] font-semibold text-[#111418]">
+                        {item.previewHeader}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#eceef1] text-[10.5px] font-medium text-[#4b5563]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#2f6df6]" />
+                        <span>{item.previewBadge}</span>
+                      </span>
                     </div>
 
-                    {/* H3 Heading */}
-                    <h3 className="text-2xl font-medium text-[#0D0D0D] mb-3">{item.title}</h3>
+                    {/* Content Rows */}
+                    <div className="space-y-2">
+                      {item.id === 0 &&
+                        (item.previewItems as Array<{
+                          from: string;
+                          to: string;
+                          relation: string;
+                          result: string;
+                        }>).map((row, rIdx) => (
+                          <div
+                            key={rIdx}
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[11px] font-semibold bg-white px-1.5 py-0.5 rounded border border-black/[0.06] text-[#111418]">
+                                {row.from}
+                              </span>
+                              <ArrowRight className="w-3 h-3 text-[#9ca3af]" />
+                              <span className="font-mono text-[11px] font-semibold bg-white px-1.5 py-0.5 rounded border border-black/[0.06] text-[#111418]">
+                                {row.to}
+                              </span>
+                              <span className="text-[10.5px] text-[#6b7280]">({row.relation})</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[#166534] text-[11px] font-medium">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#166534]" />
+                              <span>{row.result}</span>
+                            </div>
+                          </div>
+                        ))}
 
-                    {/* Paragraph */}
-                    <p className="text-[15px] text-[#575657] mb-6 leading-relaxed">
-                      {item.description}
-                    </p>
+                      {item.id === 1 &&
+                        (item.previewItems as Array<{
+                          rule: string;
+                          detail: string;
+                          result: string;
+                        }>).map((row, rIdx) => (
+                          <div
+                            key={rIdx}
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium text-[#111418] text-[12px]">
+                                {row.rule}
+                              </span>
+                              <span className="text-[10.5px] text-[#6b7280]">{row.detail}</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-black/[0.06] text-[10.5px] font-medium text-[#111418]">
+                              <Check className="w-3 h-3 text-[#2f6df6]" />
+                              <span>{row.result}</span>
+                            </span>
+                          </div>
+                        ))}
 
-                    {/* Black 'Learn More' pill */}
-                    <div className="mb-6">
-                      <a
-                        href="#decisions"
-                        className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#0D0D0D] text-white text-xs font-medium hover:bg-black/80 transition-colors"
-                      >
-                        Learn More
-                      </a>
+                      {item.id === 2 &&
+                        (item.previewItems as Array<{
+                          action: string;
+                          detail: string;
+                          result: string;
+                        }>).map((row, rIdx) => (
+                          <div
+                            key={rIdx}
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium text-[#111418] text-[12px]">
+                                {row.action}
+                              </span>
+                              <span className="text-[10.5px] text-[#6b7280]">{row.detail}</span>
+                            </div>
+                            <span className="font-mono text-[10.5px] font-medium bg-white px-2 py-0.5 rounded border border-black/[0.06] text-[#2f6df6]">
+                              {row.result}
+                            </span>
+                          </div>
+                        ))}
+
+                      {item.id === 3 &&
+                        (item.previewItems as Array<{
+                          event: string;
+                          detail: string;
+                          result: string;
+                        }>).map((row, rIdx) => (
+                          <div
+                            key={rIdx}
+                            className="flex items-center justify-between text-[12px] bg-[#f7f8fa] border border-black/[0.04] rounded-lg px-3 py-2"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium text-[#111418] text-[12px]">
+                                {row.event}
+                              </span>
+                              <span className="text-[10.5px] text-[#6b7280]">{row.detail}</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-[#4b5563] bg-white px-2 py-0.5 rounded border border-black/[0.06]">
+                              <Lock className="w-2.5 h-2.5 text-[#6b7280]" />
+                              <span>{row.result}</span>
+                            </span>
+                          </div>
+                        ))}
                     </div>
 
-                    {/* Floating White Mini-UI Preview Box */}
-                    <div className="bg-white rounded-xl p-4 sm:p-5 border border-black/[0.06]">
-                      <div className="flex items-center justify-between pb-3 border-b border-black/5 mb-3">
-                        <span className="font-mono text-xs font-medium text-[#0D0D0D]">
-                          {item.preview.header}
-                        </span>
-                        <span
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: item.dotColor }}
-                        />
-                      </div>
-                      <div className="space-y-1.5 font-mono text-xs text-[#575657]">
-                        <div className="flex items-center gap-2">
-                          <Check className="w-3.5 h-3.5 text-[#83DD79]" />
-                          <span>{item.preview.line1}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="w-3.5 h-3.5 text-[#83DD79]" />
-                          <span>{item.preview.line2}</span>
-                        </div>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-black/5 text-[11px] text-[#0D0D0D] font-medium flex items-center justify-between">
-                        <span>{item.preview.status}</span>
-                        <span className="text-[#575657] font-mono">Status: Verified</span>
-                      </div>
+                    {/* Footer Row */}
+                    <div className="mt-3 pt-2.5 border-t border-black/[0.05] text-[11px] text-[#6b7280] flex items-center justify-between">
+                      <span>{item.footerText}</span>
+                      <span className="font-medium text-[#111418]">{item.footerStatus}</span>
                     </div>
                   </div>
                 </div>
