@@ -13,6 +13,9 @@ function copyBuildArtifacts() {
         const distDir = path.resolve(__dirname, "dist");
         const buildDir = path.resolve(__dirname, "build");
         if (fs.existsSync(distDir)) {
+          if (fs.existsSync(buildDir)) {
+            fs.rmSync(buildDir, { recursive: true, force: true });
+          }
           fs.cpSync(distDir, buildDir, { recursive: true, force: true });
         }
       } catch (err) {

@@ -1,45 +1,31 @@
-import { Reveal } from '../Reveal';
 import { CodeTerminal } from '@/components/ui/code-terminal';
 
-const code1 = `// Server-side workflow transition check
-export async function validateTransition(ctx, { issueId, nextStatus }) {
+const code1 = `export async function validateTransition(ctx, { issueId, nextStatus }) {
   const issue = await ctx.db.get(issueId);
-  const project = await ctx.db.get(issue.projectId);
-  const rule = project.workflow.find(s => s.id === nextStatus);
+  const rule = (await ctx.db.get(issue.projectId)).workflow.find(s => s.id === nextStatus);
   if (rule.requiresAssignee && !issue.assigneeId) {
     throw new Error("Assignee required before transition");
   }
-  if (rule.checkBlockers) {
-    const blockers = await getOpenBlockers(ctx, issueId);
-    if (blockers.length > 0) throw new Error("Unresolved blockers");
-  }
+  const blockers = rule.checkBlockers ? await getOpenBlockers(ctx, issueId) : [];
+  if (blockers.length > 0) throw new Error("Unresolved blockers");
 }`;
 
-const code2 = `// Depth-first search DFS cycle check
-export function hasCycle(graph, source, target) {
+const code2 = `export function hasCycle(graph, source, target) {
   const visited = new Set();
   function dfs(current) {
     if (current === source) return true;
     visited.add(current);
-    for (const next of graph.get(current) || []) {
-      if (!visited.has(next) && dfs(next)) {
-        return true;
-      }
-    }
-    return false;
+    const neighbors = graph.get(current) || [];
+    return neighbors.some(next => !visited.has(next) && dfs(next));
   }
   return dfs(target);
 }`;
 
-const code3 = `// Append immutable record to activity_events
-export async function logActivity(ctx, event) {
+const code3 = `export async function logActivity(ctx, event) {
+  const { tenantId, projectId, issueId, actorId, type, payload } = event;
   await ctx.db.insert("activity_events", {
-    tenantId: event.tenantId,
-    projectId: event.projectId,
-    issueId: event.issueId,
-    actorId: event.actorId,
-    eventType: event.type,
-    payload: event.payload,
+    tenantId, projectId, issueId, actorId,
+    eventType: type, payload,
     timestamp: Date.now(),
   });
 }`;
@@ -47,6 +33,7 @@ export async function logActivity(ctx, event) {
 export function Section10EngineeringDecisions() {
   const decisions = [
     {
+      cardClass: 'stack-card-1',
       tag: 'SERVER VALIDATION',
       title: 'Workflow Transition Invariants',
       quote:
@@ -56,6 +43,7 @@ export function Section10EngineeringDecisions() {
       code: code1,
     },
     {
+      cardClass: 'stack-card-2',
       tag: 'DAG ALGORITHMIC SAFETY',
       title: 'Depth-First Cycle Detection',
       quote:
@@ -65,6 +53,7 @@ export function Section10EngineeringDecisions() {
       code: code2,
     },
     {
+      cardClass: 'stack-card-3',
       tag: 'AUDIT INTEGRITY',
       title: 'Immutable Activity Ledger',
       quote:
@@ -76,27 +65,28 @@ export function Section10EngineeringDecisions() {
   ];
 
   return (
-    <section id="decisions" className="landing-section bg-[#EFEFEF]">
-      <div className="landing-container">
+    <section id="decisions" className="landing-section bg-[#EFEFEF] overflow-visible">
+      <div className="landing-container overflow-visible">
         {/* Section Header */}
-        <Reveal className="text-center mb-16">
-          <div className="landing-pill">
+        <div className="text-center mb-12 sm:mb-16">
+          <div className="landing-pill shadow-none mb-3">
             <span>Engineering Decisions</span>
           </div>
           <h2>Engineering decisions that define Forge.</h2>
           <p className="subtext">
             A look inside our technical architecture, database constraints, and algorithmic validation model.
           </p>
-        </Reveal>
+        </div>
 
-        {/* Technical Decisions List */}
-        <div className="space-y-8 max-w-[1040px] mx-auto">
+        {/* 3 Stacking Cards in Normal Flow */}
+        <div className="stack-wrapper">
           {decisions.map((d, idx) => (
-            <Reveal key={d.title} delayMs={idx * 80}>
-              <div
-                className="bg-white rounded-[20px] border border-black/[0.06] shadow-none hover:border-black/[0.14] transition-colors duration-200 p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center text-left cursor-default overflow-hidden"
-                style={{ borderRadius: '20px' }}
-              >
+            <div
+              key={d.title}
+              className={`stack-card ${d.cardClass}`}
+              style={{ alignSelf: 'start' }}
+            >
+              <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-6 min-[900px]:gap-8 items-center text-left">
                 {/* Left Column: Context & Explanation */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -104,7 +94,6 @@ export function Section10EngineeringDecisions() {
                       {d.tag}
                     </span>
                   </div>
-                  {/* Title is a link to the GitHub README (new tab, rel noopener) */}
                   <h3 className="text-xl sm:text-2xl font-bold text-[#0D0D0D] leading-snug">
                     <a
                       href="https://github.com/Akinmoldun/forge-platform#readme"
@@ -129,10 +118,11 @@ export function Section10EngineeringDecisions() {
                     charsPerTick={2}
                     tickMs={16}
                     initialDelay={300 + idx * 400}
+                    className="[&_pre]:text-[13px] [&_pre]:leading-relaxed [&_pre]:whitespace-pre-wrap text-[13px]"
                   />
                 </div>
               </div>
-            </Reveal>
+            </div>
           ))}
         </div>
       </div>
