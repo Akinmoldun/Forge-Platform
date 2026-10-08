@@ -69,6 +69,7 @@ export { Toggle, toggleVariants } from "./toggle"; // ~3KB - Toggle button
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group"; // ~4KB - Button group toggle
 export { Alert, AlertTitle, AlertDescription } from "./alert"; // ~3KB - Alert messages
 export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from "./table"; // ~4KB - Data tables
+export { Marquee, MarqueeContent, MarqueeEdge, MarqueeItem, type MarqueeProps } from "./marquee";
 
 // ============================================================================
 // ADVANCED COMPONENTS (Large bundle size - use sparingly)

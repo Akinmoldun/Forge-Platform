@@ -236,3 +236,30 @@
 .gradient-backdrop-blue {
   background: radial-gradient(circle at 50% 50%, rgba(110, 148, 203, 0.2) 0%, rgba(159, 218, 133, 0.08) 60%, rgba(255, 255, 255, 0) 100%);
 }
+
+@keyframes marquee-left {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(calc(-100% - var(--marquee-gap))); }
+}
+@keyframes marquee-right {
+  0% { transform: translateX(calc(-100% - var(--marquee-gap))); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-marquee-left {
+  animation: marquee-left var(--marquee-duration) linear var(--marquee-loop-count);
+}
+
+.animate-marquee-right {
+  animation: marquee-right var(--marquee-duration) linear var(--marquee-loop-count);
+}
+
+[data-slot="marquee-edge"][data-side="left"] {
+  background: linear-gradient(to right, #EFEFEF 0%, transparent 100%) !important;
+}
+
+[data-slot="marquee-edge"][data-side="right"] {
+  background: linear-gradient(to left, #EFEFEF 0%, transparent 100%) !important;
+}
+
+
