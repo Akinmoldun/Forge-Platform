@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
-import { ArrowRight, Loader2 } from 'lucide-react';
 import { Reveal } from '../Reveal';
 import {
   Marquee,
@@ -195,163 +194,109 @@ export function Section2Hero() {
     }
   };
 
-  const roleChips = [
-    { label: 'Owner', color: '#83DD79' },
-    { label: 'Admin', color: '#6E94CB' },
-    { label: 'Member', color: '#7957EC' },
-    { label: 'Viewer', color: '#D6C6A1' },
-  ];
-
   return (
-    <section id="hero" className="pt-28 sm:pt-36 pb-16 sm:pb-24 overflow-hidden relative">
-      <div className="landing-container text-center">
-        {/* Radiating 64px dark rounded app icon with thin dotted lines */}
-        <Reveal delayMs={0}>
-          <div className="relative flex items-center justify-center mx-auto w-56 h-32 mb-[20px]">
-            <svg
-              className="absolute inset-0 w-full h-full text-black/15 pointer-events-none"
-              viewBox="0 0 224 128"
-              fill="none"
-            >
-              {/* Radiating subtle dotted lines */}
-              <line x1="112" y1="64" x2="20" y2="20" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="204" y2="20" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="10" y2="64" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="214" y2="64" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="24" y2="108" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="200" y2="108" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="112" y2="10" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="112" y1="64" x2="112" y2="118" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              {/* Concentric subtle rings */}
-              <circle cx="112" cy="64" r="44" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
-              <circle cx="112" cy="64" r="58" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" opacity="0.35" />
-            </svg>
-            <div className="relative z-10 w-16 h-16 rounded-2xl bg-[#0D0D0D] text-white flex items-center justify-center border border-white/20 select-none">
-              <span className="font-bold text-2xl tracking-tight">F</span>
-            </div>
+    <section id="hero" className="pt-[84px] md:pt-[92px] pb-14 sm:pb-20 overflow-hidden relative">
+      {/* Outer panel container: container minus 12px gutter each side (max-width 1440px, centered) */}
+      <div className="w-full max-w-[1440px] mx-auto px-3">
+        <div className="hero-panel flex flex-col items-center justify-center text-center px-4 sm:px-8 py-16 sm:py-20 md:py-24">
+          {/* Layer 2: Pastel Haze */}
+          <div className="hero-pastel-haze" aria-hidden="true" />
+
+          {/* Layer 3: Fine Dotted Texture */}
+          <div className="hero-dotted-texture" aria-hidden="true" />
+
+          {/* Layer 4: Glowing Sun rising from bottom edge */}
+          <div className="hero-sun-container" aria-hidden="true">
+            <div className="hero-sun-diffuse-glow" />
+            <div className="hero-sun-disc" />
           </div>
-        </Reveal>
 
-        {/* Eyebrow chip (text-only, 13px) */}
-        {/* Exact spacing: icon to chip 20px, chip to H1 24px */}
-        <Reveal delayMs={80}>
-          <div className="landing-pill mx-auto mb-[24px]">
-            <span>Engineering Workflow Platform</span>
-          </div>
-        </Reveal>
-
-        {/* H1 Heading (24px space from chip) */}
-        <Reveal delayMs={160}>
-          <h1 className="max-w-[920px] mx-auto text-[#0D0D0D] tracking-tight">
-            Ship work with rules your whole team can trust
-          </h1>
-        </Reveal>
-
-        {/* Subtitle (exact spacing: H1 to subtext 20px) */}
-        <Reveal delayMs={240}>
-          <p className="subtext mt-[20px] text-[#575657] max-w-[640px] mx-auto">
-            Forge combines projects, custom workflows, issue dependencies and explainable risk scoring
-            into one multi-tenant workspace.
-          </p>
-        </Reveal>
-
-        {/* Dual CTAs (exact spacing: subtext to buttons 32px, buttons to role chips 24px) */}
-        {/* Buttons are 48px tall, 12px apart, "Try demo" black and "View on GitHub" white with a 1px border */}
-        <Reveal delayMs={320}>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] mt-[32px] mb-[24px]">
-            <button
-              onClick={handleStart}
-              disabled={isLoading}
-              className="w-full sm:w-auto landing-btn-primary h-[48px] px-7 text-[15px] select-none"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Launching demo...</span>
-                </>
-              ) : (
-                <>
-                  <span>Try demo</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-            <a
-              href="https://github.com/Akinmoldun/forge-platform"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full sm:w-auto landing-btn-secondary h-[48px] px-7 text-[15px] select-none"
-            >
-              View on GitHub
-            </a>
-          </div>
-          {error && (
-            <p className="text-xs text-red-600 mb-4">{error}</p>
-          )}
-        </Reveal>
-
-        {/* Role chips row: 4 small chips (Owner, Admin, Member, Viewer) with small colored dots. No user count. No fake avatars. */}
-        {/* Exact spacing: buttons to role chips row 24px (above), role chips row to screenshot frame 56px (below) */}
-        <Reveal delayMs={400}>
-          <div className="flex items-center justify-center gap-2.5 flex-wrap mb-[56px]">
-            {roleChips.map((chip) => (
-              <div
-                key={chip.label}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-black/[0.06] text-xs font-medium text-[#0D0D0D] select-none"
-              >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: chip.color }}
-                />
-                <span>{chip.label}</span>
+          {/* Hero Content (Centered, nudged ~24px above center) */}
+          <div className="relative z-10 flex flex-col items-center justify-center max-w-[960px] mx-auto -translate-y-4 md:-translate-y-6">
+            {/* Pill chip with arrow */}
+            <Reveal delayMs={0}>
+              <div className="landing-pill mb-6 select-none text-[13px] inline-flex items-center gap-1.5 cursor-default">
+                <span>Engineering Workflow Platform</span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                  className="text-[#575657]"
+                >
+                  <path
+                    d="M6 12L10 8L6 4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
-            ))}
-          </div>
-        </Reveal>
+            </Reveal>
 
-        {/* Frame: pastel multicolor gradient border (palette colors), image width 100%, radius 20px, no shadow */}
-        <Reveal delayMs={480}>
-          <div className="relative max-w-[1120px] mx-auto">
-            <div className="p-[2px] rounded-[22px] bg-gradient-to-r from-[#BED390] via-[#9FDA85] via-[#6E94CB] to-[#D78FC6]">
-              <div className="rounded-[20px] overflow-hidden bg-white">
-                <img
-                  src="/screens/app-board.png"
-                  alt="Forge Kanban Board & Engineering Workflow"
-                  className="w-full h-auto block rounded-[20px] bg-[#FBFBFB]"
-                />
+            {/* Centered H1 */}
+            <Reveal delayMs={80}>
+              <h1 className="max-w-[880px] mx-auto text-[#0D0D0D] font-medium tracking-[-0.03em] leading-[1.05] text-[38px] sm:text-[54px] md:text-[68px] text-center text-balance mb-5">
+                Run engineering work on rules, not reminders.
+              </h1>
+            </Reveal>
+
+            {/* Subtext */}
+            <Reveal delayMs={160}>
+              <p className="text-[16px] sm:text-[18px] text-[#575657] max-w-[620px] mx-auto text-center leading-[1.5] mb-8">
+                Projects, custom workflows, issue dependencies and explainable risk scoring in one
+                multi-tenant workspace.
+              </p>
+            </Reveal>
+
+            {/* One button: Try demo */}
+            <Reveal delayMs={240}>
+              <div className="flex flex-col items-center justify-center">
+                <button
+                  onClick={handleStart}
+                  disabled={isLoading}
+                  className="landing-btn-primary h-[48px] px-8 text-[15px] select-none min-h-[48px] rounded-full inline-flex items-center justify-center font-medium transition-all"
+                >
+                  {isLoading ? 'Starting...' : 'Try demo'}
+                </button>
+                {error && (
+                  <p className="text-xs text-red-600 mt-2">{error}</p>
+                )}
               </div>
-            </div>
+            </Reveal>
           </div>
-        </Reveal>
-
-        {/* Built with Marquee Strip: 56px below screenshot frame, container 1200px centered */}
-        <Reveal delayMs={560}>
-          <div className="mt-[56px] max-w-[1200px] mx-auto">
-            <p className="text-[13px] text-[#575657] text-center mb-[16px] select-none font-medium">
-              Built with
-            </p>
-            <Marquee
-              autoFill
-              speed={prefersReducedMotion ? 12 : 30}
-              gap="16px"
-              pauseOnHover
-            >
-              <MarqueeContent>
-                {items.map((item) => (
-                  <MarqueeItem key={item.name}>
-                    <div className="w-[64px] h-[64px] flex items-center justify-center rounded-full bg-white border border-black/[0.06] shadow-none shrink-0">
-                      {item.logo}
-                      <span className="sr-only">{item.name}</span>
-                    </div>
-                  </MarqueeItem>
-                ))}
-              </MarqueeContent>
-              <MarqueeEdge side="left" />
-              <MarqueeEdge side="right" />
-            </Marquee>
-          </div>
-        </Reveal>
+        </div>
       </div>
+
+      {/* Built with Marquee Strip: kept exactly as is */}
+      <Reveal delayMs={360}>
+        <div className="mt-12 sm:mt-14 max-w-[1200px] mx-auto px-4 sm:px-6">
+          <p className="text-[13px] text-[#575657] text-center mb-4 select-none font-medium">
+            Built with
+          </p>
+          <Marquee
+            autoFill
+            speed={prefersReducedMotion ? 12 : 30}
+            gap="16px"
+            pauseOnHover
+          >
+            <MarqueeContent>
+              {items.map((item) => (
+                <MarqueeItem key={item.name}>
+                  <div className="w-[64px] h-[64px] flex items-center justify-center rounded-full bg-white border border-black/[0.06] shadow-none shrink-0">
+                    {item.logo}
+                    <span className="sr-only">{item.name}</span>
+                  </div>
+                </MarqueeItem>
+              ))}
+            </MarqueeContent>
+            <MarqueeEdge side="left" />
+            <MarqueeEdge side="right" />
+          </Marquee>
+        </div>
+      </Reveal>
     </section>
   );
 }

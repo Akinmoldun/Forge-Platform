@@ -206,7 +206,108 @@
   }
 }
 
-/* Soft pastel gradient backdrops for mockups & media */
+/* Hero Panel with Rising Sun and Dotted Texture */
+.hero-panel {
+  position: relative;
+  width: 100%;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  min-height: 560px;
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #FFFFFF 0%, #F4F4F2 45%, #E6E6E3 100%);
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .hero-panel {
+    min-height: 680px;
+  }
+}
+
+/* Layer 2: Pastel Haze (Blurred radial gradients using Forge palette) */
+.hero-pastel-haze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  filter: blur(60px);
+  opacity: 0.45;
+  background-image:
+    radial-gradient(circle at 18% 28%, rgba(159, 218, 133, 0.55) 0%, transparent 48%),
+    radial-gradient(circle at 82% 26%, rgba(121, 87, 236, 0.35) 0%, transparent 46%),
+    radial-gradient(circle at 14% 74%, rgba(110, 148, 203, 0.4) 0%, transparent 46%),
+    radial-gradient(circle at 86% 72%, rgba(215, 143, 198, 0.38) 0%, transparent 46%),
+    radial-gradient(circle at 50% 64%, rgba(214, 198, 161, 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 50% 22%, rgba(190, 211, 144, 0.38) 0%, transparent 46%);
+}
+
+/* Layer 3: Fine Dotted Texture */
+.hero-dotted-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: 0.75;
+}
+
+/* Layer 4: Glowing Sun rising from bottom edge (Gradients only, no shadow) */
+.hero-sun-container {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1040px;
+  height: 380px;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+/* Lighter tints of --sand (#D6C6A1) and --green-1 (#9FDA85) mixed with white */
+.hero-sun-diffuse-glow {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120%;
+  height: 440px;
+  background: radial-gradient(ellipse 70% 60% at 50% 100%, #FFFFFF 0%, rgba(246, 241, 228, 0.85) 30%, rgba(229, 246, 222, 0.45) 58%, transparent 80%);
+  pointer-events: none;
+}
+
+.hero-sun-disc {
+  position: absolute;
+  bottom: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 680px;
+  height: 340px;
+  border-radius: 340px 340px 0 0;
+  background: radial-gradient(ellipse at 50% 100%, #FFFFFF 0%, #FAF7EE 36%, #EDF7E8 68%, rgba(214, 198, 161, 0.28) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
+  border-right: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .hero-sun-container {
+    height: 270px;
+  }
+  .hero-sun-diffuse-glow {
+    height: 320px;
+  }
+  .hero-sun-disc {
+    width: 440px;
+    height: 230px;
+    bottom: -95px;
+    border-radius: 220px 220px 0 0;
+  }
+}
+
 .gradient-backdrop-green {
   background: radial-gradient(circle at 50% 50%, rgba(159, 218, 133, 0.22) 0%, rgba(131, 221, 121, 0.08) 60%, rgba(255, 255, 255, 0) 100%);
 }

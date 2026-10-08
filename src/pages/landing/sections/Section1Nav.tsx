@@ -1,131 +1,234 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
+interface NavLinkItem {
+  label: string;
+  href: string;
+  id?: string;
+  external?: boolean;
+}
+
+const navLinks: NavLinkItem[] = [
+  { label: 'Features', href: '#features', id: 'features' },
+  { label: 'Engineering decisions', href: '#decisions', id: 'decisions' },
+  { label: 'FAQ', href: '#faq', id: 'faq' },
+  { label: 'Security', href: '#security', id: 'security' },
+  { label: 'GitHub', href: GITHUB_REPO, external: true },
+];
+
 export function Section1Nav() {
   const navigate = useNavigate();
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>('');
+  const navContainerRef = useRef<HTMLDivElement>(null);
 
+  // IntersectionObserver to observe sections and highlight the currently active link
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+    const sectionIds = ['features', 'decisions', 'faq', 'security'];
+    const observedElements: HTMLElement[] = [];
+
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      const intersectingEntries = entries.filter((entry) => entry.isIntersecting);
+      if (intersectingEntries.length > 0) {
+        // Pick the entry closest to the top of the viewing area
+        const topEntry = intersectingEntries.reduce((prev, current) => {
+          return Math.abs(current.boundingClientRect.top - 88) <
+            Math.abs(prev.boundingClientRect.top - 88)
+            ? current
+            : prev;
+        });
+        setActiveSection(topEntry.target.id);
+      }
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    const observer = new IntersectionObserver(observerCallback, {
+      rootMargin: '-88px 0px -40% 0px',
+      threshold: [0.1, 0.25, 0.5],
+    });
+
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        observer.observe(el);
+        observedElements.push(el);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
+  // Close mobile menu on outside tap and on Escape
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        navContainerRef.current &&
+        !navContainerRef.current.contains(event.target as Node)
+      ) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
+  // Smooth scroll to top when clicking brand
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setMobileMenuOpen(false);
   };
 
-  const navLinks = [
-    { label: 'Features', href: '#features' },
-    { label: 'Engineering decisions', href: '#decisions' },
-    { label: 'FAQ', href: '#faq' },
-    { label: 'Security', href: '#security' },
-    { label: 'GitHub', href: GITHUB_REPO, external: true },
-  ];
+  // Smooth scroll with an offset of 88px so headings are not hidden
+  const handleLinkClick = (e: React.MouseEvent, link: NavLinkItem) => {
+    if (link.external) {
+      setMobileMenuOpen(false);
+      return;
+    }
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    if (!link.id) return;
+    const targetElement = document.getElementById(link.id);
+    if (targetElement) {
+      const top = targetElement.getBoundingClientRect().top + window.scrollY - 88;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 h-16 w-full bg-white/80 backdrop-blur-md border-b border-black/[0.06] transition-shadow duration-200 ${
-        isScrolled ? 'shadow-[0_2px_12px_rgba(0,0,0,0.04)]' : 'shadow-none'
-      }`}
+    <div
+      ref={navContainerRef}
+      className="fixed top-[12px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[1040px]"
     >
-      <div className="max-w-[1200px] h-full mx-auto px-4 sm:px-6 flex items-center justify-between relative">
-        {/* Logo (small dark rounded square with the Forge mark plus the word "Forge") on the left */}
+      {/* Floating rounded bar */}
+      <header
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.78)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+        }}
+        className="w-full h-[56px] rounded-[999px] border border-black/[0.06] pl-[18px] pr-[8px] flex items-center justify-between shadow-none relative"
+      >
+        {/* Left: Forge logo mark (28px small dark rounded square) + word Forge (16px, weight 600, #0D0D0D) */}
         <a
           href="#hero"
           onClick={scrollToTop}
-          className="flex items-center gap-2.5 text-[#0D0D0D] font-medium text-[16px] tracking-tight hover:opacity-80 transition-opacity z-10"
+          className="flex items-center gap-2.5 text-[#0D0D0D] font-semibold text-[16px] tracking-tight hover:opacity-80 transition-opacity select-none shrink-0"
         >
-          <div className="w-7 h-7 rounded-lg bg-[#0D0D0D] text-white flex items-center justify-center font-bold text-xs select-none">
+          <div className="w-[28px] h-[28px] rounded-[7px] bg-[#0D0D0D] text-white flex items-center justify-center font-bold text-xs select-none">
             F
           </div>
           <span>Forge</span>
         </a>
 
-        {/* Links centered (desktop) */}
-        <nav className="hidden md:flex items-center gap-6 text-[14px] text-[#575657] absolute left-1/2 -translate-x-1/2">
-          {navLinks.map((link) =>
-            link.external ? (
+        {/* Center: Links (Features, Engineering decisions, FAQ, Security, GitHub) */}
+        <nav className="hidden md:flex items-center gap-6 text-[14px] font-medium absolute left-1/2 -translate-x-1/2">
+          {navLinks.map((link) => {
+            const isCurrentInView = !link.external && link.id === activeSection;
+            if (link.external) {
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#575657] hover:text-[#0D0D0D] transition-colors"
+                >
+                  <span>{link.label}</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-60" />
+                </a>
+              );
+            }
+            return (
               <a
                 key={link.label}
                 href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 hover:text-[#0D0D0D] transition-colors"
-              >
-                {link.label}
-                <ArrowUpRight className="w-3.5 h-3.5 opacity-60" />
-              </a>
-            ) : (
-              <a
-                key={link.label}
-                href={link.href}
-                className="hover:text-[#0D0D0D] transition-colors"
+                onClick={(e) => handleLinkClick(e, link)}
+                className={`transition-colors ${
+                  isCurrentInView ? 'text-[#0D0D0D]' : 'text-[#575657] hover:text-[#0D0D0D]'
+                }`}
               >
                 {link.label}
               </a>
-            )
-          )}
+            );
+          })}
         </nav>
 
-        {/* Right: Black pill "Get Started" + mobile hamburger */}
-        <div className="flex items-center gap-2 z-10">
+        {/* Right: Black pill "Get Started" (40px tall, padding 0 20px, white text 14px weight 500) + mobile hamburger */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
+            type="button"
             onClick={() => navigate('/login')}
-            className="landing-btn-primary h-9 px-4 sm:px-5 text-[13px] sm:text-[14px] select-none"
+            className="h-[40px] px-[20px] rounded-[999px] bg-[#0D0D0D] text-white text-[14px] font-medium border border-[#0D0D0D] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] inline-flex items-center justify-center select-none shadow-none cursor-pointer"
           >
-            Get Started
+            <span className="hidden sm:inline">Get Started</span>
+            <span className="sm:hidden inline">Start</span>
           </button>
 
-          {/* Hamburger under 768px with min 44px tap target that closes on tap */}
+          {/* Mobile hamburger button: 44px next to Get Started */}
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-black/5 text-[#0D0D0D] transition-colors select-none"
+            className="md:hidden w-[44px] h-[44px] flex items-center justify-center rounded-full hover:bg-black/5 text-[#0D0D0D] transition-colors select-none cursor-pointer border-0 bg-transparent"
             aria-label="Toggle navigation"
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile drawer: tap targets at least 44px, closes on tap */}
+      {/* Mobile drawer: rounded white panel under the bar (radius 24px, 1px border, 16px padding), links 48px tall */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-white/95 backdrop-blur-md border-b border-black/[0.06] p-4 flex flex-col gap-1 shadow-[0_8px_16px_rgba(0,0,0,0.04)]">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              target={link.external ? '_blank' : undefined}
-              rel={link.external ? 'noreferrer' : undefined}
-              onClick={() => setMobileMenuOpen(false)}
-              className="min-h-[44px] px-3 rounded-lg text-[15px] font-medium text-[#575657] hover:text-[#0D0D0D] hover:bg-black/5 flex items-center justify-between transition-colors"
-            >
-              <span>{link.label}</span>
-              {link.external && <ArrowUpRight className="w-4 h-4 opacity-50" />}
-            </a>
-          ))}
-          <div className="pt-2 border-t border-black/5 mt-1">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigate('/login');
-              }}
-              className="w-full min-h-[44px] landing-btn-primary justify-center text-[14px]"
-            >
-              Get Started
-            </button>
-          </div>
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+          }}
+          className="md:hidden mt-2 w-full rounded-[24px] border border-black/[0.06] p-[16px] flex flex-col gap-1 shadow-none"
+        >
+          {navLinks.map((link) => {
+            const isCurrentInView = !link.external && link.id === activeSection;
+            return (
+              <a
+                key={link.label}
+                href={link.href}
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+                onClick={(e) => handleLinkClick(e, link)}
+                className={`min-h-[48px] px-4 rounded-xl text-[15px] font-medium flex items-center justify-between transition-colors ${
+                  isCurrentInView
+                    ? 'text-[#0D0D0D] bg-black/5'
+                    : 'text-[#575657] hover:text-[#0D0D0D] hover:bg-black/5'
+                }`}
+              >
+                <span>{link.label}</span>
+                {link.external && <ArrowUpRight className="w-4 h-4 opacity-50" />}
+              </a>
+            );
+          })}
         </div>
       )}
-    </header>
+    </div>
   );
 }
+
