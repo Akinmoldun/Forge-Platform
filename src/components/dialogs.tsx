@@ -210,7 +210,6 @@ export function CreateIssueDialog({
   const navigate = useNavigate();
   const createIssue = useMutation(api.issues.createIssue);
   const [open, setOpen] = useState(false);
-  const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   // Preselect: project page > last project used in localStorage > only project > first project
   const [projectId, setProjectId] = useState<string>(() => {
