@@ -1,47 +1,47 @@
 import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RotateCcw, TriangleAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 export type PriorityValue = (typeof PRIORITIES)[number];
 
-const PRIORITY_STYLE: Record<string, string> = {
-  urgent: "border-red-500/30 bg-red-500/10 text-red-400",
-  high: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-  medium: "border-sky-500/30 bg-sky-500/10 text-sky-400",
-  low: "border-white/15 bg-white/5 text-zinc-400",
-  none: "border-border bg-secondary text-muted-foreground",
+export const PRIORITY_COLORS: Record<string, string> = {
+  urgent: "#D78FC6",
+  high: "#D6C6A1",
+  medium: "#6E94CB",
+  low: "#9A9A9F",
+  none: "#9A9A9F",
+};
+
+export const STATUS_PALETTE: Record<string, string> = {
+  backlog: "#9A9A9F",
+  todo: "#6E94CB",
+  in_progress: "#7957EC",
+  review: "#D78FC6",
+  changes_requested: "#D6C6A1",
+  done: "#83DD79",
+  cancelled: "#E5857F",
 };
 
 export function PriorityBadge({ priority }: { priority: string }) {
+  const color = PRIORITY_COLORS[priority] ?? "#9A9A9F";
   return (
-    <Badge
-      variant="outline"
-      className={cn("text-[10px] font-medium uppercase tracking-wide", PRIORITY_STYLE[priority])}
-    >
-      {priority}
-    </Badge>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
+      <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+      <span className="capitalize">{priority}</span>
+    </span>
   );
 }
 
-const RISK_STYLE: Record<string, string> = {
-  low: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-  medium: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-  high: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-  critical: "border-red-500/40 bg-red-500/15 text-red-400",
-};
-
 export function RiskBadge({ level, score }: { level: string; score?: number }) {
+  const color =
+    level === "low" ? "#83DD79" : level === "medium" ? "#D6C6A1" : "#D78FC6";
   return (
-    <Badge
-      variant="outline"
-      className={cn("text-[11px] font-semibold uppercase tracking-wide", RISK_STYLE[level])}
-    >
-      {level} risk{score !== undefined ? ` · ${score}` : ""}
-    </Badge>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
+      <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+      <span className="capitalize">{level} risk</span>
+      {score !== undefined && <span className="text-[#575657]">· {score}</span>}
+    </span>
   );
 }
 
@@ -49,7 +49,8 @@ export function StatusDot({ color }: { color?: string }) {
   return (
     <span
       className="inline-block size-2 shrink-0 rounded-full"
-      style={{ backgroundColor: color ?? "#8b8b93" }}
+      style={{ backgroundColor: color ?? "#9A9A9F" }}
+      aria-hidden="true"
     />
   );
 }
@@ -70,18 +71,18 @@ export function EmptyState({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.2, 0.7, 0.2, 1] }}
-      className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-14 text-center"
+      className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-border bg-white px-6 py-14 text-center"
     >
       {icon && (
-        <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground">
+        <div className="mb-3.5 flex size-12 items-center justify-center rounded-[14px] border border-border bg-gradient-to-b from-[#FAF9F6] to-[#F1F1F3] text-[#0D0D0D]">
           {icon}
         </div>
       )}
-      <p className="text-sm font-medium">{title}</p>
+      <p className="text-[15px] font-[500] text-[#0D0D0D] tracking-tight">{title}</p>
       {description && (
-        <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
+        <p className="mt-1 max-w-sm text-[13px] leading-5 text-[#575657]">{description}</p>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-5">{action}</div>}
     </motion.div>
   );
 }
@@ -97,13 +98,13 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
-      <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
+    <div className="flex flex-col items-center justify-center rounded-[16px] border border-border bg-white p-8 text-center">
+      <div className="mb-3 flex size-11 items-center justify-center rounded-full bg-[#B3261E]/10 text-[#B3261E]">
         <TriangleAlert className="size-5" />
       </div>
-      <p className="text-sm font-medium">{title}</p>
+      <p className="text-[15px] font-medium text-[#0D0D0D]">{title}</p>
       {description && (
-        <p className="mt-1 max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p>
+        <p className="mt-1 max-w-sm text-[13px] leading-5 text-[#B3261E]">{description}</p>
       )}
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
@@ -116,9 +117,9 @@ export function ErrorState({
 
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full" />
+        <div key={i} className="h-14 w-full rounded-[16px] border border-border bg-[#EEEEF0] animate-pulse" />
       ))}
     </div>
   );

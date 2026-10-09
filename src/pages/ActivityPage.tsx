@@ -28,11 +28,11 @@ const RANGE_OPTIONS = [
 ] as const;
 
 const TYPE_STYLE: Record<string, { tone: string; label: string }> = {
-  issue: { tone: "border-sky-500/25 bg-sky-500/10 text-sky-400", label: "Issue" },
-  project: { tone: "border-white/15 bg-white/5 text-foreground", label: "Project" },
-  comment: { tone: "border-white/15 bg-white/5 text-muted-foreground", label: "Comment" },
-  membership: { tone: "border-amber-500/25 bg-amber-500/10 text-amber-400", label: "Membership" },
-  workflow: { tone: "border-violet-500/25 bg-violet-500/10 text-violet-300", label: "Workflow" },
+  issue: { tone: "border-[#6E94CB]/30 bg-[#6E94CB]/10 text-[#6E94CB]", label: "Issue" },
+  project: { tone: "border-[#83DD79]/30 bg-[#83DD79]/10 text-[#83DD79]", label: "Project" },
+  comment: { tone: "border-border bg-[#F1F1F3] text-[#575657]", label: "Comment" },
+  membership: { tone: "border-[#D6C6A1]/40 bg-[#D6C6A1]/15 text-[#D6C6A1]", label: "Membership" },
+  workflow: { tone: "border-[#7957EC]/30 bg-[#7957EC]/10 text-[#7957EC]", label: "Workflow" },
 };
 
 function typeOf(eventType: string): string {

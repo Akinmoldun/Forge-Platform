@@ -149,8 +149,10 @@ export default function ProjectSettings() {
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl tracking-[-0.02em]">Project settings</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">
+              Project settings
+            </h1>
+            <p className="mt-1 text-[13px] leading-5 text-[#575657]">
               Workflows and automations are enforced server-side on every transition.
             </p>
           </div>

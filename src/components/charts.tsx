@@ -26,7 +26,7 @@ function HoverCard({
 }) {
   return (
     <div
-      className="pointer-events-none absolute z-10 w-32 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1.5 text-[11px] leading-4 text-popover-foreground shadow-lg"
+      className="pointer-events-none absolute z-10 w-32 -translate-x-1/2 rounded-[12px] border border-border bg-white px-2.5 py-2 text-[11px] leading-4 text-[#0D0D0D] shadow-none"
       // Keep the read-out inside the plot on both edges.
       style={{ left: `min(max(${leftPct}%, 62px), calc(100% - 62px))`, top: Math.max(0, top - 46) }}
       role="status"

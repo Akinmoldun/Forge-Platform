@@ -27,9 +27,16 @@ import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PRIORITIES } from "@/components/forge";
 
+const PRIORITY_DOTS: Record<string, string> = {
+  urgent: "#D78FC6",
+  high: "#D6C6A1",
+  medium: "#6E94CB",
+  low: "#9A9A9F",
+  none: "#9A9A9F",
+};
+
 /**
- * Create project. Wraps the existing projects.createProject mutation, so the
- * default workflow is still created server-side exactly as before.
+ * Create project. Wraps the existing projects.createProject mutation.
  */
 export function CreateProjectDialog({
   workspaceId,
@@ -90,8 +97,8 @@ export function CreateProjectDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button size="sm">
-            <Plus /> Create project
+          <Button size="sm" className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+            <Plus className="size-4 mr-1" /> Create project
           </Button>
         )}
       </DialogTrigger>
@@ -109,9 +116,11 @@ export function CreateProjectDialog({
             A default workflow is set up for you: Backlog, Todo, In Progress, Review, Done.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="cp-name">Name</Label>
+            <Label htmlFor="cp-name" className="text-[13px] font-[500] text-[#0D0D0D]">
+              Name
+            </Label>
             <Input
               id="cp-name"
               value={name}
@@ -119,11 +128,14 @@ export function CreateProjectDialog({
               onChange={(e) => setName(e.target.value)}
               placeholder="Mobile API"
               aria-invalid={!!nameError}
+              className="h-11 rounded-[12px] text-[13px]"
             />
-            {nameError && <p className="text-xs text-destructive">{nameError}</p>}
+            {nameError && <p className="text-[13px] text-[#B3261E]">{nameError}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cp-key">Key</Label>
+            <Label htmlFor="cp-key" className="text-[13px] font-[500] text-[#0D0D0D]">
+              Key
+            </Label>
             <Input
               id="cp-key"
               value={key}
@@ -131,29 +143,44 @@ export function CreateProjectDialog({
               onChange={(e) => setKey(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
               placeholder="MOBILE"
               aria-invalid={!!keyError}
-              className="font-mono"
+              className="h-11 rounded-[12px] text-[13px] font-mono uppercase"
             />
-            <p className={`text-xs ${keyError ? "text-destructive" : "text-muted-foreground"}`}>
-              Issue identifiers look like {key || "MOBILE"}-142.
-            </p>
+            {keyError ? (
+              <p className="text-[13px] text-[#B3261E]">{keyError}</p>
+            ) : (
+              <p className="text-[12px] text-[#575657]">
+                Issue identifiers look like {key || "MOBILE"}-142.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cp-desc">Description (optional)</Label>
+            <Label htmlFor="cp-desc" className="text-[13px] font-[500] text-[#0D0D0D]">
+              Description (optional)
+            </Label>
             <Textarea
               id="cp-desc"
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this project about?"
+              className="rounded-[12px] text-[13px]"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            className="rounded-full h-9 px-4 text-[13px]"
+            onClick={() => setOpen(false)}
+          >
             Cancel
           </Button>
-          <Button size="sm" onClick={submit} disabled={!valid || creating}>
-            {creating && <Loader2 className="animate-spin" />}
+          <Button
+            className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
+            onClick={submit}
+            disabled={!valid || creating}
+          >
+            {creating && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
             Create project
           </Button>
         </DialogFooter>
@@ -163,8 +190,7 @@ export function CreateProjectDialog({
 }
 
 /**
- * Create issue. Wraps the existing issues.createIssue mutation and picks the
- * project from a real project list, so quick actions stay a single step.
+ * Create issue. Wraps the existing issues.createIssue mutation.
  */
 export function CreateIssueDialog({
   projects,
@@ -220,8 +246,8 @@ export function CreateIssueDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button size="sm">
-            <Plus /> Create issue
+          <Button size="sm" className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+            <Plus className="size-4 mr-1" /> Create issue
           </Button>
         )}
       </DialogTrigger>
@@ -239,12 +265,14 @@ export function CreateIssueDialog({
             It starts in the first status of the project's workflow.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           {projects.length > 1 && (
             <div className="space-y-2">
-              <Label htmlFor="ci-project">Project</Label>
+              <Label htmlFor="ci-project" className="text-[13px] font-[500] text-[#0D0D0D]">
+                Project
+              </Label>
               <Select value={effectiveProject} onValueChange={setProjectId}>
-                <SelectTrigger id="ci-project" className="h-8 text-[13px]">
+                <SelectTrigger id="ci-project" className="h-11 rounded-[12px] text-[13px]">
                   <SelectValue placeholder="Choose a project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -258,7 +286,9 @@ export function CreateIssueDialog({
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="ci-title">Title</Label>
+            <Label htmlFor="ci-title" className="text-[13px] font-[500] text-[#0D0D0D]">
+              Title
+            </Label>
             <Input
               id="ci-title"
               value={title}
@@ -266,41 +296,69 @@ export function CreateIssueDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Retry failed webhooks"
               aria-invalid={!!titleError}
+              className="h-11 rounded-[12px] text-[13px]"
             />
-            {titleError && <p className="text-xs text-destructive">{titleError}</p>}
+            {titleError && <p className="text-[13px] text-[#B3261E]">{titleError}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ci-priority">Priority</Label>
+            <Label htmlFor="ci-priority" className="text-[13px] font-[500] text-[#0D0D0D]">
+              Priority
+            </Label>
             <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger id="ci-priority" className="h-8 text-[13px]">
-                <SelectValue />
+              <SelectTrigger id="ci-priority" className="h-11 rounded-[12px] text-[13px]">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="size-2 rounded-full shrink-0"
+                    style={{ backgroundColor: PRIORITY_DOTS[priority] || "#9A9A9F" }}
+                    aria-hidden="true"
+                  />
+                  <SelectValue />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 {PRIORITIES.map((p) => (
                   <SelectItem key={p} value={p} className="text-[13px] capitalize">
-                    {p}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2 rounded-full shrink-0"
+                        style={{ backgroundColor: PRIORITY_DOTS[p] || "#9A9A9F" }}
+                        aria-hidden="true"
+                      />
+                      <span>{p}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ci-desc">Description (optional)</Label>
+            <Label htmlFor="ci-desc" className="text-[13px] font-[500] text-[#0D0D0D]">
+              Description (optional)
+            </Label>
             <Textarea
               id="ci-desc"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Context, acceptance criteria, links."
+              className="rounded-[12px] text-[13px]"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            className="rounded-full h-9 px-4 text-[13px]"
+            onClick={() => setOpen(false)}
+          >
             Cancel
           </Button>
-          <Button size="sm" onClick={submit} disabled={!valid || creating}>
-            {creating && <Loader2 className="animate-spin" />}
+          <Button
+            className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
+            onClick={submit}
+            disabled={!valid || creating}
+          >
+            {creating && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
             Create issue
           </Button>
         </DialogFooter>

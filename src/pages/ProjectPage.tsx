@@ -736,41 +736,41 @@ function BoardView({
   return (
     <div className="grid gap-3 overflow-x-auto pb-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
       {board.columns.map((col) => (
-        <div key={col.status._id} className="rounded-lg border border-border bg-secondary/50 p-2.5">
+        <div key={col.status._id} className="rounded-[16px] border border-border bg-[#F1F1F3]/50 p-3">
           <div className="mb-2.5 flex items-center gap-1.5 px-1">
             <StatusDot color={col.status.color} />
-            <span className="text-xs font-semibold">{col.status.name}</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">{col.issues.length}</span>
+            <span className="text-[13px] font-[500] text-[#0D0D0D]">{col.status.name}</span>
+            <span className="ml-auto font-mono text-[11px] text-[#575657]">{col.issues.length}</span>
           </div>
           <div className="space-y-2">
             {col.issues.length === 0 && (
-              <p className="px-1 py-3 text-[11px] text-muted-foreground">Nothing here</p>
+              <p className="px-1 py-4 text-center text-[11px] text-[#575657]">Nothing here</p>
             )}
             {col.issues.map((i) => (
               <button
                 key={i._id}
                 onClick={() => onIssueClick(i._id)}
-                className="w-full rounded-md border border-border bg-card p-2.5 text-left transition-all duration-150 hover:-translate-y-px hover:border-white/20 hover:bg-secondary active:translate-y-0"
+                className="w-full rounded-[14px] border border-border bg-white p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)] focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-muted-foreground">
+                  <span className="text-[11px] font-mono font-medium text-[#575657]">
                     {keyName}-{i.number}
                   </span>
                   <PriorityBadge priority={i.priority} />
                 </div>
-                <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-4">{i.title}</p>
-                <div className="mt-2 flex items-center gap-1.5">
+                <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
+                <div className="mt-2.5 flex items-center gap-1.5">
                   {i.isBlocked && (
-                    <Badge variant="outline" className="border-red-500/30 px-1 py-0 text-[9px] text-red-400">
+                    <Badge variant="outline" className="border-[#B3261E]/30 bg-[#B3261E]/10 px-1.5 py-0 text-[10px] text-[#B3261E]">
                       blocked
                     </Badge>
                   )}
                   {i.dueDate && (
-                    <span className="text-[10px] text-muted-foreground">{formatDate(i.dueDate)}</span>
+                    <span className="text-[11px] text-[#575657]">{formatDate(i.dueDate)}</span>
                   )}
                   {i.assigneeName && (
-                    <Avatar className="ml-auto size-4.5">
-                      <AvatarFallback className="text-[8px]">
+                    <Avatar className="ml-auto size-5">
+                      <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
                         {i.assigneeName.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -825,15 +825,15 @@ function ListView({
     );
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <table className="w-full text-sm">
+    <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-none">
+      <table className="w-full text-[13px]">
         <thead>
-          <tr className="border-b border-border bg-secondary/50 text-left text-xs text-muted-foreground">
-            <th className="px-4 py-2.5 font-medium">Issue</th>
-            <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Status</th>
-            <th className="hidden px-4 py-2.5 font-medium md:table-cell">Priority</th>
-            <th className="hidden px-4 py-2.5 font-medium md:table-cell">Assignee</th>
-            <th className="px-4 py-2.5 text-right font-medium">Updated</th>
+          <tr className="border-b border-border bg-[#FBFBFC] text-left text-[11px] font-medium uppercase tracking-[0.06em] text-[#575657]">
+            <th className="px-4 py-3">Issue</th>
+            <th className="hidden px-4 py-3 sm:table-cell">Status</th>
+            <th className="hidden px-4 py-3 md:table-cell">Priority</th>
+            <th className="hidden px-4 py-3 md:table-cell">Assignee</th>
+            <th className="px-4 py-3 text-right">Updated</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -843,28 +843,28 @@ function ListView({
               onClick={() => onIssueClick(i._id)}
               tabIndex={0}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onIssueClick(i._id)}
-              className="cursor-pointer transition-colors hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none"
+              className="cursor-pointer transition-colors hover:bg-[#F6F6F7] focus-visible:bg-[#F6F6F7] focus-visible:outline-none"
             >
-              <td className="px-4 py-2.5">
-                <span className="text-xs font-semibold text-muted-foreground">
+              <td className="px-4 py-3">
+                <span className="text-[11px] font-mono font-medium text-[#575657]">
                   {keyName}-{i.number}
                 </span>
-                <p className="mt-0.5 font-medium leading-4">{i.title}</p>
+                <p className="mt-0.5 font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
               </td>
-              <td className="hidden px-4 py-2.5 sm:table-cell">
+              <td className="hidden px-4 py-3 sm:table-cell">
                 {i.status && (
-                  <span className="flex items-center gap-1.5 text-xs">
+                  <span className="flex items-center gap-1.5 text-[12px] text-[#0D0D0D]">
                     <StatusDot color={i.status.color} /> {i.status.name}
                   </span>
                 )}
               </td>
-              <td className="hidden px-4 py-2.5 md:table-cell">
+              <td className="hidden px-4 py-3 md:table-cell">
                 <PriorityBadge priority={i.priority} />
               </td>
-              <td className="hidden px-4 py-2.5 text-xs text-muted-foreground md:table-cell">
+              <td className="hidden px-4 py-3 text-[12px] text-[#575657] md:table-cell">
                 {i.assigneeId ? memberName(i.assigneeId) ?? "Unknown" : "Unassigned"}
               </td>
-              <td className="px-4 py-2.5 text-right text-xs text-muted-foreground">
+              <td className="px-4 py-3 text-right text-[11px] tabular-nums text-[#575657]">
                 {formatDate(i.updatedAt)}
               </td>
             </tr>

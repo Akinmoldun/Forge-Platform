@@ -10,10 +10,8 @@ import { Link } from "react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import { Info, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -29,11 +27,11 @@ const EASE = [0.2, 0.7, 0.2, 1] as const;
 
 /* ------------------------------------------------------------------ layout */
 
-/** One content grid for every authenticated page. */
-export const PAGE_MAX = "mx-auto w-full max-w-[1400px] px-4 pb-14 pt-5 sm:px-6 sm:pb-16 sm:pt-7";
+/** One content grid for every authenticated page: max 1200px, 24px side padding (16px on mobile). */
+export const PAGE_MAX = "mx-auto w-full max-w-[1200px] px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8";
 
-/** Matching container for the fixed-height shell bar (no vertical padding). */
-export const SHELL_MAX = "mx-auto flex h-12 w-full max-w-[1400px] items-center gap-2 px-4 sm:px-6";
+/** Matching container for the fixed-height 56px shell bar (no vertical padding). */
+export const SHELL_MAX = "mx-auto flex h-14 w-full max-w-[1200px] items-center gap-2 px-4 sm:px-6";
 
 export function PageStack({
   children,
@@ -42,10 +40,14 @@ export function PageStack({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={cn("flex flex-col gap-4 sm:gap-5", className)}>{children}</div>;
+  return <div className={cn("flex flex-col gap-6", className)}>{children}</div>;
 }
 
-/** Compact application header: title, one line of context, primary action. */
+/**
+ * Standard page header pattern used on every post-login page:
+ * title 28px/500 with tight letter-spacing, a muted helper line under it,
+ * and page actions on the right.
+ */
 export function PageHeader({
   title,
   description,
@@ -62,25 +64,27 @@ export function PageHeader({
 }) {
   return (
     <motion.header
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: EASE }}
-      className="flex flex-col gap-3 border-b border-border pb-4"
+      transition={{ duration: 0.25, ease: EASE }}
+      className="flex flex-col gap-3 pb-2"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-[-0.02em]">{title}</h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">
+              {title}
+            </h1>
             {meta}
           </div>
           {description && (
-            <p className="mt-1 max-w-2xl text-[13px] leading-5 text-muted-foreground">
+            <p className="mt-1 text-[13px] leading-5 text-[#575657]">
               {description}
             </p>
           )}
         </div>
         {actions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 pt-1">{actions}</div>
         )}
       </div>
       {children}
@@ -112,25 +116,25 @@ export function Panel({
 }) {
   return (
     <motion.section
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: EASE }}
+      transition={{ duration: 0.28, ease: EASE }}
       className={cn(
-        "flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
+        "flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-border bg-white shadow-none",
         className,
       )}
     >
       {(title || actions) && (
-        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-3.5">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h2 className="truncate text-[13px] font-semibold tracking-[-0.01em]">
+              <h2 className="truncate text-[14px] font-[500] tracking-[-0.01em] text-[#0D0D0D]">
                 {title}
               </h2>
               {hint && <InfoHint text={hint} />}
             </div>
             {description && (
-              <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+              <p className="mt-0.5 text-[12px] leading-4 text-[#575657]">
                 {description}
               </p>
             )}
@@ -140,7 +144,7 @@ export function Panel({
           )}
         </div>
       )}
-      <div className={cn("flex-1", flush ? "" : "p-4", bodyClassName)}>{children}</div>
+      <div className={cn("flex-1", flush ? "" : "p-5", bodyClassName)}>{children}</div>
     </motion.section>
   );
 }
@@ -170,22 +174,14 @@ export function InfoHint({ text, label = "About this metric" }: { text: string; 
 export type StatTone = "neutral" | "positive" | "warning" | "danger" | "info";
 
 const TONE_TEXT: Record<StatTone, string> = {
-  neutral: "text-foreground",
-  positive: "text-emerald-400",
-  warning: "text-amber-400",
-  danger: "text-red-400",
-  info: "text-sky-400",
+  neutral: "text-[#0D0D0D]",
+  positive: "text-[#83DD79]",
+  warning: "text-[#D6C6A1]",
+  danger: "text-[#D78FC6]",
+  info: "text-[#6E94CB]",
 };
 
-const TONE_SURFACE: Record<StatTone, string> = {
-  neutral: "border-border bg-card",
-  positive: "border-emerald-500/20 bg-emerald-500/5",
-  warning: "border-amber-500/20 bg-amber-500/5",
-  danger: "border-red-500/20 bg-red-500/5",
-  info: "border-sky-500/20 bg-sky-500/5",
-};
-
-/** KPI tile. Numeric values count up; `value` accepts a node for formatted text. */
+/** KPI tile. 16px radius, white surface, 1px border. */
 export function StatCard({
   label,
   value,
@@ -207,34 +203,33 @@ export function StatCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: EASE }}
+      transition={{ duration: 0.28, ease: EASE }}
       className={cn(
-        "flex min-w-0 flex-col justify-between gap-2 rounded-lg border p-3.5",
-        TONE_SURFACE[tone],
+        "flex min-w-0 flex-col justify-between gap-2 rounded-[16px] border border-border bg-white p-4 shadow-none",
         className,
       )}
     >
       <div className="flex items-center gap-1.5">
-        <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        <span className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-[#575657]">
           {label}
         </span>
         {hint && <InfoHint text={hint} />}
-        {icon && <span className="ml-auto text-muted-foreground/70">{icon}</span>}
+        {icon && <span className="ml-auto text-[#575657]">{icon}</span>}
       </div>
       <div className="flex items-baseline gap-1.5">
         <span
           className={cn(
-            "font-display text-[26px] leading-none tracking-[-0.03em]",
+            "text-[28px] font-[500] leading-none tracking-[-0.03em]",
             TONE_TEXT[tone],
           )}
         >
           {typeof value === "number" ? <AnimatedNumber value={value} /> : value}
         </span>
-        {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
+        {suffix && <span className="text-xs text-[#575657]">{suffix}</span>}
       </div>
-      {detail && <div className="text-[11px] leading-4 text-muted-foreground">{detail}</div>}
+      {detail && <div className="text-[12px] leading-4 text-[#575657]">{detail}</div>}
     </motion.div>
   );
 }
@@ -252,13 +247,13 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium text-foreground",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D]",
         className,
       )}
     >
       <span
         className="size-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: color ?? "#8b8b93" }}
+        style={{ backgroundColor: color ?? "#9A9A9F" }}
         aria-hidden
       />
       <span className="truncate">{name}</span>
@@ -266,25 +261,21 @@ export function StatusBadge({
   );
 }
 
-const PROJECT_STATUS_TONE: Record<string, string> = {
-  planning: "border-white/15 bg-white/5 text-zinc-300",
-  active: "border-sky-500/25 bg-sky-500/10 text-sky-400",
-  paused: "border-amber-500/25 bg-amber-500/10 text-amber-400",
-  completed: "border-emerald-500/25 bg-emerald-500/10 text-emerald-400",
-  archived: "border-border bg-secondary text-muted-foreground",
+const PROJECT_STATUS_COLOR: Record<string, string> = {
+  planning: "#9A9A9F",
+  active: "#6E94CB",
+  paused: "#D6C6A1",
+  completed: "#83DD79",
+  archived: "#9A9A9F",
 };
 
 export function ProjectStatusBadge({ status }: { status: string }) {
+  const dotColor = PROJECT_STATUS_COLOR[status] ?? "#9A9A9F";
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "text-[10px] uppercase tracking-wider",
-        PROJECT_STATUS_TONE[status] ?? PROJECT_STATUS_TONE.archived,
-      )}
-    >
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[10px] uppercase font-medium tracking-wider text-[#0D0D0D]">
+      <span className="size-1.5 rounded-full" style={{ backgroundColor: dotColor }} />
       {status}
-    </Badge>
+    </span>
   );
 }
 
@@ -299,16 +290,17 @@ export function InitialsAvatar({
   size?: number;
   className?: string;
 }) {
+  const initial = name?.trim() ? name.trim().charAt(0).toUpperCase() : "G";
   return (
     <Avatar className={cn("shrink-0", className)} style={{ width: size, height: size }}>
       {image ? (
         <AvatarImage src={image} alt="" />
       ) : (
         <AvatarFallback
-          className="border border-border bg-secondary text-[10px] font-medium text-foreground"
-          style={{ width: size, height: size, fontSize: Math.max(9, size * 0.36) }}
+          className="border border-border bg-[#F1F1F3] text-[11px] font-medium text-[#0D0D0D]"
+          style={{ width: size, height: size, fontSize: Math.max(10, size * 0.38) }}
         >
-          {name.slice(0, 2).toUpperCase()}
+          {initial}
         </AvatarFallback>
       )}
     </Avatar>
@@ -321,7 +313,7 @@ export function FilterBar({ children, className }: { children: ReactNode; classN
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5",
+        "flex flex-wrap items-center gap-2 rounded-[16px] border border-border bg-white p-3 shadow-none",
         className,
       )}
     >
@@ -414,7 +406,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="group"
       aria-label={label}
-      className="inline-flex h-8 items-center gap-0.5 rounded-md border border-border bg-secondary p-0.5"
+      className="inline-flex h-9 items-center gap-1 rounded-full border border-border bg-[#F1F1F3] p-1 shadow-none"
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -425,10 +417,10 @@ export function SegmentedControl<T extends string>({
             aria-pressed={active}
             onClick={() => onValueChange(o.value)}
             className={cn(
-              "h-6 rounded-[5px] px-2.5 text-[12px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "h-7 rounded-full px-3 text-[12px] font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
               active
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-white text-[#0D0D0D] shadow-none"
+                : "text-[#575657] hover:text-[#0D0D0D]",
             )}
           >
             {o.label}
@@ -443,7 +435,7 @@ export function SegmentedControl<T extends string>({
 
 export function TableWrap({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("w-full overflow-x-auto", className)}>
+    <div className={cn("w-full overflow-x-auto rounded-[16px] border border-border bg-white shadow-none", className)}>
       <table className="w-full min-w-[640px] border-collapse text-[13px]">{children}</table>
     </div>
   );
@@ -462,7 +454,7 @@ export function Th({
     <th
       scope="col"
       className={cn(
-        "whitespace-nowrap border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground",
+        "whitespace-nowrap bg-[#FBFBFC] border-b border-border px-4 py-3 text-[11px] font-medium uppercase tracking-[0.06em] text-[#575657]",
         align === "right" && "text-right",
         align === "center" && "text-center",
         className,
@@ -488,7 +480,7 @@ export function Td({
     <td
       colSpan={colSpan}
       className={cn(
-        "border-b border-border px-4 py-2.5 align-middle",
+        "border-b border-border px-4 py-3 align-middle text-[#0D0D0D] transition-colors",
         align === "right" && "text-right",
         align === "center" && "text-center",
         className,
@@ -501,12 +493,12 @@ export function Td({
 
 export function TableSkeleton({ rows = 5, className }: { rows?: number; className?: string }) {
   return (
-    <div className={cn("space-y-px", className)}>
+    <div className={cn("space-y-2 p-4", className)}>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-3">
-          <Skeleton className="size-7 rounded-full" />
-          <Skeleton className="h-3 w-1/3" />
-          <Skeleton className="ml-auto h-3 w-16" />
+        <div key={i} className="flex items-center gap-3">
+          <div className="size-7 rounded-full bg-[#EEEEF0] animate-pulse" />
+          <div className="h-4 w-1/3 rounded-[8px] bg-[#EEEEF0] animate-pulse" />
+          <div className="ml-auto h-4 w-16 rounded-[8px] bg-[#EEEEF0] animate-pulse" />
         </div>
       ))}
     </div>
@@ -542,11 +534,11 @@ export function ActivityItem({
 }) {
   const body = (
     <>
-      <InitialsAvatar name={actorName} image={actorImage} size={26} />
-      <span className="min-w-0 flex-1 truncate text-[13px]">
-        <span className="font-medium">{actorName}</span>{" "}
-        <span className="text-muted-foreground">{action}</span>
-        {detail ? <span className="text-muted-foreground"> {detail}</span> : null}
+      <InitialsAvatar name={actorName} image={actorImage} size={28} />
+      <span className="min-w-0 flex-1 truncate text-[13px] text-[#0D0D0D]">
+        <span className="font-medium text-[#0D0D0D]">{actorName}</span>{" "}
+        <span className="text-[#575657]">{action}</span>
+        {detail ? <span className="text-[#575657]"> {detail}</span> : null}
       </span>
       {type && (
         <span
@@ -560,18 +552,18 @@ export function ActivityItem({
         </span>
       )}
       {trailing}
-      <time className="w-16 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+      <time className="w-16 shrink-0 text-right text-[11px] tabular-nums text-[#575657]">
         {timestamp}
       </time>
     </>
   );
 
   return (
-    <li className={cn("flex items-center gap-3 px-3.5 py-2.5", className)}>
+    <li className={cn("flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#F6F6F7]", className)}>
       {href ? (
         <Link
           to={href}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-md outline-none transition-colors hover:bg-secondary/40 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] outline-none transition-colors focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
         >
           {body}
         </Link>
@@ -593,10 +585,10 @@ export function KeyValue({
 }) {
   return (
     <div className={cn("flex items-baseline justify-between gap-3 py-1", className)}>
-      <span className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+      <span className="text-[11px] uppercase tracking-[0.06em] text-[#575657]">
         {label}
       </span>
-      <span className="truncate text-[13px]">{children}</span>
+      <span className="truncate text-[13px] text-[#0D0D0D] font-medium">{children}</span>
     </div>
   );
 }
@@ -611,7 +603,7 @@ export function MeterRow({
   value,
   display,
   pct,
-  tone = "bg-foreground/70",
+  tone = "bg-[#0D0D0D]",
   leading,
   hint,
 }: {
@@ -629,13 +621,13 @@ export function MeterRow({
     <div className="group/meter py-1.5">
       <div className="flex items-center gap-2">
         {leading}
-        <span className="min-w-0 flex-1 truncate text-[13px]">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] text-[#0D0D0D]">{label}</span>
         {hint && <InfoHint text={hint} />}
-        <span className="shrink-0 tabular-nums text-[12px] text-muted-foreground">
+        <span className="shrink-0 tabular-nums text-[12px] text-[#575657]">
           {display ?? value}
         </span>
       </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
         <motion.div
           className={cn("h-full rounded-full", tone)}
           initial={{ width: reduce ? `${width}%` : 0 }}
@@ -648,17 +640,17 @@ export function MeterRow({
   );
 }
 
-/** Shared loading placeholder for page-level data blocks. */
+/** Shared loading placeholder for page-level data blocks using #EEEEF0 skeleton blocks. */
 export function LoadingBlock({ className }: { className?: string }) {
   return (
-    <div className={cn("space-y-3", className)}>
-      <Skeleton className="h-20 w-full" />
+    <div className={cn("space-y-4", className)}>
+      <div className="h-20 w-full rounded-[16px] bg-[#EEEEF0] animate-pulse" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 w-full" />
+          <div key={i} className="h-24 w-full rounded-[16px] bg-[#EEEEF0] animate-pulse" />
         ))}
       </div>
-      <Skeleton className="h-56 w-full" />
+      <div className="h-60 w-full rounded-[16px] bg-[#EEEEF0] animate-pulse" />
     </div>
   );
 }

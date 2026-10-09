@@ -1,26 +1,17 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import {
-  Activity as ActivityIcon,
-  BarChart3,
   Bell,
   Building2,
   Check,
-  ChevronsUpDown,
-  FolderKanban,
-  LayoutDashboard,
+  ChevronDown,
   LogOut,
-  Menu,
   Plus,
-  Settings,
-  Users,
-  Workflow as WorkflowIcon,
+  UserPlus,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,28 +20,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
 import { FadeIn } from "./motion";
 import { PAGE_MAX, SHELL_MAX } from "./app-ui";
 
-/** Primary workspace navigation, shared by the desktop bar and the mobile sheet. */
+/** Primary workspace navigation tabs. */
 const WORKSPACE_NAV = [
-  { label: "Overview", segment: "", icon: LayoutDashboard },
-  { label: "Projects", segment: "projects", icon: FolderKanban },
-  { label: "Workflow", segment: "workflow", icon: WorkflowIcon },
-  { label: "Analytics", segment: "analytics", icon: BarChart3 },
-  { label: "Teams", segment: "teams", icon: Users },
-  { label: "Activity", segment: "activity", icon: ActivityIcon },
-  { label: "Settings", segment: "settings", icon: Settings },
+  { label: "Overview", segment: "" },
+  { label: "Projects", segment: "projects" },
+  { label: "Workflow", segment: "workflow" },
+  { label: "Analytics", segment: "analytics" },
+  { label: "Teams", segment: "teams" },
+  { label: "Activity", segment: "activity" },
+  { label: "Settings", segment: "settings" },
 ] as const;
 
 export function workspacePath(workspaceId: string, segment: string): string {
@@ -64,11 +48,6 @@ function isNavActive(pathname: string, target: string): boolean {
   return pathname.startsWith(`${target}/`);
 }
 
-/**
- * Scroll behaviour: a new page always starts at the top. On a browser
- * back/forward navigation (POP) the browser restores the previous offset, so we
- * leave it alone.
- */
 function ScrollManager() {
   const { pathname } = useLocation();
   const navigationType = useNavigationType();
@@ -82,66 +61,29 @@ function ScrollManager() {
   return null;
 }
 
-function navItemClass(active: boolean): string {
-  return cn(
-    "rounded-md px-2.5 py-1 text-[13px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-    active
-      ? "bg-secondary font-medium text-foreground"
-      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-  );
-}
-
-function DesktopNav({ workspaceId }: { workspaceId: string }) {
+/** Nav tabs: active tab is a #F1F1F3 pill with ink text; inactive muted and turns ink on hover. */
+function WorkspaceNavTabs({ workspaceId }: { workspaceId: string }) {
   const { pathname } = useLocation();
   return (
-    <nav aria-label="Workspace" className="hidden flex-1 justify-center lg:flex">
-      <div className="flex items-center gap-0.5">
-        {WORKSPACE_NAV.map(({ label, segment }) => {
-          const to = workspacePath(workspaceId, segment);
-          const active = isNavActive(pathname, to);
-          return (
-            <Link
-              key={label}
-              to={to}
-              aria-current={active ? "page" : undefined}
-              className={navItemClass(active)}
-            >
-              {label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
-
-function MobileNav({
-  workspaceId,
-  onNavigate,
-}: {
-  workspaceId: string;
-  onNavigate: () => void;
-}) {
-  const { pathname } = useLocation();
-  return (
-    <nav aria-label="Workspace" className="flex flex-col gap-0.5">
-      {WORKSPACE_NAV.map(({ label, segment, icon: Icon }) => {
+    <nav
+      aria-label="Workspace"
+      className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {WORKSPACE_NAV.map(({ label, segment }) => {
         const to = workspacePath(workspaceId, segment);
         const active = isNavActive(pathname, to);
         return (
           <Link
             key={label}
             to={to}
-            onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex min-h-[36px] sm:min-h-[32px] shrink-0 items-center rounded-full px-3.5 py-1 text-[13px] font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
               active
-                ? "bg-secondary font-medium text-foreground"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                ? "bg-[#F1F1F3] text-[#0D0D0D]"
+                : "text-[#575657] hover:bg-[#F1F1F3]/60 hover:text-[#0D0D0D]",
             )}
           >
-            <Icon className="size-3.5 shrink-0" aria-hidden />
             {label}
           </Link>
         );
@@ -158,79 +100,94 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           aria-label="Switch workspace"
-          className="h-8 max-w-[14rem] justify-start gap-2 px-2 text-[13px] font-medium"
+          className="inline-flex h-9 min-h-[44px] sm:min-h-[36px] max-w-[15rem] items-center gap-2 rounded-full border border-border bg-white px-3.5 text-[13px] font-medium text-[#0D0D0D] transition-colors hover:bg-[#F1F1F3] outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
         >
-          <Building2 className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          <Building2 className="size-3.5 shrink-0 text-[#575657]" aria-hidden="true" />
           <span className="truncate">{active ? active.name : "Workspaces"}</span>
-          <ChevronsUpDown className="ml-auto size-3 shrink-0 text-muted-foreground" aria-hidden />
-        </Button>
+          <ChevronDown className="ml-auto size-3.5 shrink-0 text-[#575657]" aria-hidden="true" />
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
+      <DropdownMenuContent align="start" className="w-64 rounded-[16px] border border-border bg-white p-1.5 shadow-none">
+        <DropdownMenuLabel className="px-2 py-1.5 text-xs text-[#575657] font-medium">Switch workspace</DropdownMenuLabel>
         {workspaces.map((w) => (
-          <DropdownMenuItem key={w._id} onClick={() => navigate(workspacePath(w._id, ""))}>
+          <DropdownMenuItem
+            key={w._id}
+            onClick={() => navigate(workspacePath(w._id, ""))}
+            className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+          >
             <span className="min-w-0 flex-1 truncate">{w.name}</span>
-            <span className="text-[11px] text-muted-foreground">{w.projectCount} proj</span>
-            {active?._id === w._id && <Check className="size-3.5" />}
+            <span className="text-[11px] text-[#575657]">{w.projectCount} proj</span>
+            {active?._id === w._id && <Check className="size-3.5 ml-2 text-[#0D0D0D]" />}
           </DropdownMenuItem>
         ))}
         {workspaces.length === 0 && (
-          <p className="px-2 py-3 text-xs text-muted-foreground">No workspaces yet.</p>
+          <p className="px-2.5 py-3 text-xs text-[#575657]">No workspaces yet.</p>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/app")}>
-          <Plus /> New workspace
+        <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem
+          onClick={() => navigate("/app")}
+          className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+        >
+          <Plus className="size-3.5 mr-2" /> New workspace
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function AccountMenu({ workspaceId }: { workspaceId?: string }) {
+function AccountMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const isGuest = user?.isAnonymous || !user || !user.email;
+  const initial = isGuest
+    ? "G"
+    : (user?.name?.trim() || user?.email?.trim() || "G").charAt(0).toUpperCase();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="size-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] inline-flex items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
           aria-label="Account menu"
         >
-          <Avatar className="size-7">
-            <AvatarFallback className="border border-border bg-secondary text-[10px] font-medium text-foreground">
-              {(user?.name ?? user?.email ?? "?").slice(0, 2).toUpperCase()}
+          <Avatar className="size-8">
+            <AvatarFallback className="border border-border bg-[#F1F1F3] text-[12px] font-semibold text-[#0D0D0D]">
+              {initial}
             </AvatarFallback>
           </Avatar>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="truncate font-normal">
-          {user?.name ?? user?.email ?? "Account"}
+      <DropdownMenuContent align="end" className="w-56 rounded-[16px] border border-border bg-white p-1.5 shadow-none">
+        <DropdownMenuLabel className="truncate px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D]">
+          {isGuest ? "Guest" : user?.name || user?.email}
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/app")}>
-          <Building2 /> All workspaces
-        </DropdownMenuItem>
-        {workspaceId && (
-          <DropdownMenuItem onClick={() => navigate(`/app/workspaces/${workspaceId}/settings`)}>
-            <Settings /> Workspace settings
+        <DropdownMenuSeparator className="bg-border" />
+        {isGuest && (
+          <DropdownMenuItem
+            onClick={() => navigate("/signup")}
+            className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] font-medium hover:bg-[#F1F1F3] cursor-pointer"
+          >
+            <UserPlus className="size-3.5 mr-2 text-[#575657]" /> Create an account
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => navigate("/app/notifications")}>
-          <Bell /> Notifications
+        <DropdownMenuItem
+          onClick={() => navigate("/app")}
+          className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+        >
+          <Building2 className="size-3.5 mr-2 text-[#575657]" /> All workspaces
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem
           onClick={async () => {
             await signOut();
             navigate("/");
           }}
+          className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#B3261E] hover:bg-[#B3261E]/10 cursor-pointer"
         >
-          <LogOut /> Sign out
+          <LogOut className="size-3.5 mr-2 text-[#B3261E]" /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -242,20 +199,20 @@ function NotificationBell() {
   const notifications = useQuery(api.analytics.listNotifications);
   const unread = notifications?.unreadCount ?? 0;
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="relative size-8 text-muted-foreground hover:text-foreground"
+    <button
+      type="button"
+      className="relative flex size-9 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] items-center justify-center rounded-full text-[#575657] hover:bg-[#F1F1F3] hover:text-[#0D0D0D] transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
       onClick={() => navigate("/app/notifications")}
       aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
     >
       <Bell className="size-4" />
       {unread > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-foreground px-1 text-[9px] font-bold leading-none text-background">
-          {unread > 9 ? "9+" : unread}
-        </span>
+        <span
+          className="absolute top-2.5 right-2.5 size-2 rounded-full bg-[#D78FC6]"
+          aria-hidden="true"
+        />
       )}
-    </Button>
+    </button>
   );
 }
 
@@ -267,77 +224,51 @@ export function AppShell({
   workspaceId?: string;
 }) {
   const { pathname } = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const workspace = useQuery(
-    api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: workspaceId as never } : "skip",
-  );
-  const workspaceName = workspace?.workspace.name ?? "Workspace";
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-[#FBFBFC] text-[#0D0D0D]">
       <ScrollManager />
 
-      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+      {/* Top bar: height 56px, white, 1px bottom border, sticky */}
+      <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
         <div className={SHELL_MAX}>
+          {/* Logo & Brand Wordmark from landing page */}
           <Link
             to="/app"
-            className="flex shrink-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Forge workspaces"
+            className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
+            aria-label="Forge home"
           >
-            <ForgeLogo className="size-5" />
-            <span className="hidden text-[14px] font-semibold tracking-tight sm:inline">
+            <ForgeLogo className="size-6 text-[#0D0D0D]" />
+            <span className="text-[16px] font-semibold tracking-tight text-[#0D0D0D] select-none">
               Forge
             </span>
           </Link>
 
-          <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
+          <span className="h-4 w-px shrink-0 bg-border mx-1" aria-hidden="true" />
 
+          {/* Workspace Switcher */}
           {workspaceId && (
             <div className="flex min-w-0 items-center">
               <WorkspaceSwitcher workspaceId={workspaceId} />
             </div>
           )}
 
-          {workspaceId && <DesktopNav workspaceId={workspaceId} />}
+          {/* Nav Tabs: horizontal scroll below 768px with no scrollbar */}
+          {workspaceId && (
+            <div className="min-w-0 flex-1 px-1">
+              <WorkspaceNavTabs workspaceId={workspaceId} />
+            </div>
+          )}
 
-          <div className="ml-auto flex items-center gap-1">
-            {workspaceId && (
-              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 lg:hidden"
-                    aria-label="Open navigation"
-                    aria-expanded={mobileOpen}
-                  >
-                    <Menu className="size-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-64 border-border bg-card p-0">
-                  <SheetHeader className="border-b border-border px-4 py-3">
-                    <SheetTitle className="flex items-center gap-2 text-sm">
-                      <ForgeLogo className="size-4" />
-                      <span className="truncate">{workspaceName}</span>
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="px-2 py-3">
-                    <MobileNav
-                      workspaceId={workspaceId}
-                      onNavigate={() => setMobileOpen(false)}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
-            )}
+          {/* Actions: Notification bell + Avatar */}
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <NotificationBell />
-            <span className="mx-0.5 hidden h-4 w-px bg-border sm:block" aria-hidden />
-            <AccountMenu workspaceId={workspaceId} />
+            <AccountMenu />
           </div>
         </div>
       </header>
 
+      {/* Content Container */}
       <main className="flex-1">
         <FadeIn key={pathname} className={PAGE_MAX}>
           {children}
@@ -350,15 +281,21 @@ export function AppShell({
 export function RoleBadge({ role }: { role: string }) {
   const tone =
     role === "owner"
-      ? "border-white/25 bg-white/10 text-foreground"
+      ? "border-border bg-[#F1F1F3] text-[#0D0D0D]"
       : role === "admin"
-        ? "border-amber-500/25 bg-amber-500/10 text-amber-400"
+        ? "border-[#D6C6A1] bg-[#D6C6A1]/15 text-[#0D0D0D]"
         : role === "member"
-          ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
-          : "border-border bg-secondary text-muted-foreground";
+          ? "border-[#83DD79] bg-[#83DD79]/15 text-[#0D0D0D]"
+          : "border-border bg-white text-[#575657]";
   return (
-    <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wider", tone)}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider",
+        tone,
+      )}
+    >
       {role}
-    </Badge>
+    </span>
   );
 }
+

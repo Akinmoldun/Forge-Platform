@@ -49,14 +49,14 @@ const RANGE_OPTIONS = [
 ] as const;
 
 const PRIORITY_TONE: Record<string, string> = {
-  urgent: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-sky-500",
-  low: "bg-zinc-400",
-  none: "bg-zinc-600",
+  urgent: "bg-[#D78FC6]",
+  high: "bg-[#D6C6A1]",
+  medium: "bg-[#6E94CB]",
+  low: "bg-[#9A9A9F]",
+  none: "bg-[#9A9A9F]",
 };
 
-const STATUS_COLORS = ["#8b8b93", "#60a5fa", "#fbbf24", "#34d399", "#a78bfa", "#fb923c"];
+const STATUS_COLORS = ["#9A9A9F", "#6E94CB", "#7957EC", "#D78FC6", "#D6C6A1", "#83DD79"];
 
 export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();

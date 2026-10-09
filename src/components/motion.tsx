@@ -126,7 +126,7 @@ export function ProgressRing({
   return (
     <div className={cn("relative inline-grid place-items-center", className)} style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-secondary" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-[#F1F1F3]" />
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -134,7 +134,7 @@ export function ProgressRing({
           fill="none"
           strokeWidth={stroke}
           strokeLinecap="round"
-          className="stroke-foreground"
+          className="stroke-[#0D0D0D]"
           strokeDasharray={c}
           initial={{ strokeDashoffset: c }}
           whileInView={{ strokeDashoffset: c - (clamped / 100) * c }}

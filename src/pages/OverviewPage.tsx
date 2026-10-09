@@ -1,67 +1,41 @@
 import { useQuery } from "convex/react";
-import { useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import {
-  ActivityItem,
-  LoadingBlock,
-  MeterRow,
-  PageHeader,
-  PageStack,
-  Panel,
-  PanelEmpty,
-  StatCard,
-} from "@/components/app-ui";
-import { StackedBar } from "@/components/charts";
+import { LoadingBlock, PageHeader, PageStack } from "@/components/app-ui";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { EmptyState } from "@/components/forge";
-import { ProgressRing } from "@/components/motion";
-import { useProjectRisks, useProjectSummaries, rollupWorkspace } from "@/hooks/use-workspace-data";
+import { useAuth } from "@/hooks/use-auth";
 import {
-  AlertTriangle,
-  ArrowUpRight,
-  BarChart3,
-  CircleSlash,
-  Flame,
-  Gauge,
-  Inbox,
-  Plus,
-  Timer,
-  UserPlus,
-} from "lucide-react";
-
-const PRIORITY_TONE: Record<string, string> = {
-  urgent: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-sky-500",
-  low: "bg-zinc-400",
-  none: "bg-zinc-600",
-};
-
-const STATUS_COLORS = [
-  "#8b8b93",
-  "#60a5fa",
-  "#fbbf24",
-  "#34d399",
-  "#a78bfa",
-  "#fb923c",
-];
-
-/** Deep link for events whose entity is a real record. */
-function relatedHref(event: { entityType: string; entityId: string }): string | null {
-  if (event.entityType === "issue" || event.entityType === "dependency") {
-    return `/app/issues/${event.entityId}`;
-  }
-  if (event.entityType === "project") return `/app/projects/${event.entityId}`;
-  return null;
-}
+  useProjectRisks,
+  useProjectSummaries,
+  useProjectIssues,
+  rollupWorkspace,
+} from "@/hooks/use-workspace-data";
+import {
+  DraggableWidgetGrid,
+  type WidgetItem,
+} from "@/components/ui/draggable-widget-grid";
+import {
+  DEFAULT_OVERVIEW_LAYOUT,
+  QuickActionsWidget,
+  MyOpenIssuesWidget,
+  RecentActivityWidget,
+  StatusDistributionWidget,
+  PriorityBreakdownWidget,
+  ProjectHealthWidget,
+  type OverviewIssueItem,
+} from "@/components/overview/OverviewWidgets";
+import { Sparkles, Move, RotateCcw, Plus } from "lucide-react";
 
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const id = workspaceId as Id<"workspaces">;
+  const { user } = useAuth();
+  const userId = user?._id || user?.email || "anonymous";
 
   const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: id });
   const projects = useQuery(api.projects.listProjects, { workspaceId: id });
@@ -76,8 +50,9 @@ export default function OverviewPage() {
   );
   const { entries: summaryEntries, loading: summariesLoading } = useProjectSummaries(projectIds);
   const { entries: riskEntries, loading: risksLoading } = useProjectRisks(projectIds);
+  const { issues: projectIssues } = useProjectIssues(projectIds);
 
-  const rollup = useMemo(
+  const realRollup = useMemo(
     () =>
       rollupWorkspace(
         summaryEntries.map((e) => e.summary),
@@ -86,7 +61,7 @@ export default function OverviewPage() {
     [summaryEntries, riskEntries],
   );
 
-  const riskByProject = useMemo(() => {
+  const realRiskByProject = useMemo(() => {
     const map = new Map<string, { score: number; level: string; blocked: number; overdue: number }>();
     for (const entry of riskEntries) {
       if (!entry.risk) continue;
@@ -99,6 +74,81 @@ export default function OverviewPage() {
     }
     return map;
   }, [riskEntries]);
+
+  const realIssues: OverviewIssueItem[] = useMemo(() => {
+    const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
+    const currentUserId = user?._id;
+    // Show issues assigned to the user or unassigned
+    const relevant = (projectIssues ?? []).filter(
+      (i) => (currentUserId && i.assigneeId === currentUserId) || !i.assigneeId,
+    );
+    return relevant.map((i) => ({
+      _id: i._id,
+      projectId: i.projectId,
+      projectKey: projectKeyMap.get(i.projectId) ?? undefined,
+      number: i.number,
+      title: i.title,
+      statusName: i.status?.name || "Todo",
+      statusColor: i.status?.color,
+      priority: i.priority || "none",
+      assigneeId: i.assigneeId,
+    }));
+  }, [projectIssues, projects, user]);
+
+  // Edit mode & sample data states
+  const [isEditing, setIsEditing] = useState(false);
+  const [sampleDataActive, setSampleDataActive] = useState(false);
+
+  // Persistence in localStorage per user and workspace
+  const storageKey = `forge_overview_layout_${workspaceId}_${userId}`;
+
+  const loadSavedLayout = useCallback((): WidgetItem[] => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed: WidgetItem[] = JSON.parse(saved);
+        const validIds = new Set(DEFAULT_OVERVIEW_LAYOUT.map((w) => w.id));
+        const savedIds = new Set(parsed.map((w) => w.id));
+        if (validIds.size === savedIds.size && [...validIds].every((i) => savedIds.has(i))) {
+          return parsed.map((item) => {
+            const def = DEFAULT_OVERVIEW_LAYOUT.find((d) => d.id === item.id);
+            return {
+              ...item,
+              size: def?.size || item.size,
+              title: def?.title || item.title,
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to read overview layout from localStorage:", e);
+    }
+    return DEFAULT_OVERVIEW_LAYOUT;
+  }, [storageKey]);
+
+  const [layout, setLayout] = useState<WidgetItem[]>(loadSavedLayout);
+
+  useEffect(() => {
+    setLayout(loadSavedLayout());
+  }, [loadSavedLayout]);
+
+  const handleLayoutChange = (newLayout: WidgetItem[]) => {
+    setLayout(newLayout);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(newLayout));
+    } catch (e) {
+      console.warn("Failed to persist overview layout:", e);
+    }
+  };
+
+  const handleResetLayout = () => {
+    setLayout(DEFAULT_OVERVIEW_LAYOUT);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (e) {
+      console.warn("Failed to clear overview layout:", e);
+    }
+  };
 
   const loading =
     workspace === undefined || projects === undefined || summariesLoading || risksLoading;
@@ -129,16 +179,233 @@ export default function OverviewPage() {
 
   const canWrite = workspace.role !== "viewer";
   const projectList = projects ?? [];
-  const statusTotal = rollup.byStatus.reduce((sum, s) => sum + s.count, 0);
-  const priorityTotal = rollup.byPriority.reduce((sum, p) => sum + p.count, 0);
-  const riskTone =
-    rollup.riskScore >= 60
-      ? "danger"
-      : rollup.riskScore >= 35
-        ? "warning"
-        : rollup.riskScore >= 15
-          ? "warning"
-          : "positive";
+
+  // Client-side sample data
+  const sampleRollup = {
+    open: 38,
+    blocked: 3,
+    overdue: 4,
+    unassigned: 7,
+    completed: 62,
+    riskScore: 24,
+    riskLevel: "medium",
+    byStatus: [
+      { statusName: "Backlog", count: 12, color: "#9A9A9F" },
+      { statusName: "Todo", count: 14, color: "#6E94CB" },
+      { statusName: "In Progress", count: 9, color: "#7957EC" },
+      { statusName: "Review", count: 5, color: "#D78FC6" },
+      { statusName: "Changes Requested", count: 2, color: "#D6C6A1" },
+      { statusName: "Done", count: 62, color: "#83DD79" },
+    ],
+    byPriority: [
+      { priority: "urgent", count: 4 },
+      { priority: "high", count: 11 },
+      { priority: "medium", count: 18 },
+      { priority: "low", count: 5 },
+      { priority: "none", count: 2 },
+    ],
+  };
+
+  const sampleProjects = [
+    {
+      _id: "demo_p1" as Id<"projects">,
+      name: "Core Engine",
+      key: "CORE",
+      status: "active",
+      issueCount: 42,
+      openIssueCount: 14,
+      doneIssueCount: 28,
+    },
+    {
+      _id: "demo_p2" as Id<"projects">,
+      name: "Mobile Client",
+      key: "MBL",
+      status: "active",
+      issueCount: 24,
+      openIssueCount: 9,
+      doneIssueCount: 15,
+    },
+    {
+      _id: "demo_p3" as Id<"projects">,
+      name: "Design System",
+      key: "DS",
+      status: "planning",
+      issueCount: 18,
+      openIssueCount: 8,
+      doneIssueCount: 10,
+    },
+    {
+      _id: "demo_p4" as Id<"projects">,
+      name: "Cloud Sync",
+      key: "SYNC",
+      status: "active",
+      issueCount: 16,
+      openIssueCount: 7,
+      doneIssueCount: 9,
+    },
+  ];
+
+  const sampleRiskByProject = new Map([
+    ["demo_p1", { score: 18, level: "low", blocked: 1, overdue: 1 }],
+    ["demo_p2", { score: 32, level: "medium", blocked: 2, overdue: 2 }],
+    ["demo_p3", { score: 10, level: "low", blocked: 0, overdue: 0 }],
+    ["demo_p4", { score: 26, level: "medium", blocked: 0, overdue: 1 }],
+  ]);
+
+  const sampleActivity = [
+    {
+      _id: "sample_1",
+      actorName: "Sarah Chen",
+      eventType: "issue.completed",
+      createdAt: Date.now() - 1000 * 60 * 18,
+      entityType: "issue",
+      entityId: "1",
+    },
+    {
+      _id: "sample_2",
+      actorName: "Alex Rivera",
+      eventType: "issue.status_changed",
+      createdAt: Date.now() - 1000 * 60 * 45,
+      entityType: "issue",
+      entityId: "2",
+    },
+    {
+      _id: "sample_3",
+      actorName: "Devin Brooks",
+      eventType: "project.updated",
+      createdAt: Date.now() - 1000 * 60 * 120,
+      entityType: "project",
+      entityId: "3",
+    },
+    {
+      _id: "sample_4",
+      actorName: "Morgan Taylor",
+      eventType: "issue.created",
+      createdAt: Date.now() - 1000 * 60 * 180,
+      entityType: "issue",
+      entityId: "4",
+    },
+    {
+      _id: "sample_5",
+      actorName: "Elena Rostova",
+      eventType: "comment.created",
+      createdAt: Date.now() - 1000 * 60 * 320,
+      entityType: "issue",
+      entityId: "5",
+    },
+  ];
+
+  const sampleIssues: OverviewIssueItem[] = [
+    {
+      _id: "si_1",
+      projectKey: "CORE",
+      number: 104,
+      title: "Integrate OAuth refresh token rotation and retry flow",
+      statusName: "In Progress",
+      statusColor: "#7957EC",
+      priority: "urgent",
+    },
+    {
+      _id: "si_2",
+      projectKey: "MBL",
+      number: 28,
+      title: "Fix iOS virtual keyboard layout shift in bottom sheet dialogs",
+      statusName: "Review",
+      statusColor: "#D78FC6",
+      priority: "high",
+    },
+    {
+      _id: "si_3",
+      projectKey: "CORE",
+      number: 112,
+      title: "Optimize composite database index on workspace audit log queries",
+      statusName: "Todo",
+      statusColor: "#6E94CB",
+      priority: "medium",
+    },
+    {
+      _id: "si_4",
+      projectKey: "SYNC",
+      number: 15,
+      title: "Implement background delta sync for offline mutations",
+      statusName: "In Progress",
+      statusColor: "#7957EC",
+      priority: "high",
+    },
+    {
+      _id: "si_5",
+      projectKey: "DS",
+      number: 44,
+      title: "Audit color tokens for WCAG AA 4.5:1 contrast compliance",
+      statusName: "Todo",
+      statusColor: "#6E94CB",
+      priority: "low",
+    },
+  ];
+
+  const effectiveRollup = sampleDataActive ? sampleRollup : realRollup;
+  const effectiveProjects = sampleDataActive ? sampleProjects : projectList;
+  const effectiveRisks = sampleDataActive ? sampleRiskByProject : realRiskByProject;
+  const effectiveActivity = sampleDataActive ? sampleActivity : (activity ?? []);
+  const effectiveIssues = sampleDataActive ? sampleIssues : realIssues;
+
+  const renderWidgetItem = (item: WidgetItem) => {
+    switch (item.id) {
+      case "quick_actions":
+        return (
+          <QuickActionsWidget
+            workspaceId={id}
+            workspaceName={workspace.workspace.name}
+            canWrite={canWrite}
+            projectList={projectList}
+            isSampleData={sampleDataActive}
+          />
+        );
+      case "my_open_issues":
+        return (
+          <MyOpenIssuesWidget
+            workspaceId={id}
+            issues={effectiveIssues}
+            canWrite={canWrite}
+            isSampleData={sampleDataActive}
+          />
+        );
+      case "recent_activity":
+        return (
+          <RecentActivityWidget
+            workspaceId={id}
+            activity={effectiveActivity}
+            isSampleData={sampleDataActive}
+          />
+        );
+      case "status_distribution":
+        return (
+          <StatusDistributionWidget
+            rollup={effectiveRollup}
+            isSampleData={sampleDataActive}
+          />
+        );
+      case "priority_breakdown":
+        return (
+          <PriorityBreakdownWidget
+            rollup={effectiveRollup}
+            isSampleData={sampleDataActive}
+          />
+        );
+      case "project_health":
+        return (
+          <ProjectHealthWidget
+            workspaceId={id}
+            projectList={effectiveProjects}
+            riskByProject={effectiveRisks}
+            canWrite={canWrite}
+            isSampleData={sampleDataActive}
+          />
+        );
+      default:
+        return <div>{item.title}</div>;
+    }
+  };
 
   return (
     <AppShell workspaceId={workspaceId}>
@@ -148,259 +415,78 @@ export default function OverviewPage() {
           description={`${workspace.projectCount} active projects, ${workspace.memberCount} members. Open work, delivery risk, and what changed most recently.`}
           meta={<RoleBadge role={workspace.role} />}
           actions={
-            <>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Preview with sample data toggle */}
+              <Button
+                variant={sampleDataActive ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSampleDataActive(!sampleDataActive)}
+                className="gap-1.5 rounded-full"
+              >
+                <Sparkles className="size-3.5" />
+                <span>{sampleDataActive ? "Sample data ON" : "Sample data"}</span>
+              </Button>
+
+              {/* Edit layout toggle */}
+              <Button
+                variant={isEditing ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="gap-1.5 rounded-full"
+              >
+                <Move className="size-3.5" />
+                <span>{isEditing ? "Done editing" : "Edit layout"}</span>
+              </Button>
+
+              {isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetLayout}
+                  className="gap-1.5 rounded-full text-[#575657] hover:text-[#0D0D0D]"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Reset layout</span>
+                </Button>
+              )}
+
+              {/* New Issue & New Project actions */}
               <CreateIssueDialog
                 projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
                 canCreate={canWrite && projectList.length > 0}
                 trigger={
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="rounded-full">
                     <Plus /> Create issue
                   </Button>
                 }
               />
               <CreateProjectDialog workspaceId={id} canCreate={canWrite} />
-            </>
+            </div>
           }
-        />
+        >
+          {isEditing && (
+            <div className="flex items-center gap-2 rounded-full border border-border bg-[#F1F1F3] px-3.5 py-1.5 text-[12px] text-[#575657]">
+              <Move className="size-3.5 text-[#0D0D0D]" />
+              <span>Drag widgets to rearrange. Use Alt + Arrow keys for keyboard reordering.</span>
+            </div>
+          )}
+        </PageHeader>
 
         {loading ? (
           <LoadingBlock />
         ) : (
-          <>
-            {/* KPI row */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <StatCard
-                label="Open issues"
-                value={rollup.open}
-                icon={<Inbox className="size-3.5" />}
-                detail={`${rollup.unassigned} unassigned`}
-                hint="Issues in an active workflow status that are not completed."
-              />
-              <StatCard
-                label="Blocked"
-                value={rollup.blocked}
-                tone={rollup.blocked > 0 ? "warning" : "positive"}
-                icon={<CircleSlash className="size-3.5" />}
-                detail="Waiting on an unresolved blocker"
-                hint="Open issues with a blocking issue that is not yet completed."
-              />
-              <StatCard
-                label="Overdue"
-                value={rollup.overdue}
-                tone={rollup.overdue > 0 ? "danger" : "positive"}
-                icon={<AlertTriangle className="size-3.5" />}
-                detail="Past their due date"
-                hint="Open issues whose due date has already passed."
-              />
-              <StatCard
-                label="Active projects"
-                value={projectList.filter((p) => p.status === "active" || p.status === "planning").length}
-                icon={<Gauge className="size-3.5" />}
-                detail={`${rollup.completed} issues completed`}
-              />
-              <StatCard
-                label="Risk score"
-                value={rollup.riskScore}
-                tone={riskTone}
-                icon={<Flame className="size-3.5" />}
-                detail={`${rollup.riskLevel} risk, average per project`}
-                hint="Average of each project's rule-based risk score (0 to 100). Higher means more blocked, overdue, and stale work."
-              />
-            </div>
-
-            {/* Health + distributions */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              <Panel
-                className="lg:col-span-2"
-                title="Project health"
-                description="Delivery progress and risk for each active project."
-                actions={
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/app/workspaces/${workspaceId}/projects`}>
-                      All projects <ArrowUpRight className="size-3.5" />
-                    </Link>
-                  </Button>
-                }
-                flush
-              >
-                {projectList.length === 0 ? (
-                  <PanelEmpty
-                    title="No projects yet"
-                    description="Create your first project to start tracking issues and delivery risk."
-                    action={
-                      canWrite ? (
-                        <CreateProjectDialog
-                          workspaceId={id}
-                          canCreate={canWrite}
-                          defaultOpen
-                        />
-                      ) : undefined
-                    }
-                  />
-                ) : (
-                  <div className="grid gap-px bg-border sm:grid-cols-2">
-                    {projectList.slice(0, 6).map((p) => {
-                      const risk = riskByProject.get(p._id);
-                      const total = p.issueCount || 1;
-                      const pct = Math.round((p.doneIssueCount / total) * 100);
-                      return (
-                        <Link
-                          key={p._id}
-                          to={`/app/projects/${p._id}`}
-                          className="group flex items-center gap-3.5 bg-card p-4 transition-colors hover:bg-secondary/60"
-                        >
-                          <ProgressRing value={pct} size={44} stroke={4}>
-                            <span className="text-[10px] font-medium tabular-nums">{pct}%</span>
-                          </ProgressRing>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate text-[13px] font-medium">{p.name}</span>
-                              <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                                {p.key}
-                              </span>
-                            </div>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              {p.openIssueCount} open · {p.doneIssueCount} done
-                              {risk ? ` · ${risk.level} risk` : ""}
-                            </p>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </Panel>
-
-              <div className="flex flex-col gap-4">
-                <Panel
-                  title="Issues by status"
-                  hint="Every non-archived issue in the workspace, grouped by its current workflow status."
-                >
-                  {statusTotal === 0 ? (
-                    <PanelEmpty title="No issues yet" />
-                  ) : (
-                    <StackedBar
-                      segments={rollup.byStatus.map((s, i) => ({
-                        label: s.statusName,
-                        value: s.count,
-                        color: s.color || STATUS_COLORS[i % STATUS_COLORS.length],
-                      }))}
-                    />
-                  )}
-                </Panel>
-
-                <Panel
-                  title="Issues by priority"
-                  hint="Open issues only, grouped by the priority set on each issue."
-                >
-                  {priorityTotal === 0 ? (
-                    <PanelEmpty title="No open issues" />
-                  ) : (
-                    <div className="space-y-2">
-                      {rollup.byPriority.map((p) => {
-                        const pct = priorityTotal ? (p.count / priorityTotal) * 100 : 0;
-                        return (
-                          <MeterRow
-                            key={p.priority}
-                            label={<span className="capitalize">{p.priority}</span>}
-                            value={p.count}
-                            display={String(p.count)}
-                            pct={pct}
-                            tone={PRIORITY_TONE[p.priority] ?? "bg-foreground/70"}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </Panel>
-              </div>
-            </div>
-
-            {/* Quick actions + activity */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              <Panel title="Quick actions" className="lg:col-span-1">
-                <div className="grid gap-2">
-                  {canWrite && (
-                    <CreateProjectDialog
-                      workspaceId={id}
-                      canCreate={canWrite}
-                      trigger={
-                        <Button variant="secondary" className="h-9 justify-start">
-                          <Plus /> Create project
-                        </Button>
-                      }
-                    />
-                  )}
-                  {canWrite && projectList.length > 0 && (
-                    <CreateIssueDialog
-                      projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
-                      canCreate={canWrite}
-                      trigger={
-                        <Button variant="secondary" className="h-9 justify-start">
-                          <Plus /> Create issue
-                        </Button>
-                      }
-                    />
-                  )}
-                  <Button variant="secondary" className="h-9 justify-start" asChild>
-                    <Link to={`/app/workspaces/${workspaceId}/teams`}>
-                      <UserPlus /> Invite member
-                    </Link>
-                  </Button>
-                  <Button variant="secondary" className="h-9 justify-start" asChild>
-                    <Link to={`/app/workspaces/${workspaceId}/analytics`}>
-                      <BarChart3 /> Explore analytics
-                    </Link>
-                  </Button>
-                  <Button variant="secondary" className="h-9 justify-start" asChild>
-                    <Link to={`/app/workspaces/${workspaceId}/activity`}>
-                      <Timer /> View activity log
-                    </Link>
-                  </Button>
-                </div>
-              </Panel>
-
-              <Panel
-                className="lg:col-span-2"
-                title="Recent activity"
-                description="The last changes across every project in this workspace."
-                actions={
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/app/workspaces/${workspaceId}/activity`}>
-                      View all <ArrowUpRight className="size-3.5" />
-                    </Link>
-                  </Button>
-                }
-                flush
-              >
-                {activity === undefined ? (
-                  <div className="px-4 py-8 text-xs text-muted-foreground">Loading activity...</div>
-                ) : activity.length === 0 ? (
-                  <PanelEmpty
-                    title="No activity yet"
-                    description="Creating projects, issues, and comments all show up here."
-                  />
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {activity.map((event) => (
-                      <ActivityItem
-                        key={event._id}
-                        className="px-4"
-                        actorName={event.actorName}
-                        actorImage={event.actorImage}
-                        action={event.eventType.replace(".", " ").replace(/_/g, " ")}
-                        timestamp={new Date(event.createdAt).toLocaleTimeString(undefined, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                        href={relatedHref(event)}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </Panel>
-            </div>
-          </>
+          <div className="w-full">
+            <DraggableWidgetGrid
+              items={layout}
+              onChange={handleLayoutChange}
+              renderItem={renderWidgetItem}
+              editable={isEditing}
+              maxColumns={4}
+              gap={16}
+              radius={20}
+              rowRatio={0.62}
+            />
+          </div>
         )}
       </PageStack>
     </AppShell>

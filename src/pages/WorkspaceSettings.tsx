@@ -75,20 +75,21 @@ export default function WorkspaceSettings() {
           </Link>
         </div>
 
-        <h1 className="font-display text-2xl tracking-[-0.02em]">Workspace settings</h1>
+        <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">Workspace settings</h1>
 
         {/* General */}
         <section className="mt-8">
-          <h2 className="text-sm font-medium">General</h2>
-          <div className="mt-3 space-y-3 rounded-lg border border-border bg-card p-4">
+          <h2 className="text-[14px] font-[500] text-[#0D0D0D]">General</h2>
+          <div className="mt-3 space-y-4 rounded-[16px] border border-border bg-white p-5 shadow-none">
             <div className="space-y-2">
-              <Label htmlFor="ws-name">Workspace name</Label>
+              <Label htmlFor="ws-name" className="text-[13px] font-[500] text-[#0D0D0D]">Workspace name</Label>
               <div className="flex gap-2">
                 <Input
                   id="ws-name"
                   value={nameValue}
                   onChange={(e) => setName(e.target.value)}
                   disabled={!isOwner}
+                  className="h-10 rounded-[12px] text-[13px]"
                   onKeyDown={(e) => {
                     if (
                       e.key === "Enter" &&
@@ -108,6 +109,7 @@ export default function WorkspaceSettings() {
                     nameValue.trim().length < 2 ||
                     nameValue === workspace.workspace.name
                   }
+                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-10 px-5 text-[13px]"
                   onClick={() =>
                     renameWorkspace({ workspaceId: workspaceId as never, name: nameValue })
                       .then(() => toast.success("Workspace renamed"))
@@ -118,14 +120,14 @@ export default function WorkspaceSettings() {
                 </Button>
               </div>
               {!isOwner && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[12px] text-[#575657]">
                   Only the workspace owner can rename it.
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <Label>Slug</Label>
-              <Input value={workspace.workspace.slug} disabled className="font-mono text-xs" />
+              <Label className="text-[13px] font-[500] text-[#0D0D0D]">Slug</Label>
+              <Input value={workspace.workspace.slug} disabled className="h-10 rounded-[12px] font-mono text-[12px] bg-[#F1F1F3]" />
             </div>
           </div>
         </section>
@@ -133,11 +135,11 @@ export default function WorkspaceSettings() {
         {/* Ownership transfer */}
         {isOwner && members && members.length > 1 && (
           <section className="mt-8">
-            <h2 className="text-sm font-medium">Transfer ownership</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Transfer ownership</h2>
+            <p className="mt-1 text-[13px] text-[#575657]">
               The new owner becomes the workspace owner; you become an admin.
             </p>
-            <div className="mt-3 flex gap-2 rounded-lg border border-border bg-card p-4">
+            <div className="mt-3 flex gap-2 rounded-[16px] border border-border bg-white p-5 shadow-none">
               <Select value={newOwner} onValueChange={setNewOwner}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Choose a member…" />
