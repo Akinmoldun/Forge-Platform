@@ -510,13 +510,46 @@ body {
   background: radial-gradient(circle at 50% 50%, rgba(110, 148, 203, 0.2) 0%, rgba(159, 218, 133, 0.08) 60%, rgba(255, 255, 255, 0) 100%);
 }
 
+@keyframes marquee-to-left {
+  0% {
+    transform: translate3d(0%, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes marquee-to-right {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0%, 0, 0);
+  }
+}
+
+.animate-marquee-to-left {
+  animation: marquee-to-left var(--marquee-speed, 35s) linear infinite !important;
+  will-change: transform;
+}
+
+.animate-marquee-to-right {
+  animation: marquee-to-right var(--marquee-speed, 35s) linear infinite !important;
+  will-change: transform;
+}
+
+.animate-marquee-to-left:hover,
+.animate-marquee-to-right:hover {
+  animation-play-state: paused !important;
+}
+
 @keyframes marquee-left {
-  0% { transform: translateX(0%); }
-  100% { transform: translateX(calc(-100% - var(--marquee-gap, 16px))); }
+  0% { transform: translate3d(0%, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
 }
 @keyframes marquee-right {
-  0% { transform: translateX(calc(-100% - var(--marquee-gap, 16px))); }
-  100% { transform: translateX(0%); }
+  0% { transform: translate3d(-50%, 0, 0); }
+  100% { transform: translate3d(0%, 0, 0); }
 }
 
 .animate-marquee-left {
@@ -542,19 +575,19 @@ body {
 /* Section 9 Marquee Animations */
 @keyframes marquee-ltr {
   0% {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
   }
   100% {
-    transform: translateX(0%);
+    transform: translate3d(0%, 0, 0);
   }
 }
 
 @keyframes marquee-rtl {
   0% {
-    transform: translateX(0%);
+    transform: translate3d(0%, 0, 0);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
@@ -597,25 +630,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cards-row {
-    overflow: visible !important;
-    mask-image: none !important;
-    -webkit-mask-image: none !important;
-  }
-  .cards-track,
+  .animate-marquee-to-left,
+  .animate-marquee-to-right,
+  .animate-marquee-left,
+  .animate-marquee-right,
   .cards-track-ltr,
   .cards-track-rtl {
-    animation: none !important;
-    width: 100% !important;
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-  }
-  .cards-group {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-  }
-  .cards-group[aria-hidden="true"] {
-    display: none !important;
+    animation-duration: 80s !important;
   }
 }
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Shield } from 'lucide-react';
 import { Reveal } from '../Reveal';
 
@@ -122,50 +123,8 @@ function NotIncludedIcon() {
 }
 
 export function Section8RolesComparison() {
-  const [inView, setInView] = useState(false);
+  const shouldReduce = useReducedMotion();
   const tableRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // prefers-reduced-motion: show immediately
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      setInView(true);
-      return;
-    }
-
-    if (!tableRef.current) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      setInView(true);
-      return;
-    }
-
-    // Check if table is already in viewport on mount
-    const rect = tableRef.current.getBoundingClientRect();
-    const vh = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.top >= 0 && rect.top < vh * 0.75) {
-      setInView(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting || entry.intersectionRatio >= 0.1) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      {
-        threshold: [0.05, 0.15, 0.25],
-        rootMargin: '0px 0px -40px 0px',
-      },
-    );
-
-    observer.observe(tableRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <section id="security" className="landing-section relative band-white">
@@ -180,19 +139,10 @@ export function Section8RolesComparison() {
           }
         }
         .roles-body-row {
-          transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1),
-                      transform 400ms cubic-bezier(0.16, 1, 0.3, 1),
-                      background-color 150ms ease;
+          transition: background-color 150ms ease;
         }
         .roles-body-row:hover {
           background-color: #F3F6FA !important;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .roles-body-row {
-            transform: none !important;
-            opacity: 1 !important;
-            transition: background-color 150ms ease !important;
-          }
         }
       `}</style>
       <div className="landing-container relative z-1">
@@ -267,24 +217,34 @@ export function Section8RolesComparison() {
                 </div>
               </div>
 
-              {/* Body rows */}
+              {/* Body rows with Framer Motion spring scroll entrance */}
               <div role="rowgroup">
                 {ROLE_ROWS.map((row, idx) => {
                   const isEven = idx % 2 === 1; // 1st row (idx 0) is #FFFFFF, 2nd row (idx 1) is #F9FBFC
                   const isLast = idx === ROLE_ROWS.length - 1;
 
                   return (
-                    <div
+                    <motion.div
                       key={row.capability}
                       role="row"
-                      className={`roles-grid-row roles-body-row h-[48px] md:h-[54px] ${
+                      initial={shouldReduce ? false : { opacity: 0, y: 28, scale: 0.985 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      viewport={{ once: true, margin: '-20px' }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 140,
+                        damping: 18,
+                        delay: (idx % 10) * 0.045,
+                      }}
+                      whileHover={{
+                        backgroundColor: '#F3F6FA',
+                        transition: { duration: 0.15 },
+                      }}
+                      className={`roles-grid-row roles-body-row h-[48px] md:h-[54px] cursor-default ${
                         isLast ? 'border-b-0' : 'border-b border-black/[0.07]'
                       }`}
                       style={{
                         backgroundColor: isEven ? '#F9FBFC' : '#FFFFFF',
-                        opacity: inView ? 1 : 0,
-                        transform: inView ? 'translateY(0)' : 'translateY(12px)',
-                        transitionDelay: inView ? `${idx * 40}ms, ${idx * 40}ms, 0ms` : '0ms',
                       }}
                     >
                       {/* First cell: capability label */}
@@ -297,24 +257,52 @@ export function Section8RolesComparison() {
 
                       {/* Viewer cell */}
                       <div role="cell" className="flex items-center justify-center">
-                        {row.viewer ? <IncludedIcon /> : <NotIncludedIcon />}
+                        <motion.div
+                          initial={shouldReduce ? false : { scale: 0.3, opacity: 0 }}
+                          whileInView={{ scale: 1, opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.08 + (idx % 10) * 0.045 }}
+                        >
+                          {row.viewer ? <IncludedIcon /> : <NotIncludedIcon />}
+                        </motion.div>
                       </div>
 
                       {/* Member cell */}
                       <div role="cell" className="flex items-center justify-center">
-                        {row.member ? <IncludedIcon /> : <NotIncludedIcon />}
+                        <motion.div
+                          initial={shouldReduce ? false : { scale: 0.3, opacity: 0 }}
+                          whileInView={{ scale: 1, opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.08 + (idx % 10) * 0.045 }}
+                        >
+                          {row.member ? <IncludedIcon /> : <NotIncludedIcon />}
+                        </motion.div>
                       </div>
 
                       {/* Admin cell */}
                       <div role="cell" className="flex items-center justify-center">
-                        {row.admin ? <IncludedIcon /> : <NotIncludedIcon />}
+                        <motion.div
+                          initial={shouldReduce ? false : { scale: 0.3, opacity: 0 }}
+                          whileInView={{ scale: 1, opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.08 + (idx % 10) * 0.045 }}
+                        >
+                          {row.admin ? <IncludedIcon /> : <NotIncludedIcon />}
+                        </motion.div>
                       </div>
 
                       {/* Owner cell */}
                       <div role="cell" className="flex items-center justify-center">
-                        {row.owner ? <IncludedIcon /> : <NotIncludedIcon />}
+                        <motion.div
+                          initial={shouldReduce ? false : { scale: 0.3, opacity: 0 }}
+                          whileInView={{ scale: 1, opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ type: 'spring', stiffness: 280, damping: 18, delay: 0.08 + (idx % 10) * 0.045 }}
+                        >
+                          {row.owner ? <IncludedIcon /> : <NotIncludedIcon />}
+                        </motion.div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>

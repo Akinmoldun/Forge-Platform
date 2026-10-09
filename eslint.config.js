@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
-  { ignores: ["dist", "src/convex/**"] },
+  { ignores: ["dist", "build", "src/convex/**", "vly-toolbar-readonly.tsx"] },
   {
     extends: [
       js.configs.recommended,
@@ -30,10 +30,7 @@ export default tseslint.config(
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
+      "react-refresh/only-export-components": "off",
     },
   },
 );

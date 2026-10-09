@@ -9,6 +9,7 @@ export function Section12FinalCTA() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   const handleDemo = async () => {
     setError(null);
@@ -177,24 +178,31 @@ export function Section12FinalCTA() {
                 </div>
 
                 {/* Screenshot with bottom fade: linear-gradient(to bottom, #000 70%, transparent) */}
-                <div
-                  style={{
-                    maskImage: 'linear-gradient(to bottom, #000 70%, transparent)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, #000 70%, transparent)',
-                  }}
-                >
-                  <img
-                    src="/screens/app-board.png"
-                    alt="Forge Kanban Board"
+                {imageError ? (
+                  <div className="py-12 text-sm text-[#575657] text-center font-mono">
+                    add /public/screens/app-board.png
+                  </div>
+                ) : (
+                  <div
                     style={{
-                      width: '100%',
-                      height: 'auto',
-                      objectPosition: 'top',
-                      maxHeight: '360px',
+                      maskImage: 'linear-gradient(to bottom, #000 70%, transparent)',
+                      WebkitMaskImage: 'linear-gradient(to bottom, #000 70%, transparent)',
                     }}
-                    className="block object-cover"
-                  />
-                </div>
+                  >
+                    <img
+                      src="/screens/app-board.png"
+                      alt="Forge Kanban Board"
+                      onError={() => setImageError(true)}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        objectPosition: 'top',
+                        maxHeight: '360px',
+                      }}
+                      className="block object-cover"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </Reveal>

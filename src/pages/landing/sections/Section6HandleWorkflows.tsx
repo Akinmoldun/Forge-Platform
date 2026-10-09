@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import {
   ShieldCheck,
   GitBranch,
@@ -95,13 +96,15 @@ export function Section6HandleWorkflows() {
                 direction={idx % 2 === 0 ? 'up' : 'pop'}
                 className="w-full h-full"
               >
-                <div
+                <motion.div
+                  whileHover={{ y: -4, borderColor: 'rgba(0, 0, 0, 0.2)' }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid rgba(0, 0, 0, 0.08)',
                     borderRadius: '10px',
                   }}
-                  className="reliability-card p-[18px] h-full min-h-[168px] min-[900px]:h-[168px] flex flex-col justify-between shadow-none"
+                  className="reliability-card p-[18px] h-full min-h-[168px] min-[900px]:h-[168px] flex flex-col justify-between shadow-none cursor-default"
                 >
                   {/* Top: Icon tile 36px x 36px, radius 8px, background #EAF2FF, 18px line icon in #1D6FE8 */}
                   <div className="w-[36px] h-[36px] rounded-[8px] bg-[#EAF2FF] flex items-center justify-center shrink-0">
@@ -117,7 +120,7 @@ export function Section6HandleWorkflows() {
                       {item.description}
                     </p>
                   </div>
-                </div>
+                </motion.div>
               </Reveal>
             );
           })}

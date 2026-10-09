@@ -7,9 +7,10 @@ interface MotionContextValue {
   registerProgressElement: (el: HTMLElement, onUpdate?: (p: number) => void) => () => void;
   registerVelocityMarquee: (track: {
     el: HTMLElement;
-    baseSpeed: number; // px per second
+    baseSpeed: number; // px per second / frame
     direction: 1 | -1; // 1: moves left (negative x), -1: moves right (positive x)
     trackWidth: number;
+    halfWidth?: number;
     pauseOnHover?: boolean;
   }) => () => void;
   isReducedMotion: boolean;
@@ -39,6 +40,7 @@ interface MarqueeSubscriber {
   baseSpeed: number;
   direction: 1 | -1;
   trackWidth: number;
+  halfWidth: number;
   pauseOnHover?: boolean;
   isHovered: boolean;
   currentX: number;
@@ -93,19 +95,46 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
       baseSpeed: number;
       direction: 1 | -1;
       trackWidth: number;
+      halfWidth?: number;
       pauseOnHover?: boolean;
     }) => {
-      const subscriber: MarqueeSubscriber = {
-        ...config,
+      const half = config.halfWidth ?? (config.trackWidth > 0 ? config.trackWidth / 2 : 2000);
+
+      let subscriber: MarqueeSubscriber | undefined;
+      for (const sub of marqueeSubscribers.current) {
+        if (sub.el === config.el) {
+          subscriber = sub;
+          break;
+        }
+      }
+
+      if (subscriber) {
+        subscriber.baseSpeed = config.baseSpeed;
+        subscriber.direction = config.direction;
+        subscriber.trackWidth = config.trackWidth;
+        subscriber.halfWidth = half;
+        subscriber.pauseOnHover = config.pauseOnHover;
+        return () => {
+          marqueeSubscribers.current.delete(subscriber!);
+        };
+      }
+
+      const newSubscriber: MarqueeSubscriber = {
+        el: config.el,
+        baseSpeed: config.baseSpeed,
+        direction: config.direction,
+        trackWidth: config.trackWidth,
+        halfWidth: half,
+        pauseOnHover: config.pauseOnHover,
         isHovered: false,
         currentX: 0,
       };
 
       const onMouseEnter = () => {
-        if (config.pauseOnHover) subscriber.isHovered = true;
+        if (config.pauseOnHover) newSubscriber.isHovered = true;
       };
       const onMouseLeave = () => {
-        if (config.pauseOnHover) subscriber.isHovered = false;
+        if (config.pauseOnHover) newSubscriber.isHovered = false;
       };
 
       if (config.pauseOnHover) {
@@ -113,14 +142,14 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
         config.el.addEventListener('mouseleave', onMouseLeave);
       }
 
-      marqueeSubscribers.current.add(subscriber);
+      marqueeSubscribers.current.add(newSubscriber);
 
       return () => {
         if (config.pauseOnHover) {
           config.el.removeEventListener('mouseenter', onMouseEnter);
           config.el.removeEventListener('mouseleave', onMouseLeave);
         }
-        marqueeSubscribers.current.delete(subscriber);
+        marqueeSubscribers.current.delete(newSubscriber);
       };
     },
     []
@@ -262,16 +291,13 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
         const frameSpeed = (sub.baseSpeed * (sub.direction === 1 ? -1 : 1) - vVal * 14 * (sub.direction === 1 ? 1 : -1)) * deltaRatio;
         sub.currentX += frameSpeed;
 
-        const halfWidth = sub.trackWidth > 0 ? sub.trackWidth / 2 : 2000;
-        // Wrap modulo at half track width so there's no jump
-        if (sub.currentX < -halfWidth) {
-          sub.currentX += halfWidth;
-        } else if (sub.currentX > 0) {
-          sub.currentX -= halfWidth;
-        }
+        const half = sub.halfWidth > 0 ? sub.halfWidth : (sub.trackWidth > 0 ? sub.trackWidth / 2 : 2000);
+        // Wrap offset with ((x % half) + half) % half so the loop never jumps and never shows a gap
+        const mod = ((sub.currentX % half) + half) % half;
+        const wrappedX = mod - half;
 
         const skewVal = (vVal * -6).toFixed(2);
-        sub.el.style.transform = `translate3d(${sub.currentX.toFixed(2)}px, 0, 0) skewX(${skewVal}deg)`;
+        sub.el.style.transform = `translate3d(${wrappedX.toFixed(2)}px, 0, 0) skewX(${skewVal}deg)`;
       });
 
       rafId = requestAnimationFrame(tick);

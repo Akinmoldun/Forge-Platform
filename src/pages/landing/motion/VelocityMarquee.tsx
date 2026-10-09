@@ -1,97 +1,78 @@
-import React, { useEffect, useRef } from 'react';
-import { useMotion } from './MotionProvider';
+import React, { useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface VelocityMarqueeProps {
   children: React.ReactNode;
-  direction?: 'left' | 'right'; // 'left' = moves right-to-left, 'right' = moves left-to-right
-  baseSpeed?: number; // px per frame (default ~1.2)
+  direction?: 'left' | 'right'; // 'left' = moves left (0% to -50%), 'right' = moves right (-50% to 0%)
+  speed?: number; // duration in seconds
   pauseOnHover?: boolean;
   className?: string;
   gap?: string;
+  repeat?: number; // Repeat items inside each group so each group is at least as wide as the screen
 }
 
 export function VelocityMarquee({
   children,
   direction = 'left',
-  baseSpeed = 1.0,
+  speed = 35,
   pauseOnHover = true,
   className = '',
   gap = '16px',
+  repeat = 4,
 }: VelocityMarqueeProps) {
-  const { registerVelocityMarquee, isReducedMotion } = useMotion();
-  const trackRef = useRef<HTMLDivElement>(null);
+  const items = React.Children.toArray(children);
+  const repeatedItems = Array.from({ length: Math.max(3, repeat) }).flatMap(() => items);
+  const prefersReduced = useReducedMotion();
+  const [isHovered, setIsHovered] = useState(false);
 
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el || isReducedMotion) return;
+  const maskStyle: React.CSSProperties = {
+    maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+    WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+  };
 
-    // Measure track width
-    const measureAndRegister = () => {
-      const trackWidth = el.scrollWidth;
-      return registerVelocityMarquee({
-        el,
-        baseSpeed,
-        direction: direction === 'left' ? 1 : -1,
-        trackWidth,
-        pauseOnHover,
-      });
-    };
-
-    const cleanup = measureAndRegister();
-
-    // Re-measure on resize
-    const ro = new ResizeObserver(() => {
-      // Re-measure if contents change
-    });
-    ro.observe(el);
-
-    return () => {
-      cleanup();
-      ro.disconnect();
-    };
-  }, [registerVelocityMarquee, baseSpeed, direction, pauseOnHover, isReducedMotion]);
-
-  if (isReducedMotion) {
-    return (
-      <div
-        className={`w-full overflow-hidden select-none ${className}`.trim()}
-        style={{
-          maskImage: 'linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent)',
-          WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent)',
-        }}
-      >
-        <div className="flex w-max" style={{ gap }}>
-          {children}
-        </div>
-      </div>
-    );
-  }
+  const xStart = direction === 'left' ? '0%' : '-50%';
+  const xEnd = direction === 'left' ? '-50%' : '0%';
 
   return (
     <div
-      className={`velocity-marquee-container w-full overflow-hidden select-none ${className}`.trim()}
-      style={{
-        maskImage: 'linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent)',
-        WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent)',
-      }}
+      className={`w-full overflow-clip select-none ${className}`.trim()}
+      style={maskStyle}
+      onMouseEnter={() => pauseOnHover && setIsHovered(true)}
+      onMouseLeave={() => pauseOnHover && setIsHovered(false)}
     >
-      <div
-        ref={trackRef}
-        className="velocity-marquee-track flex w-max will-change-transform"
-        style={{
-          gap,
+      <motion.div
+        className="flex w-max flex-nowrap will-change-transform"
+        animate={isHovered ? undefined : { x: [xStart, xEnd] }}
+        transition={{
+          x: {
+            repeat: Infinity,
+            repeatType: 'loop',
+            duration: prefersReduced ? speed * 1.5 : speed,
+            ease: 'linear',
+          },
         }}
       >
-        <div className="flex shrink-0 items-center" style={{ gap }}>
-          {children}
+        {/* Group 1 */}
+        <div
+          className="flex shrink-0 items-center flex-nowrap"
+          style={{ gap, paddingRight: gap }}
+        >
+          {repeatedItems.map((item, idx) => (
+            <React.Fragment key={idx}>{item}</React.Fragment>
+          ))}
         </div>
-        <div aria-hidden="true" className="flex shrink-0 items-center" style={{ gap }}>
-          {children}
+        {/* Group 2: Identical, aria-hidden for seamless loop */}
+        <div
+          aria-hidden="true"
+          className="flex shrink-0 items-center flex-nowrap"
+          style={{ gap, paddingRight: gap }}
+        >
+          {repeatedItems.map((item, idx) => (
+            <React.Fragment key={`copy-${idx}`}>{item}</React.Fragment>
+          ))}
         </div>
-        <div aria-hidden="true" className="flex shrink-0 items-center" style={{ gap }}>
-          {children}
-        </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
+

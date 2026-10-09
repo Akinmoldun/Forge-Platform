@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export interface RevealProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
@@ -19,92 +20,46 @@ export function Reveal({
   style,
   ...rest
 }: RevealProps) {
-  const ref = useRef<HTMLElement>(null);
-  const [mounted, setMounted] = useState(false);
-  const [isIn, setIsIn] = useState(false);
+  const shouldReduce = useReducedMotion();
 
   // Compute staggered delay with subtle organic variation across items
-  const computedDelay =
+  const computedDelayMs =
     delayMs !== undefined
       ? delayMs
       : index !== undefined
         ? index * 75 + ((index % 3) * 20)
         : 0;
 
-  useEffect(() => {
-    setMounted(true);
+  const delaySeconds = computedDelayMs / 1000;
 
-    if (!ref.current) return;
+  const initialValues = shouldReduce
+    ? false
+    : {
+        opacity: 0,
+        y: direction === 'up' ? 36 : direction === 'pop' ? 24 : 0,
+        x: direction === 'left' ? -36 : direction === 'right' ? 36 : 0,
+        scale: direction === 'pop' ? 0.94 : 0.98,
+      };
 
-    // prefers-reduced-motion: show immediately
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      setIsIn(true);
-      return;
-    }
-
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsIn(true);
-      return;
-    }
-
-    const el = ref.current;
-    const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight || document.documentElement.clientHeight;
-
-    // If already in the upper viewport (hero area / above fold) on mount:
-    // Trigger smooth entrance after a slight mount delay
-    if (rect.top >= 0 && rect.bottom <= vh * 0.7) {
-      const timer = setTimeout(() => {
-        setIsIn(true);
-      }, Math.max(40, computedDelay));
-      return () => clearTimeout(timer);
-    }
-
-    // For scrolled content: observe when entering reading zone
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting) {
-          setIsIn(true);
-          observer.unobserve(el);
-        }
-      },
-      {
-        threshold: 0.12,
-        rootMargin: '0px 0px -40px 0px',
-      },
-    );
-
-    observer.observe(el);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [computedDelay]);
-
-  let dirClass = 'reveal';
-  if (direction === 'left') dirClass = 'reveal-left';
-  else if (direction === 'right') dirClass = 'reveal-right';
-  else if (direction === 'pop') dirClass = 'reveal-pop';
-
-  // Before mount, content is fully visible (prevents content being stuck hidden if JS/observer fails)
-  const revealClasses = mounted ? `${dirClass} ${isIn ? 'is-in' : ''}` : '';
+  const MotionComponent = Component === 'div' ? motion.div : Component === 'section' ? motion.section : motion.div;
 
   return (
-    <Component
-      ref={ref}
-      style={{
-        ...style,
-        ...(computedDelay > 0 ? { transitionDelay: `${computedDelay}ms` } : {}),
+    <MotionComponent
+      initial={initialValues}
+      whileInView={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+      viewport={{ once: true, margin: '-30px' }}
+      transition={{
+        type: 'spring',
+        stiffness: 110,
+        damping: 18,
+        delay: delaySeconds,
       }}
-      className={`${revealClasses} ${className}`.trim()}
-      {...rest}
+      className={className}
+      style={style}
+      {...(rest as React.ComponentProps<typeof motion.div>)}
     >
       {children}
-    </Component>
+    </MotionComponent>
   );
 }
+

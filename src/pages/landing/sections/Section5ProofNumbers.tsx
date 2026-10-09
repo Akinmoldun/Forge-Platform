@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, useInView } from 'framer-motion';
 import { Award, CheckCircle2 } from 'lucide-react';
 import { Reveal } from '../Reveal';
 
@@ -7,7 +8,8 @@ interface MetricCardProps {
   suffix?: string;
   title: string;
   sentence: string;
-  delayMs: number;
+  step?: number;
+  delayMs?: number;
 }
 
 function MetricCard({
@@ -15,15 +17,19 @@ function MetricCard({
   suffix = '',
   title,
   sentence,
-  delayMs,
+  step = 1,
+  delayMs = 0,
 }: MetricCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(cardRef, { once: true, amount: 0.45 });
   const [displayValue, setDisplayValue] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const hasStartedRef = useRef(false);
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
+    if (!isInView || hasAnimatedRef.current) return;
+    hasAnimatedRef.current = true;
+
     // Check reduced motion preference
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -32,110 +38,90 @@ function MetricCard({
 
     if (prefersReducedMotion) {
       setDisplayValue(target);
-      setIsVisible(true);
       setIsCompleted(true);
       return;
     }
 
-    const el = cardRef.current;
-    if (!el) return;
+    // Build the calm step sequence from 0 to target
+    // e.g. target 4 by 1 -> [0, 1, 2, 3, 4]
+    // e.g. target 7 by 1 -> [0, 1, 2, 3, 4, 5, 6, 7]
+    // e.g. target 100 by 7 -> [0, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 91, 98, 100]
+    const sequence: number[] = [0];
+    let curr = 0;
+    while (curr + step <= target) {
+      curr += step;
+      sequence.push(curr);
+    }
+    if (sequence[sequence.length - 1] !== target) {
+      sequence.push(target);
+    }
 
-    let rafId: number;
+    // Calm pacing:
+    // Small targets (4, 7): give each count a calm, readable pace (~260ms for 4, ~180ms for 7)
+    // Larger target (100): calm climb with gentle deceleration as it lands on the target
+    let stepIndex = 0;
     let timerId: ReturnType<typeof setTimeout>;
 
-    const startCounting = () => {
-      if (hasStartedRef.current) return;
-      hasStartedRef.current = true;
-      setIsVisible(true);
-
-      timerId = setTimeout(() => {
-        const startTime = performance.now();
-        // Dynamic duration: for small numbers (4, 7), give enough time to clearly see every digit step;
-        // for 100, smooth rapid climb that settles gently at 100.
-        const duration = target <= 10 ? 1100 : 1600;
-
-        const tick = (now: number) => {
-          const elapsed = now - startTime;
-          const progress = Math.min(1, Math.max(0, elapsed / duration));
-
-          // Easing: easeOutExpo for dramatic deceleration as it reaches the target
-          const eased = progress >= 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-          const current = Math.round(eased * target);
-          setDisplayValue(current);
-
-          if (progress < 1) {
-            rafId = requestAnimationFrame(tick);
-          } else {
-            setDisplayValue(target);
-            setIsCompleted(true);
-          }
-        };
-
-        rafId = requestAnimationFrame(tick);
-      }, delayMs);
+    const getStepDelay = (idx: number, total: number) => {
+      if (target <= 10) {
+        return target <= 4 ? 260 : 180;
+      }
+      // For target 100: steady climb, decelerating comfortably on the final steps
+      const remaining = total - 1 - idx;
+      if (remaining <= 1) return 200; // last step into 100
+      if (remaining <= 2) return 150; // step into 98
+      if (remaining <= 3) return 110; // step into 91
+      return 75; // steady calm climb
     };
 
-    if (typeof IntersectionObserver === 'undefined') {
-      startCounting();
-      return;
-    }
+    const tick = () => {
+      stepIndex++;
+      if (stepIndex < sequence.length) {
+        setDisplayValue(sequence[stepIndex]);
+        const nextDelay = getStepDelay(stepIndex, sequence.length);
+        timerId = setTimeout(tick, nextDelay);
+      } else {
+        setDisplayValue(target);
+        setIsCompleted(true);
+      }
+    };
 
-    // Only trigger immediately on load if already inside visible reading area
-    const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.top >= 0 && rect.bottom <= vh * 0.7) {
-      startCounting();
-      return;
-    }
-
-    // Observe when the user scrolls down to this card
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting) {
-          startCounting();
-          observer.unobserve(el);
-        }
-      },
-      {
-        threshold: 0.15,
-        rootMargin: '0px 0px -40px 0px',
-      },
-    );
-
-    observer.observe(el);
+    // A comfortable initial pause (220ms + card delay) so the user sees 0 before counting starts calmly
+    const initialDelay = 220 + delayMs;
+    const initialTimer = setTimeout(() => {
+      const firstDelay = getStepDelay(0, sequence.length);
+      timerId = setTimeout(tick, firstDelay);
+    }, initialDelay);
 
     return () => {
-      observer.disconnect();
+      clearTimeout(initialTimer);
       clearTimeout(timerId);
-      cancelAnimationFrame(rafId);
     };
-  }, [target, delayMs]);
+  }, [isInView, target, step, delayMs]);
 
   return (
-    <div
+    <motion.div
       ref={cardRef}
-      style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid rgba(0, 0, 0, 0.08)',
-        borderRadius: '14px',
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'translateY(0)' : 'translateY(36px)',
-        filter: isVisible ? 'blur(0)' : 'blur(4px)',
-        transition:
-          'opacity 750ms cubic-bezier(0.16, 1, 0.3, 1), transform 750ms cubic-bezier(0.16, 1, 0.3, 1), filter 750ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms ease',
-        transitionDelay: isVisible ? `${delayMs}ms, ${delayMs}ms, ${delayMs}ms, 0ms` : '0ms',
+      initial={{ opacity: 0, y: 32, scale: 0.98 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{
+        duration: 0.65,
+        delay: delayMs / 1000,
+        ease: [0.16, 1, 0.3, 1],
       }}
-      className="number-card p-[28px] h-auto min-h-[240px] min-[900px]:h-[310px] flex flex-col justify-between hover:border-black/[0.14] shadow-none select-none transition-shadow duration-200"
+      style={{
+        boxShadow: 'none',
+      }}
+      className="number-card p-[28px] h-auto min-h-[240px] min-[900px]:h-[310px] flex flex-col justify-between bg-white border border-black/[0.08] rounded-[14px] shadow-none select-none transition-colors duration-150 cursor-default"
     >
-      {/* Top: The big number with counting animation */}
+      {/* Top: The big number with counting animation starting from 0 */}
       <div>
         <div className="flex items-baseline gap-1">
           <span
-            className="text-[64px] sm:text-[72px] font-[500] tracking-[-0.03em] text-[#005EFF] leading-none select-none inline-block tabular-nums transition-transform duration-300"
+            className="text-[64px] sm:text-[72px] font-[500] tracking-[-0.03em] text-[#005EFF] leading-none select-none inline-block tabular-nums"
             style={{
               fontVariantNumeric: 'tabular-nums',
-              transform: isCompleted ? 'scale(1)' : isVisible ? 'scale(1.02)' : 'scale(0.96)',
             }}
             aria-hidden="true"
           >
@@ -160,14 +146,20 @@ function MetricCard({
             {title}
           </h3>
           {isCompleted && (
-            <CheckCircle2 className="w-4 h-4 text-[#005EFF] opacity-75 shrink-0" strokeWidth={2} />
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+            >
+              <CheckCircle2 className="w-4 h-4 text-[#005EFF] opacity-80 shrink-0" strokeWidth={2} />
+            </motion.div>
           )}
         </div>
         <p className="text-[15px] leading-[1.45] text-[#575657] max-w-[260px] m-0 font-normal">
           {sentence}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -191,6 +183,13 @@ export function Section5ProofNumbers() {
       </div>
 
       <style>{`
+        .number-card {
+          box-shadow: none !important;
+        }
+        .number-card:hover {
+          box-shadow: none !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+        }
         @media (prefers-reduced-motion: reduce) {
           .number-card {
             transform: none !important;
@@ -224,6 +223,7 @@ export function Section5ProofNumbers() {
         <div className="w-full max-w-[1080px] mx-auto grid grid-cols-1 min-[900px]:grid-cols-3 gap-[12px]">
           <MetricCard
             target={4}
+            step={1}
             suffix=""
             title="Roles enforced"
             sentence="Owner, admin, member and viewer, checked on the server."
@@ -231,6 +231,7 @@ export function Section5ProofNumbers() {
           />
           <MetricCard
             target={7}
+            step={1}
             suffix=" days"
             title="Invitation expiry"
             sentence="Invite links expire after 7 days and are stored hashed."
@@ -238,6 +239,7 @@ export function Section5ProofNumbers() {
           />
           <MetricCard
             target={100}
+            step={7}
             suffix="%"
             title="Mutations validated"
             sentence="Role checks and input validation on every mutation."

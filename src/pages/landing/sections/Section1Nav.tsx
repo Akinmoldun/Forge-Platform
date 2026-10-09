@@ -149,9 +149,10 @@ export function Section1Nav() {
   return (
     <div
       ref={navContainerRef}
-      className="fixed top-[12px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[1040px] transition-transform duration-250 ease-out"
+      className="fixed top-[12px] left-0 right-0 mx-auto z-50 transition-transform duration-250 ease-out"
       style={{
-        transform: `translate3d(-50%, ${navVisible || mobileMenuOpen ? '0' : '-130%'}, 0)`,
+        width: 'min(1200px, calc(100% - 24px))',
+        transform: `translateY(${navVisible || mobileMenuOpen ? '0px' : '-130%'})`,
       }}
     >
       {/* Floating rounded bar */}

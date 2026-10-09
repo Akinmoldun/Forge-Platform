@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { Reveal } from '../Reveal';
 
@@ -84,7 +85,11 @@ export function Section7WhatsIncluded() {
               index={idx}
               direction={idx === 1 ? 'pop' : idx === 0 ? 'left' : 'right'}
             >
-              <div className="landing-card p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden text-left h-full">
+              <motion.div
+                whileHover={{ y: -5, scale: 1.01 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                className="landing-card p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden text-left h-full cursor-default"
+              >
                 <div
                   className={`absolute inset-0 bg-gradient-to-br ${mod.bg} -z-10 pointer-events-none`}
                 />
@@ -122,7 +127,7 @@ export function Section7WhatsIncluded() {
                     Full access
                   </span>
                 </div>
-              </div>
+              </motion.div>
             </Reveal>
           ))}
         </div>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { motion } from 'framer-motion';
 import {
   ShieldCheck,
   GitBranch,
@@ -13,11 +14,7 @@ import {
   MailCheck,
   Archive,
 } from 'lucide-react';
-import {
-  Marquee,
-  MarqueeContent,
-  MarqueeItem,
-} from '@/components/ui/marquee';
+import { VelocityMarquee } from '../motion/VelocityMarquee';
 import { Reveal } from '../Reveal';
 
 interface MarqueeCardItem {
@@ -122,9 +119,11 @@ function MarqueeCard({ item }: { item: MarqueeCardItem }) {
   const Icon = item.icon;
 
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -4, scale: 1.015 }}
+      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
       style={{ backgroundColor: '#FFFFFF' }}
-      className="marquee-card flex-none w-[262px] p-[4px] rounded-[14px] bg-white border border-black/[0.08] shadow-none select-none"
+      className="marquee-card flex-none w-[262px] p-[4px] rounded-[14px] bg-white border border-black/[0.08] shadow-none select-none cursor-default"
     >
       <div className="marquee-card-inner bg-white border border-black/[0.08] rounded-[10px] h-[168px] flex flex-col justify-between shadow-none transition-colors duration-150">
         {/* Header: padding 14px 16px, flex, align center, gap 12px */}
@@ -161,21 +160,11 @@ function MarqueeCard({ item }: { item: MarqueeCardItem }) {
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 export function Section9WhyTeamsChoose() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-    mq.addEventListener?.('change', handler);
-    return () => mq.removeEventListener?.('change', handler);
-  }, []);
-
   return (
     <section className="landing-section relative band-white pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] select-none w-full">
       {/* Header */}
@@ -194,50 +183,22 @@ export function Section9WhyTeamsChoose() {
         </p>
       </Reveal>
 
-      {/* Contained within 1240px with soft blurred edges so it never touches the screen edge */}
-      <Reveal delayMs={100} className="max-w-[1240px] mx-auto px-4 sm:px-6 relative z-1 flex flex-col gap-4">
-        {/* Row 1: scrolls to the LEFT (infinite) */}
-        <Marquee
-          autoFill
-          pauseOnHover={false}
-          side="left"
-          speed={prefersReducedMotion ? 16 : 28}
-          gap="14px"
-          style={{
-            maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
-          }}
-        >
-          <MarqueeContent>
-            {ROW_1_ITEMS.map((item) => (
-              <MarqueeItem key={item.title}>
-                <MarqueeCard item={item} />
-              </MarqueeItem>
-            ))}
-          </MarqueeContent>
-        </Marquee>
+      {/* Two card rows: full width (100%), not in a narrower container */}
+      <div className="w-full relative z-1 flex flex-col gap-4">
+        {/* Row 1: TOP row moves left */}
+        <VelocityMarquee direction="left" speed={38} gap="14px" repeat={4}>
+          {ROW_1_ITEMS.map((item) => (
+            <MarqueeCard key={item.title} item={item} />
+          ))}
+        </VelocityMarquee>
 
-        {/* Row 2: scrolls to the RIGHT (infinite) */}
-        <Marquee
-          autoFill
-          pauseOnHover={false}
-          side="right"
-          speed={prefersReducedMotion ? 16 : 28}
-          gap="14px"
-          style={{
-            maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
-          }}
-        >
-          <MarqueeContent>
-            {ROW_2_ITEMS.map((item) => (
-              <MarqueeItem key={item.title}>
-                <MarqueeCard item={item} />
-              </MarqueeItem>
-            ))}
-          </MarqueeContent>
-        </Marquee>
-      </Reveal>
+        {/* Row 2: BOTTOM row moves right */}
+        <VelocityMarquee direction="right" speed={38} gap="14px" repeat={4}>
+          {ROW_2_ITEMS.map((item) => (
+            <MarqueeCard key={item.title} item={item} />
+          ))}
+        </VelocityMarquee>
+      </div>
     </section>
   );
 }

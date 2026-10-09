@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Layers,
   Lock,
@@ -52,6 +53,8 @@ const CARDS: CapabilityCard[] = [
 ];
 
 export function Section4KeyCapabilities() {
+  const shouldReduce = useReducedMotion();
+
   return (
     <section id="capabilities" className="relative band-white py-16 sm:py-20 lg:py-24">
       <div className="relative z-1 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -103,12 +106,26 @@ export function Section4KeyCapabilities() {
           {/* RIGHT COLUMN: 5 cards arranged directly by the side of the text   */}
           {/* ================================================================= */}
           <div className="lg:col-span-7 flex flex-col gap-3.5 sm:gap-4 w-full">
-            {CARDS.map((card) => {
+            {CARDS.map((card, idx) => {
               const Icon = card.icon;
               return (
-                <div
+                <motion.div
                   key={card.title}
-                  className="bg-white border border-black/[0.08] hover:border-black/[0.18] rounded-[14px] p-5 sm:p-6 transition-all duration-200 shadow-none text-left w-full"
+                  initial={shouldReduce ? false : { opacity: 0, y: 36, scale: 0.97 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, margin: '-40px' }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 110,
+                    damping: 18,
+                    delay: idx * 0.08,
+                  }}
+                  whileHover={{
+                    y: -4,
+                    borderColor: 'rgba(0, 0, 0, 0.18)',
+                    transition: { duration: 0.2 },
+                  }}
+                  className="bg-white border border-black/[0.08] rounded-[14px] p-5 sm:p-6 shadow-none text-left w-full cursor-default"
                 >
                   <div className="flex items-start gap-4">
                     {/* Blue line icon tile/glyph */}
@@ -129,7 +146,7 @@ export function Section4KeyCapabilities() {
                       </p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
