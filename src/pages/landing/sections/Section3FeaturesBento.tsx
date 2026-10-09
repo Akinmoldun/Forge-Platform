@@ -51,9 +51,35 @@ export function Section3FeaturesBento() {
   return (
     <section
       id="features"
-      className="landing-section bg-[#EFEFEF] pt-[72px] md:pt-[100px] pb-[40px] md:pb-[56px] select-none overflow-x-clip"
+      className="landing-section relative bg-transparent pt-[72px] md:pt-[100px] pb-[40px] md:pb-[56px] select-none"
     >
-      <div className="landing-container max-w-[1040px] mx-auto px-4 md:px-6">
+      {/* Bloom behind the cards: #9FDA85 top-left (.28, 800px), #6E94CB right (.22, 700px) */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            top: '-80px',
+            left: '-140px',
+            width: '800px',
+            height: '800px',
+            background: 'radial-gradient(closest-side, #9FDA85 0%, transparent 100%)',
+            opacity: 0.28,
+          }}
+        />
+        <div
+          className="bloom-blob"
+          style={{
+            top: '240px',
+            right: '-140px',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #6E94CB 0%, transparent 100%)',
+            opacity: 0.22,
+          }}
+        />
+      </div>
+
+      <div className="landing-container relative z-1 max-w-[1040px] mx-auto px-4 md:px-6">
         {/* Section Header: fade up 16px with blur(6px) -> blur(0), 0.7s, 80ms stagger */}
         <div className="text-center">
           <motion.div

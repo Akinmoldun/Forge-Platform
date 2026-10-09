@@ -102,7 +102,7 @@ export function Section6HandleWorkflows() {
   }, []);
 
   return (
-    <section className="landing-section bg-[#EFEFEF] pt-[72px] md:pt-[100px] pb-[72px] md:pb-[100px]">
+    <section className="landing-section relative band-cool pt-[72px] md:pt-[100px] pb-[72px] md:pb-[100px]">
       <style>{`
         .reliability-card {
           box-shadow: none !important;
@@ -122,7 +122,7 @@ export function Section6HandleWorkflows() {
         }
       `}</style>
 
-      <div className="landing-container">
+      <div className="landing-container relative z-1">
         {/* Section Header */}
         <div className="text-center mb-[56px]">
           {/* Centered chip: white, 1px solid rgba(0,0,0,.08), radius 999px, padding 6px 14px, 14px text */}

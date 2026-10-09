@@ -158,7 +158,22 @@ function MarqueeCard({ item }: { item: MarqueeCardItem }) {
 
 export function Section9WhyTeamsChoose() {
   return (
-    <section className="landing-section bg-white pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] overflow-hidden select-none">
+    <section className="landing-section relative band-cool pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] select-none">
+      {/* Bloom bottom-right: faint #BED390 (.2, 700px) */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            bottom: '-120px',
+            right: '-120px',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #BED390 0%, transparent 100%)',
+            opacity: 0.2,
+          }}
+        />
+      </div>
+
       <style>{`
         @keyframes marquee-scroll-left {
           0% {
@@ -214,7 +229,7 @@ export function Section9WhyTeamsChoose() {
       `}</style>
 
       {/* Header */}
-      <div className="landing-container text-center mb-[56px]">
+      <div className="landing-container relative z-1 text-center mb-[56px]">
         {/* Centered chip: white, 1px solid rgba(0,0,0,.08), radius 999px, padding 6px 14px, 14px text, small line icon */}
         <div className="inline-flex items-center gap-1.5 px-[14px] py-[6px] rounded-[999px] bg-white border border-black/[0.08] text-[14px] font-medium text-[#0D0D0D] mb-4 shadow-none">
           <Zap className="w-3.5 h-3.5 text-[#0D0D0D] stroke-[1.5]" />
@@ -233,7 +248,7 @@ export function Section9WhyTeamsChoose() {
       </div>
 
       {/* Marquee Rows: Two rows, 14px apart, full container width (max-width 1200px, centered) */}
-      <div className="marquee-wrapper max-w-[1200px] mx-auto overflow-hidden">
+      <div className="marquee-wrapper relative z-1 max-w-[1200px] mx-auto overflow-hidden">
         {/* Row 1: moves right to left (marquee-track-left) */}
         <div className="mb-[14px]">
           <div className="marquee-track-left">

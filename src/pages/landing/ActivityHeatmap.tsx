@@ -202,9 +202,25 @@ export function ActivityHeatmap() {
     <section
       id="activity"
       ref={sectionRef}
-      className="bg-[#EFEFEF] py-[72px] md:py-[120px]"
+      className="relative bg-transparent py-[72px] md:py-[120px]"
     >
-      <div className="landing-container">
+      {/* Bloom behind heatmap: one #83DD79 blob (.22, 800px) centered */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            top: '55%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '800px',
+            height: '800px',
+            background: 'radial-gradient(closest-side, #83DD79 0%, transparent 100%)',
+            opacity: 0.22,
+          }}
+        />
+      </div>
+
+      <div className="landing-container relative z-1">
         {/* Header */}
         <Reveal className="text-center">
           <div className="landing-pill">

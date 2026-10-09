@@ -51,8 +51,8 @@ const CARDS: CapabilityCard[] = [
 
 export function Section4KeyCapabilities() {
   return (
-    <section id="capabilities" className="bg-[#FAFAFA] py-16 sm:py-20 lg:py-24 border-y border-black/[0.04]">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="capabilities" className="relative band-white py-16 sm:py-20 lg:py-24">
+      <div className="relative z-1 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Two-column side-by-side layout: Left content + Right cards directly beside it */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
           

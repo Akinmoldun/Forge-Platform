@@ -65,8 +65,24 @@ export function Section10EngineeringDecisions() {
   ];
 
   return (
-    <section id="decisions" className="landing-section bg-[#EFEFEF] overflow-visible">
-      <div className="landing-container overflow-visible">
+    <section id="decisions" className="landing-section relative bg-transparent overflow-visible">
+      {/* Bloom behind first card: #D6C6A1 (.22, 800px) */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            top: '180px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '800px',
+            height: '800px',
+            background: 'radial-gradient(closest-side, #D6C6A1 0%, transparent 100%)',
+            opacity: 0.22,
+          }}
+        />
+      </div>
+
+      <div className="landing-container relative z-1 overflow-visible">
         {/* Section Header */}
         <div className="text-center mb-12 sm:mb-16">
           <div className="landing-pill shadow-none mb-3">

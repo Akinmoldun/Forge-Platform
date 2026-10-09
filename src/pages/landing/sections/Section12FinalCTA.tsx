@@ -28,8 +28,48 @@ export function Section12FinalCTA() {
   };
 
   return (
-    <section className="py-16 sm:py-20 bg-[#EFEFEF]">
-      <div className="landing-container">
+    <section className="py-16 sm:py-20 relative bg-transparent">
+      {/* Bloom behind CTA card: #9FDA85 left, #D78FC6 center, #6E94CB right (.28, 700px each) */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            top: '50%',
+            left: 'calc(50% - 340px)',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #9FDA85 0%, transparent 100%)',
+            opacity: 0.28,
+          }}
+        />
+        <div
+          className="bloom-blob"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #D78FC6 0%, transparent 100%)',
+            opacity: 0.28,
+          }}
+        />
+        <div
+          className="bloom-blob"
+          style={{
+            top: '50%',
+            left: 'calc(50% + 340px)',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #6E94CB 0%, transparent 100%)',
+            opacity: 0.28,
+          }}
+        />
+      </div>
+
+      <div className="landing-container relative z-1">
         <div className="max-w-[1040px] mx-auto">
           <Reveal>
             {/* Card with a soft palette gradient, radius 28px, padding 64px 24px */}

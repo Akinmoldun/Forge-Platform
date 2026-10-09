@@ -29,7 +29,7 @@ export function Section13Footer() {
   };
 
   return (
-    <footer className="bg-white border-t border-black/6 pt-10 pb-6 text-left">
+    <footer className="bg-[#EFEFEF] border-t border-black/6 pt-10 pb-6 text-left">
       <div className="landing-container">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-6 border-b border-black/6">
           {/* Col 1 & 2: Brand & Tagline */}

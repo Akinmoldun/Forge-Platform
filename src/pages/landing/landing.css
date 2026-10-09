@@ -1,13 +1,17 @@
 /* ReadyLaunch Theme & Tokens for Forge Landing Page */
 .landing {
-  --bg: #EFEFEF;
+  --page: #F4F4F5;
+  --band-white: #FFFFFF;
+  --band-cool: #F7F8FA;
+  --bg: var(--page);
   --text-muted: #575657;
+  --muted: #575657;
   --ink: #0D0D0D;
   --white: #FFFFFF;
   --border-card: rgba(0, 0, 0, 0.06);
   --border-btn: rgba(0, 0, 0, 0.08);
 
-  /* Pastel accents (strictly for gradient backdrops & subtle badges) */
+  /* Bloom colors (use only these) */
   --sand: #D6C6A1;
   --green-1: #9FDA85;
   --green-2: #83DD79;
@@ -17,7 +21,7 @@
   --pink: #D78FC6;
   --blue: #6E94CB;
 
-  background-color: var(--bg);
+  background-color: var(--page);
   color: var(--ink);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
@@ -28,6 +32,70 @@
 
 body {
   overflow-x: clip;
+  background-color: #F4F4F5;
+}
+
+/* Reusable Bloom Layer (Step 2) */
+.bloom {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: clip;
+}
+
+.bloom-blob {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+@media (max-width: 767px) {
+  .bloom-blob {
+    width: min(420px, 92vw) !important;
+    height: min(420px, 92vw) !important;
+  }
+}
+
+/* Bands without hard edges (Step 3) */
+.band-white {
+  position: relative;
+  background-color: transparent !important;
+}
+
+.band-white::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--band-white, #FFFFFF) 140px,
+    var(--band-white, #FFFFFF) calc(100% - 140px),
+    transparent 100%
+  );
+}
+
+.band-cool {
+  position: relative;
+  background-color: transparent !important;
+}
+
+.band-cool::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--band-cool, #F7F8FA) 140px,
+    var(--band-cool, #F7F8FA) calc(100% - 140px),
+    transparent 100%
+  );
 }
 
 .landing * {

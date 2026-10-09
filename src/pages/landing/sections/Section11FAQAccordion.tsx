@@ -38,8 +38,8 @@ export function Section11FAQAccordion() {
   };
 
   return (
-    <section id="faq" className="landing-section bg-[#EFEFEF]">
-      <div className="landing-container">
+    <section id="faq" className="landing-section relative band-white">
+      <div className="landing-container relative z-1">
         {/* Section Header */}
         <Reveal className="text-center mb-16">
           <div className="landing-pill">

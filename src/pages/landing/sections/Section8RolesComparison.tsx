@@ -167,7 +167,7 @@ export function Section8RolesComparison() {
   }, []);
 
   return (
-    <section id="security" className="landing-section bg-white">
+    <section id="security" className="landing-section relative band-white">
       <style>{`
         .roles-grid-row {
           display: grid;
@@ -194,7 +194,7 @@ export function Section8RolesComparison() {
           }
         }
       `}</style>
-      <div className="landing-container">
+      <div className="landing-container relative z-1">
         {/* Section Header */}
         <div className="text-center mb-[48px]">
           {/* Centered eyebrow chip */}

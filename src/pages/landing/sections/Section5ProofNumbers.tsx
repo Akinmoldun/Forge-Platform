@@ -147,7 +147,23 @@ function MetricCard({
 
 export function Section5ProofNumbers() {
   return (
-    <section className="landing-section bg-white pt-[64px] md:pt-[96px] pb-[64px] md:pb-[96px]">
+    <section className="landing-section relative bg-transparent pt-[64px] md:pt-[96px] pb-[64px] md:pb-[96px]">
+      {/* Bloom behind numbers: one #7957EC blob (.14, 700px) */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            top: '55%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #7957EC 0%, transparent 100%)',
+            opacity: 0.14,
+          }}
+        />
+      </div>
+
       <style>{`
         @media (prefers-reduced-motion: reduce) {
           .number-card {
@@ -157,7 +173,7 @@ export function Section5ProofNumbers() {
           }
         }
       `}</style>
-      <div className="landing-container">
+      <div className="landing-container relative z-1">
         {/* Section Header */}
         <div className="text-center mb-[56px]">
           {/* Eyebrow chip: white, 1px solid rgba(0,0,0,.08), radius 999px, padding 6px 14px, 14px text */}

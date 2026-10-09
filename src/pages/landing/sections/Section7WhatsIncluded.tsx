@@ -46,8 +46,48 @@ export function Section7WhatsIncluded() {
   ];
 
   return (
-    <section id="capabilities-included" className="landing-section bg-[#EFEFEF]">
-      <div className="landing-container">
+    <section id="capabilities-included" className="landing-section relative bg-transparent">
+      {/* Pastel bloom centered behind three cards: #D78FC6 (.24), #7957EC (.20) and #6E94CB (.22) overlapping */}
+      <div className="bloom" aria-hidden="true">
+        <div
+          className="bloom-blob"
+          style={{
+            top: '55%',
+            left: 'calc(50% - 320px)',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #D78FC6 0%, transparent 100%)',
+            opacity: 0.24,
+          }}
+        />
+        <div
+          className="bloom-blob"
+          style={{
+            top: '55%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #7957EC 0%, transparent 100%)',
+            opacity: 0.20,
+          }}
+        />
+        <div
+          className="bloom-blob"
+          style={{
+            top: '55%',
+            left: 'calc(50% + 320px)',
+            transform: 'translate(-50%, -50%)',
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(closest-side, #6E94CB 0%, transparent 100%)',
+            opacity: 0.22,
+          }}
+        />
+      </div>
+
+      <div className="landing-container relative z-1">
         {/* Section Header */}
         <Reveal className="text-center mb-16">
           <div className="landing-pill">
