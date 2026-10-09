@@ -1,6 +1,6 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import {
   Bell,
@@ -8,9 +8,12 @@ import {
   Check,
   ChevronDown,
   LogOut,
+  Pencil,
   Plus,
   UserPlus,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -141,10 +144,30 @@ function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
 function AccountMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const updateDisplayName = useMutation(api.users.updateDisplayName);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const isGuest = user?.isAnonymous || !user || !user.email;
+  const displayName = user?.name?.trim() || user?.email?.trim() || (isGuest ? "Guest" : "User");
   const initial = isGuest
     ? "G"
     : (user?.name?.trim() || user?.email?.trim() || "G").charAt(0).toUpperCase();
+
+  const handleSaveName = async () => {
+    if (!nameValue.trim() || saving) return;
+    setSaving(true);
+    try {
+      await updateDisplayName({ name: nameValue.trim() });
+      toast.success("Display name updated");
+      setEditingName(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update display name");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -160,10 +183,68 @@ function AccountMenu() {
           </Avatar>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 rounded-[16px] border border-border bg-white p-1.5 shadow-none">
-        <DropdownMenuLabel className="truncate px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D]">
-          {isGuest ? "Guest" : user?.name || user?.email}
-        </DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-64 rounded-[16px] border border-border bg-white p-2 shadow-none">
+        <div className="px-2.5 py-1.5">
+          {editingName ? (
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-medium text-[#575657]">Display name</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  placeholder="Your name"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveName();
+                    if (e.key === "Escape") setEditingName(false);
+                  }}
+                  className="h-8 flex-1 rounded-[8px] border border-border bg-white px-2 text-[12px] text-[#0D0D0D] outline-none focus:border-[#0D0D0D]"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveName}
+                  disabled={saving || !nameValue.trim()}
+                  className="inline-flex size-8 items-center justify-center rounded-[8px] bg-[#0D0D0D] text-white hover:bg-[#262626] disabled:opacity-50"
+                  aria-label="Save display name"
+                >
+                  <Check className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingName(false)}
+                  className="inline-flex size-8 items-center justify-center rounded-[8px] border border-border text-[#575657] hover:bg-[#F1F1F3]"
+                  aria-label="Cancel"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1 pr-2">
+                <p className="truncate text-[13px] font-medium text-[#0D0D0D]">
+                  {displayName}
+                </p>
+                {user?.email && user?.email !== displayName && (
+                  <p className="truncate text-[11px] text-[#575657]">{user.email}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNameValue(user?.name ?? "");
+                  setEditingName(true);
+                }}
+                className="inline-flex size-6 items-center justify-center rounded-full text-[#575657] hover:bg-[#F1F1F3] hover:text-[#0D0D0D]"
+                title="Edit display name"
+                aria-label="Edit display name"
+              >
+                <Pencil className="size-3" />
+              </button>
+            </div>
+          )}
+        </div>
         <DropdownMenuSeparator className="bg-border" />
         {isGuest && (
           <DropdownMenuItem

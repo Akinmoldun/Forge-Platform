@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
   CardContent,
@@ -63,6 +64,7 @@ import { toast } from "sonner";
 type ViewMode = "board" | "list";
 
 export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" }) {
+  const { user } = useAuth();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,6 +84,21 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     projectId: projectId as never,
     limit: 40,
   });
+
+  const transitionIssue = useMutation(api.issues.transitionIssue);
+
+  const handleStatusChange = async (issueId: string, toStatusId: string) => {
+    try {
+      await transitionIssue({
+        issueId: issueId as never,
+        toStatusId: toStatusId as never,
+      });
+      toast.success("Status updated");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to move issue";
+      toast.error(msg);
+    }
+  };
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";
@@ -128,7 +145,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     if (title.trim().length < 3) return;
     setCreating(true);
     try {
-      await createIssue({
+      const result = await createIssue({
         projectId: projectId as never,
         title,
         description: description || undefined,
@@ -138,7 +155,12 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
       setCreateOpen(false);
       setTitle("");
       setDescription("");
-      toast.success("Issue created");
+      toast.success(`Issue ${project?.project.key}-${result.number} created in ${project?.project.name}`, {
+        action: {
+          label: "Open",
+          onClick: () => navigate(`/app/issues/${result.issueId}`),
+        },
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create issue");
     } finally {
@@ -167,8 +189,15 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     );
   }
 
-  const memberName = (id: string | undefined) =>
-    members?.find((m) => m.userId === id)?.name ?? null;
+  const memberName = (id: string | undefined) => {
+    if (!id) return null;
+    const m = members?.find((m) => m.userId === id);
+    if (!m) return null;
+    return m.userId === user?._id ? `You (${m.name})` : m.name;
+  };
+
+  const canWrite =
+    project?.role === "owner" || project?.role === "admin" || project?.role === "member";
 
   return (
     <AppShell workspaceId={project.project.workspaceId}>
@@ -264,11 +293,14 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Unassigned</SelectItem>
-                            {members?.map((m) => (
-                              <SelectItem key={m.userId} value={m.userId}>
-                                {m.name}
-                              </SelectItem>
-                            ))}
+                            {members?.map((m) => {
+                              const isMe = m.userId === user?._id;
+                              return (
+                                <SelectItem key={m.userId} value={m.userId}>
+                                  {isMe ? `You (${m.name})` : m.name}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -324,11 +356,14 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
             <SelectContent>
               <SelectItem value="all">All assignees</SelectItem>
               <SelectItem value="unassigned">Unassigned</SelectItem>
-              {members?.map((m) => (
-                <SelectItem key={m.userId} value={m.userId}>
-                  {m.name}
-                </SelectItem>
-              ))}
+              {members?.map((m) => {
+                const isMe = m.userId === user?._id;
+                return (
+                  <SelectItem key={m.userId} value={m.userId}>
+                    {isMe ? `You (${m.name})` : m.name}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           {risk && risk.hasData && (
@@ -347,11 +382,18 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         ) : tab === "activity" ? (
           <ActivityTab activity={projectActivity} keyName={project.project.key} />
         ) : view === "board" ? (
-          <BoardView
-            board={board}
-            keyName={project.project.key}
-            onIssueClick={(id) => navigate(`/app/issues/${id}`)}
-          />
+          <div className="space-y-3">
+            <p className="text-[12px] text-[#575657]">
+              New issues start in Backlog. Drag a card to move it to the next stage.
+            </p>
+            <BoardView
+              board={board}
+              keyName={project.project.key}
+              canWrite={canWrite}
+              onStatusChange={handleStatusChange}
+              onIssueClick={(id) => navigate(`/app/issues/${id}`)}
+            />
+          </div>
         ) : (
           <ListView
             issues={issues}
@@ -711,6 +753,8 @@ function ActivityTab({
 function BoardView({
   board,
   keyName,
+  canWrite,
+  onStatusChange,
   onIssueClick,
 }: {
   board:
@@ -730,57 +774,105 @@ function BoardView({
       }
     | undefined;
   keyName: string;
+  canWrite: boolean;
+  onStatusChange: (issueId: string, toStatusId: string) => Promise<void>;
   onIssueClick: (id: string) => void;
 }) {
+  const [dragOverColId, setDragOverColId] = useState<string | null>(null);
+
   if (!board) return <ListSkeleton rows={3} />;
   return (
     <div className="grid gap-3 overflow-x-auto pb-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-      {board.columns.map((col) => (
-        <div key={col.status._id} className="rounded-[16px] border border-border bg-[#F1F1F3]/50 p-3">
-          <div className="mb-2.5 flex items-center gap-1.5 px-1">
-            <StatusDot color={col.status.color} />
-            <span className="text-[13px] font-[500] text-[#0D0D0D]">{col.status.name}</span>
-            <span className="ml-auto font-mono text-[11px] text-[#575657]">{col.issues.length}</span>
-          </div>
-          <div className="space-y-2">
-            {col.issues.length === 0 && (
-              <p className="px-1 py-4 text-center text-[11px] text-[#575657]">Nothing here</p>
-            )}
-            {col.issues.map((i) => (
-              <button
-                key={i._id}
-                onClick={() => onIssueClick(i._id)}
-                className="w-full rounded-[14px] border border-border bg-white p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)] focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-medium text-[#575657]">
-                    {keyName}-{i.number}
-                  </span>
-                  <PriorityBadge priority={i.priority} />
+      {board.columns.map((col) => {
+        const isTarget = dragOverColId === col.status._id;
+        return (
+          <div
+            key={col.status._id}
+            onDragOver={(e) => {
+              if (!canWrite) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setDragOverColId(col.status._id);
+            }}
+            onDragLeave={() => {
+              if (dragOverColId === col.status._id) setDragOverColId(null);
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              setDragOverColId(null);
+              if (!canWrite) return;
+              const raw = e.dataTransfer.getData("application/json");
+              if (!raw) return;
+              try {
+                const { issueId, statusId } = JSON.parse(raw);
+                if (!issueId || statusId === col.status._id) return;
+                await onStatusChange(issueId, col.status._id);
+              } catch {
+                // ignore parse errors
+              }
+            }}
+            className={`rounded-[16px] border transition-colors p-3 ${
+              isTarget
+                ? "border-[#0D0D0D] bg-[#EAEAEA]"
+                : "border-border bg-[#F1F1F3]/50"
+            }`}
+          >
+            <div className="mb-2.5 flex items-center gap-1.5 px-1">
+              <StatusDot color={col.status.color} />
+              <span className="text-[13px] font-[500] text-[#0D0D0D]">{col.status.name}</span>
+              <span className="ml-auto font-mono text-[11px] text-[#575657]">{col.issues.length}</span>
+            </div>
+            <div className="space-y-2 min-h-[60px]">
+              {col.issues.length === 0 && (
+                <p className="px-1 py-4 text-center text-[11px] text-[#575657]">Nothing here</p>
+              )}
+              {col.issues.map((i) => (
+                <div
+                  key={i._id}
+                  draggable={canWrite}
+                  onDragStart={(e) => {
+                    if (!canWrite) return;
+                    e.dataTransfer.setData(
+                      "application/json",
+                      JSON.stringify({ issueId: i._id, statusId: col.status._id }),
+                    );
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onClick={() => onIssueClick(i._id)}
+                  className={`w-full rounded-[14px] border border-border bg-white p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)] focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2 ${
+                    canWrite ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-medium text-[#575657]">
+                      {keyName}-{i.number}
+                    </span>
+                    <PriorityBadge priority={i.priority} />
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
+                  <div className="mt-2.5 flex items-center gap-1.5">
+                    {i.isBlocked && (
+                      <Badge variant="outline" className="border-[#B3261E]/30 bg-[#B3261E]/10 px-1.5 py-0 text-[10px] text-[#B3261E]">
+                        blocked
+                      </Badge>
+                    )}
+                    {i.dueDate && (
+                      <span className="text-[11px] text-[#575657]">{formatDate(i.dueDate)}</span>
+                    )}
+                    {i.assigneeName && (
+                      <Avatar className="ml-auto size-5">
+                        <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
+                          {i.assigneeName.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
-                <div className="mt-2.5 flex items-center gap-1.5">
-                  {i.isBlocked && (
-                    <Badge variant="outline" className="border-[#B3261E]/30 bg-[#B3261E]/10 px-1.5 py-0 text-[10px] text-[#B3261E]">
-                      blocked
-                    </Badge>
-                  )}
-                  {i.dueDate && (
-                    <span className="text-[11px] text-[#575657]">{formatDate(i.dueDate)}</span>
-                  )}
-                  {i.assigneeName && (
-                    <Avatar className="ml-auto size-5">
-                      <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
-                        {i.assigneeName.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              </button>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

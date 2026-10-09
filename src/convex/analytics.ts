@@ -242,7 +242,7 @@ export const getProjectSummary = query({
           const user = members.find((m) => m?._id === id);
           return {
             userId: id,
-            name: user?.name ?? "Unknown",
+            name: user?.name?.trim() || user?.email?.trim() || "Guest",
             openIssues: open.filter((i) => i.assigneeId === id).length,
             overdue: open.filter((i) => i.assigneeId === id && i.dueDate && i.dueDate < now).length,
           };

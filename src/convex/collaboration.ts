@@ -37,7 +37,10 @@ export const listComments = query({
       _id: c._id,
       body: c.body,
       authorId: c.authorId,
-      authorName: authorById.get(c.authorId)?.name ?? "Unknown",
+      authorName:
+        authorById.get(c.authorId)?.name?.trim() ||
+        authorById.get(c.authorId)?.email?.trim() ||
+        "Guest",
       authorImage: authorById.get(c.authorId)?.image,
       editedAt: c.editedAt,
       createdAt: c.createdAt,

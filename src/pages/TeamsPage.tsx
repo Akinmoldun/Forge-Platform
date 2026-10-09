@@ -233,6 +233,51 @@ export default function TeamsPage() {
           }
         />
 
+        {/* Team access explanation and role descriptions */}
+        <div className="rounded-[16px] border border-border bg-white p-4">
+          <p className="text-[13px] font-medium text-[#0D0D0D]">
+            Everyone in this workspace can see its projects and issues. Roles decide who can change things.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 border-t border-border/70 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#0D0D0D]" aria-hidden="true" />
+                <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Owner</span>
+              </div>
+              <p className="text-[12px] leading-relaxed text-[#575657]">
+                Full workspace control; can transfer ownership and delete workspace.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#D6C6A1]" aria-hidden="true" />
+                <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Admin</span>
+              </div>
+              <p className="text-[12px] leading-relaxed text-[#575657]">
+                Can create projects, invite & manage members, and configure workflows.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#83DD79]" aria-hidden="true" />
+                <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Member</span>
+              </div>
+              <p className="text-[12px] leading-relaxed text-[#575657]">
+                Can create, edit, move, and comment on issues across projects.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-[#9A9A9F]" aria-hidden="true" />
+                <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Viewer</span>
+              </div>
+              <p className="text-[12px] leading-relaxed text-[#575657]">
+                Read-only access to projects, issues, workflow, and activity.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {members === undefined || issuesLoading ? (
           <LoadingBlock />
         ) : (

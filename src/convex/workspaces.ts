@@ -217,12 +217,13 @@ export const listMembers = query({
     return Promise.all(
       memberships.map(async (m) => {
         const user = await ctx.db.get(m.userId);
+        const displayName = user?.name?.trim() || user?.email?.trim() || "Guest";
         return {
           membershipId: m._id,
           userId: m.userId,
           role: m.role,
           joinedAt: m.joinedAt,
-          name: user?.name ?? "Unknown",
+          name: displayName,
           email: user?.email ?? "",
           image: user?.image,
         };

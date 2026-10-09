@@ -4,6 +4,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { AppShell } from "@/components/AppShell";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ import {
 import { toast } from "sonner";
 
 export default function IssuePage() {
+  const { user } = useAuth();
   const { issueId } = useParams<{ issueId: string }>();
   const detail = useQuery(api.issues.getIssue, { issueId: issueId as never });
   const comments = useQuery(api.collaboration.listComments, { issueId: issueId as never });
@@ -485,31 +487,62 @@ export default function IssuePage() {
             {/* Status */}
             <div>
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
-              {status && (
-                <div className="mb-2 flex items-center gap-2 text-sm">
-                  <StatusDot color={status.color} />
-                  <span className="font-medium">{status.name}</span>
-                </div>
+              {canWrite ? (
+                <Select
+                  value={status?._id}
+                  onValueChange={(toStatusId) => {
+                    if (toStatusId === status?._id) return;
+                    const targetTransition = nextStatuses.find((t) => t.status._id === toStatusId);
+                    requestTransition(
+                      toStatusId as Id<"workflowStatuses">,
+                      targetTransition?.requiresComment ?? false,
+                    );
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <div className="flex items-center gap-2">
+                      <StatusDot color={status?.color} />
+                      <SelectValue placeholder="Select status" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {detail.statuses.map((s) => (
+                      <SelectItem key={s._id} value={s._id}>
+                        <div className="flex items-center gap-2">
+                          <StatusDot color={s.color} />
+                          <span>{s.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                status && (
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <StatusDot color={status.color} />
+                    <span>{status.name}</span>
+                  </div>
+                )
               )}
               {canWrite && nextStatuses.length > 0 && (
-                <div className="space-y-1.5">
-                  {nextStatuses.map((t) => (
-                    <Button
-                      key={t.transitionId}
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start gap-2"
-                      onClick={() => requestTransition(t.status._id, t.requiresComment)}
-                    >
-                      <StatusDot color={t.status.color} />
-                      Move to {t.status.name}
-                      {t.requiresComment && <span className="text-[10px] text-muted-foreground">· comment</span>}
-                    </Button>
-                  ))}
+                <div className="mt-2.5 space-y-1.5">
+                  <p className="text-[11px] text-[#575657]">Suggested next steps:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {nextStatuses.map((t) => (
+                      <Button
+                        key={t.transitionId}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 rounded-full text-[11px] gap-1 px-2.5 border-border bg-white hover:bg-[#F1F1F3]"
+                        onClick={() => requestTransition(t.status._id, t.requiresComment)}
+                      >
+                        <StatusDot color={t.status.color} />
+                        {t.status.name}
+                        {t.requiresComment && <span className="text-[10px] text-[#575657]">· comment</span>}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              )}
-              {canWrite && nextStatuses.length === 0 && (
-                <p className="text-xs text-muted-foreground">No transitions available from this status.</p>
               )}
             </div>
 
@@ -561,11 +594,14 @@ export default function IssuePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {members?.map((m) => (
-                      <SelectItem key={m.userId} value={m.userId}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
+                    {members?.map((m) => {
+                      const isMe = m.userId === user?._id;
+                      return (
+                        <SelectItem key={m.userId} value={m.userId}>
+                          {isMe ? `You (${m.name})` : m.name}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               ) : (

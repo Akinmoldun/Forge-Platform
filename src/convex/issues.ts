@@ -195,7 +195,9 @@ export const getBoard = query({
           title: i.title,
           priority: i.priority,
           assigneeId: i.assigneeId,
-          assigneeName: i.assigneeId ? memberById.get(i.assigneeId)?.name ?? null : null,
+          assigneeName: i.assigneeId
+            ? (memberById.get(i.assigneeId)?.name?.trim() || memberById.get(i.assigneeId)?.email?.trim() || "Guest")
+            : null,
           dueDate: i.dueDate,
           isBlocked: unresolvedBlockers.has(i._id),
         })),
@@ -311,8 +313,18 @@ export const getIssue = query({
       statuses,
       nextStatuses,
       canWrite: roleAtLeast(role, "member"),
-      assignee: assignee ? { name: assignee.name, image: assignee.image } : null,
-      reporter: reporter ? { name: reporter.name, image: reporter.image } : null,
+      assignee: assignee
+        ? {
+            name: assignee.name?.trim() || assignee.email?.trim() || "Guest",
+            image: assignee.image,
+          }
+        : null,
+      reporter: reporter
+        ? {
+            name: reporter.name?.trim() || reporter.email?.trim() || "Guest",
+            image: reporter.image,
+          }
+        : null,
       labels: labelDocs.filter((l): l is Doc<"labels"> => l !== null),
       blockers: resolvedBlockers,
       unresolvedBlockerCount: unresolvedBlockers.length,
