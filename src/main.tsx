@@ -119,7 +119,11 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL;
+const rawConvexUrl = import.meta.env.VITE_CONVEX_URL;
+// Normalize to .convex.cloud for WebSocket connection if someone supplied .convex.site
+const convexUrl = rawConvexUrl
+  ? rawConvexUrl.replace(/\.convex\.site\/?$/, ".convex.cloud").replace(/\/$/, "")
+  : null;
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
 function BackendSetupNotice() {

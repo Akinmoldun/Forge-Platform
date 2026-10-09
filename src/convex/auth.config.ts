@@ -8,6 +8,11 @@ import type { AuthConfig } from "convex/server";
 const freebuffIssuer =
   process.env.VLY_CONVEX_AUTH_ISSUER ?? "https://freebuff.com";
 
+const rawSiteUrl = process.env.CONVEX_SITE_URL;
+const siteUrl = rawSiteUrl
+  ? rawSiteUrl.replace(/\.convex\.cloud\/?$/, ".convex.site").replace(/\/$/, "")
+  : "";
+
 export default {
   providers: [
     // Standard Convex Auth provider for this project's own sign-in ("Get
@@ -19,7 +24,7 @@ export default {
     // `kid` header, so sign-in would silently never confirm and RequireAuth
     // would loop back to /auth forever.
     {
-      domain: process.env.CONVEX_SITE_URL!,
+      domain: siteUrl,
       applicationID: "convex",
     },
     {

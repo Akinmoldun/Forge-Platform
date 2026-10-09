@@ -117,12 +117,21 @@ export function UnfoldCard({
     card.style.setProperty('--my', '-999px');
   };
 
+  const { border, borderWidth, borderStyle, borderColor: customBorderColor, ...cleanStyle } = style || {};
+  const effectiveBorderWidth = borderWidth ?? (border ? '1px' : undefined);
+  const effectiveBorderStyle = borderStyle ?? (border ? 'solid' : undefined);
+
   if (isReducedMotion) {
     return (
       <div
         ref={cardRef}
         className={`unfold-card relative ${className}`.trim()}
-        style={style}
+        style={{
+          ...cleanStyle,
+          borderWidth: effectiveBorderWidth,
+          borderStyle: effectiveBorderStyle,
+          borderColor: customBorderColor ?? (border ? 'rgba(0, 0, 0, 0.08)' : undefined),
+        }}
         {...rest}
       >
         {children}
@@ -137,12 +146,14 @@ export function UnfoldCard({
       onMouseLeave={handleMouseLeave}
       className={`unfold-card relative ${className}`.trim()}
       style={{
-        ...style,
+        ...cleanStyle,
+        borderWidth: effectiveBorderWidth,
+        borderStyle: effectiveBorderStyle,
+        borderColor: inView ? (customBorderColor ?? 'rgba(0, 0, 0, 0.08)') : 'transparent',
         clipPath: inView ? 'inset(0 round 14px)' : 'inset(0 0 100% 0 round 14px)',
         transform: inView ? 'none' : 'perspective(900px) rotateX(-10deg) translateY(36px) scale(0.96)',
         transformOrigin: 'top center',
         opacity: inView ? 1 : 0,
-        borderColor: inView ? 'rgba(0, 0, 0, 0.08)' : 'transparent',
         transition: inView
           ? `clip-path 900ms cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, transform 900ms cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, opacity 900ms cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, border-color 500ms ease ${delayMs + 200}ms`
           : 'none',

@@ -23,6 +23,15 @@ export function TryDemoButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const withTimeout = <T,>(promise: Promise<T> | Promise<unknown>, ms = 10000): Promise<T> => {
+    return Promise.race([
+      promise as Promise<T>,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out')), ms),
+      ),
+    ]);
+  };
+
   const handleClick = async () => {
     setError(null);
     if (onClick) onClick();
@@ -34,15 +43,12 @@ export function TryDemoButton({
 
     setLoading(true);
     try {
-      await signIn('anonymous');
+      await withTimeout(signIn('anonymous'), 10000);
       navigate(redirect);
     } catch (err) {
       console.error('Guest demo sign-in error:', err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to start demo. Please try again.'
-      );
+      setError("We couldn't start the demo, try again");
+    } finally {
       setLoading(false);
     }
   };

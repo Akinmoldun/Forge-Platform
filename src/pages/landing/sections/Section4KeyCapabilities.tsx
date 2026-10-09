@@ -125,7 +125,12 @@ export function Section4KeyCapabilities() {
                     borderColor: 'rgba(0, 0, 0, 0.18)',
                     transition: { duration: 0.2 },
                   }}
-                  className="bg-white border border-black/[0.08] rounded-[14px] p-5 sm:p-6 shadow-none text-left w-full cursor-default"
+                  style={{
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'rgba(0, 0, 0, 0.08)',
+                  }}
+                  className="bg-white rounded-[14px] p-5 sm:p-6 shadow-none text-left w-full cursor-default"
                 >
                   <div className="flex items-start gap-4">
                     {/* Blue line icon tile/glyph */}

@@ -1,4 +1,5 @@
-import { Link } from 'react-router';
+import { Link, Navigate } from 'react-router';
+import { useAuth } from '@/hooks/use-auth';
 import { AuthForm } from '@/components/AuthForm';
 import { AuthDecorativePanel } from '@/components/AuthDecorativePanel';
 
@@ -7,6 +8,12 @@ interface SignupPageProps {
 }
 
 export default function SignupPage({ redirectAfterAuth = '/app' }: SignupPageProps) {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to={redirectAfterAuth} replace />;
+  }
+
   return (
     <div className="min-h-screen min-[900px]:h-screen w-full flex flex-col min-[900px]:flex-row min-[900px]:overflow-hidden bg-[#FBFBFC]">
       {/* Left half: white background, content vertically centered, max-width 380px */}

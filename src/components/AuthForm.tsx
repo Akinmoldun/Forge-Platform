@@ -76,6 +76,15 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     return () => clearInterval(timer);
   }, [countdown]);
 
+  const withTimeout = <T,>(promise: Promise<T> | Promise<unknown>, ms = 10000): Promise<T> => {
+    return Promise.race([
+      promise as Promise<T>,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out')), ms),
+      ),
+    ]);
+  };
+
   const validateEmail = (val: string): boolean => {
     const trimmed = val.trim();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
@@ -87,7 +96,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
     const trimmedEmail = email.trim();
     if (!validateEmail(trimmedEmail)) {
-      setError('Please enter a valid email address.');
+      setError('Enter a valid email');
       return;
     }
 
@@ -97,20 +106,16 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     try {
       const formData = new FormData();
       formData.set('email', trimmedEmail);
-      await signIn('email-otp', formData);
+      await withTimeout(signIn('email-otp', formData), 10000);
       setStep('code');
       setCountdown(30);
     } catch (err: unknown) {
       console.error('Send OTP error:', err);
-      if (!navigator.onLine) {
-        setError('Network error. Please check your internet connection.');
+      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+      if (msg.includes('rate') || msg.includes('too many')) {
+        setError('Too many attempts, try again later');
       } else {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.toLowerCase().includes('rate') || msg.toLowerCase().includes('too many')) {
-          setError('Too many attempts. Please try again later.');
-        } else {
-          setError('Failed to send verification code. Please check your email and try again.');
-        }
+        setError("We couldn't send the code, try again");
       }
     } finally {
       setIsSubmitting(false);
@@ -123,7 +128,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
     const trimmedCode = code.trim();
     if (trimmedCode.length !== 6) {
-      setError('Please enter the 6-digit code sent to your email.');
+      setError('That code is incorrect');
       return;
     }
 
@@ -134,19 +139,17 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       const formData = new FormData();
       formData.set('email', email.trim());
       formData.set('code', trimmedCode);
-      await signIn('email-otp', formData);
+      await withTimeout(signIn('email-otp', formData), 10000);
       navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
       console.error('Verify OTP error:', err);
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!navigator.onLine || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('fetch')) {
-        setError('Network error. Please check your internet connection.');
-      } else if (msg.toLowerCase().includes('expired')) {
-        setError('The verification code has expired. Please request a new one.');
-      } else if (msg.toLowerCase().includes('rate') || msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('attempt')) {
-        setError('Too many attempts. Please try again in a few minutes.');
+      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+      if (msg.includes('expired')) {
+        setError('That code has expired');
+      } else if (msg.includes('rate') || msg.includes('too many')) {
+        setError('Too many attempts, try again later');
       } else {
-        setError('The verification code you entered is incorrect.');
+        setError('That code is incorrect');
       }
       setCode('');
     } finally {
@@ -162,14 +165,15 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     try {
       const formData = new FormData();
       formData.set('email', email.trim());
-      await signIn('email-otp', formData);
+      await withTimeout(signIn('email-otp', formData), 10000);
       setCountdown(30);
     } catch (err: unknown) {
       console.error('Resend OTP error:', err);
-      if (!navigator.onLine) {
-        setError('Network error. Please check your internet connection.');
+      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+      if (msg.includes('rate') || msg.includes('too many')) {
+        setError('Too many attempts, try again later');
       } else {
-        setError('Failed to resend code. Please try again in a moment.');
+        setError("We couldn't send the code, try again");
       }
     } finally {
       setIsSubmitting(false);
@@ -202,16 +206,17 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
     setIsGuestLoading(true);
     try {
-      await signIn('anonymous');
+      await withTimeout(signIn('anonymous'), 10000);
       navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
       console.error('Guest sign-in error:', err);
-      if (!navigator.onLine) {
-        setGuestError('Network error. Please check your internet connection.');
+      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+      if (msg.includes('rate') || msg.includes('too many')) {
+        setGuestError('Too many attempts, try again later');
       } else {
-        const msg = err instanceof Error ? err.message : String(err);
-        setGuestError(msg || 'Failed to start demo. Please try again.');
+        setGuestError("We couldn't start the demo, try again");
       }
+    } finally {
       setIsGuestLoading(false);
     }
   };

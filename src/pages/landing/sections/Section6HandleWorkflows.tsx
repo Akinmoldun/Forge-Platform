@@ -101,7 +101,9 @@ export function Section6HandleWorkflows() {
                   transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                   style={{
                     backgroundColor: '#FFFFFF',
-                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'rgba(0, 0, 0, 0.08)',
                     borderRadius: '10px',
                   }}
                   className="reliability-card p-[18px] h-full min-h-[168px] min-[900px]:h-[168px] flex flex-col justify-between shadow-none cursor-default"

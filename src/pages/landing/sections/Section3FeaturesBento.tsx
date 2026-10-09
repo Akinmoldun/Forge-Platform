@@ -90,7 +90,9 @@ export function Section3FeaturesBento() {
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.08)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(0,0,0,.08)',
               background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-1 min-[1060px]:col-end-2 min-[1060px]:row-start-1 min-[1060px]:row-end-3 h-[692px]"
@@ -332,7 +334,9 @@ export function Section3FeaturesBento() {
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.08)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(0,0,0,.08)',
               background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-3 min-[1060px]:row-start-1 min-[1060px]:row-end-2 h-[340px]"
@@ -491,7 +495,9 @@ export function Section3FeaturesBento() {
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.08)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(0,0,0,.08)',
               background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-3 min-[1060px]:col-end-4 min-[1060px]:row-start-1 min-[1060px]:row-end-2 h-[340px]"
@@ -675,7 +681,9 @@ export function Section3FeaturesBento() {
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.08)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(0,0,0,.08)',
               background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-4 min-[1060px]:row-start-2 min-[1060px]:row-end-3 h-[340px]"
