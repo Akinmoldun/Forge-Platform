@@ -43,11 +43,13 @@ import {
   type RuleKey,
 } from "@/components/workflow/TransitionRulesPanel";
 import {
+  ArrowRight,
   GitBranch,
   Loader2,
   Lock,
   RotateCcw,
   Save,
+  ShieldCheck,
   SlidersHorizontal,
   Zap,
 } from "lucide-react";
@@ -222,7 +224,7 @@ export default function WorkflowPage() {
   const header = (
     <PageHeader
       title="Workflow"
-      description="Configure how issues move through your workspace."
+      description="Your workflow defines the stages an issue moves through, from Backlog to Done. Rules protect important transitions."
       meta={
         project?.project ? (
           <Badge variant="outline" className="font-mono text-[10px]">
@@ -380,6 +382,81 @@ export default function WorkflowPage() {
             </p>
           </div>
         )}
+
+        {/* Visual Pipeline */}
+        <div className="rounded-[16px] border border-border bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-3">
+            <div>
+              <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Visual pipeline</h2>
+              <p className="mt-0.5 text-[12px] text-[#575657]">
+                Stages an issue moves through from start to finish, with active protection rules.
+              </p>
+            </div>
+            {canEdit ? (
+              <Badge variant="outline" className="rounded-full border-[#83DD79]/60 bg-[#83DD79]/10 text-[11px] font-medium text-[#0D0D0D]">
+                <ShieldCheck className="mr-1 size-3 text-[#83DD79]" /> Admin: editing enabled
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="rounded-full border-border bg-[#F1F1F3] text-[11px] font-medium text-[#575657]">
+                <Lock className="mr-1 size-3 text-[#575657]" /> Read-only (Admin role required)
+              </Badge>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch sm:overflow-x-auto pb-1">
+            {statuses.map((status, idx) => {
+              const outgoing = transitions.filter((t) => t.fromStatusId === status._id);
+              const activeRules: string[] = [];
+              if (outgoing.some((t) => t.requiresAssignee)) activeRules.push("Requires assignee");
+              if (outgoing.some((t) => t.requiresComment)) activeRules.push("Requires comment");
+              if (outgoing.some((t) => t.requiresApproval)) activeRules.push("Requires approval");
+
+              return (
+                <div key={status._id} className="flex flex-1 items-center gap-3 min-w-[160px]">
+                  <div
+                    onClick={() => setSelectedStatusId(selectedStatusId === status._id ? null : status._id)}
+                    className={`flex-1 cursor-pointer rounded-[14px] border p-3.5 transition-all hover:border-[rgba(13,13,13,0.3)] ${
+                      selectedStatusId === status._id
+                        ? "border-[#0D0D0D] bg-[#F6F6F7]"
+                        : "border-border bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="size-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: status.color || "#8b8b93" }}
+                          aria-hidden="true"
+                        />
+                        <span className="text-[13px] font-[500] text-[#0D0D0D]">{status.name}</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-[#575657] tabular-nums">
+                        {counts.get(status._id) ?? 0}
+                      </span>
+                    </div>
+
+                    <div className="mt-2.5 space-y-1">
+                      {activeRules.length > 0 ? (
+                        activeRules.map((rule) => (
+                          <div key={rule} className="flex items-center gap-1.5 text-[11px] text-[#0D0D0D] font-medium">
+                            <span className="size-1 rounded-full bg-[#B3261E]" />
+                            <span>{rule}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-[#575657]">No restrictions</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {idx < statuses.length - 1 && (
+                    <ArrowRight className="hidden size-4 shrink-0 text-[#9A9A9F] sm:block" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Editor summary */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

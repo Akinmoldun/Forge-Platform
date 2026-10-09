@@ -2,17 +2,10 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { AppShell, RoleBadge } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EmptyState, ListSkeleton } from "@/components/forge";
-import { ArrowLeft, Building2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WorkspaceSettings() {
@@ -39,11 +32,11 @@ export default function WorkspaceSettings() {
   });
 
   const renameWorkspace = useMutation(api.workspaces.renameWorkspace);
-  const transferOwnership = useMutation(api.workspaces.transferOwnership);
+  const deleteWorkspace = useMutation(api.workspaces.deleteWorkspace);
   const leaveWorkspace = useMutation(api.workspaces.leaveWorkspace);
 
   const [name, setName] = useState<string | null>(null);
-  const [newOwner, setNewOwner] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   if (workspace === undefined) {
     return (
@@ -63,6 +56,19 @@ export default function WorkspaceSettings() {
   const isOwner = workspace.role === "owner";
   const nameValue = name ?? workspace.workspace.name;
 
+  const handleDeleteWorkspace = async () => {
+    setDeleting(true);
+    try {
+      await deleteWorkspace({ workspaceId: workspaceId as never });
+      toast.success("Workspace deleted");
+      navigate("/app");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete workspace");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <AppShell workspaceId={workspaceId}>
       <div className="mx-auto max-w-2xl">
@@ -77,7 +83,7 @@ export default function WorkspaceSettings() {
 
         <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">Workspace settings</h1>
 
-        {/* General */}
+        {/* 1. Workspace name */}
         <section className="mt-8">
           <h2 className="text-[14px] font-[500] text-[#0D0D0D]">General</h2>
           <div className="mt-3 space-y-4 rounded-[16px] border border-border bg-white p-5 shadow-none">
@@ -125,124 +131,114 @@ export default function WorkspaceSettings() {
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label className="text-[13px] font-[500] text-[#0D0D0D]">Slug</Label>
-              <Input value={workspace.workspace.slug} disabled className="h-10 rounded-[12px] font-mono text-[12px] bg-[#F1F1F3]" />
-            </div>
           </div>
         </section>
 
-        {/* Ownership transfer */}
-        {isOwner && members && members.length > 1 && (
-          <section className="mt-8">
-            <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Transfer ownership</h2>
-            <p className="mt-1 text-[13px] text-[#575657]">
-              The new owner becomes the workspace owner; you become an admin.
-            </p>
-            <div className="mt-3 flex gap-2 rounded-[16px] border border-border bg-white p-5 shadow-none">
-              <Select value={newOwner} onValueChange={setNewOwner}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Choose a member…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members
-                    .filter((m) => m.role !== "owner")
-                    .map((m) => (
-                      <SelectItem key={m.userId} value={m.userId}>
-                        {m.name} ({m.email})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={!newOwner}>
-                    Transfer
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Transfer ownership?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This cannot be undone from this screen. The selected member will become the
-                      workspace owner.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        transferOwnership({
-                          workspaceId: workspaceId as never,
-                          userId: newOwner as never,
-                        })
-                          .then(() => {
-                            toast.success("Ownership transferred");
-                            setNewOwner("");
-                          })
-                          .catch((e) => toast.error(e.message))
-                      }
-                    >
-                      Transfer
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </section>
-        )}
-
-        {/* Leave */}
-        {!isOwner && (
-          <section className="mt-8">
-            <h2 className="text-sm font-medium">Membership</h2>
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-card p-4">
+        {/* 2. Members (link to Teams) */}
+        <section className="mt-8">
+          <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Members</h2>
+          <div className="mt-3 rounded-[16px] border border-border bg-white p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-full bg-[#F1F1F3] flex items-center justify-center text-[#0D0D0D]">
+                <Users className="size-5" />
+              </div>
               <div>
-                <p className="text-sm">Your role</p>
-                <p className="text-xs text-muted-foreground">
-                  <RoleBadge role={workspace.role} />
+                <p className="text-[14px] font-[500] text-[#0D0D0D]">
+                  {members?.length ?? 1} {members?.length === 1 ? "member" : "members"}
+                </p>
+                <p className="text-[12px] text-[#575657]">
+                  Invite teammates, assign roles, and manage access.
                 </p>
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline">Leave workspace</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Leave this workspace?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      You will lose access to its projects and issues until re-invited.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() =>
-                        leaveWorkspace({ workspaceId: workspaceId as never })
-                          .then(() => navigate("/app"))
-                          .catch((e) => toast.error(e.message))
-                      }
-                    >
-                      Leave
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
-          </section>
-        )}
+            <Button variant="outline" size="sm" className="rounded-full text-[13px] gap-1.5" asChild>
+              <Link to={`/app/workspaces/${workspaceId}/teams`}>
+                Manage team <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
+          </div>
+        </section>
 
-        {/* Isolation note */}
-        <section className="mt-8 rounded-lg border border-border bg-secondary p-4">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <div className="text-xs leading-5 text-muted-foreground">
-              <p className="font-medium text-foreground">Tenant isolation</p>
-              <p className="mt-1">
-                Every Forge query is scoped through your workspace membership on the server. Data
-                never crosses workspace boundaries, regardless of what the UI shows.
-              </p>
-            </div>
+        {/* 3. Danger zone (Delete workspace / Leave workspace) */}
+        <section className="mt-8">
+          <h2 className="text-[14px] font-[500] text-[#B3261E]">Danger zone</h2>
+          <div className="mt-3 rounded-[16px] border border-[#B3261E]/30 bg-[#B3261E]/5 p-5">
+            {isOwner ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-[500] text-[#0D0D0D]">Delete workspace</p>
+                  <p className="text-[12px] text-[#575657]">
+                    Permanently delete this workspace and all its projects, workflows, and issues.
+                  </p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="rounded-full px-4 text-[13px]"
+                      disabled={deleting}
+                    >
+                      <Trash2 className="size-3.5 mr-1.5" /> Delete workspace
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the workspace
+                        "{workspace.workspace.name}" along with all projects, issues, comments, and member access.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteWorkspace}
+                        className="bg-[#B3261E] text-white hover:bg-[#961F18]"
+                      >
+                        Delete permanently
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-[500] text-[#0D0D0D]">Leave workspace</p>
+                  <p className="text-[12px] text-[#575657]">
+                    Remove yourself from this workspace. You will need an invite to rejoin.
+                  </p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-full px-4 text-[13px]">
+                      Leave workspace
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Leave this workspace?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will lose access to its projects and issues until re-invited.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() =>
+                          leaveWorkspace({ workspaceId: workspaceId as never })
+                            .then(() => navigate("/app"))
+                            .catch((e) => toast.error(e.message))
+                        }
+                      >
+                        Leave
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
         </section>
 

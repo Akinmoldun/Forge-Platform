@@ -23,18 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreateIssueDialog } from "@/components/dialogs";
 import {
   EmptyState,
   ListSkeleton,
@@ -57,7 +47,6 @@ import {
   TrendingUp,
   ArrowUpDown,
   Activity as ActivityIcon,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -71,6 +60,10 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const view = (searchParams.get("view") as ViewMode) ?? "board";
 
   const project = useQuery(api.projects.getProject, { projectId: projectId as never });
+  const allProjects = useQuery(
+    api.projects.listProjects,
+    project ? { workspaceId: project.project.workspaceId } : "skip",
+  );
   const members = useQuery(
     api.workspaces.listMembers,
     project ? { workspaceId: project.project.workspaceId } : "skip",
@@ -88,6 +81,8 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const transitionIssue = useMutation(api.issues.transitionIssue);
 
   const handleStatusChange = async (issueId: string, toStatusId: string) => {
+    const toStatusName =
+      board?.columns.find((c) => c.status._id === toStatusId)?.status.name || "the next status";
     try {
       await transitionIssue({
         issueId: issueId as never,
@@ -96,7 +91,17 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
       toast.success("Status updated");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to move issue";
-      toast.error(msg);
+      if (msg.includes("requires an assignee")) {
+        toast.error(`Needs an assignee before it can move to ${toStatusName}.`);
+      } else if (msg.includes("requires a comment")) {
+        toast.error(`Needs a comment before it can move to ${toStatusName}.`);
+      } else if (msg.includes("is not allowed")) {
+        toast.error(`Workflow rules do not allow moving directly to ${toStatusName}.`);
+      } else if (msg.includes("unresolved blocker")) {
+        toast.error("Blocked: resolve blocking issues first.");
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -133,41 +138,6 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     setSearchParams(next, { replace: true });
   };
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<string>("medium");
-  const [assignee, setAssignee] = useState<string>("none");
-  const [creating, setCreating] = useState(false);
-  const createIssue = useMutation(api.issues.createIssue);
-
-  const handleCreateIssue = async () => {
-    if (title.trim().length < 3) return;
-    setCreating(true);
-    try {
-      const result = await createIssue({
-        projectId: projectId as never,
-        title,
-        description: description || undefined,
-        priority: priority as never,
-        assigneeId: assignee !== "none" ? (assignee as never) : undefined,
-      });
-      setCreateOpen(false);
-      setTitle("");
-      setDescription("");
-      toast.success(`Issue ${project?.project.key}-${result.number} created in ${project?.project.name}`, {
-        action: {
-          label: "Open",
-          onClick: () => navigate(`/app/issues/${result.issueId}`),
-        },
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create issue");
-    } finally {
-      setCreating(false);
-    }
-  };
-
   const openCount = project?.openIssueCount ?? 0;
 
   if (project === null) {
@@ -190,10 +160,17 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   }
 
   const memberName = (id: string | undefined) => {
-    if (!id) return null;
+    if (!id) return "Unassigned";
     const m = members?.find((m) => m.userId === id);
-    if (!m) return null;
-    return m.userId === user?._id ? `You (${m.name})` : m.name;
+    if (!m) {
+      if (user?._id === id) {
+        const myName = user.name?.trim() || user.email?.trim() || "Guest";
+        return `You (${myName})`;
+      }
+      return "Guest";
+    }
+    const name = m.name?.trim() || m.email?.trim() || "Guest";
+    return m.userId === user?._id ? `You (${name})` : name;
   };
 
   const canWrite =
@@ -235,91 +212,21 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
               </Link>
             </Button>
             {project.role !== "viewer" && (
-              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus /> New issue
+              <CreateIssueDialog
+                projects={(allProjects ?? [project.project]).map((p) => ({
+                  _id: p._id,
+                  name: p.name,
+                  key: p.key,
+                }))}
+                defaultProjectId={project.project._id}
+                workspaceId={project.project.workspaceId}
+                canCreate={canWrite}
+                trigger={
+                  <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+                    <Plus className="size-4 mr-1" /> New issue
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>New issue</DialogTitle>
-                    <DialogDescription>
-                      It will be numbered {project.project.key}-N and enter the first backlog status.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="i-title">Title</Label>
-                      <Input
-                        id="i-title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Implement refresh-token rotation"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="i-desc">Description</Label>
-                      <Textarea
-                        id="i-desc"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Add context, acceptance criteria, links…"
-                        rows={3}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>Priority</Label>
-                        <Select value={priority} onValueChange={setPriority}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PRIORITIES.map((p) => (
-                              <SelectItem key={p} value={p} className="capitalize">
-                                {p}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Assignee</Label>
-                        <Select value={assignee} onValueChange={setAssignee}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Unassigned</SelectItem>
-                            {members?.map((m) => {
-                              const isMe = m.userId === user?._id;
-                              return (
-                                <SelectItem key={m.userId} value={m.userId}>
-                                  {isMe ? `You (${m.name})` : m.name}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleCreateIssue}
-                      disabled={title.trim().length < 3 || creating}
-                    >
-                      {creating && <Loader2 className="animate-spin" />}
-                      Create issue
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                }
+              />
             )}
           </div>
         </div>

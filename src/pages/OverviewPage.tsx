@@ -7,6 +7,13 @@ import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { LoadingBlock, PageHeader, PageStack } from "@/components/app-ui";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
+import { InviteMembersDialog } from "@/components/InviteMembersDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/forge";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -29,7 +36,18 @@ import {
   ProjectHealthWidget,
   type OverviewIssueItem,
 } from "@/components/overview/OverviewWidgets";
-import { Sparkles, Move, RotateCcw, Plus } from "lucide-react";
+import {
+  Move,
+  RotateCcw,
+  Plus,
+  SlidersHorizontal,
+  CheckCircle2,
+  Circle,
+  ArrowRight,
+  AlertCircle,
+  Clock,
+  CheckCircle,
+} from "lucide-react";
 
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -95,9 +113,8 @@ export default function OverviewPage() {
     }));
   }, [projectIssues, projects, user]);
 
-  // Edit mode & sample data states
+  // Edit mode state (sample data permanently disabled)
   const [isEditing, setIsEditing] = useState(false);
-  const [sampleDataActive, setSampleDataActive] = useState(false);
 
   // Persistence in localStorage per user and workspace
   const storageKey = `forge_overview_layout_${workspaceId}_${userId}`;
@@ -180,175 +197,6 @@ export default function OverviewPage() {
   const canWrite = workspace.role !== "viewer";
   const projectList = projects ?? [];
 
-  // Client-side sample data
-  const sampleRollup = {
-    open: 38,
-    blocked: 3,
-    overdue: 4,
-    unassigned: 7,
-    completed: 62,
-    riskScore: 24,
-    riskLevel: "medium",
-    byStatus: [
-      { statusName: "Backlog", count: 12, color: "#9A9A9F" },
-      { statusName: "Todo", count: 14, color: "#6E94CB" },
-      { statusName: "In Progress", count: 9, color: "#7957EC" },
-      { statusName: "Review", count: 5, color: "#D78FC6" },
-      { statusName: "Changes Requested", count: 2, color: "#D6C6A1" },
-      { statusName: "Done", count: 62, color: "#83DD79" },
-    ],
-    byPriority: [
-      { priority: "urgent", count: 4 },
-      { priority: "high", count: 11 },
-      { priority: "medium", count: 18 },
-      { priority: "low", count: 5 },
-      { priority: "none", count: 2 },
-    ],
-  };
-
-  const sampleProjects = [
-    {
-      _id: "demo_p1" as Id<"projects">,
-      name: "Core Engine",
-      key: "CORE",
-      status: "active",
-      issueCount: 42,
-      openIssueCount: 14,
-      doneIssueCount: 28,
-    },
-    {
-      _id: "demo_p2" as Id<"projects">,
-      name: "Mobile Client",
-      key: "MBL",
-      status: "active",
-      issueCount: 24,
-      openIssueCount: 9,
-      doneIssueCount: 15,
-    },
-    {
-      _id: "demo_p3" as Id<"projects">,
-      name: "Design System",
-      key: "DS",
-      status: "planning",
-      issueCount: 18,
-      openIssueCount: 8,
-      doneIssueCount: 10,
-    },
-    {
-      _id: "demo_p4" as Id<"projects">,
-      name: "Cloud Sync",
-      key: "SYNC",
-      status: "active",
-      issueCount: 16,
-      openIssueCount: 7,
-      doneIssueCount: 9,
-    },
-  ];
-
-  const sampleRiskByProject = new Map([
-    ["demo_p1", { score: 18, level: "low", blocked: 1, overdue: 1 }],
-    ["demo_p2", { score: 32, level: "medium", blocked: 2, overdue: 2 }],
-    ["demo_p3", { score: 10, level: "low", blocked: 0, overdue: 0 }],
-    ["demo_p4", { score: 26, level: "medium", blocked: 0, overdue: 1 }],
-  ]);
-
-  const sampleActivity = [
-    {
-      _id: "sample_1",
-      actorName: "Sarah Chen",
-      eventType: "issue.completed",
-      createdAt: Date.now() - 1000 * 60 * 18,
-      entityType: "issue",
-      entityId: "1",
-    },
-    {
-      _id: "sample_2",
-      actorName: "Alex Rivera",
-      eventType: "issue.status_changed",
-      createdAt: Date.now() - 1000 * 60 * 45,
-      entityType: "issue",
-      entityId: "2",
-    },
-    {
-      _id: "sample_3",
-      actorName: "Devin Brooks",
-      eventType: "project.updated",
-      createdAt: Date.now() - 1000 * 60 * 120,
-      entityType: "project",
-      entityId: "3",
-    },
-    {
-      _id: "sample_4",
-      actorName: "Morgan Taylor",
-      eventType: "issue.created",
-      createdAt: Date.now() - 1000 * 60 * 180,
-      entityType: "issue",
-      entityId: "4",
-    },
-    {
-      _id: "sample_5",
-      actorName: "Elena Rostova",
-      eventType: "comment.created",
-      createdAt: Date.now() - 1000 * 60 * 320,
-      entityType: "issue",
-      entityId: "5",
-    },
-  ];
-
-  const sampleIssues: OverviewIssueItem[] = [
-    {
-      _id: "si_1",
-      projectKey: "CORE",
-      number: 104,
-      title: "Integrate OAuth refresh token rotation and retry flow",
-      statusName: "In Progress",
-      statusColor: "#7957EC",
-      priority: "urgent",
-    },
-    {
-      _id: "si_2",
-      projectKey: "MBL",
-      number: 28,
-      title: "Fix iOS virtual keyboard layout shift in bottom sheet dialogs",
-      statusName: "Review",
-      statusColor: "#D78FC6",
-      priority: "high",
-    },
-    {
-      _id: "si_3",
-      projectKey: "CORE",
-      number: 112,
-      title: "Optimize composite database index on workspace audit log queries",
-      statusName: "Todo",
-      statusColor: "#6E94CB",
-      priority: "medium",
-    },
-    {
-      _id: "si_4",
-      projectKey: "SYNC",
-      number: 15,
-      title: "Implement background delta sync for offline mutations",
-      statusName: "In Progress",
-      statusColor: "#7957EC",
-      priority: "high",
-    },
-    {
-      _id: "si_5",
-      projectKey: "DS",
-      number: 44,
-      title: "Audit color tokens for WCAG AA 4.5:1 contrast compliance",
-      statusName: "Todo",
-      statusColor: "#6E94CB",
-      priority: "low",
-    },
-  ];
-
-  const effectiveRollup = sampleDataActive ? sampleRollup : realRollup;
-  const effectiveProjects = sampleDataActive ? sampleProjects : projectList;
-  const effectiveRisks = sampleDataActive ? sampleRiskByProject : realRiskByProject;
-  const effectiveActivity = sampleDataActive ? sampleActivity : (activity ?? []);
-  const effectiveIssues = sampleDataActive ? sampleIssues : realIssues;
-
   const renderWidgetItem = (item: WidgetItem) => {
     switch (item.id) {
       case "quick_actions":
@@ -358,54 +206,61 @@ export default function OverviewPage() {
             workspaceName={workspace.workspace.name}
             canWrite={canWrite}
             projectList={projectList}
-            isSampleData={sampleDataActive}
           />
         );
       case "my_open_issues":
         return (
           <MyOpenIssuesWidget
             workspaceId={id}
-            issues={effectiveIssues}
+            issues={realIssues}
             canWrite={canWrite}
-            isSampleData={sampleDataActive}
+            projectList={projectList}
           />
         );
       case "recent_activity":
         return (
           <RecentActivityWidget
             workspaceId={id}
-            activity={effectiveActivity}
-            isSampleData={sampleDataActive}
+            activity={activity ?? []}
           />
         );
       case "status_distribution":
         return (
           <StatusDistributionWidget
-            rollup={effectiveRollup}
-            isSampleData={sampleDataActive}
+            rollup={realRollup}
           />
         );
       case "priority_breakdown":
         return (
           <PriorityBreakdownWidget
-            rollup={effectiveRollup}
-            isSampleData={sampleDataActive}
+            rollup={realRollup}
           />
         );
       case "project_health":
         return (
           <ProjectHealthWidget
             workspaceId={id}
-            projectList={effectiveProjects}
-            riskByProject={effectiveRisks}
+            projectList={projectList}
+            riskByProject={realRiskByProject}
             canWrite={canWrite}
-            isSampleData={sampleDataActive}
           />
         );
       default:
         return <div>{item.title}</div>;
     }
   };
+
+  // Checklist state for new workspaces
+  const hasProject = projectList.length > 0;
+  const hasIssue = realRollup.open + realRollup.completed > 0;
+  const hasTeammate = (workspace.memberCount ?? 1) > 1;
+  const showChecklist = !hasProject || !hasIssue || !hasTeammate;
+
+  // Filtered issue destination link
+  const issuesTargetLink =
+    projectList.length === 1
+      ? `/app/projects/${projectList[0]._id}`
+      : `/app/workspaces/${id}/projects`;
 
   return (
     <AppShell workspaceId={workspaceId}>
@@ -416,44 +271,37 @@ export default function OverviewPage() {
           meta={<RoleBadge role={workspace.role} />}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              {/* Preview with sample data toggle */}
-              <Button
-                variant={sampleDataActive ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSampleDataActive(!sampleDataActive)}
-                className="gap-1.5 rounded-full"
-              >
-                <Sparkles className="size-3.5" />
-                <span>{sampleDataActive ? "Sample data ON" : "Sample data"}</span>
-              </Button>
-
-              {/* Edit layout toggle */}
-              <Button
-                variant={isEditing ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-                className="gap-1.5 rounded-full"
-              >
-                <Move className="size-3.5" />
-                <span>{isEditing ? "Done editing" : "Edit layout"}</span>
-              </Button>
-
-              {isEditing && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetLayout}
-                  className="gap-1.5 rounded-full text-[#575657] hover:text-[#0D0D0D]"
-                >
-                  <RotateCcw className="size-3.5" />
-                  <span>Reset layout</span>
-                </Button>
-              )}
+              {/* Customize menu for layout rearrangement */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5 rounded-full text-[13px]">
+                    <SlidersHorizontal className="size-3.5" />
+                    <span>Customize</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-[14px] p-1.5 shadow-none border-border bg-white">
+                  <DropdownMenuItem
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="rounded-[10px] text-[13px] cursor-pointer"
+                  >
+                    <Move className="size-3.5 mr-2" />
+                    {isEditing ? "Done rearranging" : "Rearrange widgets"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleResetLayout}
+                    className="rounded-[10px] text-[13px] text-[#575657] cursor-pointer"
+                  >
+                    <RotateCcw className="size-3.5 mr-2" />
+                    Reset layout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* New Issue & New Project actions */}
               <CreateIssueDialog
                 projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
-                canCreate={canWrite && projectList.length > 0}
+                workspaceId={id}
+                canCreate={canWrite}
                 trigger={
                   <Button variant="outline" size="sm" className="rounded-full">
                     <Plus /> Create issue
@@ -471,6 +319,200 @@ export default function OverviewPage() {
             </div>
           )}
         </PageHeader>
+
+        {/* 1. Get started checklist card (visible when workspace is new / steps incomplete) */}
+        {showChecklist && (
+          <div className="rounded-[16px] border border-border bg-white p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-[15px] font-[500] text-[#0D0D0D]">Get started with your workspace</h2>
+                <p className="mt-0.5 text-[13px] text-[#575657]">
+                  Three simple steps to set up work tracking for your team.
+                </p>
+              </div>
+              <span className="rounded-full bg-[#F1F1F3] px-2.5 py-0.5 text-[11px] font-medium text-[#575657]">
+                {[hasProject, hasIssue, hasTeammate].filter(Boolean).length} of 3 done
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Step 1: Create a project */}
+              <div
+                className={`flex flex-col justify-between rounded-[14px] border p-3.5 transition-colors ${
+                  hasProject ? "border-border/60 bg-[#F6F6F7]/60" : "border-border bg-white"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    {hasProject ? (
+                      <CheckCircle2 className="size-4 text-[#83DD79] shrink-0" />
+                    ) : (
+                      <Circle className="size-4 text-[#9A9A9F] shrink-0" />
+                    )}
+                    <span className={`text-[13px] font-medium ${hasProject ? "line-through text-[#575657]" : "text-[#0D0D0D]"}`}>
+                      1. Create a project
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] text-[#575657] pl-6">
+                    Organize your work with keys and boards.
+                  </p>
+                </div>
+                {!hasProject && (
+                  <div className="mt-3 pl-6">
+                    <CreateProjectDialog
+                      workspaceId={id}
+                      canCreate={canWrite}
+                      trigger={
+                        <Button size="sm" className="h-8 rounded-full bg-[#0D0D0D] px-3 text-[12px] text-white hover:bg-[#262626]">
+                          Create project <ArrowRight className="size-3 ml-1" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Add your first issue */}
+              <div
+                className={`flex flex-col justify-between rounded-[14px] border p-3.5 transition-colors ${
+                  hasIssue ? "border-border/60 bg-[#F6F6F7]/60" : "border-border bg-white"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    {hasIssue ? (
+                      <CheckCircle2 className="size-4 text-[#83DD79] shrink-0" />
+                    ) : (
+                      <Circle className="size-4 text-[#9A9A9F] shrink-0" />
+                    )}
+                    <span className={`text-[13px] font-medium ${hasIssue ? "line-through text-[#575657]" : "text-[#0D0D0D]"}`}>
+                      2. Add your first issue
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] text-[#575657] pl-6">
+                    Capture tasks, bugs, or feature ideas.
+                  </p>
+                </div>
+                {!hasIssue && (
+                  <div className="mt-3 pl-6">
+                    <CreateIssueDialog
+                      projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
+                      workspaceId={id}
+                      canCreate={canWrite}
+                      trigger={
+                        <Button size="sm" className="h-8 rounded-full bg-[#0D0D0D] px-3 text-[12px] text-white hover:bg-[#262626]">
+                          Add issue <ArrowRight className="size-3 ml-1" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Step 3: Invite a teammate */}
+              <div
+                className={`flex flex-col justify-between rounded-[14px] border p-3.5 transition-colors ${
+                  hasTeammate ? "border-border/60 bg-[#F6F6F7]/60" : "border-border bg-white"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    {hasTeammate ? (
+                      <CheckCircle2 className="size-4 text-[#83DD79] shrink-0" />
+                    ) : (
+                      <Circle className="size-4 text-[#9A9A9F] shrink-0" />
+                    )}
+                    <span className={`text-[13px] font-medium ${hasTeammate ? "line-through text-[#575657]" : "text-[#0D0D0D]"}`}>
+                      3. Invite a teammate
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px] text-[#575657] pl-6">
+                    Share projects and assign work together.
+                  </p>
+                </div>
+                {!hasTeammate && (
+                  <div className="mt-3 pl-6">
+                    <InviteMembersDialog
+                      workspaceId={id}
+                      workspaceName={workspace.workspace.name}
+                      canInvite={canWrite}
+                      trigger={
+                        <Button size="sm" className="h-8 rounded-full bg-[#0D0D0D] px-3 text-[12px] text-white hover:bg-[#262626]">
+                          Invite member <ArrowRight className="size-3 ml-1" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Overview clickable summary metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Link
+            to={issuesTargetLink}
+            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+          >
+            <div className="flex items-center justify-between text-[12px] text-[#575657]">
+              <span>Open issues</span>
+              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            </div>
+            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+              {realRollup.open}
+            </div>
+            <p className="mt-0.5 text-[11px] text-[#575657]">Across {projectList.length} projects</p>
+          </Link>
+
+          <Link
+            to={issuesTargetLink}
+            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+          >
+            <div className="flex items-center justify-between text-[12px] text-[#575657]">
+              <span className="flex items-center gap-1.5">
+                <AlertCircle className="size-3 text-[#B3261E]" /> Blocked
+              </span>
+              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            </div>
+            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+              {realRollup.blocked}
+            </div>
+            <p className="mt-0.5 text-[11px] text-[#575657]">Unresolved dependencies</p>
+          </Link>
+
+          <Link
+            to={issuesTargetLink}
+            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+          >
+            <div className="flex items-center justify-between text-[12px] text-[#575657]">
+              <span className="flex items-center gap-1.5">
+                <Clock className="size-3 text-[#D6C6A1]" /> Overdue
+              </span>
+              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            </div>
+            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+              {realRollup.overdue}
+            </div>
+            <p className="mt-0.5 text-[11px] text-[#575657]">Past target date</p>
+          </Link>
+
+          <Link
+            to={issuesTargetLink}
+            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+          >
+            <div className="flex items-center justify-between text-[12px] text-[#575657]">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="size-3 text-[#83DD79]" /> Completed
+              </span>
+              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            </div>
+            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+              {realRollup.completed}
+            </div>
+            <p className="mt-0.5 text-[11px] text-[#575657]">Finished work items</p>
+          </Link>
+        </div>
 
         {loading ? (
           <LoadingBlock />

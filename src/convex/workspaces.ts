@@ -26,13 +26,20 @@ const DEFAULT_WORKFLOW = [
 const DEFAULT_TRANSITIONS: Array<[string, string]> = [
   ["Backlog", "Todo"],
   ["Backlog", "In Progress"],
+  ["Backlog", "Cancelled"],
   ["Todo", "In Progress"],
   ["Todo", "Backlog"],
+  ["Todo", "Cancelled"],
   ["In Progress", "Review"],
   ["In Progress", "Todo"],
+  ["In Progress", "Cancelled"],
   ["Review", "Done"],
   ["Review", "In Progress"],
   ["Review", "Changes Requested"],
+  ["Review", "Cancelled"],
+  ["Changes Requested", "In Progress"],
+  ["Changes Requested", "Review"],
+  ["Changes Requested", "Cancelled"],
   ["Done", "In Progress"],
   ["Cancelled", "Backlog"],
 ];
@@ -214,21 +221,40 @@ export const listMembers = query({
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
       .collect();
 
-    return Promise.all(
-      memberships.map(async (m) => {
-        const user = await ctx.db.get(m.userId);
-        const displayName = user?.name?.trim() || user?.email?.trim() || "Guest";
-        return {
-          membershipId: m._id,
-          userId: m.userId,
-          role: m.role,
-          joinedAt: m.joinedAt,
-          name: displayName,
-          email: user?.email ?? "",
-          image: user?.image,
-        };
-      }),
+    const userDocs = await Promise.all(memberships.map((m) => ctx.db.get(m.userId)));
+    const userById = new Map(
+      userDocs.filter((u): u is Doc<"users"> => u !== null).map((u) => [u._id, u]),
     );
+
+    const sortedMemberships = [...memberships].sort(
+      (a, b) => a.joinedAt - b.joinedAt || a._id.localeCompare(b._id),
+    );
+    const guestLabelMap = new Map<string, string>();
+    let guestCount = 1;
+    for (const m of sortedMemberships) {
+      const u = userById.get(m.userId);
+      if (!u?.name?.trim() && !u?.email?.trim()) {
+        guestLabelMap.set(m.userId, `Guest ${guestCount++}`);
+      }
+    }
+
+    return memberships.map((m) => {
+      const user = userById.get(m.userId);
+      const displayName =
+        user?.name?.trim() ||
+        user?.email?.trim() ||
+        guestLabelMap.get(m.userId) ||
+        `Guest ${m.userId.slice(-4)}`;
+      return {
+        membershipId: m._id,
+        userId: m.userId,
+        role: m.role,
+        joinedAt: m.joinedAt,
+        name: displayName,
+        email: user?.email ?? "",
+        image: user?.image,
+      };
+    });
   },
 });
 
@@ -757,5 +783,49 @@ export const acceptMyInvitation = mutation({
     }
 
     return await joinFromInvitation(ctx, invitation, user);
+  },
+});
+
+/**
+ * Deletes a workspace and all its data. Only the workspace owner can perform this.
+ */
+export const deleteWorkspace = mutation({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const { workspaceId, role } = await loadWorkspaceContext(ctx, args.workspaceId);
+    if (role !== "owner") {
+      throw new Error("Only the workspace owner can delete this workspace");
+    }
+
+    const deleteWorkspaceTableRows = async (table: "memberships" | "projects" | "issues" | "issueDependencies" | "issueLabels" | "labels" | "workflows" | "workflowStatuses" | "workflowTransitions" | "invitations" | "activityEvents" | "comments") => {
+      const rows = await ctx.db.query(table).collect();
+      for (const row of rows) {
+        if ("workspaceId" in row && (row as { workspaceId: Id<"workspaces"> }).workspaceId === workspaceId) {
+          await ctx.db.delete(row._id);
+        }
+      }
+    };
+
+    const tables = [
+      "memberships",
+      "projects",
+      "issues",
+      "issueDependencies",
+      "issueLabels",
+      "labels",
+      "workflows",
+      "workflowStatuses",
+      "workflowTransitions",
+      "invitations",
+      "activityEvents",
+      "comments",
+    ] as const;
+
+    for (const t of tables) {
+      await deleteWorkspaceTableRows(t);
+    }
+
+    await ctx.db.delete(workspaceId);
+    return { success: true };
   },
 });

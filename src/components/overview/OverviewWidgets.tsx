@@ -108,7 +108,6 @@ export function QuickActionsWidget({
   workspaceName,
   canWrite,
   projectList,
-  isSampleData,
 }: {
   workspaceId: string;
   workspaceName?: string;
@@ -121,13 +120,13 @@ export function QuickActionsWidget({
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Quick actions</span>
-          {isSampleData && <SampleDataBadge />}
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
-        {canWrite && projectList.length > 0 && (
+        {canWrite && (
           <CreateIssueDialog
             projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
+            workspaceId={workspaceId as Id<"workspaces">}
             canCreate={canWrite}
             trigger={
               <Button
@@ -177,13 +176,19 @@ export function MyOpenIssuesWidget({
   workspaceId,
   issues,
   canWrite: _canWrite,
-  isSampleData,
+  projectList,
 }: {
   workspaceId: string;
   issues: OverviewIssueItem[];
   canWrite: boolean;
+  projectList?: OverviewDataProps["projectList"];
   isSampleData?: boolean;
 }) {
+  const viewAllLink =
+    projectList && projectList.length === 1
+      ? `/app/projects/${projectList[0]._id}`
+      : `/app/workspaces/${workspaceId}/projects`;
+
   return (
     <div className="flex h-full flex-col justify-between">
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
@@ -192,10 +197,9 @@ export function MyOpenIssuesWidget({
           <span className="inline-flex items-center rounded-full bg-[#F1F1F3] px-2 py-0.5 text-[11px] font-medium text-[#575657]">
             {issues.length}
           </span>
-          {isSampleData && <SampleDataBadge />}
         </div>
         <Link
-          to={`/app/workspaces/${workspaceId}/projects`}
+          to={viewAllLink}
           className="inline-flex items-center gap-1 text-[12px] font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors"
         >
           View all <ArrowUpRight className="size-3.5" />
@@ -221,7 +225,7 @@ export function MyOpenIssuesWidget({
               return (
                 <li key={issue._id}>
                   <Link
-                    to={`/app/workspaces/${workspaceId}/issues/${issue._id}`}
+                    to={`/app/issues/${issue._id}`}
                     className="flex items-center gap-2.5 py-2 px-1 rounded-[10px] transition-colors hover:bg-[#F6F6F7]"
                   >
                     {/* Status dot */}
@@ -266,7 +270,6 @@ export function MyOpenIssuesWidget({
 export function RecentActivityWidget({
   workspaceId,
   activity,
-  isSampleData,
 }: {
   workspaceId: string;
   activity: OverviewDataProps["activity"];
@@ -279,7 +282,6 @@ export function RecentActivityWidget({
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Recent activity</span>
-          {isSampleData && <SampleDataBadge />}
         </div>
         <Link
           to={`/app/workspaces/${workspaceId}/activity`}
@@ -300,8 +302,16 @@ export function RecentActivityWidget({
           <ul className="divide-y divide-border/60">
             {events.map((e) => {
               const initial = (e.actorName || "G").charAt(0).toUpperCase();
-              return (
-                <li key={e._id} className="flex items-center justify-between gap-3 py-2 px-1">
+              const isIssueEvent = e.entityType === "issue" || e.eventType.startsWith("issue.");
+              const isProjectEvent = e.entityType === "project" || e.eventType.startsWith("project.");
+              const targetHref = isIssueEvent
+                ? `/app/issues/${e.entityId}`
+                : isProjectEvent
+                  ? `/app/projects/${e.entityId}`
+                  : null;
+
+              const content = (
+                <div className="flex items-center justify-between gap-3 py-2 px-1 rounded-[10px] transition-colors hover:bg-[#F6F6F7]">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-[#F1F1F3] text-[10px] font-semibold text-[#0D0D0D]">
                       {initial}
@@ -316,6 +326,18 @@ export function RecentActivityWidget({
                   <time className="shrink-0 text-[11px] tabular-nums text-[#575657]">
                     {new Date(e.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </time>
+                </div>
+              );
+
+              return (
+                <li key={e._id}>
+                  {targetHref ? (
+                    <Link to={targetHref} className="block">
+                      {content}
+                    </Link>
+                  ) : (
+                    content
+                  )}
                 </li>
               );
             })}
@@ -334,7 +356,6 @@ export function RecentActivityWidget({
 /* 4. Status distribution (2x1 wide) */
 export function StatusDistributionWidget({
   rollup,
-  isSampleData,
 }: {
   rollup: OverviewDataProps["rollup"];
   isSampleData?: boolean;
@@ -348,7 +369,6 @@ export function StatusDistributionWidget({
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Status distribution</span>
           <InfoHint text="Workspace work items grouped across workflow statuses." />
         </div>
-        {isSampleData && <SampleDataBadge />}
       </div>
 
       <div className="py-2">
@@ -378,7 +398,6 @@ export function StatusDistributionWidget({
 /* 5. Priority breakdown (2x1 wide) */
 export function PriorityBreakdownWidget({
   rollup,
-  isSampleData,
 }: {
   rollup: OverviewDataProps["rollup"];
   isSampleData?: boolean;
@@ -393,7 +412,6 @@ export function PriorityBreakdownWidget({
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Priority breakdown</span>
           <InfoHint text="Breakdown of open issues by priority level." />
         </div>
-        {isSampleData && <SampleDataBadge />}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
@@ -429,7 +447,6 @@ export function ProjectHealthWidget({
   projectList,
   riskByProject,
   canWrite: _canWrite,
-  isSampleData,
 }: {
   workspaceId: string;
   projectList: OverviewDataProps["projectList"];
@@ -442,7 +459,6 @@ export function ProjectHealthWidget({
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Project health</span>
-          {isSampleData && <SampleDataBadge />}
         </div>
         <Link
           to={`/app/workspaces/${workspaceId}/projects`}

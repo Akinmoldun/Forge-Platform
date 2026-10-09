@@ -4,11 +4,13 @@ import {
   createNotification,
   findIssueContext,
   findProjectContext,
+  findWorkspaceContext,
   loadIssueContext,
   loadProjectContext,
   recordEvent,
   roleAtLeast,
 } from "./lib/auth";
+import { isIssueDone, isIssueOpen } from "./lib/issueStatus";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -183,12 +185,26 @@ export const getBoard = query({
         .map((d) => d.blockedIssueId),
     );
 
-    const columns = statuses.map((status) => ({
+    const statusIdSet = new Set(statuses.map((s) => s._id));
+
+    const columns: Array<{
+      status: Doc<"workflowStatuses">;
+      issues: Array<{
+        _id: Id<"issues">;
+        number: number;
+        title: string;
+        priority: string;
+        assigneeId?: Id<"users">;
+        assigneeName: string | null;
+        dueDate?: number;
+        isBlocked: boolean;
+      }>;
+      isUnsorted?: boolean;
+    }> = statuses.map((status) => ({
       status,
       issues: issues
         .filter((i) => i.statusId === status._id)
         .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, 50)
         .map((i) => ({
           _id: i._id,
           number: i.number,
@@ -196,12 +212,49 @@ export const getBoard = query({
           priority: i.priority,
           assigneeId: i.assigneeId,
           assigneeName: i.assigneeId
-            ? (memberById.get(i.assigneeId)?.name?.trim() || memberById.get(i.assigneeId)?.email?.trim() || "Guest")
+            ? (memberById.get(i.assigneeId)?.name?.trim() ||
+                memberById.get(i.assigneeId)?.email?.trim() ||
+                `Guest ${i.assigneeId.slice(-4)}`)
             : null,
           dueDate: i.dueDate,
           isBlocked: unresolvedBlockers.has(i._id),
         })),
+      isUnsorted: false,
     }));
+
+    // Find any active issues whose status is not in the project's workflow
+    const unsortedIssues = issues.filter((i) => !statusIdSet.has(i.statusId));
+    if (unsortedIssues.length > 0) {
+      columns.push({
+        status: {
+          _id: "unsorted" as Id<"workflowStatuses">,
+          _creationTime: 0,
+          workspaceId,
+          workflowId: workflow._id,
+          name: "Unsorted",
+          category: "unsorted" as never,
+          color: "#8b8b93",
+          position: 999,
+        },
+        issues: unsortedIssues
+          .sort((a, b) => b.updatedAt - a.updatedAt)
+          .map((i) => ({
+            _id: i._id,
+            number: i.number,
+            title: i.title,
+            priority: i.priority,
+            assigneeId: i.assigneeId,
+            assigneeName: i.assigneeId
+              ? (memberById.get(i.assigneeId)?.name?.trim() ||
+                  memberById.get(i.assigneeId)?.email?.trim() ||
+                  `Guest ${i.assigneeId.slice(-4)}`)
+              : null,
+            dueDate: i.dueDate,
+            isBlocked: unresolvedBlockers.has(i._id),
+          })),
+        isUnsorted: true,
+      });
+    }
 
     return { statuses, columns, dependencies: deps.map((d) => ({ blocking: d.blockingIssueId, blocked: d.blockedIssueId })) };
   },
@@ -315,13 +368,13 @@ export const getIssue = query({
       canWrite: roleAtLeast(role, "member"),
       assignee: assignee
         ? {
-            name: assignee.name?.trim() || assignee.email?.trim() || "Guest",
+            name: assignee.name?.trim() || assignee.email?.trim() || `Guest ${assignee._id.slice(-4)}`,
             image: assignee.image,
           }
         : null,
       reporter: reporter
         ? {
-            name: reporter.name?.trim() || reporter.email?.trim() || "Guest",
+            name: reporter.name?.trim() || reporter.email?.trim() || `Guest ${reporter._id.slice(-4)}`,
             image: reporter.image,
           }
         : null,
@@ -941,5 +994,129 @@ export const deleteIssue = mutation({
       payload: { title: (await ctx.db.get(args.issueId))?.title },
     });
     await ctx.db.delete(args.issueId);
+  },
+});
+
+export const listWorkspaceIssues = query({
+  args: {
+    workspaceId: v.id("workspaces"),
+    projectId: v.optional(v.id("projects")),
+    filter: v.optional(v.string()),
+    statusId: v.optional(v.string()),
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const workspaceCtx = await findWorkspaceContext(ctx, args.workspaceId);
+    if (!workspaceCtx) return { issues: [], total: 0 };
+
+    let issues = (
+      await ctx.db
+        .query("issues")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+        .collect()
+    ).filter((i) => !i.archivedAt);
+
+    if (args.projectId) {
+      issues = issues.filter((i) => i.projectId === args.projectId);
+    }
+
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .collect();
+    const projectById = new Map(projects.map((p) => [p._id, p]));
+
+    const statusIds = [...new Set(issues.map((i) => i.statusId))];
+    const statusDocs = (
+      await Promise.all(statusIds.map((id) => ctx.db.get(id)))
+    ).filter((s): s is Doc<"workflowStatuses"> => s !== null);
+    const statusById = new Map(statusDocs.map((s) => [s._id, s]));
+
+    const deps = (await ctx.db.query("issueDependencies").collect()).filter(
+      (d) => d.workspaceId === args.workspaceId && d.dependencyType === "blocks",
+    );
+    const statusByIssueId = new Map(issues.map((i) => [i._id, i.statusId]));
+    const completedStatusIds = new Set(
+      statusDocs
+        .filter((s) => s.category === "completed" || s.category === "cancelled")
+        .map((s) => s._id),
+    );
+    const blockedIssueIds = new Set(
+      deps
+        .filter((d) => {
+          const blockerStatus = statusByIssueId.get(d.blockingIssueId);
+          return blockerStatus !== undefined && !completedStatusIds.has(blockerStatus);
+        })
+        .map((d) => d.blockedIssueId),
+    );
+
+    if (args.search && args.search.trim().length > 0) {
+      const needle = args.search.trim().toLowerCase();
+      issues = issues.filter((i) => {
+        const proj = projectById.get(i.projectId);
+        const fullKey = proj ? `${proj.key}-${i.number}`.toLowerCase() : "";
+        return (
+          i.title.toLowerCase().includes(needle) ||
+          (i.description ?? "").toLowerCase().includes(needle) ||
+          fullKey.includes(needle)
+        );
+      });
+    }
+
+    if (args.statusId && args.statusId !== "all") {
+      issues = issues.filter((i) => i.statusId === args.statusId);
+    }
+
+    const now = Date.now();
+    if (args.filter === "open") {
+      issues = issues.filter((i) => isIssueOpen(i, statusById.get(i.statusId)?.category));
+    } else if (args.filter === "completed") {
+      issues = issues.filter((i) => isIssueDone(i, statusById.get(i.statusId)?.category));
+    } else if (args.filter === "blocked") {
+      issues = issues.filter((i) => blockedIssueIds.has(i._id));
+    } else if (args.filter === "overdue") {
+      issues = issues.filter(
+        (i) => isIssueOpen(i, statusById.get(i.statusId)?.category) && i.dueDate && i.dueDate < now,
+      );
+    }
+
+    const assigneeIds = [
+      ...new Set(issues.map((i) => i.assigneeId).filter((x): x is Id<"users"> => !!x)),
+    ];
+    const assignees = await Promise.all(assigneeIds.map((id) => ctx.db.get(id)));
+    const assigneeById = new Map(
+      assignees.filter((u): u is Doc<"users"> => u !== null).map((u) => [u._id, u]),
+    );
+
+    issues.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    const enriched = issues.map((i) => {
+      const proj = projectById.get(i.projectId);
+      const st = statusById.get(i.statusId);
+      const asg = i.assigneeId ? assigneeById.get(i.assigneeId) : null;
+      return {
+        _id: i._id,
+        projectId: i.projectId,
+        projectKey: proj?.key ?? "",
+        projectName: proj?.name ?? "",
+        number: i.number,
+        title: i.title,
+        priority: i.priority,
+        statusId: i.statusId,
+        status: st
+          ? { name: st.name, color: st.color, category: st.category }
+          : { name: "Unsorted", color: "#8b8b93", category: "unsorted" },
+        assigneeId: i.assigneeId,
+        assigneeName: i.assigneeId
+          ? asg?.name?.trim() || asg?.email?.trim() || `Guest ${i.assigneeId.slice(-4)}`
+          : null,
+        dueDate: i.dueDate,
+        isBlocked: blockedIssueIds.has(i._id),
+        updatedAt: i.updatedAt,
+        createdAt: i.createdAt,
+      };
+    });
+
+    return { issues: enriched, total: enriched.length };
   },
 });

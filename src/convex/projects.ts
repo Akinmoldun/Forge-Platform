@@ -7,6 +7,7 @@ import {
   recordEvent,
   roleAtLeast,
 } from "./lib/auth";
+import { isIssueDone, isIssueOpen } from "./lib/issueStatus";
 import { DEFAULT_STATUS_ROWS, DEFAULT_TRANSITION_PAIRS } from "./workspaces";
 
 // ---------------------------------------------------------------------------
@@ -32,9 +33,21 @@ export const listProjects = query({
           .query("issues")
           .withIndex("by_project", (q) => q.eq("projectId", p._id))
           .collect();
-        const open = issues.filter((i) => !i.archivedAt && !i.completedAt).length;
-        const done = issues.filter((i) => i.completedAt).length;
-        return { ...p, openIssueCount: open, doneIssueCount: done, issueCount: issues.length };
+        const workflow = await ctx.db
+          .query("workflows")
+          .withIndex("by_project", (q) => q.eq("projectId", p._id))
+          .first();
+        const statuses = workflow
+          ? await ctx.db
+              .query("workflowStatuses")
+              .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
+              .collect()
+          : [];
+        const statusCategoryMap = new Map(statuses.map((s) => [s._id, s.category]));
+        const active = issues.filter((i) => !i.archivedAt);
+        const open = active.filter((i) => isIssueOpen(i, statusCategoryMap.get(i.statusId))).length;
+        const done = active.filter((i) => isIssueDone(i, statusCategoryMap.get(i.statusId))).length;
+        return { ...p, openIssueCount: open, doneIssueCount: done, issueCount: active.length };
       }),
     );
   },
@@ -50,12 +63,23 @@ export const getProject = query({
       .query("issues")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
       .collect();
+    const workflow = await ctx.db
+      .query("workflows")
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+      .first();
+    const statuses = workflow
+      ? await ctx.db
+          .query("workflowStatuses")
+          .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
+          .collect()
+      : [];
+    const statusCategoryMap = new Map(statuses.map((s) => [s._id, s.category]));
     const active = issues.filter((i) => !i.archivedAt);
     return {
       project,
       role,
-      openIssueCount: active.filter((i) => !i.completedAt).length,
-      doneIssueCount: issues.filter((i) => i.completedAt).length,
+      openIssueCount: active.filter((i) => isIssueOpen(i, statusCategoryMap.get(i.statusId))).length,
+      doneIssueCount: active.filter((i) => isIssueDone(i, statusCategoryMap.get(i.statusId))).length,
       issueCount: active.length,
     };
   },

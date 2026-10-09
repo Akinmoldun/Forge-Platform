@@ -129,13 +129,26 @@ export default function IssuePage() {
     toStatusId: Id<"workflowStatuses">,
     comment?: string,
   ) => {
+    const toStatusName =
+      detail?.statuses.find((s) => s._id === toStatusId)?.name || "the next status";
     try {
       await transitionIssue({ issueId: issue._id, toStatusId, comment });
       toast.success("Status updated");
       setPendingStatus(null);
       setTransitionComment("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Transition rejected");
+      const msg = e instanceof Error ? e.message : "Transition rejected";
+      if (msg.includes("requires an assignee")) {
+        toast.error(`Needs an assignee before it can move to ${toStatusName}.`);
+      } else if (msg.includes("requires a comment")) {
+        toast.error(`Needs a comment before it can move to ${toStatusName}.`);
+      } else if (msg.includes("is not allowed")) {
+        toast.error(`Workflow rules do not allow moving directly to ${toStatusName}.`);
+      } else if (msg.includes("unresolved blocker")) {
+        toast.error("Blocked: resolve blocking issues first.");
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -596,9 +609,10 @@ export default function IssuePage() {
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members?.map((m) => {
                       const isMe = m.userId === user?._id;
+                      const name = m.name?.trim() || m.email?.trim() || "Guest";
                       return (
                         <SelectItem key={m.userId} value={m.userId}>
-                          {isMe ? `You (${m.name})` : m.name}
+                          {isMe ? `You (${name})` : name}
                         </SelectItem>
                       );
                     })}
@@ -606,7 +620,7 @@ export default function IssuePage() {
                 </Select>
               ) : (
                 <p className="text-sm">
-                  {detail.assignee?.name ?? "Unassigned"}
+                  {detail.assignee?.name ?? (issue.assigneeId ? "Guest" : "Unassigned")}
                 </p>
               )}
             </div>

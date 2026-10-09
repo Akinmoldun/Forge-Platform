@@ -11,6 +11,7 @@ import {
   requireUser,
   roleAtLeast,
 } from "./lib/auth";
+import { isIssueDone, isIssueOpen } from "./lib/issueStatus";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -163,12 +164,10 @@ export const getProjectSummary = query({
       await Promise.all(statusIds.map((id) => ctx.db.get(id)))
     ).filter((s): s is Doc<"workflowStatuses"> => s !== null);
     const statusById = new Map(statuses.map((s) => [s._id, s]));
-    const doneStatusIds = new Set(
-      statuses.filter((s) => s.category === "completed" || s.category === "cancelled").map((s) => s._id),
-    );
+    const statusCategoryMap = new Map(statuses.map((s) => [s._id, s.category]));
 
-    const open = issues.filter((i) => !doneStatusIds.has(i.statusId) && !i.completedAt);
-    const completed = issues.filter((i) => i.completedAt);
+    const open = issues.filter((i) => isIssueOpen(i, statusCategoryMap.get(i.statusId)));
+    const completed = issues.filter((i) => isIssueDone(i, statusCategoryMap.get(i.statusId)));
     const now = Date.now();
     const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
     const completedThisWeek = completed.filter((i) => (i.completedAt ?? 0) >= weekAgo);
@@ -242,7 +241,7 @@ export const getProjectSummary = query({
           const user = members.find((m) => m?._id === id);
           return {
             userId: id,
-            name: user?.name?.trim() || user?.email?.trim() || "Guest",
+            name: user?.name?.trim() || user?.email?.trim() || `Guest ${id.slice(-4)}`,
             openIssues: open.filter((i) => i.assigneeId === id).length,
             overdue: open.filter((i) => i.assigneeId === id && i.dueDate && i.dueDate < now).length,
           };

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -208,6 +209,7 @@ export function CreateIssueDialog({
   onCreated?: (issueId: Id<"issues">) => void;
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const createIssue = useMutation(api.issues.createIssue);
   const [open, setOpen] = useState(false);
 
@@ -226,6 +228,7 @@ export function CreateIssueDialog({
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<string>("none");
   const [statusId, setStatusId] = useState<string>("");
+  const [assigneeId, setAssigneeId] = useState<string>("none");
   const [description, setDescription] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -255,6 +258,12 @@ export function CreateIssueDialog({
     effectiveProject ? { projectId: effectiveProject as Id<"projects"> } : "skip",
   );
   const statuses = workflowData?.statuses ?? [];
+
+  // Query members for assignee dropdown if workspaceId is available
+  const members = useQuery(
+    api.workspaces.listMembers,
+    workspaceId ? { workspaceId } : "skip",
+  );
 
   // Default status to first backlog status if not explicitly picked
   const effectiveStatusId = statusId || (statuses[0]?._id ?? "");
@@ -287,6 +296,7 @@ export function CreateIssueDialog({
         description: description.trim() || undefined,
         priority: priority as "urgent",
         statusId: effectiveStatusId ? (effectiveStatusId as Id<"workflowStatuses">) : undefined,
+        assigneeId: assigneeId !== "none" ? (assigneeId as Id<"users">) : undefined,
       });
 
       setOpen(false);
@@ -294,6 +304,7 @@ export function CreateIssueDialog({
       setDescription("");
       setPriority("none");
       setStatusId("");
+      setAssigneeId("none");
 
       const projectLabel = chosenProject ? chosenProject.name : "project";
       const keyPrefix = chosenProject ? chosenProject.key : "ISSUE";
@@ -489,7 +500,35 @@ export function CreateIssueDialog({
                   </div>
                 </div>
 
-                {/* 4. Description */}
+                {/* 4. Assignee */}
+                {members && members.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="ci-assignee" className="text-[13px] font-[500] text-[#0D0D0D]">
+                      Assignee
+                    </Label>
+                    <Select value={assigneeId} onValueChange={setAssigneeId}>
+                      <SelectTrigger id="ci-assignee" className="h-11 rounded-[12px] text-[13px]">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-[13px]">
+                          Unassigned
+                        </SelectItem>
+                        {members.map((m) => {
+                          const isMe = m.userId === user?._id;
+                          const name = m.name?.trim() || m.email?.trim() || "Guest";
+                          return (
+                            <SelectItem key={m.userId} value={m.userId} className="text-[13px]">
+                              {isMe ? `You (${name})` : name}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* 5. Description */}
                 <div className="space-y-2">
                   <Label htmlFor="ci-desc" className="text-[13px] font-[500] text-[#0D0D0D]">
                     Description (optional)
