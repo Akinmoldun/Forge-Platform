@@ -25,12 +25,29 @@ export function Reveal({
     delayMs !== undefined ? delayMs : index !== undefined ? index * 80 : 0;
 
   useEffect(() => {
-    // Hidden state applies only after observer is mounted
     setMounted(true);
 
     if (!ref.current) return;
 
+    // prefers-reduced-motion: show immediately
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setIsIn(true);
+      return;
+    }
+
     if (typeof IntersectionObserver === 'undefined') {
+      setIsIn(true);
+      return;
+    }
+
+    // Check if element is already inside the viewport on mount
+    const rect = ref.current.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.top < vh * 0.95 && rect.bottom > 0) {
       setIsIn(true);
       return;
     }
@@ -38,7 +55,7 @@ export function Reveal({
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting || entry.intersectionRatio > 0) {
           setIsIn(true);
           if (ref.current) {
             observer.unobserve(ref.current);
@@ -46,9 +63,9 @@ export function Reveal({
         }
       },
       {
-        threshold: 0.15,
-        rootMargin: '0px 0px -8% 0px',
-      }
+        threshold: [0.05, 0.12],
+        rootMargin: '0px 0px -20px 0px',
+      },
     );
 
     observer.observe(ref.current);

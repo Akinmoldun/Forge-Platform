@@ -26,6 +26,10 @@
   -webkit-font-smoothing: antialiased;
 }
 
+body {
+  overflow-x: clip;
+}
+
 .landing * {
   box-sizing: border-box;
 }
