@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-interface RevealProps extends React.HTMLAttributes<HTMLElement> {
+export interface RevealProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
   delayMs?: number;
   index?: number;
+  direction?: 'up' | 'left' | 'right' | 'pop';
   className?: string;
   as?: React.ElementType;
 }
@@ -12,6 +13,7 @@ export function Reveal({
   children,
   delayMs,
   index,
+  direction = 'up',
   className = '',
   as: Component = 'div',
   style,
@@ -21,8 +23,13 @@ export function Reveal({
   const [mounted, setMounted] = useState(false);
   const [isIn, setIsIn] = useState(false);
 
+  // Compute staggered delay with subtle organic variation across items
   const computedDelay =
-    delayMs !== undefined ? delayMs : index !== undefined ? index * 80 : 0;
+    delayMs !== undefined
+      ? delayMs
+      : index !== undefined
+        ? index * 75 + ((index % 3) * 20)
+        : 0;
 
   useEffect(() => {
     setMounted(true);
@@ -44,39 +51,48 @@ export function Reveal({
       return;
     }
 
-    // Check if element is already inside the viewport on mount
-    const rect = ref.current.getBoundingClientRect();
+    const el = ref.current;
+    const rect = el.getBoundingClientRect();
     const vh = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.top < vh * 0.95 && rect.bottom > 0) {
-      setIsIn(true);
-      return;
+
+    // If already in the upper viewport (hero area / above fold) on mount:
+    // Trigger smooth entrance after a slight mount delay
+    if (rect.top >= 0 && rect.bottom <= vh * 0.7) {
+      const timer = setTimeout(() => {
+        setIsIn(true);
+      }, Math.max(40, computedDelay));
+      return () => clearTimeout(timer);
     }
 
+    // For scrolled content: observe when entering reading zone
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (entry.isIntersecting || entry.intersectionRatio > 0) {
+        if (entry.isIntersecting) {
           setIsIn(true);
-          if (ref.current) {
-            observer.unobserve(ref.current);
-          }
+          observer.unobserve(el);
         }
       },
       {
-        threshold: [0.05, 0.12],
-        rootMargin: '0px 0px -20px 0px',
+        threshold: 0.12,
+        rootMargin: '0px 0px -40px 0px',
       },
     );
 
-    observer.observe(ref.current);
+    observer.observe(el);
 
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [computedDelay]);
+
+  let dirClass = 'reveal';
+  if (direction === 'left') dirClass = 'reveal-left';
+  else if (direction === 'right') dirClass = 'reveal-right';
+  else if (direction === 'pop') dirClass = 'reveal-pop';
 
   // Before mount, content is fully visible (prevents content being stuck hidden if JS/observer fails)
-  const revealClasses = mounted ? `reveal ${isIn ? 'is-in' : ''}` : '';
+  const revealClasses = mounted ? `${dirClass} ${isIn ? 'is-in' : ''}` : '';
 
   return (
     <Component

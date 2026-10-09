@@ -418,7 +418,7 @@ function Marquee(props: MarqueeProps) {
 }
 
 const marqueeContentVariants = cva(
-  "flex min-w-full shrink-0 gap-(--marquee-gap)",
+  "flex min-w-full shrink-0 gap-[var(--marquee-gap)]",
   {
     variants: {
       side: {
@@ -522,7 +522,7 @@ function MarqueeContent(props: DivProps) {
       ...styleProp,
       animationDuration: "var(--marquee-duration)",
       animationDelay: "var(--marquee-delay)",
-      animationIterationCount: "var(--marquee-loop-count)",
+      animationIterationCount: "var(--marquee-loop-count, infinite)",
       animationDirection: context.reverse ? "reverse" : "normal",
     }),
     [styleProp, context.reverse],
@@ -547,16 +547,16 @@ function MarqueeContent(props: DivProps) {
           }),
           isVertical && "flex-col",
           isVertical
-            ? "mb-(--marquee-gap)"
+            ? "mb-[var(--marquee-gap)]"
             : isRtl
-              ? "ml-(--marquee-gap)"
-              : "mr-(--marquee-gap)",
+              ? "ml-[var(--marquee-gap)]"
+              : "mr-[var(--marquee-gap)]",
         )}
       >
         <div
           ref={composedRef}
           className={cn(
-            "flex shrink-0 gap-(--marquee-gap)",
+            "flex shrink-0 gap-[var(--marquee-gap)]",
             isVertical && "flex-col",
           )}
         >

@@ -47,41 +47,17 @@ export function Section7WhatsIncluded() {
 
   return (
     <section id="capabilities-included" className="landing-section relative bg-transparent">
-      {/* Pastel bloom centered behind three cards: #D78FC6 (.24), #7957EC (.20) and #6E94CB (.22) overlapping */}
+      {/* Pastel bloom centered behind three cards: soft gradient with fully transparent edges */}
       <div className="bloom" aria-hidden="true">
         <div
           className="bloom-blob"
           style={{
-            top: '55%',
-            left: 'calc(50% - 320px)',
-            transform: 'translate(-50%, -50%)',
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(closest-side, #D78FC6 0%, transparent 100%)',
-            opacity: 0.24,
-          }}
-        />
-        <div
-          className="bloom-blob"
-          style={{
-            top: '55%',
+            top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(closest-side, #7957EC 0%, transparent 100%)',
-            opacity: 0.20,
-          }}
-        />
-        <div
-          className="bloom-blob"
-          style={{
-            top: '55%',
-            left: 'calc(50% + 320px)',
-            transform: 'translate(-50%, -50%)',
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(closest-side, #6E94CB 0%, transparent 100%)',
+            width: '750px',
+            height: '420px',
+            background: 'radial-gradient(ellipse at center, rgba(215, 143, 198, 0.45) 0%, rgba(121, 87, 236, 0.3) 35%, transparent 70%)',
             opacity: 0.22,
           }}
         />
@@ -103,7 +79,11 @@ export function Section7WhatsIncluded() {
         {/* 3 Modules Grid (NO pricing, NO toggle) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-[1120px] mx-auto">
           {modules.map((mod, idx) => (
-            <Reveal key={mod.title} delayMs={idx * 80}>
+            <Reveal
+              key={mod.title}
+              index={idx}
+              direction={idx === 1 ? 'pop' : idx === 0 ? 'left' : 'right'}
+            >
               <div className="landing-card p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden text-left h-full">
                 <div
                   className={`absolute inset-0 bg-gradient-to-br ${mod.bg} -z-10 pointer-events-none`}

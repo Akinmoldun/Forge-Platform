@@ -1,4 +1,6 @@
 import './landing.css';
+import { MotionProvider } from './motion/MotionProvider';
+import { ScrollProgressLine } from './motion/ScrollProgressLine';
 import { Section1Nav } from './sections/Section1Nav';
 import { Section2Hero } from './sections/Section2Hero';
 import { Section3FeaturesBento } from './sections/Section3FeaturesBento';
@@ -16,51 +18,54 @@ import { Section13Footer } from './sections/Section13Footer';
 
 export default function ForgeLanding() {
   return (
-    <div className="landing relative w-full min-h-screen">
-      {/* 1. Shell + Nav */}
-      <Section1Nav />
+    <MotionProvider>
+      <div className="landing relative w-full min-h-screen">
+        <ScrollProgressLine />
+        {/* 1. Shell + Nav */}
+        <Section1Nav />
 
-      {/* Main Content Sections */}
-      <main>
-        {/* 2. Hero */}
-        <Section2Hero />
+        {/* Main Content Sections */}
+        <main>
+          {/* 2. Hero */}
+          <Section2Hero />
 
-        {/* 3. Features bento (Interactive Workflow Diagram) */}
-        <Section3FeaturesBento />
+          {/* 3. Features bento (Interactive Workflow Diagram) */}
+          <Section3FeaturesBento />
 
-        {/* 4. Key Capabilities (sticky list on left, sticky card pile on right) */}
-        <Section4KeyCapabilities />
+          {/* 4. Key Capabilities (sticky list on left, sticky card pile on right) */}
+          <Section4KeyCapabilities />
 
-        {/* 5. Proof in the numbers */}
-        <Section5ProofNumbers />
+          {/* 5. Proof in the numbers */}
+          <Section5ProofNumbers />
 
-        {/* Activity heatmap audit trail */}
-        <ActivityHeatmap />
+          {/* Activity heatmap audit trail */}
+          <ActivityHeatmap />
 
-        {/* 6. Handle complex workflows */}
-        <Section6HandleWorkflows />
+          {/* 6. Handle complex workflows */}
+          <Section6HandleWorkflows />
 
-        {/* 7. What's included (NO pricing, no prices, no toggle) */}
-        <Section7WhatsIncluded />
+          {/* 7. What's included (NO pricing, no prices, no toggle) */}
+          <Section7WhatsIncluded />
 
-        {/* 8. Roles comparison table */}
-        <Section8RolesComparison />
+          {/* 8. Roles comparison table */}
+          <Section8RolesComparison />
 
-        {/* 9. Why teams choose Forge */}
-        <Section9WhyTeamsChoose />
+          {/* 9. Why teams choose Forge */}
+          <Section9WhyTeamsChoose />
 
-        {/* 10. Engineering decisions */}
-        <Section10EngineeringDecisions />
+          {/* 10. Engineering decisions */}
+          <Section10EngineeringDecisions />
 
-        {/* 11. FAQ accordion */}
-        <Section11FAQAccordion />
+          {/* 11. FAQ accordion */}
+          <Section11FAQAccordion />
 
-        {/* 12. Final CTA */}
-        <Section12FinalCTA />
-      </main>
+          {/* 12. Final CTA */}
+          <Section12FinalCTA />
+        </main>
 
-      {/* 13. Footer */}
-      <Section13Footer />
-    </div>
+        {/* 13. Footer */}
+        <Section13Footer />
+      </div>
+    </MotionProvider>
   );
 }

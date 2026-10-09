@@ -30,14 +30,14 @@ function tokenize(code: string): Token[] {
   return tokens;
 }
 
-const COLORS: Record<TokenType, string> = {
-  comment: "text-neutral-500 italic",
-  string: "text-emerald-300",
-  keyword: "text-violet-400",
-  builtin: "text-sky-400",
-  number: "text-pink-400",
-  fn: "text-sky-300",
-  plain: "text-neutral-200",
+const TOKEN_STYLES: Record<TokenType, React.CSSProperties> = {
+  comment: { color: "#6E7781", fontStyle: "italic" },
+  string: { color: "#1D6FE8" },
+  keyword: { color: "#7957EC", fontWeight: 500 },
+  builtin: { color: "#7957EC" },
+  number: { color: "#1F2328" },
+  fn: { color: "#BF3989" },
+  plain: { color: "#1F2328" },
 };
 
 function renderTypedTokens(tokens: Token[], count: number) {
@@ -46,13 +46,24 @@ function renderTypedTokens(tokens: Token[], count: number) {
     const room = count - shown;
     shown += tk.value.length;
     if (room <= 0) return null;
-    return <span key={i} className={COLORS[tk.type]}>{tk.value.slice(0, room)}</span>;
+    return (
+      <span key={i} style={TOKEN_STYLES[tk.type]}>
+        {tk.value.slice(0, room)}
+      </span>
+    );
   });
+}
+
+export interface CodeTab {
+  name: string;
+  code: string;
 }
 
 export interface CodeTerminalProps {
   code: string;
-  title: string;
+  title?: string;
+  fileName?: string;
+  tabs?: CodeTab[];
   charsPerTick?: number; // default 2
   tickMs?: number;       // default 16
   initialDelay?: number; // default 300
@@ -60,10 +71,23 @@ export interface CodeTerminalProps {
 }
 
 export function CodeTerminal({
-  code, title, charsPerTick = 2, tickMs = 16, initialDelay = 300, className,
+  code: defaultCode,
+  title,
+  fileName,
+  tabs,
+  charsPerTick = 2,
+  tickMs = 16,
+  initialDelay = 300,
+  className,
 }: CodeTerminalProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const tokens = useMemo(() => tokenize(code), [code]);
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  const [crossfade, setCrossfade] = useState(false);
+
+  const activeCode = tabs && tabs.length > 0 ? tabs[activeTabIdx].code : defaultCode;
+  const activeFileName = tabs && tabs.length > 0 ? tabs[activeTabIdx].name : (fileName || title || "invariant.ts");
+
+  const tokens = useMemo(() => tokenize(activeCode), [activeCode]);
   const [count, setCount] = useState(0);
   const [started, setStarted] = useState(false);
   const reduced =
@@ -71,7 +95,7 @@ export function CodeTerminal({
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   useEffect(() => {
-    if (reduced) { setCount(code.length); return; }
+    if (reduced) { setCount(activeCode.length); return; }
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => {
@@ -79,44 +103,134 @@ export function CodeTerminal({
     }, { threshold: 0.25 });
     io.observe(el);
     return () => io.disconnect();
-  }, [code.length, reduced]);
+  }, [activeCode.length, reduced]);
 
   useEffect(() => {
     if (!started || reduced) return;
+    setCount(0);
     let interval: ReturnType<typeof setInterval>;
     const t = setTimeout(() => {
       interval = setInterval(() => {
         setCount((c) => {
-          const n = Math.min(c + charsPerTick, code.length);
-          if (n >= code.length) clearInterval(interval);
+          const n = Math.min(c + charsPerTick, activeCode.length);
+          if (n >= activeCode.length) clearInterval(interval);
           return n;
         });
       }, tickMs);
-    }, initialDelay);
+    }, activeTabIdx === 0 ? initialDelay : 50);
     return () => { clearTimeout(t); clearInterval(interval); };
-  }, [started, reduced, code.length, charsPerTick, tickMs, initialDelay]);
+  }, [started, reduced, activeCode, charsPerTick, tickMs, initialDelay, activeTabIdx]);
 
-  const done = count >= code.length;
+  const handleTabClick = (idx: number) => {
+    if (idx === activeTabIdx) return;
+    setCrossfade(true);
+    setTimeout(() => {
+      setActiveTabIdx(idx);
+      setCrossfade(false);
+    }, 100);
+  };
+
+  const done = count >= activeCode.length;
   const typed = renderTypedTokens(tokens, count);
 
   return (
     <div ref={ref} className={"w-full font-mono " + (className ?? "")}>
-      <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
-        <div className="flex items-center gap-2 bg-neutral-800 px-4 py-3">
-          <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded-full bg-red-500" />
-            <div className="h-3 w-3 rounded-full bg-yellow-500" />
-            <div className="h-3 w-3 rounded-full bg-green-500" />
+      {/* Light panel container: #F7F8FA background, 1px solid rgba(0,0,0,.08), radius 12px, no shadow */}
+      <div
+        style={{
+          backgroundColor: "#F7F8FA",
+          border: "1px solid rgba(0, 0, 0, 0.08)",
+          borderRadius: "12px",
+          overflow: "hidden",
+          boxShadow: "none",
+        }}
+      >
+        {/* Top bar */}
+        <div
+          style={{
+            height: "38px",
+            borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+            backgroundColor: "#F0F1F4",
+          }}
+          className="flex items-center justify-between px-3 md:px-4"
+        >
+          <div className="flex items-center gap-[6px] shrink-0">
+            <div
+              style={{
+                width: "10px",
+                height: "10px",
+                backgroundColor: "#FF5F57",
+              }}
+              className="rounded-full shrink-0"
+            />
+            <div
+              style={{
+                width: "10px",
+                height: "10px",
+                backgroundColor: "#FEBC2E",
+              }}
+              className="rounded-full shrink-0"
+            />
+            <div
+              style={{
+                width: "10px",
+                height: "10px",
+                backgroundColor: "#28C840",
+              }}
+              className="rounded-full shrink-0"
+            />
           </div>
-          <div className="flex-1 truncate text-center text-xs text-neutral-400">{title}</div>
-          <div className="w-[52px]" />
+
+          {tabs && tabs.length > 1 ? (
+            <div className="flex items-center gap-1 ml-3 overflow-x-auto">
+              {tabs.map((tab, idx) => {
+                const isActive = activeTabIdx === idx;
+                return (
+                  <button
+                    key={tab.name}
+                    type="button"
+                    onClick={() => handleTabClick(idx)}
+                    style={{
+                      transition: "opacity 200ms ease, background-color 200ms ease",
+                    }}
+                    className={`px-2.5 py-1 text-[11.5px] rounded cursor-pointer transition-colors ${
+                      isActive
+                        ? "bg-white text-[#0D0D0D] font-medium border border-black/[0.08]"
+                        : "text-[#575657] hover:text-[#0D0D0D] hover:bg-black/5"
+                    }`}
+                  >
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span
+              style={{
+                color: "#575657",
+                fontSize: "12px",
+                marginLeft: "12px",
+              }}
+              className="font-mono font-normal truncate"
+            >
+              {activeFileName}
+            </span>
+          )}
         </div>
-        <div className="grid p-4 text-[11.5px] leading-relaxed sm:text-[12.5px]">
+
+        {/* Code Content Area with 200ms Crossfade */}
+        <div
+          style={{
+            opacity: crossfade ? 0 : 1,
+            transition: "opacity 200ms ease",
+          }}
+          className="grid p-4 text-[11.5px] leading-relaxed sm:text-[12.5px] text-[#1F2328]"
+        >
           {/* invisible full copy reserves the final height, so nothing jumps */}
-          <pre aria-hidden className="invisible col-start-1 row-start-1 whitespace-pre-wrap break-words">{code}</pre>
-          <pre className="col-start-1 row-start-1 whitespace-pre-wrap break-words" aria-label={code}>
+          <pre aria-hidden className="invisible col-start-1 row-start-1 whitespace-pre-wrap break-words">{activeCode}</pre>
+          <pre className="col-start-1 row-start-1 whitespace-pre-wrap break-words" aria-label={activeCode}>
             {typed}
-            {!done && <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-neutral-300 align-middle" />}
+            {!done && <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-[#1F2328] align-middle" />}
           </pre>
         </div>
       </div>

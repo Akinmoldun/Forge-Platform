@@ -1,8 +1,22 @@
+/* Lenis recommended smooth scroll CSS */
+html.lenis, html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
 /* ReadyLaunch Theme & Tokens for Forge Landing Page */
 .landing {
-  --page: #F4F4F5;
+  --page: #FBFBFC;
   --band-white: #FFFFFF;
-  --band-cool: #F7F8FA;
+  --band-cool: #F7F7F8;
   --bg: var(--page);
   --text-muted: #575657;
   --muted: #575657;
@@ -32,7 +46,7 @@
 
 body {
   overflow-x: clip;
-  background-color: #F4F4F5;
+  background-color: #FBFBFC;
 }
 
 /* Reusable Bloom Layer (Step 2) */
@@ -253,32 +267,111 @@ body {
   box-shadow: none;
 }
 
-/* Scroll reveal classes */
-.reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition-property: opacity, transform;
-  transition-duration: 600ms;
-  transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
-  will-change: opacity, transform;
+/* Signature Motion System styles */
+
+/* Focus Pull Headings */
+.focus-pull-heading {
+  letter-spacing: -0.03em;
 }
 
-.reveal.is-in {
-  opacity: 1;
-  transform: translateY(0);
+.focus-word {
+  display: inline-block;
+  transition-property: filter, letter-spacing, opacity, transform;
+  transition-duration: 800ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Ink Fill Paragraphs */
+.ink-fill-paragraph {
+  color: #C9C9CC;
+}
+
+.ink-word {
+  display: inline-block;
+}
+
+/* Spotlight Borders (Desktop pointer:fine only) */
+@media (pointer: fine) {
+  .spotlight-border-overlay {
+    padding: 1px;
+    background: radial-gradient(220px circle at var(--mx, -999px) var(--my, -999px), rgba(255, 255, 255, 0.95), transparent 75%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.85;
+    transition: opacity 200ms ease;
+  }
+}
+
+@media (pointer: coarse) {
+  .spotlight-border-overlay {
+    display: none !important;
+  }
+}
+
+/* Depth Drift for Blooms and Mini-UIs (Desktop >= 768px only) */
+@media (min-width: 768px) {
+  .bloom-drift {
+    transform: translate3d(0, calc((var(--p, 0.5) - 0.5) * var(--depth, 0) * 1px), 0);
+    will-change: transform;
+  }
+
+  .mini-ui-drift {
+    transform: translate3d(0, calc((var(--p, 0.5) - 0.5) * -24px), 0);
+    will-change: transform;
+  }
+
+  .hero-inner-panel-drift {
+    transform: scale(calc(1 - (var(--p, 0) * 0.04)));
+    border-radius: calc(24px + var(--p, 0) * 16px);
+    will-change: transform, border-radius;
+  }
+}
+
+@media (max-width: 767px) {
+  .bloom-drift,
+  .mini-ui-drift,
+  .hero-inner-panel-drift {
+    transform: none !important;
+  }
+}
+
+/* prefers-reduced-motion: reduce -> no smooth scroll, no parallax, no velocity effects, no reveal movement. Everything shows in its final state. */
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 0;
+  .focus-word {
+    filter: none !important;
+    letter-spacing: -0.03em !important;
+    opacity: 1 !important;
     transform: none !important;
-    transition-property: opacity;
-    transition-duration: 300ms;
+    transition: none !important;
   }
-  .reveal.is-in {
-    opacity: 1;
+
+  .ink-fill-paragraph,
+  .ink-word {
+    color: #575657 !important;
+    transition: none !important;
+  }
+
+  .unfold-card {
+    clip-path: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    transition: none !important;
+  }
+
+  .bloom-drift,
+  .mini-ui-drift,
+  .hero-inner-panel-drift {
     transform: none !important;
   }
+
+  .spotlight-border-overlay {
+    display: none !important;
+  }
+
   .landing-btn-primary:hover,
   .landing-btn-secondary:hover {
     transform: none;
@@ -293,7 +386,7 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.06);
   overflow: hidden;
   min-height: 560px;
-  background: radial-gradient(ellipse 80% 70% at 50% 40%, #FFFFFF 0%, #F4F4F2 45%, #E6E6E3 100%);
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #FFFFFF 0%, #F8F8F7 50%, #F4F4F5 100%);
   box-shadow: none;
 }
 
@@ -419,27 +512,111 @@ body {
 
 @keyframes marquee-left {
   0% { transform: translateX(0%); }
-  100% { transform: translateX(calc(-100% - var(--marquee-gap))); }
+  100% { transform: translateX(calc(-100% - var(--marquee-gap, 16px))); }
 }
 @keyframes marquee-right {
-  0% { transform: translateX(calc(-100% - var(--marquee-gap))); }
+  0% { transform: translateX(calc(-100% - var(--marquee-gap, 16px))); }
   100% { transform: translateX(0%); }
 }
 
 .animate-marquee-left {
-  animation: marquee-left var(--marquee-duration) linear var(--marquee-loop-count);
+  animation: marquee-left var(--marquee-duration, 35s) linear infinite !important;
+  will-change: transform;
 }
 
 .animate-marquee-right {
-  animation: marquee-right var(--marquee-duration) linear var(--marquee-loop-count);
+  animation: marquee-right var(--marquee-duration, 35s) linear infinite !important;
+  will-change: transform;
 }
 
-[data-slot="marquee-edge"][data-side="left"] {
-  background: linear-gradient(to right, #EFEFEF 0%, transparent 100%) !important;
+[data-slot="marquee-content"] {
+  display: flex !important;
+  flex-shrink: 0 !important;
+  gap: var(--marquee-gap, 16px) !important;
 }
 
-[data-slot="marquee-edge"][data-side="right"] {
-  background: linear-gradient(to left, #EFEFEF 0%, transparent 100%) !important;
+[data-slot="marquee-content"]:first-of-type {
+  margin-right: var(--marquee-gap, 16px) !important;
+}
+
+/* Section 9 Marquee Animations */
+@keyframes marquee-ltr {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+@keyframes marquee-rtl {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.cards-rows {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cards-row {
+  width: 100%;
+  overflow: clip !important;
+  mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%) !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%) !important;
+}
+
+.cards-track {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  width: max-content !important;
+}
+
+.cards-track-ltr {
+  animation: marquee-ltr 60s linear infinite !important;
+}
+
+.cards-track-rtl {
+  animation: marquee-rtl 60s linear infinite !important;
+}
+
+.cards-row:hover .cards-track {
+  animation-play-state: paused !important;
+}
+
+.cards-group {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cards-row {
+    overflow: visible !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+  .cards-track,
+  .cards-track-ltr,
+  .cards-track-rtl {
+    animation: none !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  .cards-group {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  .cards-group[aria-hidden="true"] {
+    display: none !important;
+  }
 }
 
 /* Card Stacking Pile for Section 10 Engineering Decisions */

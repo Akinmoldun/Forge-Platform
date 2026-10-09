@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Shield } from 'lucide-react';
+import { Reveal } from '../Reveal';
 
 interface RoleRow {
   capability: string;
@@ -196,7 +197,7 @@ export function Section8RolesComparison() {
       `}</style>
       <div className="landing-container relative z-1">
         {/* Section Header */}
-        <div className="text-center mb-[48px]">
+        <Reveal className="text-center mb-[48px]">
           {/* Centered eyebrow chip */}
           <div className="inline-flex items-center gap-1.5 px-[14px] py-[6px] rounded-[999px] bg-white border border-black/[0.08] text-[14px] font-medium text-[#0D0D0D] mb-4">
             <Shield className="w-3.5 h-3.5 text-[#0D0D0D] stroke-[1.5]" />
@@ -212,15 +213,16 @@ export function Section8RolesComparison() {
           <p className="mt-3 text-[15px] md:text-[18px] text-[#575657] text-center max-w-[680px] mx-auto font-normal leading-[1.5]">
             Granular separation of duties across Forge's four native roles: Viewer, Member, Admin, and Owner.
           </p>
-        </div>
+        </Reveal>
 
         {/* Two-layer Table Frame */}
-        <div
-          ref={tableRef}
-          className="w-full max-w-[1080px] mx-auto p-2 rounded-[20px] bg-[#FAFAFA] border border-black/[0.04] shadow-none"
-        >
-          {/* Inner table box: background #FFFFFF, 1px solid rgba(0,0,0,.08), radius 12px, overflow hidden (only this box) */}
-          <div className="w-full bg-[#FFFFFF] border border-black/[0.08] rounded-[12px] overflow-x-auto overflow-y-hidden shadow-none">
+        <Reveal delayMs={100} className="w-full max-w-[1080px] mx-auto">
+          <div
+            ref={tableRef}
+            className="w-full p-2 rounded-[20px] bg-[#FAFAFA] border border-black/[0.04] shadow-none"
+          >
+            {/* Inner table box: background #FFFFFF, 1px solid rgba(0,0,0,.08), radius 12px, overflow hidden (only this box) */}
+            <div className="w-full bg-[#FFFFFF] border border-black/[0.08] rounded-[12px] overflow-x-auto overflow-y-hidden shadow-none">
             <div
               role="table"
               aria-label="Forge roles and capabilities comparison"
@@ -319,6 +321,7 @@ export function Section8RolesComparison() {
             </div>
           </div>
         </div>
+        </Reveal>
       </div>
     </section>
   );

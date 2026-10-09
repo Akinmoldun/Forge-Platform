@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   GitBranch,
@@ -13,6 +13,12 @@ import {
   MailCheck,
   Archive,
 } from 'lucide-react';
+import {
+  Marquee,
+  MarqueeContent,
+  MarqueeItem,
+} from '@/components/ui/marquee';
+import { Reveal } from '../Reveal';
 
 interface MarqueeCardItem {
   title: string;
@@ -116,11 +122,14 @@ function MarqueeCard({ item }: { item: MarqueeCardItem }) {
   const Icon = item.icon;
 
   return (
-    <div className="marquee-card flex-none w-[262px] p-[4px] rounded-[14px] bg-black/[0.025] border border-black/[0.04] mr-[14px] shadow-none select-none">
+    <div
+      style={{ backgroundColor: '#FFFFFF' }}
+      className="marquee-card flex-none w-[262px] p-[4px] rounded-[14px] bg-white border border-black/[0.08] shadow-none select-none"
+    >
       <div className="marquee-card-inner bg-white border border-black/[0.08] rounded-[10px] h-[168px] flex flex-col justify-between shadow-none transition-colors duration-150">
         {/* Header: padding 14px 16px, flex, align center, gap 12px */}
         <div className="p-[14px_16px] flex items-center gap-[12px]">
-          {/* 38px x 38px tile, radius 8px, soft pastel gradient at 30% over white */}
+          {/* 38px x 38px tile, radius 8px */}
           <div
             className="w-[38px] h-[38px] min-w-[38px] rounded-[8px] flex items-center justify-center shrink-0"
             style={{
@@ -157,136 +166,78 @@ function MarqueeCard({ item }: { item: MarqueeCardItem }) {
 }
 
 export function Section9WhyTeamsChoose() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener?.('change', handler);
+    return () => mq.removeEventListener?.('change', handler);
+  }, []);
+
   return (
-    <section className="landing-section relative band-cool pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] select-none">
-      {/* Bloom bottom-right: faint #BED390 (.2, 700px) */}
-      <div className="bloom" aria-hidden="true">
-        <div
-          className="bloom-blob"
-          style={{
-            bottom: '-120px',
-            right: '-120px',
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(closest-side, #BED390 0%, transparent 100%)',
-            opacity: 0.2,
-          }}
-        />
-      </div>
-
-      <style>{`
-        @keyframes marquee-scroll-left {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-
-        .marquee-wrapper {
-          mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-          -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-        }
-
-        .marquee-track-left {
-          display: flex;
-          flex-wrap: nowrap;
-          width: max-content;
-          animation: marquee-scroll-left 55s linear infinite;
-          will-change: transform;
-        }
-
-        .marquee-track-right {
-          display: flex;
-          flex-wrap: nowrap;
-          width: max-content;
-          animation: marquee-scroll-left 55s linear infinite reverse;
-          will-change: transform;
-        }
-
-        .marquee-wrapper:hover .marquee-track-left,
-        .marquee-wrapper:hover .marquee-track-right {
-          animation-play-state: paused;
-        }
-
-        .marquee-card:hover .marquee-card-inner {
-          border-color: rgba(0, 0, 0, 0.16);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .marquee-track-left,
-          .marquee-track-right {
-            animation: none !important;
-          }
-          .marquee-wrapper {
-            overflow-x: auto !important;
-          }
-          .marquee-clone-group {
-            display: none !important;
-          }
-        }
-      `}</style>
-
+    <section className="landing-section relative band-white pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] select-none w-full">
       {/* Header */}
-      <div className="landing-container relative z-1 text-center mb-[56px]">
-        {/* Centered chip: white, 1px solid rgba(0,0,0,.08), radius 999px, padding 6px 14px, 14px text, small line icon */}
+      <Reveal className="landing-container relative z-1 text-center mb-[56px]">
         <div className="inline-flex items-center gap-1.5 px-[14px] py-[6px] rounded-[999px] bg-white border border-black/[0.08] text-[14px] font-medium text-[#0D0D0D] mb-4 shadow-none">
           <Zap className="w-3.5 h-3.5 text-[#0D0D0D] stroke-[1.5]" />
           <span>Why Teams Choose Forge</span>
         </div>
 
-        {/* H2 centered, 48px/500, letter-spacing -0.03em, #0D0D0D, max-width 760px */}
         <h2 className="text-center text-[32px] md:text-[48px] font-[500] leading-[1.12] tracking-[-0.03em] text-[#0D0D0D] max-w-[760px] mx-auto m-0">
           Boost clarity, speed and team flow.
         </h2>
 
-        {/* Subtext 16px/1.5 #575657, max-width 600px */}
         <p className="mt-3.5 text-[15px] md:text-[16px] leading-[1.5] text-[#575657] text-center max-w-[600px] mx-auto font-normal">
           Engineered for teams that outgrew chaotic spreadsheets, brittle ticket trackers, and endless status meetings.
         </p>
-      </div>
+      </Reveal>
 
-      {/* Marquee Rows: Two rows, 14px apart, full container width (max-width 1200px, centered) */}
-      <div className="marquee-wrapper relative z-1 max-w-[1200px] mx-auto overflow-hidden">
-        {/* Row 1: moves right to left (marquee-track-left) */}
-        <div className="mb-[14px]">
-          <div className="marquee-track-left">
-            {/* Primary Group */}
-            <div className="flex flex-nowrap min-w-full shrink-0">
-              {ROW_1_ITEMS.map((item) => (
-                <MarqueeCard key={item.title} item={item} />
-              ))}
-            </div>
+      {/* Contained within 1240px with soft blurred edges so it never touches the screen edge */}
+      <Reveal delayMs={100} className="max-w-[1240px] mx-auto px-4 sm:px-6 relative z-1 flex flex-col gap-4">
+        {/* Row 1: scrolls to the LEFT (infinite) */}
+        <Marquee
+          autoFill
+          pauseOnHover={false}
+          side="left"
+          speed={prefersReducedMotion ? 16 : 28}
+          gap="14px"
+          style={{
+            maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+          }}
+        >
+          <MarqueeContent>
+            {ROW_1_ITEMS.map((item) => (
+              <MarqueeItem key={item.title}>
+                <MarqueeCard item={item} />
+              </MarqueeItem>
+            ))}
+          </MarqueeContent>
+        </Marquee>
 
-            {/* Duplicate Group for seamless infinite scroll */}
-            <div className="marquee-clone-group flex flex-nowrap min-w-full shrink-0" aria-hidden="true">
-              {ROW_1_ITEMS.map((item) => (
-                <MarqueeCard key={`clone-${item.title}`} item={item} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: moves left to right (marquee-track-right, reverse) */}
-        <div>
-          <div className="marquee-track-right">
-            {/* Primary Group */}
-            <div className="flex flex-nowrap min-w-full shrink-0">
-              {ROW_2_ITEMS.map((item) => (
-                <MarqueeCard key={item.title} item={item} />
-              ))}
-            </div>
-
-            {/* Duplicate Group for seamless infinite scroll */}
-            <div className="marquee-clone-group flex flex-nowrap min-w-full shrink-0" aria-hidden="true">
-              {ROW_2_ITEMS.map((item) => (
-                <MarqueeCard key={`clone-${item.title}`} item={item} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* Row 2: scrolls to the RIGHT (infinite) */}
+        <Marquee
+          autoFill
+          pauseOnHover={false}
+          side="right"
+          speed={prefersReducedMotion ? 16 : 28}
+          gap="14px"
+          style={{
+            maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+          }}
+        >
+          <MarqueeContent>
+            {ROW_2_ITEMS.map((item) => (
+              <MarqueeItem key={item.title}>
+                <MarqueeCard item={item} />
+              </MarqueeItem>
+            ))}
+          </MarqueeContent>
+        </Marquee>
+      </Reveal>
     </section>
   );
 }

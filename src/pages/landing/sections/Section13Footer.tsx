@@ -29,39 +29,59 @@ export function Section13Footer() {
   };
 
   return (
-    <footer className="bg-[#EFEFEF] border-t border-black/6 pt-10 pb-6 text-left">
-      <div className="landing-container">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-6 border-b border-black/6">
+    <footer
+      style={{ backgroundColor: '#0D0D0D', width: '100%' }}
+      className="w-full pt-12 pb-8 text-left relative z-1"
+    >
+      <div className="landing-container max-w-[1200px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-8">
           {/* Col 1 & 2: Brand & Tagline */}
           <Reveal index={0} className="md:col-span-2 space-y-4">
-            <ForgeLogo onClick={scrollToTop} />
+            <div className="flex items-center gap-2.5">
+              <ForgeLogo className="text-white" onClick={scrollToTop} />
+              <span className="text-[16px] font-semibold tracking-tight text-white select-none">
+                Forge
+              </span>
+            </div>
 
-            <p className="text-xs text-[#575657] max-w-[320px] leading-relaxed">
+            <p className="text-[14px] text-[#A1A1A6] max-w-[320px] leading-relaxed">
               Deterministic workflow orchestration, cycle-free dependency graphs, and explainable risk evaluation for engineering teams.
             </p>
           </Reveal>
 
           {/* Col 3: Product */}
-          <Reveal index={1} className="space-y-2.5">
-            <h4 className="text-xs font-mono uppercase tracking-wider text-[#0D0D0D]">Product</h4>
-            <ul className="space-y-1.5 text-xs text-[#575657]">
+          <Reveal index={1} className="space-y-3">
+            <h4 className="text-[14px] font-[500] text-[#FFFFFF]">Product</h4>
+            <ul className="space-y-2">
               <li>
-                <a href="#features" className="hover:text-[#0D0D0D] transition-colors">
+                <a
+                  href="#features"
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors"
+                >
                   Productivity Features
                 </a>
               </li>
               <li>
-                <a href="#capabilities" className="hover:text-[#0D0D0D] transition-colors">
+                <a
+                  href="#capabilities"
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors"
+                >
                   Key Capabilities
                 </a>
               </li>
               <li>
-                <a href="#decisions" className="hover:text-[#0D0D0D] transition-colors">
+                <a
+                  href="#decisions"
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors"
+                >
                   Engineering Decisions
                 </a>
               </li>
               <li>
-                <a href="#security" className="hover:text-[#0D0D0D] transition-colors">
+                <a
+                  href="#security"
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors"
+                >
                   Roles & Governance
                 </a>
               </li>
@@ -69,13 +89,14 @@ export function Section13Footer() {
           </Reveal>
 
           {/* Col 4: Platform */}
-          <Reveal index={2} className="space-y-2.5">
-            <h4 className="text-xs font-mono uppercase tracking-wider text-[#0D0D0D]">Platform</h4>
-            <ul className="space-y-1.5 text-xs text-[#575657]">
+          <Reveal index={2} className="space-y-3">
+            <h4 className="text-[14px] font-[500] text-[#FFFFFF]">Platform</h4>
+            <ul className="space-y-2">
               <li>
                 <button
+                  type="button"
                   onClick={handleDemo}
-                  className="hover:text-[#0D0D0D] transition-colors text-left"
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors text-left cursor-pointer"
                 >
                   Instant Guest Demo
                 </button>
@@ -85,14 +106,17 @@ export function Section13Footer() {
                   href={GITHUB_REPO}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 hover:text-[#0D0D0D] transition-colors"
+                  className="inline-flex items-center gap-1 text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors"
                 >
                   <span>GitHub Repository</span>
-                  <ArrowUpRight className="w-3 h-3 opacity-60" />
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-70" />
                 </a>
               </li>
               <li>
-                <a href="#faq" className="hover:text-[#0D0D0D] transition-colors">
+                <a
+                  href="#faq"
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors"
+                >
                   FAQ & Guides
                 </a>
               </li>
@@ -100,30 +124,37 @@ export function Section13Footer() {
           </Reveal>
 
           {/* Col 5: Security */}
-          <Reveal index={3} className="space-y-2.5">
-            <h4 className="text-xs font-mono uppercase tracking-wider text-[#0D0D0D]">Security</h4>
-            <ul className="space-y-1.5 text-xs text-[#575657]">
+          <Reveal index={3} className="space-y-3">
+            <h4 className="text-[14px] font-[500] text-[#FFFFFF]">Security</h4>
+            <ul className="space-y-2 text-[14px] text-[#A1A1A6]">
               <li>
-                <span className="text-[#575657]">Multi-Tenant Isolation</span>
+                <span>Multi-Tenant Isolation</span>
               </li>
               <li>
-                <span className="text-[#575657]">Append-Only Audit</span>
+                <span>Append-Only Audit</span>
               </li>
               <li>
-                <span className="text-[#575657]">DFS Cycle Prevention</span>
+                <span>DFS Cycle Prevention</span>
               </li>
               <li>
-                <span className="text-[#575657]">Role-Based Access Control</span>
+                <span>Role-Based Access Control</span>
               </li>
             </ul>
           </Reveal>
         </div>
 
-        {/* Bottom bar */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#575657]">
+        {/* Legal row with 1px top divider at rgba(255, 255, 255, 0.12) */}
+        <div
+          style={{ borderTop: '1px solid rgba(255, 255, 255, 0.12)' }}
+          className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[13px] text-[#8E8E93]"
+        >
           <div>© 2026 Forge. All rights reserved.</div>
           <div className="flex items-center gap-6">
-            <button onClick={scrollToTop} className="hover:text-[#0D0D0D] transition-colors">
+            <button
+              type="button"
+              onClick={scrollToTop}
+              className="text-[13px] text-[#8E8E93] hover:text-[#FFFFFF] transition-colors cursor-pointer"
+            >
               Back to top ↑
             </button>
           </div>

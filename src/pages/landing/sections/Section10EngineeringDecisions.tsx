@@ -1,4 +1,5 @@
 import { CodeTerminal } from '@/components/ui/code-terminal';
+import { Reveal } from '../Reveal';
 
 const code1 = `export async function validateTransition(ctx, { issueId, nextStatus }) {
   const issue = await ctx.db.get(issueId);
@@ -36,6 +37,7 @@ export function Section10EngineeringDecisions() {
       cardClass: 'stack-card-1',
       tag: 'SERVER VALIDATION',
       title: 'Workflow Transition Invariants',
+      fileName: 'validateTransition.ts',
       quote:
         'State transitions are not simple field mutations; they are server-enforced business contracts.',
       paragraph:
@@ -46,6 +48,7 @@ export function Section10EngineeringDecisions() {
       cardClass: 'stack-card-2',
       tag: 'DAG ALGORITHMIC SAFETY',
       title: 'Depth-First Cycle Detection',
+      fileName: 'hasCycle.ts',
       quote:
         'Preventing circular blocking chains mathematically guarantees that deadlocks cannot halt sprint delivery.',
       paragraph:
@@ -56,6 +59,7 @@ export function Section10EngineeringDecisions() {
       cardClass: 'stack-card-3',
       tag: 'AUDIT INTEGRITY',
       title: 'Immutable Activity Ledger',
+      fileName: 'logActivity.ts',
       quote:
         'Every mutation appends permanently to an immutable activity record that cannot be rewritten.',
       paragraph:
@@ -65,8 +69,8 @@ export function Section10EngineeringDecisions() {
   ];
 
   return (
-    <section id="decisions" className="landing-section relative bg-transparent overflow-visible">
-      {/* Bloom behind first card: #D6C6A1 (.22, 800px) */}
+    <section id="decisions" className="landing-section relative bg-[#FFFFFF] overflow-visible">
+      {/* Bloom behind first card: soft #D6C6A1 gradient with transparent edges */}
       <div className="bloom" aria-hidden="true">
         <div
           className="bloom-blob"
@@ -74,17 +78,17 @@ export function Section10EngineeringDecisions() {
             top: '180px',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '800px',
-            height: '800px',
-            background: 'radial-gradient(closest-side, #D6C6A1 0%, transparent 100%)',
-            opacity: 0.22,
+            width: '700px',
+            height: '450px',
+            background: 'radial-gradient(ellipse at center, #D6C6A1 0%, transparent 70%)',
+            opacity: 0.12,
           }}
         />
       </div>
 
       <div className="landing-container relative z-1 overflow-visible">
         {/* Section Header */}
-        <div className="text-center mb-12 sm:mb-16">
+        <Reveal className="text-center mb-12 sm:mb-16">
           <div className="landing-pill shadow-none mb-3">
             <span>Engineering Decisions</span>
           </div>
@@ -92,7 +96,7 @@ export function Section10EngineeringDecisions() {
           <p className="subtext">
             A look inside our technical architecture, database constraints, and algorithmic validation model.
           </p>
-        </div>
+        </Reveal>
 
         {/* 3 Stacking Cards in Normal Flow */}
         <div className="stack-wrapper">
@@ -130,7 +134,8 @@ export function Section10EngineeringDecisions() {
                 <div className="w-full min-w-0">
                   <CodeTerminal
                     code={d.code}
-                    title="TypeScript Engine Invariant"
+                    fileName={d.fileName}
+                    title={d.fileName}
                     charsPerTick={2}
                     tickMs={16}
                     initialDelay={300 + idx * 400}

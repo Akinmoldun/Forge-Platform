@@ -1,13 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
-import { Reveal } from '../Reveal';
-import {
-  Marquee,
-  MarqueeContent,
-  MarqueeEdge,
-  MarqueeItem,
-} from '@/components/ui/marquee';
+import { FocusPullHeading } from '../motion/FocusPullHeading';
+import { InkFillParagraph } from '../motion/InkFillParagraph';
+import { MagneticButton } from '../motion/MagneticButton';
+import { VelocityMarquee } from '../motion/VelocityMarquee';
+import { useProgress } from '../motion/MotionProvider';
 
 const items = [
   {
@@ -194,11 +192,20 @@ export function Section2Hero() {
     }
   };
 
+  const heroSectionRef = useRef<HTMLElement>(null);
+  useProgress(heroSectionRef);
+
   return (
-    <section id="hero" className="pt-[84px] md:pt-[92px] pb-14 sm:pb-20 overflow-hidden relative">
+    <section ref={heroSectionRef} id="hero" className="pt-[84px] md:pt-[92px] pb-14 sm:pb-20 overflow-hidden relative">
       {/* Outer panel container: container minus 12px gutter each side (max-width 1440px, centered) */}
       <div className="w-full max-w-[1440px] mx-auto px-3">
-        <div className="hero-panel flex flex-col items-center justify-center text-center px-4 sm:px-8 py-16 sm:py-20 md:py-24">
+        <div
+          style={{
+            transform: 'scale(calc(1 - (var(--p, 0) * 0.04)))',
+            borderRadius: 'calc(24px + var(--p, 0) * 16px)',
+          }}
+          className="hero-panel hero-inner-panel-drift flex flex-col items-center justify-center text-center px-4 sm:px-8 py-16 sm:py-20 md:py-24 transition-transform duration-75"
+        >
           {/* Layer 2: Pastel Haze */}
           <div className="hero-pastel-haze" aria-hidden="true" />
 
@@ -214,89 +221,75 @@ export function Section2Hero() {
           {/* Hero Content (Centered, nudged ~24px above center) */}
           <div className="relative z-10 flex flex-col items-center justify-center max-w-[960px] mx-auto -translate-y-4 md:-translate-y-6">
             {/* Pill chip with arrow */}
-            <Reveal delayMs={0}>
-              <div className="landing-pill mb-6 select-none text-[13px] inline-flex items-center gap-1.5 cursor-default">
-                <span>Engineering Workflow Platform</span>
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  aria-hidden="true"
-                  className="text-[#575657]"
-                >
-                  <path
-                    d="M6 12L10 8L6 4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            </Reveal>
+            <div
+              className="landing-pill mb-6 select-none text-[13px] inline-flex items-center gap-1.5 cursor-default transition-all duration-900 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            >
+              <span>Engineering Workflow Platform</span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+                className="text-[#575657]"
+              >
+                <path
+                  d="M6 12L10 8L6 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
 
-            {/* Centered H1 */}
-            <Reveal delayMs={80}>
-              <h1 className="max-w-[880px] mx-auto text-[#0D0D0D] font-medium tracking-[-0.03em] leading-[1.05] text-[38px] sm:text-[54px] md:text-[68px] text-center text-balance mb-5">
-                Run engineering work on rules, not reminders.
-              </h1>
-            </Reveal>
+            {/* Centered H1 Focus Pull */}
+            <FocusPullHeading
+              as="h1"
+              className="max-w-[880px] mx-auto text-[#0D0D0D] font-medium tracking-[-0.03em] leading-[1.05] text-[38px] sm:text-[54px] md:text-[68px] text-center text-balance mb-5"
+            >
+              Run engineering work on rules, not reminders.
+            </FocusPullHeading>
 
             {/* Subtext */}
-            <Reveal delayMs={160}>
-              <p className="text-[16px] sm:text-[18px] text-[#575657] max-w-[620px] mx-auto text-center leading-[1.5] mb-8">
-                Projects, custom workflows, issue dependencies and explainable risk scoring in one
-                multi-tenant workspace.
-              </p>
-            </Reveal>
+            <InkFillParagraph className="text-[16px] sm:text-[18px] text-[#575657] max-w-[620px] mx-auto text-center leading-[1.5] mb-8">
+              Projects, custom workflows, issue dependencies and explainable risk scoring in one multi-tenant workspace.
+            </InkFillParagraph>
 
-            {/* One button: Try demo */}
-            <Reveal delayMs={240}>
-              <div className="flex flex-col items-center justify-center">
-                <button
-                  onClick={handleStart}
-                  disabled={isLoading}
-                  className="landing-btn-primary h-[48px] px-8 text-[15px] select-none min-h-[48px] rounded-full inline-flex items-center justify-center font-medium transition-all"
-                >
-                  {isLoading ? 'Starting...' : 'Try demo'}
-                </button>
-                {error && (
-                  <p className="text-xs text-red-600 mt-2">{error}</p>
-                )}
-              </div>
-            </Reveal>
+            {/* One button: Try demo with Magnetic Button */}
+            <div className="flex flex-col items-center justify-center">
+              <MagneticButton
+                onClick={handleStart}
+                disabled={isLoading}
+                className="landing-btn-primary h-[48px] px-8 text-[15px] select-none min-h-[48px] rounded-full inline-flex items-center justify-center font-medium transition-all cursor-pointer"
+              >
+                {isLoading ? 'Starting...' : 'Try demo'}
+              </MagneticButton>
+              {error && (
+                <p className="text-xs text-red-600 mt-2">{error}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Built with Marquee Strip: kept exactly as is */}
-      <Reveal delayMs={360}>
-        <div className="mt-12 sm:mt-14 max-w-[1200px] mx-auto px-4 sm:px-6">
-          <p className="text-[13px] text-[#575657] text-center mb-4 select-none font-medium">
-            Built with
-          </p>
-          <Marquee
-            autoFill
-            speed={prefersReducedMotion ? 12 : 30}
-            gap="16px"
-            pauseOnHover
-          >
-            <MarqueeContent>
-              {items.map((item) => (
-                <MarqueeItem key={item.name}>
-                  <div className="w-[64px] h-[64px] flex items-center justify-center rounded-full bg-white border border-black/[0.06] shadow-none shrink-0">
-                    {item.logo}
-                    <span className="sr-only">{item.name}</span>
-                  </div>
-                </MarqueeItem>
-              ))}
-            </MarqueeContent>
-            <MarqueeEdge side="left" />
-            <MarqueeEdge side="right" />
-          </Marquee>
-        </div>
-      </Reveal>
+      {/* Built with Velocity Marquee Strip */}
+      <div className="mt-12 sm:mt-14 max-w-[1200px] mx-auto px-4 sm:px-6">
+        <p className="text-[13px] text-[#575657] text-center mb-4 select-none font-medium">
+          Built with
+        </p>
+        <VelocityMarquee direction="left" baseSpeed={1.0} gap="16px">
+          {items.map((item) => (
+            <div
+              key={item.name}
+              className="w-[64px] h-[64px] flex items-center justify-center rounded-full bg-white border border-black/[0.06] shadow-none shrink-0 select-none"
+            >
+              {item.logo}
+              <span className="sr-only">{item.name}</span>
+            </div>
+          ))}
+        </VelocityMarquee>
+      </div>
     </section>
   );
 }

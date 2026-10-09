@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { ForgeLogo } from '../ForgeLogo';
+import { useMotion } from '../motion/MotionProvider';
+import { MagneticButton } from '../motion/MagneticButton';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
@@ -22,9 +24,41 @@ const navLinks: NavLinkItem[] = [
 
 export function Section1Nav() {
   const navigate = useNavigate();
+  const { scrollTo } = useMotion();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const navContainerRef = useRef<HTMLDivElement>(null);
+
+  // Hide nav on scroll down after 120px, show on scroll up (250ms translateY).
+  // Never hide while mobile menu is open.
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (mobileMenuOpen) {
+        setNavVisible(true);
+        lastScrollY.current = currentScrollY;
+        return;
+      }
+
+      if (currentScrollY > 120) {
+        if (currentScrollY > lastScrollY.current + 4) {
+          // Scrolling down
+          setNavVisible(false);
+        } else if (currentScrollY < lastScrollY.current - 4) {
+          // Scrolling up
+          setNavVisible(true);
+        }
+      } else {
+        setNavVisible(true);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [mobileMenuOpen]);
 
   // IntersectionObserver to observe sections and highlight the currently active link
   useEffect(() => {
@@ -96,11 +130,11 @@ export function Section1Nav() {
   // Smooth scroll to top when clicking brand
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollTo(0, { offset: 0, duration: 1.4 });
     setMobileMenuOpen(false);
   };
 
-  // Smooth scroll with an offset of 88px so headings are not hidden
+  // Smooth scroll with an offset of -96px so headings are not hidden
   const handleLinkClick = (e: React.MouseEvent, link: NavLinkItem) => {
     if (link.external) {
       setMobileMenuOpen(false);
@@ -109,17 +143,16 @@ export function Section1Nav() {
     e.preventDefault();
     setMobileMenuOpen(false);
     if (!link.id) return;
-    const targetElement = document.getElementById(link.id);
-    if (targetElement) {
-      const top = targetElement.getBoundingClientRect().top + window.scrollY - 88;
-      window.scrollTo({ top, behavior: 'smooth' });
-    }
+    scrollTo(`#${link.id}`, { offset: -96, duration: 1.4 });
   };
 
   return (
     <div
       ref={navContainerRef}
-      className="fixed top-[12px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[1040px]"
+      className="fixed top-[12px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[1040px] transition-transform duration-250 ease-out"
+      style={{
+        transform: `translate3d(-50%, ${navVisible || mobileMenuOpen ? '0' : '-130%'}, 0)`,
+      }}
     >
       {/* Floating rounded bar */}
       <header
@@ -168,14 +201,14 @@ export function Section1Nav() {
 
         {/* Right: Black pill "Get Started" (40px tall, padding 0 20px, white text 14px weight 500) + mobile hamburger */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
+          <MagneticButton
             type="button"
             onClick={() => navigate('/login')}
             className="h-[40px] px-[20px] rounded-[999px] bg-[#0D0D0D] text-white text-[14px] font-medium border border-[#0D0D0D] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] inline-flex items-center justify-center select-none shadow-none cursor-pointer"
           >
             <span className="hidden sm:inline">Get Started</span>
             <span className="sm:hidden inline">Start</span>
-          </button>
+          </MagneticButton>
 
           {/* Mobile hamburger button: 44px next to Get Started */}
           <button

@@ -114,11 +114,11 @@
 }
 
 .animate-marquee-left {
-  animation: marquee-left var(--marquee-duration) linear var(--marquee-loop-count);
+  animation: marquee-left var(--marquee-duration, 35s) linear var(--marquee-loop-count, infinite);
 }
 
 .animate-marquee-right {
-  animation: marquee-right var(--marquee-duration) linear var(--marquee-loop-count);
+  animation: marquee-right var(--marquee-duration, 35s) linear var(--marquee-loop-count, infinite);
 }
 
 /* CHANGE VALUES FOR THEME — Vercel-inspired dark system: near-black canvas,

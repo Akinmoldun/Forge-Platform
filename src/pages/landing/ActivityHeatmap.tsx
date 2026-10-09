@@ -13,18 +13,26 @@ function mulberry32(a: number) {
 
 const EVENT_TYPES = ['issue.created', 'issue.status_changed', 'comment.added'] as const;
 
-interface DayData {
+// 5 palette greens from #E8F5E1 to #83DD79
+const GREEN_LEVELS = [
+  '#E8F5E1', // Level 0 (lightest green)
+  '#CFECC7', // Level 1
+  '#B6E3AD', // Level 2
+  '#9FDA85', // Level 3
+  '#83DD79', // Level 4 (darkest palette green)
+];
+
+const NUM_COLS = 52;
+const NUM_ROWS = 7; // Mon to Sun
+
+interface DayCell {
   dateStr: string;
-  month: string;
-  dayOfMonth: number;
-  isFirstOfMonth: boolean;
   level: number;
   eventCount: number;
   eventTypes: string[];
 }
 
 export function ActivityHeatmap() {
-  const [isInView, setIsInView] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<{
     text: string;
     targetRect: DOMRect;
@@ -33,16 +41,16 @@ export function ActivityHeatmap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Generate 53 columns x 7 days data with fixed seed
-  const { columns, monthLabels } = useMemo(() => {
+  // Generate 7 rows x 52 columns of data with fixed seed
+  const { grid, monthLabels } = useMemo(() => {
     const rand = mulberry32(424242);
-    const cols: DayData[][] = [];
+    // Grid: array of 7 rows, each row has 52 columns
+    const rows: DayCell[][] = Array.from({ length: NUM_ROWS }, () => []);
     const monthsMap: { colIndex: number; label: string }[] = [];
 
-    // Let's create an anchor date 371 days ago ending today
     const anchorDate = new Date(2026, 9, 8); // Oct 8, 2026
     const startDate = new Date(anchorDate);
-    startDate.setDate(startDate.getDate() - 53 * 7 + 1);
+    startDate.setDate(startDate.getDate() - NUM_COLS * 7 + 1);
 
     // Align to Monday
     const dayOffset = (startDate.getDay() + 6) % 7;
@@ -51,12 +59,11 @@ export function ActivityHeatmap() {
     const currentDate = new Date(startDate);
     let lastMonth = -1;
 
-    for (let c = 0; c < 53; c++) {
-      const colDays: DayData[] = [];
+    for (let c = 0; c < NUM_COLS; c++) {
       const isQuietWeek = c === 3 || c === 16 || c === 28 || c === 42;
       const isBurstWeek = c === 7 || c === 21 || c === 35 || c === 48;
 
-      for (let r = 0; r < 7; r++) {
+      for (let r = 0; r < NUM_ROWS; r++) {
         const d = new Date(currentDate);
         const monthNum = d.getMonth();
         const monthStr = d.toLocaleDateString('en-US', { month: 'short' });
@@ -68,7 +75,6 @@ export function ActivityHeatmap() {
           lastMonth = monthNum;
         }
 
-        // Generate level with natural distributions
         let level = 0;
         const roll = rand();
 
@@ -89,7 +95,6 @@ export function ActivityHeatmap() {
           else level = 0;
         }
 
-        // Events count & sample event types
         let eventCount = 0;
         const types: string[] = [];
 
@@ -102,11 +107,8 @@ export function ActivityHeatmap() {
           }
         }
 
-        colDays.push({
+        rows[r].push({
           dateStr: `${monthStr} ${dayNum}`,
-          month: monthStr,
-          dayOfMonth: dayNum,
-          isFirstOfMonth: dayNum === 1,
           level,
           eventCount,
           eventTypes: types,
@@ -114,37 +116,12 @@ export function ActivityHeatmap() {
 
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      cols.push(colDays);
     }
 
-    return { columns: cols, monthLabels: monthsMap };
+    return { grid: rows, monthLabels: monthsMap };
   }, []);
 
-  // IntersectionObserver for staggered column fade-in
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsInView(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Close tooltip on document tap/click outside
+  // Close tooltip on click outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -160,31 +137,14 @@ export function ActivityHeatmap() {
     };
   }, []);
 
-  const getCellColor = (level: number) => {
-    switch (level) {
-      case 0:
-        return '#E6E6E2';
-      case 1:
-        return 'color-mix(in srgb, var(--green-1) 40%, white)';
-      case 2:
-        return 'var(--green-1)';
-      case 3:
-        return 'var(--green-2)';
-      case 4:
-        return 'color-mix(in srgb, var(--green-3) 70%, #0D0D0D 30%)';
-      default:
-        return '#E6E6E2';
-    }
-  };
-
-  const handleCellHover = (e: React.MouseEvent | React.TouchEvent, day: DayData) => {
+  const handleCellHover = (e: React.MouseEvent | React.TouchEvent, cell: DayCell) => {
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-    const typeList = day.eventTypes.length > 0 ? `, ${day.eventTypes.join(', ')}` : '';
+    const typeList = cell.eventTypes.length > 0 ? `, ${cell.eventTypes.join(', ')}` : '';
     const text =
-      day.eventCount > 0
-        ? `${day.dateStr}: ${day.eventCount} ${day.eventCount === 1 ? 'event' : 'events'}${typeList}`
-        : `${day.dateStr}: No events`;
+      cell.eventCount > 0
+        ? `${cell.dateStr}: ${cell.eventCount} ${cell.eventCount === 1 ? 'event' : 'events'}${typeList}`
+        : `${cell.dateStr}: No events`;
 
     setActiveTooltip({
       text,
@@ -196,26 +156,26 @@ export function ActivityHeatmap() {
     setActiveTooltip(null);
   };
 
-  const dayLabels = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
     <section
       id="activity"
       ref={sectionRef}
-      className="relative bg-transparent py-[72px] md:py-[120px]"
+      className="relative bg-transparent py-[72px] md:py-[100px]"
     >
-      {/* Bloom behind heatmap: one #83DD79 blob (.22, 800px) centered */}
+      {/* Bloom behind heatmap: soft radial gradient reaching 100% transparent well within bounds */}
       <div className="bloom" aria-hidden="true">
         <div
           className="bloom-blob"
           style={{
-            top: '55%',
+            top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '800px',
-            height: '800px',
-            background: 'radial-gradient(closest-side, #83DD79 0%, transparent 100%)',
-            opacity: 0.22,
+            width: '600px',
+            height: '360px',
+            background: 'radial-gradient(ellipse at center, #83DD79 0%, transparent 65%)',
+            opacity: 0.16,
           }}
         />
       </div>
@@ -237,9 +197,10 @@ export function ActivityHeatmap() {
           </p>
         </Reveal>
 
-        {/* Heatmap Grid Area (40px below) */}
-        <div ref={containerRef} className="mt-10 max-w-[1020px] mx-auto relative select-none">
-          {/* Tooltip Popup */}
+        {/* Heatmap Grid Area */}
+        <Reveal delayMs={120} className="mt-10 max-w-[1040px] mx-auto relative select-none">
+          <div ref={containerRef}>
+            {/* Tooltip Popup */}
           {activeTooltip && (
             <div
               style={{
@@ -257,99 +218,93 @@ export function ActivityHeatmap() {
             </div>
           )}
 
-          {/* Grid Container */}
-          <div
-            role="img"
-            aria-label="Sample activity heatmap showing append-only audit events"
-            className="flex items-start justify-center gap-2 overflow-hidden"
-          >
-            {/* Left Day Labels (Mon, Wed, Fri) */}
-            <div className="flex flex-col gap-1 md:gap-1 pt-[22px] pr-1 shrink-0 text-[12px] text-[#575657] font-mono leading-none">
-              {dayLabels.map((label, idx) => (
-                <div key={idx} className="h-[12px] md:h-[14px] flex items-center justify-end">
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            {/* Heatmap Columns Wrapper */}
-            <div className="flex flex-col overflow-hidden">
-              {/* Month Labels Row */}
-              <div className="h-[20px] flex items-center mb-1 text-[12px] text-[#575657] font-mono">
-                {columns.map((col, cIdx) => {
-                  const isVisibleOnMobile = cIdx >= 33;
-                  const monthAtCol = monthLabels.find((m) => m.colIndex === cIdx);
-
-                  return (
-                    <div
-                      key={cIdx}
-                      className={`w-[12px] md:w-[14px] shrink-0 mr-[3px] md:mr-[4px] relative ${
-                        !isVisibleOnMobile ? 'hidden md:block' : 'block'
-                      }`}
-                    >
-                      {monthAtCol && (
-                        <span className="absolute left-0 top-0 whitespace-nowrap text-[11px] md:text-[12px]">
-                          {monthAtCol.label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+          {/* Centered Heatmap wrapper with overflow protection */}
+          <div className="w-full flex justify-center overflow-x-auto pb-2">
+            <div className="flex items-start shrink-0">
+              {/* Day Labels at left */}
+              <div className="flex flex-col gap-[3px] pt-[20px] pr-2 shrink-0 text-[11px] text-[#575657] font-mono leading-none">
+                {dayLabels.map((label, idx) => (
+                  <div
+                    key={idx}
+                    className="h-[12px] flex items-center justify-end"
+                    style={{ lineHeight: '12px' }}
+                  >
+                    {idx % 2 === 0 ? label : ''}
+                  </div>
+                ))}
               </div>
 
-              {/* 53 Columns of 7 Rows */}
-              <div className="flex items-center gap-[3px] md:gap-[4px]">
-                {columns.map((col, cIdx) => {
-                  const isVisibleOnMobile = cIdx >= 33; // show last 20 columns on mobile (<768px)
-                  const transitionDelay = `${cIdx * 12}ms`;
-
-                  return (
-                    <div
-                      key={cIdx}
-                      style={{
-                        transitionDelay,
-                        opacity: isInView ? 1 : 0,
-                      }}
-                      className={`flex flex-col gap-[3px] md:gap-[4px] transition-opacity duration-300 ${
-                        !isVisibleOnMobile ? 'hidden md:flex' : 'flex'
-                      }`}
-                    >
-                      {col.map((day, rIdx) => (
-                        <div
-                          key={rIdx}
-                          onMouseEnter={(e) => handleCellHover(e, day)}
-                          onMouseLeave={handleCellLeave}
-                          onTouchStart={(e) => handleCellHover(e, day)}
-                          style={{
-                            backgroundColor: getCellColor(day.level),
-                          }}
-                          className="w-[12px] h-[12px] md:w-[14px] md:h-[14px] rounded-[3px] md:rounded-[4px] transition-transform hover:scale-110 cursor-pointer"
-                        />
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Caption & Legend Row */}
-          <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-[13px] text-[#575657]">
-            <div>Sample activity, shown for illustration.</div>
-
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12px]">Less</span>
-              {[0, 1, 2, 3, 4].map((level) => (
+              {/* Main Grid: Month Labels + 7 Rows */}
+              <div className="flex flex-col">
+                {/* Month labels row */}
                 <div
-                  key={level}
-                  style={{ backgroundColor: getCellColor(level) }}
-                  className="w-[12px] h-[12px] md:w-[14px] md:h-[14px] rounded-[3px] border border-black/[0.04]"
-                />
-              ))}
-              <span className="text-[12px]">More</span>
+                  className="grid mb-1 text-[11px] text-[#575657] font-mono h-[16px] relative"
+                  style={{
+                    gridTemplateColumns: `repeat(${NUM_COLS}, 12px)`,
+                    columnGap: '3px',
+                  }}
+                >
+                  {monthLabels.map((m) => (
+                    <span
+                      key={m.colIndex}
+                      style={{
+                        gridColumnStart: m.colIndex + 1,
+                      }}
+                      className="whitespace-nowrap absolute"
+                    >
+                      {m.label}
+                    </span>
+                  ))}
+                </div>
+
+                {/* 7 rows of 52 columns CSS Grid */}
+                <div
+                  className="grid gap-[3px]"
+                  style={{
+                    gridTemplateRows: `repeat(${NUM_ROWS}, 12px)`,
+                    gridTemplateColumns: `repeat(${NUM_COLS}, 12px)`,
+                  }}
+                >
+                  {grid.map((row, rIdx) =>
+                    row.map((cell, cIdx) => (
+                      <div
+                        key={`${rIdx}-${cIdx}`}
+                        onMouseEnter={(e) => handleCellHover(e, cell)}
+                        onMouseLeave={handleCellLeave}
+                        onTouchStart={(e) => handleCellHover(e, cell)}
+                        style={{
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '3px',
+                          backgroundColor: GREEN_LEVELS[cell.level],
+                        }}
+                        className="transition-transform hover:scale-125 cursor-pointer"
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Right-aligned small legend "Less ... More" under the grid */}
+          <div className="mt-4 flex items-center justify-end gap-1.5 text-[12px] text-[#575657]">
+            <span className="text-[11px] mr-1">Less</span>
+            {GREEN_LEVELS.map((color, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '3px',
+                  backgroundColor: color,
+                }}
+              />
+            ))}
+            <span className="text-[11px] ml-1">More</span>
+          </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

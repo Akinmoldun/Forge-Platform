@@ -9,6 +9,8 @@ import {
   History,
   Users,
 } from 'lucide-react';
+import { FocusPullHeading } from '../motion/FocusPullHeading';
+import { InkFillParagraph } from '../motion/InkFillParagraph';
 
 interface CapabilityCard {
   title: string;
@@ -67,15 +69,18 @@ export function Section4KeyCapabilities() {
             </div>
 
             {/* Bold Display Heading */}
-            <h2 className="text-[34px] sm:text-[42px] lg:text-[46px] font-[600] tracking-[-0.03em] leading-[1.08] text-[#0D0D0D] text-left m-0 max-w-[460px]">
+            <FocusPullHeading
+              as="h2"
+              className="text-[34px] sm:text-[42px] lg:text-[46px] font-[600] tracking-[-0.03em] leading-[1.08] text-[#0D0D0D] text-left m-0 max-w-[460px]"
+            >
               Everything a delivery team needs, built in.
-            </h2>
+            </FocusPullHeading>
 
             {/* Subtext description */}
-            <p className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#575657] text-left max-w-[420px] m-0">
+            <InkFillParagraph className="mt-4 text-[15px] sm:text-[16px] leading-[1.5] text-[#575657] text-left max-w-[420px] m-0">
               From task planning to automated validation gates, Forge gives your team the controls to move fast,
               stay focused, and prevent regressions.
-            </p>
+            </InkFillParagraph>
 
             {/* Three vertically stacked pills with vivid blue line icons */}
             <div className="flex flex-col items-start gap-2.5 mt-7">
@@ -103,7 +108,7 @@ export function Section4KeyCapabilities() {
               return (
                 <div
                   key={card.title}
-                  className="bg-white border border-black/[0.08] hover:border-black/[0.18] rounded-[14px] p-5 sm:p-6 transition-all duration-200 shadow-none text-left"
+                  className="bg-white border border-black/[0.08] hover:border-black/[0.18] rounded-[14px] p-5 sm:p-6 transition-all duration-200 shadow-none text-left w-full"
                 >
                   <div className="flex items-start gap-4">
                     {/* Blue line icon tile/glyph */}

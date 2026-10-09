@@ -1,117 +1,73 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { FocusPullHeading } from '../motion/FocusPullHeading';
+import { InkFillParagraph } from '../motion/InkFillParagraph';
+import { UnfoldGroup, UnfoldCard } from '../motion/UnfoldCard';
+import { useProgress } from '../motion/MotionProvider';
 
 export function Section3FeaturesBento() {
   const shouldReduceMotion = useReducedMotion();
-  const cardARef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  useProgress(sectionRef);
 
   // Easing specified: cubic-bezier(.16, 1, .3, 1)
   const customEase = [0.16, 1, 0.3, 1] as const;
 
-  // Card A scroll-linked interaction: computes progress p from 0 to 1
-  // as the card moves from 85% down the viewport to its center, set as CSS variable --p.
-  useEffect(() => {
-    if (shouldReduceMotion) {
-      if (cardARef.current) {
-        cardARef.current.style.setProperty('--p', '1');
-      }
-      return;
-    }
-
-    const el = cardARef.current;
-    if (!el) return;
-
-    let rafId: number;
-    const updateScroll = () => {
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || 800;
-      const start = vh * 0.85;
-      const end = vh * 0.5 - rect.height * 0.5;
-      const rawP = (start - rect.top) / (start - end);
-      const p = Math.max(0, Math.min(1, rawP));
-      el.style.setProperty('--p', p.toFixed(4));
-    };
-
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateScroll);
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    updateScroll();
-
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      cancelAnimationFrame(rafId);
-    };
-  }, [shouldReduceMotion]);
-
   return (
     <section
+      ref={sectionRef}
       id="features"
-      className="landing-section relative bg-transparent pt-[72px] md:pt-[100px] pb-[40px] md:pb-[56px] select-none"
+      className="landing-section relative band-white pt-[72px] md:pt-[100px] pb-[40px] md:pb-[56px] select-none"
     >
-      {/* Bloom behind the cards: #9FDA85 top-left (.28, 800px), #6E94CB right (.22, 700px) */}
+      {/* Bloom behind the cards: #9FDA85 top-left, #6E94CB right with soft radial gradients */}
       <div className="bloom" aria-hidden="true">
         <div
-          className="bloom-blob"
+          className="bloom-blob bloom-drift"
           style={{
-            top: '-80px',
-            left: '-140px',
-            width: '800px',
-            height: '800px',
-            background: 'radial-gradient(closest-side, #9FDA85 0%, transparent 100%)',
-            opacity: 0.28,
-          }}
+            top: '40px',
+            left: '-60px',
+            width: '650px',
+            height: '650px',
+            background: 'radial-gradient(circle, #9FDA85 0%, transparent 70%)',
+            opacity: 0.16,
+            '--depth': -120,
+          } as React.CSSProperties}
         />
         <div
-          className="bloom-blob"
+          className="bloom-blob bloom-drift"
           style={{
-            top: '240px',
-            right: '-140px',
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(closest-side, #6E94CB 0%, transparent 100%)',
-            opacity: 0.22,
-          }}
+            top: '260px',
+            right: '-60px',
+            width: '650px',
+            height: '650px',
+            background: 'radial-gradient(circle, #6E94CB 0%, transparent 70%)',
+            opacity: 0.14,
+            '--depth': 80,
+          } as React.CSSProperties}
         />
       </div>
 
       <div className="landing-container relative z-1 max-w-[1040px] mx-auto px-4 md:px-6">
-        {/* Section Header: fade up 16px with blur(6px) -> blur(0), 0.7s, 80ms stagger */}
+        {/* Section Header */}
         <div className="text-center">
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
-            whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, delay: 0, ease: customEase }}
-            className="landing-pill inline-flex items-center text-[13px] font-[500] bg-white border border-black/[0.08] px-[14px] py-[6px] rounded-full mb-4"
+          <div
+            className="landing-pill inline-flex items-center text-[13px] font-[500] bg-white border border-black/[0.08] px-[14px] py-[6px] rounded-full mb-4 shadow-none"
           >
             <span>Productivity Features</span>
-          </motion.div>
+          </div>
 
-          <motion.h2
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
-            whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, delay: 0.08, ease: customEase }}
+          <FocusPullHeading
+            as="h2"
             className="text-[30px] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4"
           >
             Built for how engineering teams actually work.
-          </motion.h2>
+          </FocusPullHeading>
 
-          <motion.p
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 16, filter: 'blur(6px)' }}
-            whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, delay: 0.16, ease: customEase }}
+          <InkFillParagraph
             className="text-[15px] sm:text-[17px] text-[#575657] max-w-[560px] mx-auto leading-relaxed"
           >
-            From fast-moving startups to structured engineering organizations, Forge adapts to your team’s
-            real-world workflows — not the other way around.
-          </motion.p>
+            From fast-moving startups to structured engineering organizations, Forge adapts to your team’s real-world workflows — not the other way around.
+          </InkFillParagraph>
         </div>
 
         {/* 
@@ -123,18 +79,19 @@ export function Section3FeaturesBento() {
           Card D: row 2 (688px wide, 340px tall)
           Under 1060px: one column, cards 340px tall (A: 692px)
         */}
-        <div className="mt-14 grid grid-cols-1 min-[1060px]:grid-cols-3 min-[1060px]:grid-rows-[340px_340px] gap-[12px]">
+        <UnfoldGroup className="mt-14 grid grid-cols-1 min-[1060px]:grid-cols-3 min-[1060px]:grid-rows-[340px_340px] gap-[12px]">
           {/* ================================================================= */}
           {/* CARD A "Rules enforced on every transition" (338 × 692)           */}
           {/* ================================================================= */}
-          <div
-            ref={cardARef}
+          <UnfoldCard
+            col={0}
+            row={0}
             style={{
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.06)',
-              background: '#f7f8fa',
+              border: '1px solid rgba(0,0,0,.08)',
+              background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-1 min-[1060px]:col-end-2 min-[1060px]:row-start-1 min-[1060px]:row-end-3 h-[692px]"
           >
@@ -165,7 +122,7 @@ export function Section3FeaturesBento() {
                   width: '330px',
                   height: '166px',
                   borderRadius: '14px',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   border: '1px solid rgba(0,0,0,.06)',
                   background: '#ffffff',
                   transformOrigin: 'left center',
@@ -233,7 +190,7 @@ export function Section3FeaturesBento() {
                   width: '330px',
                   height: '166px',
                   borderRadius: '14px',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   border: '1px solid rgba(0,0,0,.06)',
                   background: '#ffffff',
                   transformOrigin: 'left center',
@@ -296,7 +253,7 @@ export function Section3FeaturesBento() {
                   width: '330px',
                   height: '166px',
                   borderRadius: '14px',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   border: '1px solid rgba(0,0,0,.06)',
                   background: '#ffffff',
                   zIndex: 20,
@@ -363,18 +320,20 @@ export function Section3FeaturesBento() {
                 </div>
               </div>
             </motion.div>
-          </div>
+          </UnfoldCard>
 
           {/* ================================================================= */}
           {/* CARD B "Real-time everywhere" (338 × 340)                         */}
           {/* ================================================================= */}
-          <div
+          <UnfoldCard
+            col={1}
+            row={0}
             style={{
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.06)',
-              background: '#f7f8fa',
+              border: '1px solid rgba(0,0,0,.08)',
+              background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-3 min-[1060px]:row-start-1 min-[1060px]:row-end-2 h-[340px]"
           >
@@ -421,7 +380,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '14px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   zIndex: 10,
                 }}
                 className="flex items-center justify-between pl-[12px] pr-[14px]"
@@ -450,7 +409,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '14px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   zIndex: 10,
                   overflow: 'hidden',
                 }}
@@ -512,26 +471,28 @@ export function Section3FeaturesBento() {
                 }}
                 className="flex items-center gap-1"
               >
-                <svg className="w-3 h-3 text-[#2f6df6] fill-current drop-shadow-sm" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 text-[#2f6df6] fill-current" viewBox="0 0 24 24">
                   <path d="M3 3l7 18 3-7 7-3L3 3z" />
                 </svg>
-                <span className="h-[22px] px-2 rounded-full bg-[#2f6df6] text-white text-[11px] font-semibold flex items-center shadow-md">
+                <span className="h-[22px] px-2 rounded-full bg-[#2f6df6] text-white text-[11px] font-semibold flex items-center">
                   Sam
                 </span>
               </motion.div>
             </motion.div>
-          </div>
+          </UnfoldCard>
 
           {/* ================================================================= */}
           {/* CARD C "Explainable risk" (338 × 340)                              */}
           {/* ================================================================= */}
-          <div
+          <UnfoldCard
+            col={2}
+            row={0}
             style={{
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.06)',
-              background: '#f7f8fa',
+              border: '1px solid rgba(0,0,0,.08)',
+              background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-3 min-[1060px]:col-end-4 min-[1060px]:row-start-1 min-[1060px]:row-end-2 h-[340px]"
           >
@@ -564,7 +525,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '14px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   padding: '12px',
                   opacity: 0.45,
                   filter: 'blur(0.8px)',
@@ -603,7 +564,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '14px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 10px 30px rgba(0,0,0,.06)',
+                  boxShadow: 'none',
                   padding: '12px',
                   zIndex: 20,
                 }}
@@ -702,18 +663,20 @@ export function Section3FeaturesBento() {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </UnfoldCard>
 
           {/* ================================================================= */}
           {/* CARD D "Dependencies without loops" (688 × 340)                   */}
           {/* ================================================================= */}
-          <div
+          <UnfoldCard
+            col={1}
+            row={1}
             style={{
               position: 'relative',
               overflow: 'hidden',
               borderRadius: '14px',
-              border: '1px solid rgba(0,0,0,.06)',
-              background: '#f7f8fa',
+              border: '1px solid rgba(0,0,0,.08)',
+              background: '#ffffff',
             }}
             className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-4 min-[1060px]:row-start-2 min-[1060px]:row-end-3 h-[340px]"
           >
@@ -868,7 +831,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '9999px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  boxShadow: 'none',
                   zIndex: 20,
                 }}
                 className="flex items-center pl-2 pr-3 gap-2"
@@ -897,7 +860,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '12px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  boxShadow: 'none',
                   padding: '8px',
                   zIndex: 20,
                 }}
@@ -946,7 +909,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '12px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  boxShadow: 'none',
                   padding: '8px',
                   zIndex: 20,
                 }}
@@ -993,7 +956,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '12px',
                   background: '#ffffff',
                   border: '1px solid rgba(0,0,0,.06)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  boxShadow: 'none',
                   padding: '8px',
                   zIndex: 20,
                 }}
@@ -1038,7 +1001,7 @@ export function Section3FeaturesBento() {
                   borderRadius: '9999px',
                   background: '#ffffff',
                   border: '1px solid #d1d5db',
-                  boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+                  boxShadow: 'none',
                   zIndex: 25,
                 }}
                 className="px-2.5 flex items-center gap-1.5"
@@ -1048,8 +1011,8 @@ export function Section3FeaturesBento() {
                 </span>
               </motion.div>
             </motion.div>
-          </div>
-        </div>
+          </UnfoldCard>
+        </UnfoldGroup>
       </div>
     </section>
   );

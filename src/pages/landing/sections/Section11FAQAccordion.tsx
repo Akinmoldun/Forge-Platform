@@ -56,7 +56,7 @@ export function Section11FAQAccordion() {
           {faqs.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
-              <Reveal key={faq.q} delayMs={idx * 80}>
+              <Reveal key={faq.q} index={idx} direction={idx % 2 === 0 ? 'up' : 'pop'}>
                 <div className="landing-card border border-black/[0.06] overflow-hidden">
                   <button
                     type="button"
