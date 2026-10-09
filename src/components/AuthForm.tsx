@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
-import { TryDemoButton } from './TryDemoButton';
+import { Loader2, User } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'login' | 'signup';
@@ -14,17 +13,30 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const redirectTarget =
+  const rawTarget =
     searchParams.get('returnTo') ||
     searchParams.get('redirect') ||
     redirectAfterAuth ||
     '/app';
 
+  // Guard against self-redirect loops if returnTo was pointing to auth routes
+  const safeRedirect =
+    rawTarget === '/login' ||
+    rawTarget === '/signup' ||
+    rawTarget === '/auth' ||
+    rawTarget.startsWith('/login?') ||
+    rawTarget.startsWith('/signup?') ||
+    rawTarget.startsWith('/auth?')
+      ? '/app'
+      : rawTarget;
+
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestError, setGuestError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -33,9 +45,9 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   // If already signed in, redirect immediately to app home
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate(redirectTarget, { replace: true });
+      navigate(safeRedirect, { replace: true });
     }
-  }, [authLoading, isAuthenticated, navigate, redirectTarget]);
+  }, [authLoading, isAuthenticated, navigate, safeRedirect]);
 
   // Escape key returns to step 1 from step 2, focus moves to code input on step 2
   useEffect(() => {
@@ -71,7 +83,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || isGuestLoading) return;
 
     const trimmedEmail = email.trim();
     if (!validateEmail(trimmedEmail)) {
@@ -107,7 +119,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || isGuestLoading) return;
 
     const trimmedCode = code.trim();
     if (trimmedCode.length !== 6) {
@@ -123,7 +135,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       formData.set('email', email.trim());
       formData.set('code', trimmedCode);
       await signIn('email-otp', formData);
-      navigate(redirectTarget);
+      navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
       console.error('Verify OTP error:', err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -143,7 +155,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   };
 
   const handleResendCode = async () => {
-    if (countdown > 0 || isSubmitting) return;
+    if (countdown > 0 || isSubmitting || isGuestLoading) return;
     setIsSubmitting(true);
     setError(null);
 
@@ -179,27 +191,62 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     }
   };
 
-  return (
-    <div className="w-full transition-opacity duration-150 motion-reduce:transition-none">
-      {step === 'email' ? (
-        <div>
-          {/* Heading */}
-          {mode === 'login' ? (
-            <h1 className="font-['Hanken_Grotesk',sans-serif] text-[28px] font-semibold text-[#3B1500] tracking-[-0.02em] leading-tight">
-              Sign in to Forge
-            </h1>
-          ) : (
-            <h1 className="font-['Hanken_Grotesk',sans-serif] text-[32px] font-semibold text-[#3B1500] tracking-[-0.02em] leading-tight text-left">
-              Build with rules that hold
-            </h1>
-          )}
+  const handleGuestSignIn = async () => {
+    if (isGuestLoading || isSubmitting) return;
+    setGuestError(null);
 
-          {/* Form */}
+    if (isAuthenticated) {
+      navigate(safeRedirect, { replace: true });
+      return;
+    }
+
+    setIsGuestLoading(true);
+    try {
+      await signIn('anonymous');
+      navigate(safeRedirect, { replace: true });
+    } catch (err: unknown) {
+      console.error('Guest sign-in error:', err);
+      if (!navigator.onLine) {
+        setGuestError('Network error. Please check your internet connection.');
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        setGuestError(msg || 'Failed to start demo. Please try again.');
+      }
+      setIsGuestLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full">
+      <style>{`
+        .auth-field-input:focus {
+          border-color: #0D0D0D !important;
+          outline: 3px solid rgba(0, 0, 0, 0.08) !important;
+          outline-offset: 0 !important;
+          box-shadow: none !important;
+        }
+      `}</style>
+
+      {step === 'email' ? (
+        <div className="transition-opacity duration-150 motion-reduce:transition-none">
+          {/* Heading */}
+          <h1 className="text-[32px] font-medium tracking-[-0.03em] text-[#0D0D0D] leading-[1.2]">
+            {mode === 'login' ? 'Sign in to Forge' : 'Create your Forge account'}
+          </h1>
+
+          {/* Subheading */}
+          <p className="mt-2 text-[15px] text-[#575657] leading-relaxed">
+            {mode === 'login'
+              ? "Enter your email and we'll send you a one-time code."
+              : "No password. We'll email you a one-time code."}
+          </p>
+
+          {/* Email form */}
           <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
             <div>
               <label
                 htmlFor="auth-email"
-                className="block text-sm font-medium text-[#3B1500] mb-1.5"
+                className="block text-[14px] font-medium text-[#0D0D0D] mb-2"
               >
                 Email
               </label>
@@ -214,16 +261,17 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                   setEmail(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGuestLoading}
                 placeholder="name@example.com"
                 required
-                className="w-full h-[48px] px-3.5 rounded-[8px] border border-[#E8D8CA] bg-white text-[#3B1500] text-base placeholder:text-[#7A5A4A]/50 focus:outline-none focus:ring-2 focus:ring-[#FF4801] focus:border-[#FF4801] transition-shadow disabled:opacity-60"
+                className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
+                style={{ boxShadow: 'none' }}
               />
               {error && (
                 <p
                   role="alert"
                   aria-live="polite"
-                  className="mt-1.5 text-[13px] text-[#B3261E] font-medium"
+                  className="mt-2 text-[13px] text-[#B3261E] font-medium"
                 >
                   {error}
                 </p>
@@ -233,13 +281,14 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             {/* Primary button */}
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full h-[48px] rounded-[8px] bg-[#FF4801] hover:bg-[#E03E00] text-white font-medium text-base transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer select-none shadow-xs"
+              disabled={isSubmitting || isGuestLoading}
+              className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
+              style={{ boxShadow: 'none' }}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Sending code...</span>
+                  <span>{mode === 'login' ? 'Sending code...' : 'Creating account...'}</span>
                 </>
               ) : mode === 'login' ? (
                 'Send code'
@@ -249,83 +298,87 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             </button>
           </form>
 
-          {/* Mode specific lower area */}
-          {mode === 'login' ? (
-            <div className="mt-6">
-              {/* Divider with OR */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#E8D8CA]" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                  <span className="bg-white px-3 text-[#7A5A4A] font-medium">OR</span>
-                </div>
-              </div>
+          {/* Divider "or" */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-black/[0.08]" />
+            </div>
+            <div className="relative flex justify-center text-[13px]">
+              <span className="bg-white px-3 text-[#575657]">or</span>
+            </div>
+          </div>
 
-              {/* Try demo as guest outlined button */}
-              <TryDemoButton
-                variant="none"
-                redirect={redirectTarget}
-                className="w-full h-[48px] rounded-[8px] border border-[#E8D8CA] bg-white hover:bg-[#FFE5D6] text-[#3B1500] font-medium text-sm transition-colors cursor-pointer select-none flex items-center justify-center"
+          {/* Secondary button: Try demo as guest */}
+          <div>
+            <button
+              type="button"
+              onClick={handleGuestSignIn}
+              disabled={isGuestLoading || isSubmitting}
+              className="w-full h-[48px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[15px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
+              style={{ boxShadow: 'none' }}
+            >
+              {isGuestLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <span>Starting demo...</span>
+                </>
+              ) : (
+                <>
+                  <User className="w-4 h-4 shrink-0 text-[#0D0D0D]" />
+                  <span>Try demo as guest</span>
+                </>
+              )}
+            </button>
+
+            {guestError && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
               >
-                Try demo as guest
-              </TryDemoButton>
+                {guestError}
+              </p>
+            )}
+          </div>
 
-              {/* Don't have an account? Sign up */}
-              <p className="mt-6 text-center text-sm text-[#7A5A4A]">
+          {/* Navigation link */}
+          <p className="mt-6 text-center text-[14px] text-[#575657]">
+            {mode === 'login' ? (
+              <>
                 Don't have an account?{' '}
                 <Link
                   to="/signup"
-                  className="font-semibold text-[#FF4801] hover:underline"
+                  className="text-[#0D0D0D] font-medium hover:underline"
                 >
                   Sign up
                 </Link>
-              </p>
-
-              {/* Terms and privacy line */}
-              <p className="mt-4 text-center text-xs text-[#7A5A4A]/80 leading-relaxed">
-                By continuing, you agree to the terms and privacy policy.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4">
-              {/* Terms line */}
-              <p className="text-xs text-[#7A5A4A]/80 leading-relaxed">
-                By continuing, you agree to the terms and privacy policy.
-              </p>
-
-              {/* Already have an account? Log in */}
-              <p className="mt-4 text-sm text-[#7A5A4A]">
+              </>
+            ) : (
+              <>
                 Already have an account?{' '}
                 <Link
                   to="/login"
-                  className="font-semibold text-[#FF4801] hover:underline"
+                  className="text-[#0D0D0D] font-medium hover:underline"
                 >
                   Log in
                 </Link>
-              </p>
+              </>
+            )}
+          </p>
 
-              {/* Under the form, an outlined "Try demo as guest" button */}
-              <div className="mt-6 pt-6 border-t border-[#E8D8CA]">
-                <TryDemoButton
-                  variant="none"
-                  redirect={redirectTarget}
-                  className="w-full h-[48px] rounded-[8px] border border-[#E8D8CA] bg-white hover:bg-[#FFE5D6] text-[#3B1500] font-medium text-sm transition-colors cursor-pointer select-none flex items-center justify-center"
-                >
-                  Try demo as guest
-                </TryDemoButton>
-              </div>
-            </div>
-          )}
+          {/* Terms line */}
+          <p className="mt-3 text-center text-[13px] text-[#575657] leading-relaxed">
+            By continuing, you agree to the terms and privacy policy.
+          </p>
         </div>
       ) : (
-        /* STEP 2: CODE */
+        /* STEP 2 OF THE FORM */
         <div className="transition-opacity duration-150 motion-reduce:transition-none">
-          <h1 className="font-['Hanken_Grotesk',sans-serif] text-[28px] font-semibold text-[#3B1500] tracking-[-0.02em] leading-tight">
+          <h1 className="text-[32px] font-medium tracking-[-0.03em] text-[#0D0D0D] leading-[1.2]">
             Check your email
           </h1>
-          <p className="mt-2 text-sm text-[#7A5A4A] leading-relaxed">
-            We sent a 6-digit code to <strong className="text-[#3B1500]">{email}</strong>
+          <p className="mt-2 text-[15px] text-[#575657] leading-relaxed">
+            We sent a 6-digit code to <strong className="text-[#0D0D0D] font-medium">{email}</strong>
           </p>
 
           <form onSubmit={handleCodeSubmit} className="mt-8 space-y-4">
@@ -347,7 +400,8 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                 disabled={isSubmitting}
                 placeholder="······"
                 autoFocus
-                className="w-full h-[48px] text-center font-mono text-[24px] tracking-[0.3em] font-semibold rounded-[8px] border border-[#E8D8CA] bg-white text-[#3B1500] focus:outline-none focus:ring-2 focus:ring-[#FF4801] focus:border-[#FF4801] transition-shadow disabled:opacity-60"
+                className="auth-field-input w-full h-[56px] text-center font-mono text-[28px] tracking-[0.35em] font-medium rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] placeholder:text-[#575657]/40 transition-all disabled:opacity-60"
+                style={{ boxShadow: 'none' }}
               />
               {error && (
                 <p
@@ -364,7 +418,8 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             <button
               type="submit"
               disabled={isSubmitting || code.length !== 6}
-              className="w-full h-[48px] rounded-[8px] bg-[#FF4801] hover:bg-[#E03E00] text-white font-medium text-base transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer select-none shadow-xs"
+              className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
+              style={{ boxShadow: 'none' }}
             >
               {isSubmitting ? (
                 <>
@@ -377,16 +432,16 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             </button>
           </form>
 
-          {/* Links: Resend code (disabled with 30s countdown) and Use a different email */}
+          {/* Links under button: Resend code + Use a different email */}
           <div className="mt-6 flex flex-col items-center gap-3">
             <button
               type="button"
               onClick={handleResendCode}
               disabled={countdown > 0 || isSubmitting}
-              className={`text-sm transition-colors cursor-pointer select-none ${
+              className={`text-[14px] transition-colors select-none ${
                 countdown > 0 || isSubmitting
-                  ? 'text-[#7A5A4A]/60 cursor-not-allowed'
-                  : 'text-[#FF4801] hover:underline font-medium'
+                  ? 'text-[#575657]/50 cursor-not-allowed'
+                  : 'text-[#0D0D0D] font-medium hover:underline cursor-pointer'
               }`}
             >
               {countdown > 0 ? `Resend code (${countdown}s)` : 'Resend code'}
@@ -400,7 +455,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                 setCode('');
               }}
               disabled={isSubmitting}
-              className="text-sm text-[#7A5A4A] hover:text-[#3B1500] transition-colors cursor-pointer"
+              className="text-[14px] text-[#575657] hover:text-[#0D0D0D] transition-colors cursor-pointer"
             >
               Use a different email
             </button>

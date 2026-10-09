@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { AuthForm } from '@/components/AuthForm';
+import { AuthDecorativePanel } from '@/components/AuthDecorativePanel';
 
 interface SignupPageProps {
   redirectAfterAuth?: string;
@@ -7,40 +8,51 @@ interface SignupPageProps {
 
 export default function SignupPage({ redirectAfterAuth = '/app' }: SignupPageProps) {
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-[#FFFBF5] px-4 py-6 sm:px-8 sm:py-8">
-      {/* Top Header Row: Logo top-left, top-right outlined pill "Log in" */}
-      <header className="max-w-[450px] w-full mx-auto flex items-center justify-between">
-        <Link
-          to="/"
-          aria-label="Forge home"
-          className="inline-flex items-center gap-2.5 group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-[#FF4801] flex items-center justify-center font-bold text-white text-base shadow-xs select-none">
-            F
-          </div>
-          <span className="font-['Hanken_Grotesk',sans-serif] font-bold text-lg tracking-tight text-[#3B1500]">
-            Forge
-          </span>
-        </Link>
+    <div className="min-h-screen min-[900px]:h-screen w-full flex flex-col min-[900px]:flex-row min-[900px]:overflow-hidden bg-[#FBFBFC]">
+      {/* Left half: white background, content vertically centered, max-width 380px */}
+      <div className="w-full min-[900px]:w-1/2 min-h-screen min-[900px]:h-full flex flex-col justify-between bg-white overflow-y-auto min-[900px]:overflow-hidden relative z-10">
+        {/* Top-left: Forge logo and wordmark (padding 32px 48px on desktop) */}
+        <div className="flex items-center justify-between w-full p-6 sm:p-8 min-[900px]:px-12 min-[900px]:py-8">
+          <Link
+            to="/"
+            aria-label="Forge home"
+            className="inline-flex items-center gap-2.5 group select-none text-[#0D0D0D] hover:opacity-80 transition-opacity"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 32 32"
+              className="w-[28px] h-[28px] text-[#0D0D0D]"
+              aria-hidden="true"
+            >
+              <path d="M0 0h32v32H0z" fill="none" />
+              <path fill="currentColor" d="M8 4v4H4V4zM2 2v8h8V2Zm16 5v4h-4V7zm-6-2v8h8V5ZM8 16v4H4v-4zm-6-2v8h8v-8Z" />
+              <path fill="currentColor" d="M22 10v6h-6v6h-6v8h20V10Zm-4 8h4v4h-4Zm-2 10h-4v-4h4Zm6 0h-4v-4h4Zm6 0h-4v-4h4Zm0-6h-4v-4h4Zm-4-6v-4h4v4Z" />
+            </svg>
+            <span className="text-[17px] font-semibold tracking-tight text-[#0D0D0D]">
+              Forge
+            </span>
+          </Link>
 
-        <Link
-          to="/login"
-          className="rounded-full border border-[#E8D8CA] bg-white px-5 py-2 text-sm font-medium text-[#3B1500] hover:bg-[#FFE5D6] transition-colors shadow-2xs"
-        >
-          Log in
-        </Link>
-      </header>
+          {/* Under 900px: Log in link moves to top-right */}
+          <Link
+            to="/login"
+            className="min-[900px]:hidden rounded-full border border-black/[0.08] px-3.5 py-1.5 text-[13px] font-medium text-[#0D0D0D] hover:border-black/20 transition-colors"
+          >
+            Log in
+          </Link>
+        </div>
 
-      {/* Main Single Centered Column: max-width 450px */}
-      <main className="max-w-[450px] w-full mx-auto my-auto py-8">
-        <AuthForm mode="signup" redirectAfterAuth={redirectAfterAuth} />
-      </main>
+        {/* Form centered, max-width 380px, padding 24px under 900px */}
+        <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 min-[900px]:px-0 min-[900px]:py-0">
+          <AuthForm mode="signup" redirectAfterAuth={redirectAfterAuth} />
+        </div>
 
-      {/* Simple footer row, 1px top border, 13px muted text: "Forge" and "(c) 2026". No dead links */}
-      <footer className="max-w-[450px] w-full mx-auto pt-6 border-t border-[#E8D8CA] flex items-center justify-between text-[13px] text-[#7A5A4A]">
-        <span>Forge</span>
-        <span>© 2026</span>
-      </footer>
+        {/* Bottom edge spacer */}
+        <div className="h-8 min-[900px]:px-12 min-[900px]:py-4" aria-hidden="true" />
+      </div>
+
+      {/* Right half: decorative panel */}
+      <AuthDecorativePanel mode="signup" />
     </div>
   );
 }
