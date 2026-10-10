@@ -33,7 +33,6 @@ export default function WorkspaceSettings() {
   });
 
   const renameWorkspace = useMutation(api.workspaces.renameWorkspace);
-  const deleteWorkspace = useMutation(api.workspaces.deleteWorkspace);
   const leaveWorkspace = useMutation(api.workspaces.leaveWorkspace);
 
   const convex = useConvex();

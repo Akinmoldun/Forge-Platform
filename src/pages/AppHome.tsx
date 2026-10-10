@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { ensureGuestWorkspace } from "@/lib/guestDemo";
@@ -45,7 +45,7 @@ export default function AppHome() {
   const create = useMutation(api.workspaces.createWorkspace);
   const acceptMyInvitation = useMutation(api.workspaces.acceptMyInvitation);
 
-  const startDemoProvisioning = () => {
+  const startDemoProvisioning = useCallback(() => {
     setSeedError(null);
     setAutoSeeding(true);
     ensureGuestWorkspace(convex)
@@ -57,7 +57,7 @@ export default function AppHome() {
         setSeedError(err instanceof Error ? err.message : "Failed to prepare demo workspace.");
         setAutoSeeding(false);
       });
-  };
+  }, [convex, navigate]);
 
   useEffect(() => {
     if (user?.isAnonymous && workspaces !== undefined && !autoSeeding && !seedError) {
@@ -66,7 +66,7 @@ export default function AppHome() {
         startDemoProvisioning();
       }
     }
-  }, [user?.isAnonymous, workspaces, autoSeeding, seedError]);
+  }, [user?.isAnonymous, workspaces, autoSeeding, seedError, startDemoProvisioning]);
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2
