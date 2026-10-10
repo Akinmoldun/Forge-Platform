@@ -1,9 +1,5 @@
 // THIS FILE IS READ ONLY. Do not touch this file unless you are correctly adding a new auth provider in accordance to the vly auth documentation
 
-import { convexAuth } from "@convex-dev/auth/server";
-import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
-import { emailOtp } from "./auth/emailOtp";
-
 
 import { convexAuth } from "@convex-dev/auth/server";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
@@ -36,7 +32,7 @@ export const signIn = action({
     calledBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Guest (anonymous) sign-in and token refreshes pass through directly
+    // Guest (anonymous) and token refreshes pass through directly
     if (args.provider === "anonymous" || args.refreshToken !== undefined) {
       return await (rawAuth.signIn as any)._handler(ctx, args);
     }

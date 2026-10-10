@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
@@ -18,8 +18,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EmptyState, ListSkeleton } from "@/components/forge";
-import { ArrowLeft, ArrowRight, Building2, Trash2, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Trash2, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { deleteOrLeaveWorkspace } from "@/lib/guestDemo";
 
 export default function WorkspaceSettings() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -35,8 +36,11 @@ export default function WorkspaceSettings() {
   const deleteWorkspace = useMutation(api.workspaces.deleteWorkspace);
   const leaveWorkspace = useMutation(api.workspaces.leaveWorkspace);
 
+  const convex = useConvex();
   const [name, setName] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (workspace === undefined) {
     return (
@@ -55,13 +59,16 @@ export default function WorkspaceSettings() {
 
   const isOwner = workspace.role === "owner";
   const nameValue = name ?? workspace.workspace.name;
+  const workspaceRealName = workspace.workspace.name;
 
   const handleDeleteWorkspace = async () => {
+    if (confirmName.trim() !== workspaceRealName.trim() || deleting) return;
     setDeleting(true);
     try {
-      await deleteWorkspace({ workspaceId: workspaceId as never });
+      await deleteOrLeaveWorkspace(convex, workspaceId as string);
       toast.success("Workspace deleted");
-      navigate("/app");
+      setDeleteDialogOpen(false);
+      navigate("/app", { replace: true });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete workspace");
     } finally {
@@ -171,7 +178,10 @@ export default function WorkspaceSettings() {
                     Permanently delete this workspace and all its projects, workflows, and issues.
                   </p>
                 </div>
-                <AlertDialog>
+                <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+                  setDeleteDialogOpen(open);
+                  if (!open) setConfirmName("");
+                }}>
                   <AlertDialogTrigger asChild>
                     <Button
                       variant="destructive"
@@ -185,19 +195,41 @@ export default function WorkspaceSettings() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the workspace
-                        "{workspace.workspace.name}" along with all projects, issues, comments, and member access.
+                      <AlertDialogDescription className="space-y-3">
+                        <span>
+                          This action cannot be undone. This will permanently delete the workspace{" "}
+                          <strong className="text-[#0D0D0D]">"{workspaceRealName}"</strong> along with all projects, issues, comments, and member access.
+                        </span>
+                        <div className="pt-2 text-left">
+                          <Label htmlFor="confirm-ws-delete" className="text-[12px] font-medium text-[#0D0D0D]">
+                            Type <span className="font-semibold">{workspaceRealName}</span> to confirm:
+                          </Label>
+                          <Input
+                            id="confirm-ws-delete"
+                            value={confirmName}
+                            onChange={(e) => setConfirmName(e.target.value)}
+                            placeholder={workspaceRealName}
+                            className="mt-1.5 h-10 rounded-[10px] text-[13px]"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && confirmName.trim() === workspaceRealName.trim()) {
+                                handleDeleteWorkspace();
+                              }
+                            }}
+                          />
+                        </div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
+                    <AlertDialogFooter className="mt-2">
+                      <AlertDialogCancel onClick={() => setConfirmName("")}>Cancel</AlertDialogCancel>
+                      <Button
                         onClick={handleDeleteWorkspace}
-                        className="bg-[#B3261E] text-white hover:bg-[#961F18]"
+                        disabled={confirmName.trim() !== workspaceRealName.trim() || deleting}
+                        className="rounded-full bg-[#B3261E] text-white hover:bg-[#961F18] h-9 px-4 text-[13px] disabled:opacity-50"
                       >
+                        {deleting && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
                         Delete permanently
-                      </AlertDialogAction>
+                      </Button>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>

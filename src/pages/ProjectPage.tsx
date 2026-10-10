@@ -861,7 +861,7 @@ function ListView({
                 <PriorityBadge priority={i.priority} />
               </td>
               <td className="hidden px-4 py-3 text-[12px] text-[#575657] md:table-cell">
-                {i.assigneeId ? memberName(i.assigneeId) ?? "Unknown" : "Unassigned"}
+                {i.assigneeId ? memberName(i.assigneeId) ?? `Teammate ${i.assigneeId.slice(-4)}` : "Unassigned"}
               </td>
               <td className="px-4 py-3 text-right text-[11px] tabular-nums text-[#575657]">
                 {formatDate(i.updatedAt)}

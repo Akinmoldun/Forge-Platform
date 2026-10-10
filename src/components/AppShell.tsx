@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
@@ -10,8 +10,10 @@ import {
   LogOut,
   Pencil,
   Plus,
+  RefreshCw,
   UserPlus,
   X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { resetGuestDemo } from "@/lib/guestDemo";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
@@ -297,6 +300,62 @@ function NotificationBell() {
   );
 }
 
+function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
+  const { user } = useAuth();
+  const convex = useConvex();
+  const navigate = useNavigate();
+  const [resetting, setResetting] = useState(false);
+
+  if (!user?.isAnonymous) return null;
+
+  const handleResetDemo = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try {
+      const res = await resetGuestDemo(convex, workspaceId || "");
+      toast.success("Demo reset fresh");
+      navigate(`/app/workspaces/${res.workspaceId}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to reset demo");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#0D0D0D] text-white px-4 py-2 text-[12px] flex items-center justify-between gap-3 border-b border-[#262626]">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="inline-block size-2 rounded-full bg-[#83DD79] shrink-0" />
+        <span className="truncate text-white/90 font-normal">
+          You're exploring a demo. Create an account to keep your own work.
+        </span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={handleResetDemo}
+          disabled={resetting}
+          className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+        >
+          {resetting ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <RefreshCw className="size-3" />
+          )}
+          Reset demo
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/signup")}
+          className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#0D0D0D] hover:bg-[#F1F1F3] transition-colors"
+        >
+          Create account
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({
   children,
   workspaceId,
@@ -309,6 +368,9 @@ export function AppShell({
   return (
     <div className="flex min-h-screen flex-col bg-[#FBFBFC] text-[#0D0D0D]">
       <ScrollManager />
+
+      {/* Guest demo banner - visible only to anonymous users */}
+      <GuestDemoBanner workspaceId={workspaceId} />
 
       {/* Top bar: height 56px, white, 1px bottom border, sticky */}
       <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">

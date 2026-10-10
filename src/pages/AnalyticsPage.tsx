@@ -156,8 +156,11 @@ export default function AnalyticsPage() {
     for (const issue of openIssues) {
       if (!issue.assigneeId) continue;
       const key = issue.assigneeId;
+      const member = (members ?? []).find((m) => m.userId === issue.assigneeId);
       const name =
-        (members ?? []).find((m) => m.userId === issue.assigneeId)?.name ?? "Unknown";
+        member?.name?.trim() ||
+        member?.email?.trim() ||
+        `Teammate ${issue.assigneeId.slice(-4)}`;
       const entry = map.get(key) ?? { name, open: 0, overdue: 0, urgent: 0 };
       entry.open += 1;
       if (isOverdue(issue, now)) entry.overdue += 1;

@@ -1,7 +1,9 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useAuth } from "@/hooks/use-auth";
+import { ensureGuestWorkspace } from "@/lib/guestDemo";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +31,8 @@ import {
 import { toast } from "sonner";
 
 export default function AppHome() {
+  const { user } = useAuth();
+  const convex = useConvex();
   const workspaces = useQuery(api.workspaces.listMyWorkspaces);
   const myInvitations = useQuery(api.workspaces.getMyInvitations);
   const navigate = useNavigate();
@@ -36,8 +40,33 @@ export default function AppHome() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [autoSeeding, setAutoSeeding] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
   const create = useMutation(api.workspaces.createWorkspace);
   const acceptMyInvitation = useMutation(api.workspaces.acceptMyInvitation);
+
+  const startDemoProvisioning = () => {
+    setSeedError(null);
+    setAutoSeeding(true);
+    ensureGuestWorkspace(convex)
+      .then((res) => {
+        navigate(`/app/workspaces/${res.workspaceId}`, { replace: true });
+      })
+      .catch((err) => {
+        console.error("Auto-seeding guest workspace error:", err);
+        setSeedError(err instanceof Error ? err.message : "Failed to prepare demo workspace.");
+        setAutoSeeding(false);
+      });
+  };
+
+  useEffect(() => {
+    if (user?.isAnonymous && workspaces !== undefined && !autoSeeding && !seedError) {
+      const hasDemo = workspaces.some((w) => w.name === "Demo: Northstar Labs");
+      if (!hasDemo) {
+        startDemoProvisioning();
+      }
+    }
+  }, [user?.isAnonymous, workspaces, autoSeeding, seedError]);
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2
@@ -76,6 +105,56 @@ export default function AppHome() {
       setCreating(false);
     }
   };
+
+  if (autoSeeding) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-[1200px] py-12">
+          <div className="mb-8 flex flex-col items-center justify-center text-center">
+            <Loader2 className="size-8 animate-spin text-[#0D0D0D] mb-3" />
+            <h2 className="text-[20px] font-medium text-[#0D0D0D]">Preparing your demo workspace...</h2>
+            <p className="mt-1 text-[13px] text-[#575657]">
+              Setting up Demo: Northstar Labs with sample projects, workflows, and teammates.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <ListSkeleton rows={4} />
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (seedError && user?.isAnonymous) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-[600px] flex flex-col items-center justify-center py-24 text-center">
+          <div className="size-12 rounded-2xl bg-[#B3261E]/10 border border-[#B3261E]/20 text-[#B3261E] flex items-center justify-center mb-4">
+            <Building2 className="size-6" />
+          </div>
+          <h2 className="text-[18px] font-medium text-[#0D0D0D]">Could not load demo workspace</h2>
+          <p className="mt-1.5 text-[13px] text-[#575657] max-w-sm">
+            {seedError}
+          </p>
+          <div className="mt-5 flex gap-3">
+            <Button
+              onClick={startDemoProvisioning}
+              className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-5 text-[13px]"
+            >
+              Try again
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setSeedError(null)}
+              className="rounded-full h-9 px-4 text-[13px]"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

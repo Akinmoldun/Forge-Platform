@@ -92,9 +92,12 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (isSubmitting || isGuestLoading) return;
 
     const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
+
     if (!validateEmail(trimmedEmail)) {
       setError('Enter a valid email');
       return;
@@ -286,7 +289,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             {/* Primary button */}
             <button
               type="submit"
-              disabled={isSubmitting || isGuestLoading}
+              disabled={isSubmitting || isGuestLoading || !email.trim()}
               className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
               style={{ boxShadow: 'none' }}
             >
