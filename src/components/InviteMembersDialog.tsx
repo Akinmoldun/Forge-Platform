@@ -58,17 +58,27 @@ export function InviteMembersDialog({
   workspaceName,
   canInvite,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   workspaceId: Id<"workspaces">;
   workspaceName: string;
   canInvite: boolean;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const createInvitations = useMutation(api.workspaces.createInvitations);
   const sendEmail = useAction(api.emails.sendInvitationEmail);
   const checkDeliveryStatus = useAction(api.emails.getEmailDeliveryStatus);
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = typeof controlledOpen === "boolean";
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (val: boolean) => {
+    if (!isControlled) setInternalOpen(val);
+    controlledOnOpenChange?.(val);
+  };
   const [emailsText, setEmailsText] = useState("");
   const [role, setRole] = useState<string>("member");
   const [sending, setSending] = useState(false);
@@ -196,13 +206,15 @@ export function InviteMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : !isControlled ? (
+        <DialogTrigger asChild>
           <Button size="sm">
             <UserPlus /> Invite member
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Invite to {workspaceName}</DialogTitle>

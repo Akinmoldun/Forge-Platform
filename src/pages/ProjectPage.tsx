@@ -13,8 +13,6 @@ import {
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
@@ -23,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateIssueDialog } from "@/components/dialogs";
 import {
   EmptyState,
@@ -41,9 +38,6 @@ import { AnimatedNumber, FadeIn, MotionBar, ProgressRing, Stagger, StaggerItem }
 import {
   Plus,
   Search,
-  ListFilter,
-  KanbanSquare,
-  Rows3,
   TrendingUp,
   ArrowUpDown,
   Activity as ActivityIcon,
@@ -106,7 +100,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   };
 
   const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
-  const [colStatusId, setColStatusId] = useState<string>("");
+  const [_colStatusId, setColStatusId] = useState<string>("");
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";

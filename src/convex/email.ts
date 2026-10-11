@@ -26,15 +26,125 @@ function maskEmail(email: string): string {
   const parts = email.split("@");
   if (parts.length !== 2) return "***";
   const [local, domain] = parts;
-  if (!local || local.length <= 1) return `*@${domain}`;
   return `${local[0]}***@${domain}`;
 }
 
-function resolveProvider(): "brevo" | "resend" | "log" {
+export function resolveProvider(): "brevo" | "resend" | "log" {
   const configured = (process.env.EMAIL_PROVIDER || "").toLowerCase().trim();
   if (configured === "brevo") return "brevo";
   if (configured === "resend") return "resend";
   return "log";
+}
+
+export async function sendEmailDirect({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<{ ok: boolean; provider: string; fallback?: boolean; reason?: string }> {
+  const configured = (process.env.EMAIL_PROVIDER || "").toLowerCase().trim();
+  if (!configured) {
+    console.error(
+      "[email] Missing EMAIL_PROVIDER environment variable in Convex deployment. Set EMAIL_PROVIDER to 'resend', 'brevo', or 'log'."
+    );
+    throw new Error("Email isn't set up yet");
+  }
+
+  if (configured === "brevo") {
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+      console.error(
+        "[email:brevo] Missing BREVO_API_KEY environment variable in Convex deployment."
+      );
+      throw new Error("Email isn't set up yet");
+    }
+
+    const rawFrom = process.env.EMAIL_FROM || "no-reply@forge.internal";
+    const fromMatch = rawFrom.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    const senderEmail = fromMatch ? fromMatch[1] : rawFrom;
+
+    try {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": apiKey,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "Forge", email: senderEmail },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+          textContent: text,
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(`[email:brevo] Delivery failed with HTTP ${response.status}`);
+        return { ok: false, provider: "brevo", reason: `Brevo rejected request (HTTP ${response.status})` };
+      }
+      return { ok: true, provider: "brevo" };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "network error";
+      console.warn(`[email:brevo] Network error during send: ${msg}`);
+      return { ok: false, provider: "brevo", reason: "Network error connecting to email provider" };
+    }
+  }
+
+  if (configured === "resend") {
+    const apiKey = process.env.RESEND_API_KEY || process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
+      console.error(
+        "[email:resend] Missing RESEND_API_KEY (or AUTH_RESEND_KEY) environment variable in Convex deployment."
+      );
+      throw new Error("Email isn't set up yet");
+    }
+
+    const from = process.env.EMAIL_FROM || "Forge <onboarding@resend.dev>";
+
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: [to],
+          subject,
+          html,
+          text,
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn(`[email:resend] Delivery failed with HTTP ${response.status}`);
+        return { ok: false, provider: "resend", reason: `Resend rejected request (HTTP ${response.status})` };
+      }
+      return { ok: true, provider: "resend" };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "network error";
+      console.warn(`[email:resend] Network error during send: ${msg}`);
+      return { ok: false, provider: "resend", reason: "Network error connecting to email provider" };
+    }
+  }
+
+  if (configured === "log") {
+    console.log(`[email:log] To: ${maskEmail(to)} | Subject: "${subject}"`);
+    return { ok: true, provider: "log" };
+  }
+
+  console.error(
+    `[email] Unrecognized EMAIL_PROVIDER '${configured}'. Set EMAIL_PROVIDER to 'resend', 'brevo', or 'log'.`
+  );
+  throw new Error("Email isn't set up yet");
 }
 
 // ---------------------------------------------------------------------------
@@ -106,90 +216,12 @@ export const sendEmail = internalAction({
       return { ok: false, reason: "Rate limit reached (20 emails per hour)" };
     }
 
-    const provider = resolveProvider();
-
-    if (provider === "brevo") {
-      const apiKey = process.env.BREVO_API_KEY;
-      if (!apiKey) {
-        console.warn("[email:brevo] BREVO_API_KEY is not set. Falling back to safe log.");
-        console.log(`[email:log] To: ${maskEmail(to)} | Subject: "${args.subject}"`);
-        return { ok: true, provider: "log", fallback: true };
-      }
-
-      const rawFrom = process.env.EMAIL_FROM || "no-reply@forge.internal";
-      const fromMatch = rawFrom.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-      const senderEmail = fromMatch ? fromMatch[1] : rawFrom;
-
-      try {
-        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            "api-key": apiKey,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            sender: { name: "Forge", email: senderEmail },
-            to: [{ email: to }],
-            subject: args.subject,
-            htmlContent: args.html,
-            textContent: args.text,
-          }),
-        });
-
-        if (!response.ok) {
-          console.warn(`[email:brevo] Delivery failed with HTTP ${response.status}`);
-          return { ok: false, reason: `Brevo rejected request (HTTP ${response.status})` };
-        }
-        return { ok: true, provider: "brevo" };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "network error";
-        console.warn(`[email:brevo] Network error during send: ${msg}`);
-        return { ok: false, reason: "Network error connecting to email provider" };
-      }
-    }
-
-    if (provider === "resend") {
-      const apiKey = process.env.RESEND_API_KEY || process.env.AUTH_RESEND_KEY;
-      if (!apiKey) {
-        console.warn("[email:resend] RESEND_API_KEY is not set. Falling back to safe log.");
-        console.log(`[email:log] To: ${maskEmail(to)} | Subject: "${args.subject}"`);
-        return { ok: true, provider: "log", fallback: true };
-      }
-
-      const from = process.env.EMAIL_FROM || "Forge <onboarding@resend.dev>";
-
-      try {
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from,
-            to: [to],
-            subject: args.subject,
-            html: args.html,
-            text: args.text,
-          }),
-        });
-
-        if (!response.ok) {
-          console.warn(`[email:resend] Delivery failed with HTTP ${response.status}`);
-          return { ok: false, reason: `Resend rejected request (HTTP ${response.status})` };
-        }
-        return { ok: true, provider: "resend" };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "network error";
-        console.warn(`[email:resend] Network error during send: ${msg}`);
-        return { ok: false, reason: "Network error connecting to email provider" };
-      }
-    }
-
-    // Default "log" provider
-    console.log(`[email:log] To: ${maskEmail(to)} | Subject: "${args.subject}"`);
-    return { ok: true, provider: "log" };
+    return await sendEmailDirect({
+      to,
+      subject: args.subject,
+      html: args.html,
+      text: args.text,
+    });
   },
 });
 

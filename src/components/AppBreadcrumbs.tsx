@@ -51,9 +51,12 @@ export function AppBreadcrumbs({
       {issue && (
         <>
           <ChevronRight className="size-3.5 shrink-0 text-[#575657]/50" aria-hidden="true" />
-          <span className="font-medium text-[#0D0D0D] truncate max-w-[160px] sm:max-w-[260px]">
+          <Link
+            to={`/app/issues/${issue._id}`}
+            className="font-medium text-[#0D0D0D] truncate max-w-[160px] sm:max-w-[260px] hover:underline"
+          >
             {project?.key ? `${project.key}-${issue.number}` : `#${issue.number}`}: {issue.title}
-          </span>
+          </Link>
         </>
       )}
 

@@ -321,10 +321,10 @@ export default function WorkspaceSettings() {
             {workspace.workspace.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">
+            <h1 className="text-[32px] font-[600] leading-tight tracking-tight text-[#0D0D0D]">
               Workspace settings
             </h1>
-            <p className="text-[13px] text-[#575657]">
+            <p className="mt-1 text-[13px] leading-5 text-[#575657]">
               Manage workspace details, team access, issue labels, and configuration.
             </p>
           </div>

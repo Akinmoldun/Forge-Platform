@@ -1,6 +1,7 @@
 import { Email } from "@convex-dev/auth/providers/Email";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { maskEmail, normalizeEmail } from "../authCheck";
+import { sendEmailDirect } from "../email";
 
 export const emailOtp = Email({
   id: "email-otp",
@@ -33,32 +34,15 @@ export const emailOtp = Email({
   },
   async sendVerificationRequest({ identifier: rawEmail, token }) {
     const email = normalizeEmail(rawEmail);
-    const apiKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.error(
-        "[auth] Missing AUTH_RESEND_KEY (or RESEND_API_KEY) in Convex deployment environment variables. Email could not be sent.",
-      );
-      throw new Error(
-        "Email service is not configured. Please set AUTH_RESEND_KEY in your Convex deployment environment variables.",
-      );
+
+    // DEV ONLY, remove before launch
+    if (process.env.ALLOW_DEV_OTP_LOG === "true") {
+      console.log(`[auth:dev-otp] One-time code for ${maskEmail(email)}: ${token}`);
     }
 
-    const from = process.env.EMAIL_FROM || "Forge <onboarding@resend.dev>";
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from,
-          to: [email],
-          subject: `Your Forge verification code: ${token}`,
-          html: `
+    const subject = `Your Forge verification code: ${token}`;
+    const text = `Your Forge verification code is: ${token}. This code expires in 10 minutes.`;
+    const html = `
 <!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -95,28 +79,16 @@ export const emailOtp = Email({
       </tr>
     </table>
   </body>
-</html>`,
-          text: `Your Forge verification code is: ${token}. This code expires in 10 minutes.`,
-        }),
-        signal: controller.signal,
-      });
+</html>`;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          `[auth] Resend API rejected email to ${maskEmail(email)} (HTTP ${response.status}):`,
-          errorText,
-        );
-        throw new Error(`Email provider rejected request (HTTP ${response.status})`);
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") {
-        console.error("[auth] Email request timed out after 10 seconds.");
-        throw new Error("Email service timed out. Please try again.");
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
+    const res = await sendEmailDirect({
+      to: email,
+      subject,
+      html,
+      text,
+    });
+    if (!res.ok) {
+      throw new Error(res.reason || "Failed to send verification code");
     }
   },
 });

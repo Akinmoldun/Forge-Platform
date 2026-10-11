@@ -54,6 +54,7 @@ import { FadeIn } from "./motion";
 import { CreateIssueDialog, CreateProjectDialog } from "./dialogs";
 import { CommandPaletteDialog } from "./CommandPaletteDialog";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
+import { InviteMembersDialog } from "./InviteMembersDialog";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
 
 /** Primary workspace navigation rows. */
@@ -408,6 +409,27 @@ export function AppShell({
 
   const unreadCount = notifications?.unreadCount ?? 0;
 
+  // Current active project or issue if on project/issue page
+  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
+  const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
+  const issueDetail = useQuery(
+    api.issues.getIssue,
+    activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
+  );
+
+  const activeProject =
+    projects?.find((p) => p._id === activeProjectId) ||
+    (issueDetail ? { _id: issueDetail.project._id, name: issueDetail.project.name, key: issueDetail.project.key, color: issueDetail.project.color } : undefined);
+
+  const activeIssue = issueDetail
+    ? {
+        _id: issueDetail.issue._id,
+        title: issueDetail.issue.title,
+        number: issueDetail.issue.number,
+        key: issueDetail.project.key,
+      }
+    : null;
+
   // Sidebar collapse state (persisted in localStorage)
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -449,6 +471,9 @@ export function AppShell({
   // New Project dialog state
   const [newProjectOpen, setNewProjectOpen] = useState(false);
 
+  // Invite member dialog state
+  const [inviteOpen, setInviteOpen] = useState(false);
+
   // Pinned projects in localStorage
   const storagePinKey = `forge_pinned_${workspaceId || "global"}_${user?._id || "anon"}`;
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
@@ -486,11 +511,10 @@ export function AppShell({
     }
   });
 
-  // Track recent visits
+  // Track recent visits (projects and issues)
   useEffect(() => {
-    if (!projects || projects.length === 0) return;
     const matchProj = pathname.match(/^\/app\/projects\/([^/]+)/);
-    if (matchProj) {
+    if (matchProj && projects && projects.length > 0) {
       const pId = matchProj[1];
       const p = projects.find((x) => x._id === pId);
       if (p) {
@@ -506,7 +530,23 @@ export function AppShell({
         });
       }
     }
-  }, [pathname, projects, storageRecentKey]);
+
+    const matchIssue = pathname.match(/^\/app\/issues\/([^/]+)/);
+    if (matchIssue && issueDetail) {
+      const iId = matchIssue[1];
+      const title = `${issueDetail.project.key}-${issueDetail.issue.number}: ${issueDetail.issue.title}`;
+      setRecentItems((prev) => {
+        const filtered = prev.filter((item) => item.id !== iId);
+        const next = [{ id: iId, name: title, type: "issue" as const, path: `/app/issues/${iId}` }, ...filtered].slice(0, 5);
+        try {
+          localStorage.setItem(storageRecentKey, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    }
+  }, [pathname, projects, issueDetail, storageRecentKey]);
 
   // Section collapse states
   const [workspaceSectionCollapsed, setWorkspaceSectionCollapsed] = useState(false);
@@ -590,10 +630,6 @@ export function AppShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mobileDrawerOpen, workspaceId, navigate]);
-
-  // Current active project if on project page
-  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
-  const activeProject = projects?.find((p) => p._id === activeProjectId);
 
   // If outside workspace (e.g. /app, /app/settings/profile, /invite)
   if (!isInsideWorkspace) {
@@ -728,45 +764,40 @@ export function AppShell({
       >
         {/* Top: Logo & collapse toggle */}
         <div className="flex h-12 items-center justify-between px-3 border-b border-border/40 shrink-0">
-          <Link
-            to="/app"
-            className={cn(
-              "flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85",
-              collapsed && "mx-auto justify-center"
-            )}
-            aria-label="Forge home"
-          >
-            <ForgeLogo className="size-5 text-[#0D0D0D]" />
-            {!collapsed && (
-              <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
-                Forge
-              </span>
-            )}
-          </Link>
+          {!collapsed ? (
+            <>
+              <Link
+                to="/app"
+                className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
+                aria-label="Forge home"
+              >
+                <ForgeLogo className="size-5 text-[#0D0D0D]" />
+                <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
+                  Forge
+                </span>
+              </Link>
 
-          {!collapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={toggleCollapsed}
+                    className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                    aria-label="Collapse sidebar ([)"
+                  >
+                    <PanelLeftClose className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Collapse sidebar ([)</TooltipContent>
+              </Tooltip>
+            </>
+          ) : (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   onClick={toggleCollapsed}
-                  className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                  aria-label="Collapse sidebar ([)"
-                >
-                  <PanelLeftClose className="size-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Collapse sidebar ([)</TooltipContent>
-            </Tooltip>
-          )}
-
-          {collapsed && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={toggleCollapsed}
-                  className="hidden"
+                  className="mx-auto inline-flex size-8 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
                   aria-label="Expand sidebar ([)"
                 >
                   <PanelLeftOpen className="size-4" />
@@ -1264,6 +1295,7 @@ export function AppShell({
                   : null
               }
               project={activeProject ? { _id: activeProject._id, name: activeProject.name, key: activeProject.key } : null}
+              issue={activeIssue}
             />
           </div>
 
@@ -1306,6 +1338,16 @@ export function AppShell({
         />
       )}
 
+      {workspaceId && currentWorkspace && (
+        <InviteMembersDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          workspaceId={workspaceId as Id<"workspaces">}
+          workspaceName={currentWorkspace.workspace.name}
+          canInvite={true}
+        />
+      )}
+
       <CommandPaletteDialog
         open={commandOpen}
         onOpenChange={setCommandOpen}
@@ -1313,6 +1355,7 @@ export function AppShell({
         projects={projects}
         onNewIssue={() => setNewIssueOpen(true)}
         onNewProject={() => setNewProjectOpen(true)}
+        onInviteMember={() => setInviteOpen(true)}
         onToggleSidebar={toggleCollapsed}
       />
 

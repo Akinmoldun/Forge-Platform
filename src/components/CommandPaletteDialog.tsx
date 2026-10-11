@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -24,6 +23,7 @@ import {
   Plus,
   PanelLeft,
   UserPlus,
+  CheckCircle2,
 } from "lucide-react";
 
 export function CommandPaletteDialog({
@@ -60,6 +60,12 @@ export function CommandPaletteDialog({
         { label: "Inbox", icon: Bell, path: `/app/workspaces/${workspaceId}/notifications` },
       ]
     : [{ label: "Workspaces", icon: LayoutDashboard, path: "/app" }];
+
+  // Query workspace issues for command palette search
+  const workspaceIssues = useQuery(
+    api.issues.listWorkspaceIssues,
+    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
+  );
 
   const handleSelect = (run: () => void) => {
     onOpenChange(false);
@@ -114,6 +120,24 @@ export function CommandPaletteDialog({
                 />
                 <span className="font-medium truncate flex-1">{proj.name}</span>
                 <span className="font-mono text-[11px] text-[#575657] uppercase">{proj.key}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {/* Issues group */}
+        {workspaceIssues?.issues && workspaceIssues.issues.length > 0 && (
+          <CommandGroup heading="Issues">
+            {workspaceIssues.issues.slice(0, 8).map((iss) => (
+              <CommandItem
+                key={iss._id}
+                value={`issue ${iss.number} ${iss.title}`}
+                onSelect={() => handleSelect(() => navigate(`/app/issues/${iss._id}`))}
+                className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] cursor-pointer aria-selected:bg-[#ECECEE]"
+              >
+                <CheckCircle2 className="size-3.5 text-[#575657] shrink-0" />
+                <span className="font-medium truncate flex-1">{iss.title}</span>
+                <span className="font-mono text-[11px] text-[#575657]">#{iss.number}</span>
               </CommandItem>
             ))}
           </CommandGroup>
