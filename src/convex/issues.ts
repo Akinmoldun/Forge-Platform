@@ -548,6 +548,7 @@ export const updateIssue = mutation({
     issueId: v.id("issues"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
+    icon: v.optional(v.string()),
     priority: v.optional(
       v.union(
         v.literal("urgent"),
@@ -581,6 +582,9 @@ export const updateIssue = mutation({
       if (title.length < 3 || title.length > 200) throw new Error("Title must be 3-200 characters");
       patch.title = title;
       changes.push({ field: "title", from: issue.title, to: title });
+    }
+    if (args.icon !== undefined) {
+      patch.icon = args.icon.trim() || undefined;
     }
     if (args.description !== undefined) {
       if (args.description.length > 20000) throw new Error("Description must be at most 20,000 characters");

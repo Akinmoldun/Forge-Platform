@@ -1,7 +1,8 @@
 import { Email } from "@convex-dev/auth/providers/Email";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
+import { ConvexError } from "convex/values";
 import { maskEmail, normalizeEmail } from "../authCheck";
-import { sendEmailDirect } from "../email";
+import { sendEmailDirect } from "../email/index";
 
 export const emailOtp = Email({
   id: "email-otp",
@@ -81,14 +82,25 @@ export const emailOtp = Email({
   </body>
 </html>`;
 
-    const res = await sendEmailDirect({
-      to: email,
-      subject,
-      html,
-      text,
-    });
-    if (!res.ok) {
-      throw new Error(res.reason || "Failed to send verification code");
+    try {
+      const res = await sendEmailDirect({
+        to: email,
+        subject,
+        html,
+        text,
+      });
+      if (!res.ok) {
+        throw new ConvexError(res.reason || "Failed to send verification code");
+      }
+    } catch (err: unknown) {
+      if (err instanceof ConvexError) {
+        throw err;
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Email isn't set up yet")) {
+        throw new ConvexError("Email isn't set up yet");
+      }
+      throw err;
     }
   },
 });

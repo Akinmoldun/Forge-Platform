@@ -34,9 +34,12 @@ import {
   KanbanSquare,
   List,
   SlidersHorizontal,
+  MoreHorizontal,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { WorkspaceIllustration, ProjectIllustration, NotionAvatarIllustration } from "@/components/Illustrations";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,23 +110,6 @@ function ScrollManager() {
   return null;
 }
 
-const PASTEL_COLORS = [
-  "#9FDA85",
-  "#83DD79",
-  "#BED390",
-  "#D6C6A1",
-  "#D78FC6",
-  "#7957EC",
-  "#6E94CB",
-];
-
-function getPastelForKey(key: string): string {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = key.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return PASTEL_COLORS[Math.abs(hash) % PASTEL_COLORS.length];
-}
 
 // ---------------------------------------------------------------------------
 // Account menu
@@ -151,9 +137,6 @@ function AccountMenu({
 
   const isGuest = user?.isAnonymous || !user || !user.email;
   const displayName = user?.name?.trim() || user?.email?.trim() || (isGuest ? "Guest" : "User");
-  const initial = isGuest
-    ? "G"
-    : (user?.name?.trim() || user?.email?.trim() || "G").charAt(0).toUpperCase();
 
   const handleSaveName = async () => {
     if (!nameValue.trim() || saving) return;
@@ -185,15 +168,22 @@ function AccountMenu({
             {user?.image ? (
               <AvatarImage src={user.image} alt="" className="object-cover" />
             ) : null}
-            <AvatarFallback className="border border-border bg-[#F1F1F3] text-[11px] font-semibold text-[#0D0D0D]">
-              {initial}
+            <AvatarFallback className="border border-border bg-[#FBFBFC]">
+              <NotionAvatarIllustration name={displayName} size={26} />
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-[#0D0D0D] leading-tight">
-                {displayName}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="truncate text-[13px] font-medium text-[#0D0D0D] leading-tight">
+                  {displayName}
+                </p>
+                {isGuest && (
+                  <span className="rounded bg-[#F1F1F3] px-1.5 py-0.2 text-[10px] font-medium text-[#575657] border border-border/60 shrink-0">
+                    Demo
+                  </span>
+                )}
+              </div>
               <p className="truncate text-[11px] text-[#575657]">
                 {isGuest ? "Guest demo" : user?.email ?? "Signed in"}
               </p>
@@ -319,8 +309,15 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
   const convex = useConvex();
   const navigate = useNavigate();
   const [resetting, setResetting] = useState(false);
+  const [hidden, setHidden] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem("forge_hide_demo_session") === "true";
+    } catch {
+      return false;
+    }
+  });
 
-  if (!user?.isAnonymous) return null;
+  if (!user?.isAnonymous || hidden) return null;
 
   const handleResetDemo = async () => {
     if (resetting) return;
@@ -336,35 +333,57 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
     }
   };
 
+  const handleHideSession = () => {
+    try {
+      sessionStorage.setItem("forge_hide_demo_session", "true");
+    } catch {
+      /* ignore */
+    }
+    setHidden(true);
+  };
+
   return (
-    <div className="bg-[#0D0D0D] text-white px-4 py-1.5 text-[12px] flex items-center justify-between gap-3 border-b border-[#262626] shrink-0">
+    <div className="h-[36px] bg-gradient-to-r from-[#F7F2EC] via-[#F1F4F9] to-[#F3F7ED] text-[#0D0D0D] px-4 text-[12px] flex items-center justify-between border-b border-black/[0.08] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0">
-        <span className="inline-block size-2 rounded-full bg-[#83DD79] shrink-0" />
-        <span className="truncate text-white/90 font-normal">
-          You're exploring a demo. Create an account to keep your work.
+        <span className="truncate text-[#0D0D0D] font-normal">
+          You're exploring a demo workspace. Changes here are temporary.
         </span>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={handleResetDemo}
-          disabled={resetting}
-          className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white hover:bg-white/20 transition-colors disabled:opacity-50"
-        >
-          {resetting ? (
-            <Loader2 className="size-3 animate-spin" />
-          ) : (
-            <RefreshCw className="size-3" />
-          )}
-          Reset demo
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/signup")}
-          className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#0D0D0D] hover:bg-[#F1F1F3] transition-colors"
+      <div className="flex items-center gap-3 shrink-0">
+        <Link
+          to="/signup"
+          className="text-[12px] font-medium text-[#0D0D0D] underline hover:text-[#575657] transition-colors"
         >
           Create account
-        </button>
+        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex size-6 items-center justify-center rounded-[6px] text-[#575657] hover:bg-black/[0.05] hover:text-[#0D0D0D] transition-colors"
+              aria-label="Demo options"
+            >
+              <MoreHorizontal className="size-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 rounded-[12px] border border-border bg-white p-1 shadow-none">
+            <DropdownMenuItem
+              onClick={handleResetDemo}
+              disabled={resetting}
+              className="rounded-[8px] text-[12px] text-[#0D0D0D] cursor-pointer"
+            >
+              {resetting ? <Loader2 className="size-3 animate-spin mr-2" /> : <RefreshCw className="size-3 mr-2 text-[#575657]" />}
+              Reset demo
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleHideSession}
+              className="rounded-[8px] text-[12px] text-[#575657] cursor-pointer"
+            >
+              <EyeOff className="size-3 mr-2" />
+              Hide for this session
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -675,9 +694,9 @@ export function AppShell({
     myWorkspaces?.find((w) => w._id === workspaceId) ||
     (workspaceId ? { _id: workspaceId as Id<"workspaces">, name: "Workspace" } : undefined);
 
-  // Projects list: 8 most recent
-  const visibleProjects = projects?.slice(0, 8) ?? [];
-  const hasMoreProjects = (projects?.length ?? 0) > 8;
+  // Projects list: at most 6 projects shown directly
+  const visibleProjects = projects?.slice(0, 6) ?? [];
+  const hasMoreProjects = (projects?.length ?? 0) > 6;
 
   // Workspace switcher component for sidebar
   const workspaceSwitcherPill = (
@@ -693,13 +712,8 @@ export function AppShell({
               : "gap-2 px-2 py-1.5 hover:bg-[#ECECEE]"
           )}
         >
-          <div
-            className="flex size-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-white text-[11px] font-semibold text-[#0D0D0D]"
-            style={{
-              backgroundColor: activeWs ? getPastelForKey(activeWs.name) : "#F1F1F3",
-            }}
-          >
-            {activeWs?.name ? activeWs.name.charAt(0).toUpperCase() : "W"}
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-[#FBFBFC] text-[#0D0D0D]">
+            <WorkspaceIllustration name={activeWs?.name} size={18} />
           </div>
           {!collapsed && (
             <>
@@ -724,10 +738,7 @@ export function AppShell({
             onClick={() => navigate(workspacePath(w._id, ""))}
             className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
           >
-            <span
-              className="mr-2 size-2 rounded-full"
-              style={{ backgroundColor: getPastelForKey(w.name) }}
-            />
+            <WorkspaceIllustration name={w.name} size={16} className="mr-2.5" />
             <span className="min-w-0 flex-1 truncate">{w.name}</span>
             <span className="text-[11px] text-[#575657]">{w.projectCount} proj</span>
             {activeWs?._id === w._id && <Check className="size-3.5 ml-2 text-[#0D0D0D]" />}
@@ -951,7 +962,6 @@ export function AppShell({
                   const proj = projects.find((p) => p._id === pId);
                   if (!proj) return null;
                   const active = activeProjectId === pId;
-                  const dotColor = proj.color || getPastelForKey(proj.key);
 
                   return (
                     <Link
@@ -965,10 +975,7 @@ export function AppShell({
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="size-2 rounded-[2px] shrink-0"
-                          style={{ backgroundColor: dotColor }}
-                        />
+                        <ProjectIllustration projectKey={proj.key} name={proj.name} size={15} />
                         <span className="truncate">{proj.name}</span>
                       </div>
                       <button
@@ -1048,7 +1055,6 @@ export function AppShell({
                   const active = activeProjectId === proj._id;
                   const isPinned = pinnedIds.includes(proj._id);
                   const isExpanded = !!expandedProjects[proj._id];
-                  const dotColor = proj.color || getPastelForKey(proj.key);
 
                   return (
                     <div key={proj._id} className="space-y-0.5">
@@ -1080,10 +1086,7 @@ export function AppShell({
                                   />
                                 </button>
                               )}
-                              <span
-                                className="size-2 rounded-[2px] shrink-0"
-                                style={{ backgroundColor: dotColor }}
-                              />
+                              <ProjectIllustration projectKey={proj.key} name={proj.name} size={15} />
                               {!collapsed && (
                                 <span className="truncate font-medium">{proj.name}</span>
                               )}

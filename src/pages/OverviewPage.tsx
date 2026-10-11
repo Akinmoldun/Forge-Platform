@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AppShell, RoleBadge } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { LoadingBlock, PageHeader, PageStack } from "@/components/app-ui";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/forge";
+import { StatusIllustration } from "@/components/Illustrations";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useProjectRisks,
@@ -257,9 +258,13 @@ export default function OverviewPage() {
   const showChecklist = !hasProject || !hasIssue || !hasTeammate;
 
   // User greeting based on local time
+  const isGuestOrAnonymous = Boolean(user?.isAnonymous || !user?.name?.trim());
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const userFirst = (user?.name?.trim() || user?.email?.split("@")[0] || "there").split(" ")[0];
+  const userFirst = user?.name?.trim() ? user.name.trim().split(" ")[0] : "";
+  const greeting = isGuestOrAnonymous || !userFirst
+    ? "Good evening"
+    : `${timeGreeting}, ${userFirst}`;
 
   // Today strip data using existing real projectIssues
   const now = Date.now();
@@ -288,9 +293,8 @@ export default function OverviewPage() {
     <AppShell workspaceId={workspaceId}>
       <PageStack>
         <PageHeader
-          title={`${timeGreeting}, ${userFirst}`}
+          title={greeting}
           description={`${workspace.workspace.name} · ${workspace.projectCount} active projects, ${workspace.memberCount} members.`}
-          meta={<RoleBadge role={workspace.role} />}
           actions={
             <div className="flex flex-wrap items-center gap-2">
               {/* Customize menu for layout rearrangement */}
@@ -350,7 +354,7 @@ export default function OverviewPage() {
           >
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium text-[#575657]">Assigned to you</span>
-              <span className="size-2 rounded-full bg-[#6E94CB]" />
+              <StatusIllustration category="active" size={14} />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
               <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
@@ -368,7 +372,7 @@ export default function OverviewPage() {
           >
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium text-[#575657]">Due this week</span>
-              <span className="size-2 rounded-full bg-[#D78FC6]" />
+              <Clock className="size-3.5 text-[#575657]" />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
               <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
@@ -386,7 +390,7 @@ export default function OverviewPage() {
           >
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium text-[#575657]">Needs your review</span>
-              <span className="size-2 rounded-full bg-[#BED390]" />
+              <StatusIllustration category="review" size={14} />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
               <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">

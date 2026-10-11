@@ -234,10 +234,11 @@ export function StatCard({
   );
 }
 
-/** Workflow status pill driven by the real status color from the backend. */
+import { StatusIllustration, NotionAvatarIllustration } from "@/components/Illustrations";
+
+/** Workflow status pill driven by vector status illustration. */
 export function StatusBadge({
   name,
-  color,
   className,
 }: {
   name: string;
@@ -251,29 +252,16 @@ export function StatusBadge({
         className,
       )}
     >
-      <span
-        className="size-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: color ?? "#9A9A9F" }}
-        aria-hidden
-      />
+      <StatusIllustration category={name} name={name} size={12} />
       <span className="truncate">{name}</span>
     </span>
   );
 }
 
-const PROJECT_STATUS_COLOR: Record<string, string> = {
-  planning: "#9A9A9F",
-  active: "#6E94CB",
-  paused: "#D6C6A1",
-  completed: "#83DD79",
-  archived: "#9A9A9F",
-};
-
 export function ProjectStatusBadge({ status }: { status: string }) {
-  const dotColor = PROJECT_STATUS_COLOR[status] ?? "#9A9A9F";
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[10px] uppercase font-medium tracking-wider text-[#0D0D0D]">
-      <span className="size-1.5 rounded-full" style={{ backgroundColor: dotColor }} />
+      <StatusIllustration category={status} size={11} />
       {status}
     </span>
   );
@@ -290,20 +278,19 @@ export function InitialsAvatar({
   size?: number;
   className?: string;
 }) {
-  const initial = name?.trim() ? name.trim().charAt(0).toUpperCase() : "G";
-  return (
-    <Avatar className={cn("shrink-0", className)} style={{ width: size, height: size }}>
-      {image ? (
+  if (image) {
+    return (
+      <Avatar className={cn("shrink-0", className)} style={{ width: size, height: size }}>
         <AvatarImage src={image} alt="" />
-      ) : (
-        <AvatarFallback
-          className="border border-border bg-[#F1F1F3] text-[11px] font-medium text-[#0D0D0D]"
-          style={{ width: size, height: size, fontSize: Math.max(10, size * 0.38) }}
-        >
-          {initial}
+        <AvatarFallback className="border border-border bg-[#F1F1F3]">
+          <NotionAvatarIllustration name={name} size={size} />
         </AvatarFallback>
-      )}
-    </Avatar>
+      </Avatar>
+    );
+  }
+
+  return (
+    <NotionAvatarIllustration name={name} size={size} className={className} />
   );
 }
 

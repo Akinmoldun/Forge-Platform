@@ -22,6 +22,7 @@ import {
   Th,
 } from "@/components/app-ui";
 import { CreateProjectDialog } from "@/components/dialogs";
+import { ProjectIllustration } from "@/components/Illustrations";
 import { EmptyState, RiskBadge, timeAgo } from "@/components/forge";
 import { useProjectRisks } from "@/hooks/use-workspace-data";
 import {
@@ -241,11 +242,12 @@ export default function ProjectsPage() {
                                 to={`/app/projects/${p._id}`}
                                 className="block outline-none focus-visible:underline"
                               >
-                                <span className="flex items-center gap-2">
-                                  <span className="rounded border border-border bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                <span className="flex items-center gap-2.5">
+                                  <ProjectIllustration projectKey={p.key} name={p.name} size={16} />
+                                  <span className="rounded-[4px] border border-border bg-[#F1F1F3] px-1.5 py-0.5 font-mono text-[10px] text-[#575657]">
                                     {p.key}
                                   </span>
-                                  <span className="truncate font-medium">{p.name}</span>
+                                  <span className="truncate font-medium text-[#0D0D0D]">{p.name}</span>
                                 </span>
                                 {p.description && (
                                   <span className="mt-0.5 line-clamp-1 block max-w-sm text-[11px] text-muted-foreground">

@@ -114,10 +114,21 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       setCountdown(30);
     } catch (err: unknown) {
       console.error('Send OTP error:', err);
-      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
-      if (msg.includes("email isn't set up yet") || msg.includes('not configured') || msg.includes('is not configured')) {
+      const dataStr = (err as { data?: unknown })?.data
+        ? String((err as { data?: unknown }).data)
+        : '';
+      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      const combined = `${dataStr.toLowerCase()} ${msg}`;
+      if (
+        combined.includes("email isn't set up yet") ||
+        combined.includes("email isnt set up yet") ||
+        combined.includes('email_provider') ||
+        combined.includes('email provider') ||
+        combined.includes('not configured') ||
+        combined.includes('is not configured')
+      ) {
         setError("Email isn't set up yet");
-      } else if (msg.includes('rate') || msg.includes('too many')) {
+      } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
       } else {
         setError("We couldn't send the code, try again");
@@ -174,10 +185,21 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       setCountdown(30);
     } catch (err: unknown) {
       console.error('Resend OTP error:', err);
-      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
-      if (msg.includes("email isn't set up yet") || msg.includes('not configured') || msg.includes('is not configured')) {
+      const dataStr = (err as { data?: unknown })?.data
+        ? String((err as { data?: unknown }).data)
+        : '';
+      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      const combined = `${dataStr.toLowerCase()} ${msg}`;
+      if (
+        combined.includes("email isn't set up yet") ||
+        combined.includes("email isnt set up yet") ||
+        combined.includes('email_provider') ||
+        combined.includes('email provider') ||
+        combined.includes('not configured') ||
+        combined.includes('is not configured')
+      ) {
         setError("Email isn't set up yet");
-      } else if (msg.includes('rate') || msg.includes('too many')) {
+      } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
       } else {
         setError("We couldn't send the code, try again");

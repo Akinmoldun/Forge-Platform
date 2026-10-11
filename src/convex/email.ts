@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
   action,
   internalAction,
@@ -33,6 +33,7 @@ export function resolveProvider(): "brevo" | "resend" | "log" {
   const configured = (process.env.EMAIL_PROVIDER || "").toLowerCase().trim();
   if (configured === "brevo") return "brevo";
   if (configured === "resend") return "resend";
+  if (configured === "log") return "log";
   return "log";
 }
 
@@ -52,7 +53,7 @@ export async function sendEmailDirect({
     console.error(
       "[email] Missing EMAIL_PROVIDER environment variable in Convex deployment. Set EMAIL_PROVIDER to 'resend', 'brevo', or 'log'."
     );
-    throw new Error("Email isn't set up yet");
+    throw new ConvexError("Email isn't set up yet");
   }
 
   if (configured === "brevo") {
@@ -61,7 +62,7 @@ export async function sendEmailDirect({
       console.error(
         "[email:brevo] Missing BREVO_API_KEY environment variable in Convex deployment."
       );
-      throw new Error("Email isn't set up yet");
+      throw new ConvexError("Email isn't set up yet");
     }
 
     const rawFrom = process.env.EMAIL_FROM || "no-reply@forge.internal";
@@ -103,7 +104,7 @@ export async function sendEmailDirect({
       console.error(
         "[email:resend] Missing RESEND_API_KEY (or AUTH_RESEND_KEY) environment variable in Convex deployment."
       );
-      throw new Error("Email isn't set up yet");
+      throw new ConvexError("Email isn't set up yet");
     }
 
     const from = process.env.EMAIL_FROM || "Forge <onboarding@resend.dev>";
@@ -137,14 +138,19 @@ export async function sendEmailDirect({
   }
 
   if (configured === "log") {
-    console.log(`[email:log] To: ${maskEmail(to)} | Subject: "${subject}"`);
+    // DEV ONLY, remove before launch
+    if (process.env.ALLOW_DEV_OTP_LOG === "true") {
+      console.log(`[email:log] OTP Code: ${text} | To: ${maskEmail(to)}`);
+    } else {
+      console.log(`[email:log] To: ${maskEmail(to)} | Subject: "${subject}"`);
+    }
     return { ok: true, provider: "log" };
   }
 
   console.error(
     `[email] Unrecognized EMAIL_PROVIDER '${configured}'. Set EMAIL_PROVIDER to 'resend', 'brevo', or 'log'.`
   );
-  throw new Error("Email isn't set up yet");
+  throw new ConvexError("Email isn't set up yet");
 }
 
 // ---------------------------------------------------------------------------

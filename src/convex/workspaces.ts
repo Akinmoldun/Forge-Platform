@@ -214,6 +214,7 @@ export const updateWorkspace = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     iconColor: v.optional(v.string()),
+    icon: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { workspaceId, userId, role } = await loadWorkspaceContext(
@@ -243,6 +244,10 @@ export const updateWorkspace = mutation({
 
     if (args.iconColor !== undefined) {
       patch.iconColor = args.iconColor.trim() || undefined;
+    }
+
+    if (args.icon !== undefined) {
+      patch.icon = args.icon.trim() || undefined;
     }
 
     await ctx.db.patch(workspaceId, patch);

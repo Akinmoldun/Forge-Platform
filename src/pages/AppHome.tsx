@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/components/forge";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion";
+import { WorkspaceIllustration } from "@/components/Illustrations";
 import {
   FolderKanban,
   Users,
@@ -60,7 +61,7 @@ export default function AppHome() {
       });
   }, [convex]);
 
-  const handleResetDemo = async () => {
+  const _handleResetDemo = async () => {
     setSeedError(null);
     setResettingDemo(true);
     setAutoSeeding(true);
@@ -160,42 +161,6 @@ export default function AppHome() {
   return (
     <AppShell>
       <div className="mx-auto max-w-[1200px]">
-        {/* Guest Exploration Banner */}
-        {user?.isAnonymous && (
-          <FadeIn>
-            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-[12px] border border-border bg-[#F1F1F3] px-4 py-3 text-[13px] text-[#0D0D0D]">
-              <div className="flex items-center gap-2">
-                <span className="inline-block size-2 rounded-full bg-[#83DD79]" />
-                <span>You're exploring a demo. Create an account to keep your own work.</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={resettingDemo}
-                  onClick={handleResetDemo}
-                  className="rounded-full bg-white h-8 px-3 text-[12px]"
-                >
-                  {resettingDemo ? (
-                    <>
-                      <Loader2 className="size-3 animate-spin mr-1.5" /> Resetting...
-                    </>
-                  ) : (
-                    "Reset demo"
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => navigate("/signup")}
-                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-8 px-3 text-[12px]"
-                >
-                  Create account
-                </Button>
-              </div>
-            </div>
-          </FadeIn>
-        )}
-
         {/* Header: title 28px/500 tight letter-spacing, muted helper line, black pill CTA */}
         <FadeIn>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-2">
@@ -365,16 +330,7 @@ export default function AppHome() {
             </div>
           ) : (
             <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {workspaces.map((w, index) => {
-                const pastelTints = [
-                  "bg-[#6E94CB]/10 border-[#6E94CB]/20 text-[#6E94CB]",
-                  "bg-[#83DD79]/15 border-[#83DD79]/30 text-[#83DD79]",
-                  "bg-[#D78FC6]/15 border-[#D78FC6]/30 text-[#D78FC6]",
-                  "bg-[#D6C6A1]/20 border-[#D6C6A1]/40 text-[#D6C6A1]",
-                  "bg-[#7957EC]/10 border-[#7957EC]/20 text-[#7957EC]",
-                ];
-                const tint = pastelTints[index % pastelTints.length];
-
+              {workspaces.map((w) => {
                 return (
                   <StaggerItem key={w._id}>
                     <button
@@ -383,10 +339,8 @@ export default function AppHome() {
                       className="group w-full rounded-[16px] border border-border bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)] focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
                     >
                       <div className="flex items-start justify-between">
-                        <div
-                          className={`flex size-10 items-center justify-center rounded-xl border ${tint}`}
-                        >
-                          <Building2 className="size-5" />
+                        <div className="flex size-11 items-center justify-center rounded-[12px] border border-border bg-[#FBFBFC] text-[#0D0D0D]">
+                          <WorkspaceIllustration name={w.name} size={26} />
                         </div>
                         <RoleBadge role={w.role} />
                       </div>

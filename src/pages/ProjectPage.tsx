@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
-import { AppShell, RoleBadge } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
+import { ProjectIllustration } from "@/components/Illustrations";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -180,18 +181,15 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span
-                className="size-6 rounded-[6px] shrink-0 border border-border flex items-center justify-center text-[11px] font-semibold text-[#0D0D0D]"
-                style={{ backgroundColor: project.project.color || "#6E94CB" }}
-              />
+              <div className="size-7 rounded-[6px] shrink-0 border border-border bg-[#FBFBFC] flex items-center justify-center text-[#0D0D0D]">
+                <ProjectIllustration projectKey={project.project.key} name={project.project.name} size={18} />
+              </div>
               <h1 className="text-[32px] font-[600] leading-tight tracking-tight text-[#0D0D0D]">
                 {project.project.name}
               </h1>
               <span className="rounded-[4px] border border-border bg-[#F1F1F3] px-2 py-0.5 font-mono text-[11px] uppercase text-[#0D0D0D]">
                 {project.project.key}
               </span>
-              <RoleBadge role={project.role} />
-              {risk && risk.hasData && <RiskBadge level={risk.level} score={risk.score} />}
             </div>
             <p className="mt-1 text-[13px] leading-5 text-[#575657]">
               {openCount} open · {project.doneIssueCount} done
@@ -369,10 +367,10 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
 // ---------------------------------------------------------------------------
 // Analytics tab
 const RISK_TONE: Record<string, string> = {
-  low: "text-emerald-400",
-  medium: "text-amber-400",
-  high: "text-orange-400",
-  critical: "text-red-400",
+  low: "text-[#575657]",
+  medium: "text-[#575657]",
+  high: "text-[#0D0D0D] font-medium",
+  critical: "text-[#0D0D0D] font-semibold",
 };
 
 function AnalyticsTab({

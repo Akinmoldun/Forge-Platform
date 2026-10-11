@@ -15,6 +15,7 @@ import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { Button } from "@/components/ui/button";
 import type { Id } from "@/convex/_generated/dataModel";
+import { ProjectIllustration, NotionAvatarIllustration, StatusIllustration } from "@/components/Illustrations";
 
 export const DEFAULT_OVERVIEW_LAYOUT: WidgetItem[] = [
   { id: "quick_actions", size: "wide", title: "Quick actions" },
@@ -206,7 +207,7 @@ export function MyOpenIssuesWidget({
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-2">
+      <div className="flex-1 overflow-hidden py-2">
         {issues.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-4 text-center">
             <Inbox className="size-8 text-[#575657]/40 mb-2" />
@@ -215,7 +216,7 @@ export function MyOpenIssuesWidget({
           </div>
         ) : (
           <ul className="divide-y divide-border/60">
-            {issues.slice(0, 7).map((issue) => {
+            {issues.slice(0, 5).map((issue) => {
               const statusColor =
                 issue.statusColor || STATUS_PALETTE[issue.statusName] || "#9A9A9F";
               const priorityColor =
@@ -226,27 +227,23 @@ export function MyOpenIssuesWidget({
                 <li key={issue._id}>
                   <Link
                     to={`/app/issues/${issue._id}`}
-                    className="flex items-center gap-2.5 py-2 px-1 rounded-[10px] transition-colors hover:bg-[#F6F6F7]"
+                    className="flex items-center gap-2.5 py-1.5 px-1 rounded-[10px] transition-colors hover:bg-[#F6F6F7]"
                   >
-                    {/* Status dot */}
                     <span
                       className="size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: statusColor }}
                       title={`Status: ${issue.statusName}`}
                       aria-hidden="true"
                     />
-                    {/* Priority dot */}
                     <span
                       className="size-1.5 shrink-0 rounded-full"
                       style={{ backgroundColor: priorityColor }}
                       title={`Priority: ${issue.priority}`}
                       aria-hidden="true"
                     />
-                    {/* Identifier */}
                     <span className="font-mono text-[11px] font-medium text-[#575657] shrink-0">
                       {keyBadge}
                     </span>
-                    {/* Title */}
                     <span className="truncate text-[12px] font-medium text-[#0D0D0D] min-w-0 flex-1">
                       {issue.title}
                     </span>
@@ -259,8 +256,10 @@ export function MyOpenIssuesWidget({
       </div>
 
       <div className="border-t border-border/80 pt-2 flex items-center justify-between text-[11px] text-[#575657]">
-        <span>Status and priority colored indicators</span>
-        <span className="font-mono text-[10px]">Showing {Math.min(issues.length, 7)} of {issues.length}</span>
+        <span>Open work</span>
+        <Link to={viewAllLink} className="hover:text-[#0D0D0D] transition-colors">
+          View all ({issues.length})
+        </Link>
       </div>
     </div>
   );
@@ -275,10 +274,10 @@ export function RecentActivityWidget({
   activity: OverviewDataProps["activity"];
   isSampleData?: boolean;
 }) {
-  const events = activity.slice(0, 7);
+  const events = activity.slice(0, 5);
 
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex h-full flex-col justify-between overflow-hidden">
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Recent activity</span>
@@ -291,7 +290,7 @@ export function RecentActivityWidget({
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-2">
+      <div className="flex-1 overflow-hidden py-2">
         {events.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-4 text-center">
             <Clock className="size-8 text-[#575657]/40 mb-2" />
@@ -301,7 +300,6 @@ export function RecentActivityWidget({
         ) : (
           <ul className="divide-y divide-border/60">
             {events.map((e) => {
-              const initial = (e.actorName || "G").charAt(0).toUpperCase();
               const isIssueEvent = e.entityType === "issue" || e.eventType.startsWith("issue.");
               const isProjectEvent = e.entityType === "project" || e.eventType.startsWith("project.");
               const targetHref = isIssueEvent
@@ -311,11 +309,9 @@ export function RecentActivityWidget({
                   : null;
 
               const content = (
-                <div className="flex items-center justify-between gap-3 py-2 px-1 rounded-[10px] transition-colors hover:bg-[#F6F6F7]">
+                <div className="flex items-center justify-between gap-3 py-1.5 px-1 rounded-[10px] transition-colors hover:bg-[#F6F6F7]">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-[#F1F1F3] text-[10px] font-semibold text-[#0D0D0D]">
-                      {initial}
-                    </span>
+                    <NotionAvatarIllustration name={e.actorName || "User"} size={20} />
                     <div className="min-w-0 flex-1 truncate text-[12px]">
                       <span className="font-medium text-[#0D0D0D]">{e.actorName}</span>{" "}
                       <span className="text-[#575657]">
@@ -346,8 +342,10 @@ export function RecentActivityWidget({
       </div>
 
       <div className="border-t border-border/80 pt-2 flex items-center justify-between text-[11px] text-[#575657]">
-        <span>Workspace events feed</span>
-        <span className="font-mono text-[10px]">Real-time audit</span>
+        <span>Recent workspace updates</span>
+        <Link to={`/app/workspaces/${workspaceId}/activity`} className="hover:text-[#0D0D0D] transition-colors">
+          View audit
+        </Link>
       </div>
     </div>
   );
@@ -363,7 +361,7 @@ export function StatusDistributionWidget({
   const statusTotal = rollup.byStatus.reduce((sum, s) => sum + s.count, 0);
 
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex h-full flex-col justify-between overflow-hidden">
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-1.5">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Status distribution</span>
@@ -389,7 +387,7 @@ export function StatusDistributionWidget({
 
       <div className="flex items-center justify-between text-[11px] text-[#575657] border-t border-border/80 pt-1.5">
         <span>Total work items</span>
-        <span className="font-mono text-[12px] font-medium text-[#0D0D0D]">{statusTotal}</span>
+        <span className="text-[12px] font-medium text-[#0D0D0D]">{statusTotal}</span>
       </div>
     </div>
   );
@@ -406,7 +404,7 @@ export function PriorityBreakdownWidget({
   const priorityMap = new Map(rollup.byPriority.map((p) => [p.priority.toLowerCase(), p.count]));
 
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex h-full flex-col justify-between overflow-hidden">
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-1.5">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Priority breakdown</span>
@@ -434,8 +432,8 @@ export function PriorityBreakdownWidget({
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-[#575657] border-t border-border/80 pt-1.5">
-        <span>Priority queue</span>
-        <span className="font-mono text-[11px]">Urgent / High / Med / Low</span>
+        <span>Open issues</span>
+        <span className="text-[12px] font-medium text-[#0D0D0D]">{rollup.open} total</span>
       </div>
     </div>
   );
@@ -455,7 +453,7 @@ export function ProjectHealthWidget({
   isSampleData?: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex h-full flex-col justify-between overflow-hidden">
       <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-[500] text-[#0D0D0D]">Project health</span>
@@ -468,18 +466,16 @@ export function ProjectHealthWidget({
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-hidden py-1">
         {projectList.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center p-3 text-[12px] text-[#575657]">
             No projects in this workspace.
           </div>
         ) : (
           <div className="space-y-1.5">
-            {projectList.slice(0, 3).map((p) => {
+            {projectList.slice(0, 5).map((p) => {
               const risk = riskByProject.get(p._id);
               const riskLevel = risk?.level || "low";
-              const riskDot =
-                riskLevel === "high" ? "#D78FC6" : riskLevel === "medium" ? "#D6C6A1" : "#83DD79";
 
               return (
                 <Link
@@ -489,6 +485,7 @@ export function ProjectHealthWidget({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      <ProjectIllustration projectKey={p.key} name={p.name} size={15} />
                       <span className="truncate text-[12px] font-medium text-[#0D0D0D]">{p.name}</span>
                       <span className="font-mono text-[10px] text-[#575657]">{p.key}</span>
                     </div>
@@ -498,7 +495,7 @@ export function ProjectHealthWidget({
                   </div>
 
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[10px] uppercase font-medium text-[#0D0D0D]">
-                    <span className="size-1.5 rounded-full" style={{ backgroundColor: riskDot }} />
+                    <StatusIllustration category={riskLevel === "low" ? "done" : riskLevel === "medium" ? "review" : "cancelled"} size={10} />
                     {riskLevel}
                   </span>
                 </Link>
@@ -509,8 +506,8 @@ export function ProjectHealthWidget({
       </div>
 
       <div className="border-t border-border/80 pt-1.5 flex items-center justify-between text-[11px] text-[#575657]">
-        <span>Risk & progress indicators</span>
-        <span className="font-mono text-[10px]">{projectList.length} total projects</span>
+        <span>Active projects</span>
+        <span className="text-[12px] font-medium text-[#0D0D0D]">{projectList.length}</span>
       </div>
     </div>
   );

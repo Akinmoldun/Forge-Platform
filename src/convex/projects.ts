@@ -197,6 +197,7 @@ export const updateProject = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     color: v.optional(v.string()),
+    icon: v.optional(v.string()),
     defaultAssigneeId: v.optional(v.union(v.id("users"), v.null())),
     status: v.optional(
       v.union(
@@ -223,6 +224,7 @@ export const updateProject = mutation({
     }
     if (args.description !== undefined) patch.description = args.description.trim() || undefined;
     if (args.color !== undefined) patch.color = args.color.trim() || undefined;
+    if (args.icon !== undefined) patch.icon = args.icon.trim() || undefined;
     if (args.defaultAssigneeId !== undefined) patch.defaultAssigneeId = args.defaultAssigneeId ?? undefined;
     if (args.status !== undefined) patch.status = args.status;
     if (args.targetDate !== undefined) {

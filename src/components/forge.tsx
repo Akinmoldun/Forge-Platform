@@ -23,35 +23,30 @@ export const STATUS_PALETTE: Record<string, string> = {
   cancelled: "#E5857F",
 };
 
+import { PriorityIllustration, StatusIllustration } from "@/components/Illustrations";
+
 export function PriorityBadge({ priority }: { priority: string }) {
-  const color = PRIORITY_COLORS[priority] ?? "#9A9A9F";
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
-      <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+      <PriorityIllustration priority={priority} size={12} />
       <span className="capitalize">{priority}</span>
     </span>
   );
 }
 
 export function RiskBadge({ level, score }: { level: string; score?: number }) {
-  const color =
-    level === "low" ? "#83DD79" : level === "medium" ? "#D6C6A1" : "#D78FC6";
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
-      <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden />
+      <StatusIllustration category={level === "low" ? "done" : level === "medium" ? "review" : "cancelled"} size={11} />
       <span className="capitalize">{level} risk</span>
       {score !== undefined && <span className="text-[#575657]">· {score}</span>}
     </span>
   );
 }
 
-export function StatusDot({ color }: { color?: string }) {
+export function StatusDot({ color, name }: { color?: string; name?: string }) {
   return (
-    <span
-      className="inline-block size-2 shrink-0 rounded-full"
-      style={{ backgroundColor: color ?? "#9A9A9F" }}
-      aria-hidden="true"
-    />
+    <StatusIllustration category={name || color || "backlog"} name={name} size={12} />
   );
 }
 
