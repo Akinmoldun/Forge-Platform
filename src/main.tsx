@@ -51,6 +51,7 @@ const IssuePage = safeLazy(() => import("./pages/IssuePage"));
 const ProjectSettings = safeLazy(() => import("./pages/ProjectSettings"));
 const WorkspaceSettings = safeLazy(() => import("./pages/WorkspaceSettings"));
 const NotificationsPage = safeLazy(() => import("./pages/NotificationsPage"));
+const ProfileSettingsPage = safeLazy(() => import("./pages/ProfileSettingsPage"));
 const InvitePage = safeLazy(() => import("./pages/InvitePage"));
 const NotFound = safeLazy(() => import("./pages/NotFound"));
 
@@ -457,6 +458,22 @@ createRoot(document.getElementById("root")!).render(
                 element={withConvexAuth(
                   <RequireAuth redirectImmediately>
                     <NotificationsPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/settings/profile"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProfileSettingsPage />
+                  </RequireAuth>,
+                )}
+              />
+              <Route
+                path="/app/profile"
+                element={withConvexAuth(
+                  <RequireAuth redirectImmediately>
+                    <ProfileSettingsPage />
                   </RequireAuth>,
                 )}
               />

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import {
   createNotification,
@@ -204,6 +205,56 @@ export const renameWorkspace = mutation({
       eventType: "workspace.updated",
       payload: { field: "name", new_value: name },
     });
+  },
+});
+
+export const updateWorkspace = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    iconColor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadWorkspaceContext(
+      ctx,
+      args.workspaceId,
+    );
+    if (!roleAtLeast(role, "admin")) {
+      throw new Error("Only admins or owners can update workspace settings");
+    }
+
+    const patch: Record<string, unknown> = { updatedAt: Date.now() };
+
+    if (args.name !== undefined) {
+      if (role !== "owner") {
+        throw new Error("Only the workspace owner can rename the workspace");
+      }
+      const name = args.name.trim();
+      if (name.length < 2 || name.length > 60) {
+        throw new Error("Workspace name must be 2-60 characters");
+      }
+      patch.name = name;
+    }
+
+    if (args.description !== undefined) {
+      patch.description = args.description.trim() || undefined;
+    }
+
+    if (args.iconColor !== undefined) {
+      patch.iconColor = args.iconColor.trim() || undefined;
+    }
+
+    await ctx.db.patch(workspaceId, patch);
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "workspace",
+      entityId: workspaceId,
+      eventType: "workspace.updated",
+      payload: { fields: Object.keys(patch).filter((k) => k !== "updatedAt") },
+    });
+    return { ok: true };
   },
 });
 
@@ -440,6 +491,12 @@ export const createInvitations = mutation({
     }
     const user = await requireUser(ctx);
     const workspaceForNotify = (await ctx.db.get(args.workspaceId))!;
+    if (
+      workspaceForNotify.name.startsWith("Demo:") ||
+      workspaceForNotify.slug.startsWith("demo-")
+    ) {
+      throw new Error("Invitations are disabled in demo workspaces.");
+    }
     const now = Date.now();
 
     // Normalize + drop malformed entries and duplicates inside the batch
@@ -530,6 +587,12 @@ export const createInvitations = mutation({
           });
         }
 
+        // Dispath invitation email asynchronously via email provider
+        ctx.scheduler.runAfter(0, internal.email.sendInvitationEmail, {
+          invitationId,
+          token,
+        });
+
         results.push({ email, status: "created", invitationId, token });
       } catch (err) {
         results.push({
@@ -546,8 +609,7 @@ export const createInvitations = mutation({
 
 /**
  * Generates a fresh one-time token for an existing pending invitation and
- * clears the previous email-delivery state. The client then triggers the same
- * emails.sendInvitationEmail action used when the invitation was created.
+ * clears the previous email-delivery state.
  */
 export const resendInvitation = mutation({
   args: {
@@ -588,6 +650,12 @@ export const resendInvitation = mutation({
       payload: { email: invitation.email, role: invitation.role },
     });
 
+    // Schedule invitation email with the fresh token
+    ctx.scheduler.runAfter(0, internal.email.sendInvitationEmail, {
+      invitationId: invitation._id,
+      token,
+    });
+
     return { token };
   },
 });
@@ -609,10 +677,17 @@ export const listInvitations = query({
         role: i.role,
         expiresAt: i.expiresAt,
         acceptedAt: i.acceptedAt,
+        revokedAt: i.revokedAt,
         createdAt: i.createdAt,
         emailSentAt: i.emailSentAt,
         emailError: i.emailError,
-        status: i.acceptedAt ? "accepted" : i.expiresAt < Date.now() ? "expired" : "pending",
+        status: i.revokedAt
+          ? "revoked"
+          : i.acceptedAt
+            ? "accepted"
+            : i.expiresAt < Date.now()
+              ? "expired"
+              : "pending",
       }));
   },
 });
@@ -626,7 +701,7 @@ export const revokeInvitation = mutation({
     if (!invitation || invitation.workspaceId !== workspaceId) {
       throw new Error("Invitation not found");
     }
-    await ctx.db.delete(args.invitationId);
+    await ctx.db.patch(args.invitationId, { revokedAt: Date.now() });
   },
 });
 
@@ -640,13 +715,19 @@ export const getInvitationByToken = query({
       .withIndex("by_token", (q) => q.eq("tokenHash", tokenHash))
       .unique();
     if (!invitation) return null;
-    const workspace = await ctx.db.get(invitation.workspaceId);
+    const [workspace, inviter] = await Promise.all([
+      ctx.db.get(invitation.workspaceId),
+      ctx.db.get(invitation.invitedBy),
+    ]);
     return {
+      _id: invitation._id,
       email: invitation.email,
       role: invitation.role,
       workspaceName: workspace?.name ?? "Unknown workspace",
+      inviterName: inviter?.name ?? inviter?.email ?? "A teammate",
       expiresAt: invitation.expiresAt,
       acceptedAt: invitation.acceptedAt,
+      revokedAt: invitation.revokedAt,
     };
   },
 });
@@ -704,11 +785,35 @@ export const acceptInvitation = mutation({
       .query("invitations")
       .withIndex("by_token", (q) => q.eq("tokenHash", tokenHash))
       .unique();
-    if (!invitation) throw new Error("This invitation is invalid");
+    if (!invitation) throw new Error("This invitation is invalid or does not exist");
+    if (invitation.revokedAt) throw new Error("This invitation has been revoked");
     if (invitation.acceptedAt) throw new Error("This invitation has already been used");
-    if (invitation.expiresAt < Date.now()) throw new Error("This invitation has expired");
+    if (invitation.expiresAt < Date.now()) throw new Error("This invitation has expired (7-day validity)");
 
-    return await joinFromInvitation(ctx, invitation, user);
+    const signedInEmail = user.email?.trim().toLowerCase();
+    const invitedEmail = invitation.email?.trim().toLowerCase();
+    if (signedInEmail && invitedEmail && signedInEmail !== invitedEmail) {
+      throw new Error(
+        `This invitation was sent to ${invitedEmail}, but you are currently signed in as ${signedInEmail}.`,
+      );
+    }
+
+    const res = await joinFromInvitation(ctx, invitation, user);
+
+    // Notify the inviter if they aren't already the owner
+    const workspace = await ctx.db.get(invitation.workspaceId);
+    if (workspace && invitation.invitedBy !== workspace.ownerId) {
+      await createNotification(ctx, {
+        workspaceId: invitation.workspaceId,
+        recipientId: invitation.invitedBy,
+        actorId: user._id,
+        type: "member.joined",
+        title: `${user.name ?? user.email ?? "Someone"} accepted your invitation to join ${workspace.name}`,
+        body: `Joined as ${invitation.role}`,
+      });
+    }
+
+    return res;
   },
 });
 

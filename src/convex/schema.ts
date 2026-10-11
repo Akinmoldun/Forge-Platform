@@ -63,6 +63,15 @@ const schema = defineSchema(
       emailVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(v.string()),
+      jobTitle: v.optional(v.string()),
+      timezone: v.optional(v.string()),
+      avatarStorageId: v.optional(v.id("_storage")),
+      welcomeEmailSent: v.optional(v.boolean()),
+      emailMentions: v.optional(v.boolean()),
+      emailAssigned: v.optional(v.boolean()),
+      emailComments: v.optional(v.boolean()),
+      emailStatus: v.optional(v.boolean()),
+      emailInvites: v.optional(v.boolean()),
     }).index("email", ["email"]),
 
     // -------------------------------------------------------------
@@ -72,6 +81,8 @@ const schema = defineSchema(
       name: v.string(),
       slug: v.string(),
       ownerId: v.id("users"),
+      description: v.optional(v.string()),
+      iconColor: v.optional(v.string()),
       createdAt: v.number(),
       updatedAt: v.number(),
     }).index("slug", ["slug"]),
@@ -93,6 +104,7 @@ const schema = defineSchema(
       tokenHash: v.string(),
       expiresAt: v.number(),
       acceptedAt: v.optional(v.number()),
+      revokedAt: v.optional(v.number()),
       invitedBy: v.id("users"),
       // set once the invitation email has been dispatched by the email action
       emailSentAt: v.optional(v.number()),
@@ -112,6 +124,8 @@ const schema = defineSchema(
       name: v.string(),
       key: v.string(),
       description: v.optional(v.string()),
+      color: v.optional(v.string()),
+      defaultAssigneeId: v.optional(v.id("users")),
       status: projectStatusValidator,
       startDate: v.optional(v.number()),
       targetDate: v.optional(v.number()),
@@ -279,6 +293,15 @@ const schema = defineSchema(
       createdAt: v.number(),
       updatedAt: v.number(),
     }).index("by_project", ["projectId"]),
+
+    // -------------------------------------------------------------
+    // Email rate limits (max 20 sends/hour per recipient)
+    // -------------------------------------------------------------
+    emailRateLimits: defineTable({
+      recipient: v.string(),
+      windowStart: v.number(),
+      count: v.number(),
+    }).index("by_recipient", ["recipient"]),
   },
   {
     schemaValidation: false,

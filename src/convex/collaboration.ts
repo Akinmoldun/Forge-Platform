@@ -80,11 +80,55 @@ export const addComment = mutation({
       payload: { issue: `${project.key}-${issue.number}` },
     });
 
-    // notify assignee + reporter
-    const recipients = new Set<Id<"users">>();
-    if (issue.assigneeId) recipients.add(issue.assigneeId);
-    recipients.add(issue.reporterId);
-    for (const recipientId of recipients) {
+    // Check for @mentions of workspace members
+    const memberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    const members = await Promise.all(memberships.map((m) => ctx.db.get(m.userId)));
+
+    const lowerBody = body.toLowerCase();
+    const mentionedUserIds = new Set<Id<"users">>();
+
+    for (const m of members) {
+      if (!m || m._id === userId) continue;
+      const name = m.name?.trim().toLowerCase();
+      const email = m.email?.trim().toLowerCase();
+      const localPart = email ? email.split("@")[0] : null;
+
+      if (
+        (name && lowerBody.includes(`@${name}`)) ||
+        (localPart && lowerBody.includes(`@${localPart}`)) ||
+        (name && name.split(" ")[0] && lowerBody.includes(`@${name.split(" ")[0]}`))
+      ) {
+        mentionedUserIds.add(m._id);
+      }
+    }
+
+    // Send mention notifications
+    for (const mentionedId of mentionedUserIds) {
+      await createNotification(ctx, {
+        workspaceId,
+        actorId: userId,
+        recipientId: mentionedId,
+        type: "comment.mentioned",
+        title: `You were mentioned on ${project.key}-${issue.number}`,
+        body: body.slice(0, 200),
+        resourceType: "issue",
+        resourceId: issue._id,
+      });
+    }
+
+    // notify assignee + reporter (if not already notified as mentioned)
+    const otherRecipients = new Set<Id<"users">>();
+    if (issue.assigneeId && !mentionedUserIds.has(issue.assigneeId)) {
+      otherRecipients.add(issue.assigneeId);
+    }
+    if (issue.reporterId && !mentionedUserIds.has(issue.reporterId)) {
+      otherRecipients.add(issue.reporterId);
+    }
+
+    for (const recipientId of otherRecipients) {
       await createNotification(ctx, {
         workspaceId,
         actorId: userId,

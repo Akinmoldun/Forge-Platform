@@ -216,6 +216,7 @@ export const getBoard = query({
                 memberById.get(i.assigneeId)?.email?.trim() ||
                 `Guest ${i.assigneeId.slice(-4)}`)
             : null,
+          assigneeImage: i.assigneeId ? memberById.get(i.assigneeId)?.image : undefined,
           dueDate: i.dueDate,
           isBlocked: unresolvedBlockers.has(i._id),
         })),
@@ -249,6 +250,7 @@ export const getBoard = query({
                   memberById.get(i.assigneeId)?.email?.trim() ||
                   `Guest ${i.assigneeId.slice(-4)}`)
               : null,
+            assigneeImage: i.assigneeId ? memberById.get(i.assigneeId)?.image : undefined,
             dueDate: i.dueDate,
             isBlocked: unresolvedBlockers.has(i._id),
           })),

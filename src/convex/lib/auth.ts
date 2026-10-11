@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "../_generated/api";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { WorkspaceRole } from "../schema";
@@ -236,5 +237,17 @@ export async function createNotification(
     resourceType: args.resourceType,
     resourceId: args.resourceId,
     createdAt: Date.now(),
+  });
+
+  // Asynchronously trigger notification email via scheduler so user action is never slowed down
+  ctx.scheduler.runAfter(0, internal.email.sendNotificationEmail, {
+    workspaceId: args.workspaceId,
+    recipientId: args.recipientId,
+    actorId: args.actorId,
+    type: args.type,
+    title: args.title,
+    body: args.body,
+    resourceType: args.resourceType,
+    resourceId: args.resourceId,
   });
 }

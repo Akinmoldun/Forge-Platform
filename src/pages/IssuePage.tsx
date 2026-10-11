@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -446,6 +446,9 @@ export default function IssuePage() {
                   comments.map((c) => (
                     <div key={c._id} className="flex gap-3">
                       <Avatar className="size-7">
+                        {c.authorImage && (
+                          <AvatarImage src={c.authorImage} alt="" className="object-cover" />
+                        )}
                         <AvatarFallback className="text-[10px]">
                           {c.authorName.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
@@ -612,16 +615,36 @@ export default function IssuePage() {
                       const name = m.name?.trim() || m.email?.trim() || "Guest";
                       return (
                         <SelectItem key={m.userId} value={m.userId}>
-                          {isMe ? `You (${name})` : name}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="size-4 shrink-0">
+                              {m.image && <AvatarImage src={m.image} alt="" className="object-cover" />}
+                              <AvatarFallback className="text-[8px] bg-[#F1F1F3] text-[#0D0D0D]">
+                                {name.slice(0, 1).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{isMe ? `You (${name})` : name}</span>
+                          </div>
                         </SelectItem>
                       );
                     })}
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm">
-                  {detail.assignee?.name ?? (issue.assigneeId ? "Guest" : "Unassigned")}
-                </p>
+                <div className="flex items-center gap-2">
+                  {issue.assigneeId && (
+                    <Avatar className="size-5 shrink-0">
+                      {detail.assignee?.image && (
+                        <AvatarImage src={detail.assignee.image} alt="" className="object-cover" />
+                      )}
+                      <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D]">
+                        {(detail.assignee?.name ?? "G").slice(0, 1).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <p className="text-sm">
+                    {detail.assignee?.name ?? (issue.assigneeId ? "Guest" : "Unassigned")}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -701,7 +724,17 @@ export default function IssuePage() {
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <User className="size-3" /> Reporter
               </p>
-              <p className="text-sm">{detail.reporter?.name ?? "Unknown"}</p>
+              <div className="flex items-center gap-2">
+                <Avatar className="size-5 shrink-0">
+                  {detail.reporter?.image && (
+                    <AvatarImage src={detail.reporter.image} alt="" className="object-cover" />
+                  )}
+                  <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D]">
+                    {(detail.reporter?.name ?? "U").slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-sm">{detail.reporter?.name ?? "Unknown"}</p>
+              </div>
             </div>
 
             {/* Role note */}

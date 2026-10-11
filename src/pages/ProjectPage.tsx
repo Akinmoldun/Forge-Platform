@@ -15,7 +15,7 @@ import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -674,6 +674,7 @@ function BoardView({
             title: string;
             priority: string;
             assigneeName: string | null;
+            assigneeImage?: string;
             isBlocked: boolean;
             dueDate?: number;
           }>;
@@ -768,6 +769,9 @@ function BoardView({
                     )}
                     {i.assigneeName && (
                       <Avatar className="ml-auto size-5">
+                        {i.assigneeImage && (
+                          <AvatarImage src={i.assigneeImage} alt="" className="object-cover" />
+                        )}
                         <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
                           {i.assigneeName.slice(0, 2).toUpperCase()}
                         </AvatarFallback>

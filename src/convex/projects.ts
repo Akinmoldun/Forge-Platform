@@ -196,6 +196,8 @@ export const updateProject = mutation({
     projectId: v.id("projects"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    color: v.optional(v.string()),
+    defaultAssigneeId: v.optional(v.union(v.id("users"), v.null())),
     status: v.optional(
       v.union(
         v.literal("planning"),
@@ -220,6 +222,8 @@ export const updateProject = mutation({
       patch.name = name;
     }
     if (args.description !== undefined) patch.description = args.description.trim() || undefined;
+    if (args.color !== undefined) patch.color = args.color.trim() || undefined;
+    if (args.defaultAssigneeId !== undefined) patch.defaultAssigneeId = args.defaultAssigneeId ?? undefined;
     if (args.status !== undefined) patch.status = args.status;
     if (args.targetDate !== undefined) {
       if (args.targetDate <= 0) throw new Error("Target date must be a valid timestamp");
@@ -238,6 +242,42 @@ export const updateProject = mutation({
         fields: Object.keys(patch).filter((k) => k !== "updatedAt"),
       },
     });
+  },
+});
+
+export const archiveProject = mutation({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadProjectContext(ctx, args.projectId);
+    if (!roleAtLeast(role, "admin")) throw new Error("Only admins can archive projects");
+    await ctx.db.patch(args.projectId, { status: "archived", updatedAt: Date.now() });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "project",
+      entityId: args.projectId,
+      eventType: "project.archived",
+      projectId: args.projectId,
+    });
+    return { ok: true };
+  },
+});
+
+export const restoreProject = mutation({
+  args: { projectId: v.id("projects") },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadProjectContext(ctx, args.projectId);
+    if (!roleAtLeast(role, "admin")) throw new Error("Only admins can restore projects");
+    await ctx.db.patch(args.projectId, { status: "active", updatedAt: Date.now() });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "project",
+      entityId: args.projectId,
+      eventType: "project.restored",
+      projectId: args.projectId,
+    });
+    return { ok: true };
   },
 });
 
@@ -315,3 +355,76 @@ export const createLabel = mutation({
     return { labelId };
   },
 });
+
+export const updateLabel = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    labelId: v.id("labels"),
+    name: v.optional(v.string()),
+    color: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, role } = await loadWorkspaceContext(ctx, args.workspaceId);
+    if (!roleAtLeast(role, "member")) throw new Error("Viewers cannot edit labels");
+
+    const label = await ctx.db.get(args.labelId);
+    if (!label || label.workspaceId !== workspaceId) {
+      throw new Error("Label not found");
+    }
+
+    const patch: { name?: string; color?: string } = {};
+
+    if (args.name !== undefined) {
+      const name = args.name.trim().toLowerCase();
+      if (name.length < 2 || name.length > 30) throw new Error("Label name must be 2-30 characters");
+      const duplicates = await ctx.db
+        .query("labels")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .collect();
+      if (duplicates.some((l) => l.name === name && l._id !== args.labelId)) {
+        throw new Error(`A label named "${name}" already exists`);
+      }
+      patch.name = name;
+    }
+
+    if (args.color !== undefined) {
+      const color = args.color.trim();
+      if (color.length < 1 || color.length > 32) throw new Error("Label color must be 1-32 characters");
+      patch.color = color;
+    }
+
+    await ctx.db.patch(args.labelId, patch);
+    return { ok: true };
+  },
+});
+
+export const deleteLabel = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    labelId: v.id("labels"),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, role } = await loadWorkspaceContext(ctx, args.workspaceId);
+    if (!roleAtLeast(role, "member")) throw new Error("Viewers cannot delete labels");
+
+    const label = await ctx.db.get(args.labelId);
+    if (!label || label.workspaceId !== workspaceId) {
+      throw new Error("Label not found");
+    }
+
+    // Remove all associations on issues
+    const issueLabels = await ctx.db
+      .query("issueLabels")
+      .withIndex("by_issue_label")
+      .collect();
+    for (const il of issueLabels) {
+      if (il.labelId === args.labelId) {
+        await ctx.db.delete(il._id);
+      }
+    }
+
+    await ctx.db.delete(args.labelId);
+    return { ok: true };
+  },
+});
+

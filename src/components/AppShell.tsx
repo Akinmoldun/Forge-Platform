@@ -14,9 +14,10 @@ import {
   UserPlus,
   X,
   Loader2,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -148,9 +149,16 @@ function AccountMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const updateDisplayName = useMutation(api.users.updateDisplayName);
+  const ensureWelcomeEmail = useMutation(api.users.ensureWelcomeEmail);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user && !user.isAnonymous && user.email) {
+      ensureWelcomeEmail().catch(() => {});
+    }
+  }, [user, ensureWelcomeEmail]);
 
   const isGuest = user?.isAnonymous || !user || !user.email;
   const displayName = user?.name?.trim() || user?.email?.trim() || (isGuest ? "Guest" : "User");
@@ -180,6 +188,9 @@ function AccountMenu() {
           aria-label="Account menu"
         >
           <Avatar className="size-8">
+            {user?.image ? (
+              <AvatarImage src={user.image} alt="" className="object-cover" />
+            ) : null}
             <AvatarFallback className="border border-border bg-[#F1F1F3] text-[12px] font-semibold text-[#0D0D0D]">
               {initial}
             </AvatarFallback>
@@ -257,6 +268,12 @@ function AccountMenu() {
             <UserPlus className="size-3.5 mr-2 text-[#575657]" /> Create an account
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem
+          onClick={() => navigate("/app/settings/profile")}
+          className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+        >
+          <User className="size-3.5 mr-2 text-[#575657]" /> Profile & settings
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => navigate("/app")}
           className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
