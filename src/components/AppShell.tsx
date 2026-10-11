@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -422,7 +422,9 @@ export function AppShell({
       const next = !prev;
       try {
         localStorage.setItem("forge_sidebar_collapsed", String(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -466,7 +468,9 @@ export function AppShell({
         : [...prev, projectId];
       try {
         localStorage.setItem(storagePinKey, JSON.stringify(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -495,7 +499,9 @@ export function AppShell({
           const next = [{ id: pId, name: p.name, type: "project" as const, path: `/app/projects/${pId}` }, ...filtered].slice(0, 5);
           try {
             localStorage.setItem(storageRecentKey, JSON.stringify(next));
-          } catch {}
+          } catch {
+            /* ignore */
+          }
           return next;
         });
       }
