@@ -72,7 +72,7 @@ export function PageHeader({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">
+            <h1 className="text-[32px] font-[600] leading-tight tracking-tight text-[#0D0D0D]">
               {title}
             </h1>
             {meta}

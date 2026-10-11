@@ -44,17 +44,28 @@ export function CreateProjectDialog({
   canCreate,
   trigger,
   defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
   onCreated,
 }: {
   workspaceId: Id<"workspaces">;
   canCreate: boolean;
   trigger?: React.ReactNode;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onCreated?: (projectId: Id<"projects">) => void;
 }) {
   const navigate = useNavigate();
   const createProject = useMutation(api.projects.createProject);
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (val: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof val === "function" ? val(open) : val;
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
@@ -96,13 +107,15 @@ export function CreateProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm" className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
-            <Plus className="size-4 mr-1" /> Create project
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm" className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+              <Plus className="size-4 mr-1" /> Create project
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && (e.target as HTMLElement).tagName !== "TEXTAREA") {
@@ -199,6 +212,8 @@ export function CreateIssueDialog({
   defaultProjectId,
   workspaceId,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
   onCreated,
 }: {
   projects: Array<{ _id: Id<"projects">; name: string; key: string }>;
@@ -206,12 +221,21 @@ export function CreateIssueDialog({
   defaultProjectId?: Id<"projects">;
   workspaceId?: Id<"workspaces">;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onCreated?: (issueId: Id<"issues">) => void;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const createIssue = useMutation(api.issues.createIssue);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (val: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof val === "function" ? val(open) : val;
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
 
   // Preselect: project page > last project used in localStorage > only project > first project
   const [projectId, setProjectId] = useState<string>(() => {
@@ -326,16 +350,18 @@ export function CreateIssueDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          {trigger ?? (
-            <Button
-              size="sm"
-              className="h-9 rounded-full bg-[#0D0D0D] px-4 text-[13px] text-white hover:bg-[#262626]"
-            >
-              <Plus className="mr-1 size-4" /> Create issue
-            </Button>
-          )}
-        </DialogTrigger>
+        {trigger !== null && (
+          <DialogTrigger asChild>
+            {trigger ?? (
+              <Button
+                size="sm"
+                className="h-9 rounded-full bg-[#0D0D0D] px-4 text-[13px] text-white hover:bg-[#262626]"
+              >
+                <Plus className="mr-1 size-4" /> Create issue
+              </Button>
+            )}
+          </DialogTrigger>
+        )}
         <DialogContent
           onKeyDown={(e) => {
             if (

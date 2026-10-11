@@ -279,12 +279,21 @@ export default function WorkspaceSettings() {
     if (deleteConfirmName.trim() !== workspaceRealName.trim() || deleting) return;
     setDeleting(true);
     try {
-      await deleteOrLeaveWorkspace(convex, workspaceId as string);
+      await deleteOrLeaveWorkspace(convex, workspaceId as string, deleteConfirmName.trim());
       toast.success("Workspace deleted");
       setDeleteDialogOpen(false);
       navigate("/app", { replace: true });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete workspace");
+      let rawMsg = e instanceof Error ? e.message : "Failed to delete workspace";
+      // Strip Convex RPC prefix if present (e.g. "[Request ID: ...] Server Error Uncaught Error: ...")
+      if (rawMsg.includes("Uncaught Error: ")) {
+        rawMsg = rawMsg.split("Uncaught Error: ")[1].split("\n")[0].trim();
+      } else if (rawMsg.includes("Uncaught ")) {
+        rawMsg = rawMsg.split("Uncaught ")[1].split("\n")[0].trim();
+      } else if (rawMsg.startsWith("Convex")) {
+        rawMsg = rawMsg.replace(/^Convex\s*(Error:?)?\s*/i, "").trim() || "Failed to delete workspace";
+      }
+      toast.error(rawMsg);
     } finally {
       setDeleting(false);
     }

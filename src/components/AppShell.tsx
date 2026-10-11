@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   Bell,
   Building2,
   Check,
   ChevronDown,
+  ChevronRight,
   LogOut,
   Pencil,
   Plus,
@@ -15,6 +17,23 @@ import {
   X,
   Loader2,
   User,
+  Search,
+  LayoutDashboard,
+  FolderKanban,
+  GitBranch,
+  BarChart3,
+  Users,
+  History,
+  Settings,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Keyboard,
+  Star,
+  Clock,
+  KanbanSquare,
+  List,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,22 +45,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { resetGuestDemo } from "@/lib/guestDemo";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
 import { FadeIn } from "./motion";
-import { PAGE_MAX, SHELL_MAX } from "./app-ui";
+import { CreateIssueDialog, CreateProjectDialog } from "./dialogs";
+import { CommandPaletteDialog } from "./CommandPaletteDialog";
+import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
+import { AppBreadcrumbs } from "./AppBreadcrumbs";
 
-/** Primary workspace navigation tabs. */
+/** Primary workspace navigation rows. */
 const WORKSPACE_NAV = [
-  { label: "Overview", segment: "" },
-  { label: "Projects", segment: "projects" },
-  { label: "Workflow", segment: "workflow" },
-  { label: "Analytics", segment: "analytics" },
-  { label: "Teams", segment: "teams" },
-  { label: "Activity", segment: "activity" },
-  { label: "Settings", segment: "settings" },
+  { label: "Overview", segment: "", icon: LayoutDashboard },
+  { label: "Projects", segment: "projects", icon: FolderKanban },
+  { label: "Workflow", segment: "workflow", icon: GitBranch },
+  { label: "Analytics", segment: "analytics", icon: BarChart3 },
+  { label: "Teams", segment: "teams", icon: Users },
+  { label: "Activity", segment: "activity", icon: History },
+  { label: "Settings", segment: "settings", icon: Settings },
 ] as const;
 
 export function workspacePath(workspaceId: string, segment: string): string {
@@ -50,9 +73,24 @@ export function workspacePath(workspaceId: string, segment: string): string {
     : `/app/workspaces/${workspaceId}`;
 }
 
-function isNavActive(pathname: string, target: string): boolean {
+function isNavActive(pathname: string, target: string, isRoot = false): boolean {
   if (pathname === target) return true;
+  if (isRoot) return pathname === `${target}/overview`;
   return pathname.startsWith(`${target}/`);
+}
+
+/** Returns true if the route belongs to a workspace. */
+export function isWorkspaceRoute(pathname: string): boolean {
+  if (
+    pathname === "/app" ||
+    pathname === "/app/" ||
+    pathname.startsWith("/app/settings") ||
+    pathname === "/invite" ||
+    pathname.startsWith("/invite/")
+  ) {
+    return false;
+  }
+  return /^\/app\/(workspaces|projects|issues)\/[^/]+/.test(pathname);
 }
 
 function ScrollManager() {
@@ -68,84 +106,34 @@ function ScrollManager() {
   return null;
 }
 
-/** Nav tabs: active tab is a #F1F1F3 pill with ink text; inactive muted and turns ink on hover. */
-function WorkspaceNavTabs({ workspaceId }: { workspaceId: string }) {
-  const { pathname } = useLocation();
-  return (
-    <nav
-      aria-label="Workspace"
-      className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-    >
-      {WORKSPACE_NAV.map(({ label, segment }) => {
-        const to = workspacePath(workspaceId, segment);
-        const active = isNavActive(pathname, to);
-        return (
-          <Link
-            key={label}
-            to={to}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "inline-flex min-h-[36px] sm:min-h-[32px] shrink-0 items-center rounded-full px-3.5 py-1 text-[13px] font-medium transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
-              active
-                ? "bg-[#F1F1F3] text-[#0D0D0D]"
-                : "text-[#575657] hover:bg-[#F1F1F3]/60 hover:text-[#0D0D0D]",
-            )}
-          >
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
+const PASTEL_COLORS = [
+  "#9FDA85",
+  "#83DD79",
+  "#BED390",
+  "#D6C6A1",
+  "#D78FC6",
+  "#7957EC",
+  "#6E94CB",
+];
+
+function getPastelForKey(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return PASTEL_COLORS[Math.abs(hash) % PASTEL_COLORS.length];
 }
 
-function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
-  const navigate = useNavigate();
-  const workspaces = useQuery(api.workspaces.listMyWorkspaces) ?? [];
-  const active = workspaceId ? workspaces.find((w) => w._id === workspaceId) : undefined;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Switch workspace"
-          className="inline-flex h-9 min-h-[44px] sm:min-h-[36px] max-w-[15rem] items-center gap-2 rounded-full border border-border bg-white px-3.5 text-[13px] font-medium text-[#0D0D0D] transition-colors hover:bg-[#F1F1F3] outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
-        >
-          <Building2 className="size-3.5 shrink-0 text-[#575657]" aria-hidden="true" />
-          <span className="truncate">{active ? active.name : "Workspaces"}</span>
-          <ChevronDown className="ml-auto size-3.5 shrink-0 text-[#575657]" aria-hidden="true" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64 rounded-[16px] border border-border bg-white p-1.5 shadow-none">
-        <DropdownMenuLabel className="px-2 py-1.5 text-xs text-[#575657] font-medium">Switch workspace</DropdownMenuLabel>
-        {workspaces.map((w) => (
-          <DropdownMenuItem
-            key={w._id}
-            onClick={() => navigate(workspacePath(w._id, ""))}
-            className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
-          >
-            <span className="min-w-0 flex-1 truncate">{w.name}</span>
-            <span className="text-[11px] text-[#575657]">{w.projectCount} proj</span>
-            {active?._id === w._id && <Check className="size-3.5 ml-2 text-[#0D0D0D]" />}
-          </DropdownMenuItem>
-        ))}
-        {workspaces.length === 0 && (
-          <p className="px-2.5 py-3 text-xs text-[#575657]">No workspaces yet.</p>
-        )}
-        <DropdownMenuSeparator className="bg-border" />
-        <DropdownMenuItem
-          onClick={() => navigate("/app")}
-          className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
-        >
-          <Plus className="size-3.5 mr-2" /> New workspace
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function AccountMenu() {
+// ---------------------------------------------------------------------------
+// Account menu
+// ---------------------------------------------------------------------------
+function AccountMenu({
+  onOpenShortcuts,
+  collapsed = false,
+}: {
+  onOpenShortcuts?: () => void;
+  collapsed?: boolean;
+}) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const updateDisplayName = useMutation(api.users.updateDisplayName);
@@ -184,20 +172,39 @@ function AccountMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="size-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] inline-flex items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
+          className={cn(
+            "group flex items-center rounded-[10px] text-left transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
+            collapsed
+              ? "size-10 justify-center hover:bg-[#ECECEE]"
+              : "w-full gap-2.5 p-1.5 hover:bg-[#ECECEE]"
+          )}
           aria-label="Account menu"
         >
-          <Avatar className="size-8">
+          <Avatar className="size-7 shrink-0">
             {user?.image ? (
               <AvatarImage src={user.image} alt="" className="object-cover" />
             ) : null}
-            <AvatarFallback className="border border-border bg-[#F1F1F3] text-[12px] font-semibold text-[#0D0D0D]">
+            <AvatarFallback className="border border-border bg-[#F1F1F3] text-[11px] font-semibold text-[#0D0D0D]">
               {initial}
             </AvatarFallback>
           </Avatar>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-medium text-[#0D0D0D] leading-tight">
+                {displayName}
+              </p>
+              <p className="truncate text-[11px] text-[#575657]">
+                {isGuest ? "Guest demo" : user?.email ?? "Signed in"}
+              </p>
+            </div>
+          )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 rounded-[16px] border border-border bg-white p-2 shadow-none">
+      <DropdownMenuContent
+        align={collapsed ? "start" : "end"}
+        side="top"
+        className="w-64 rounded-[16px] border border-border bg-white p-2 shadow-none"
+      >
         <div className="px-2.5 py-1.5">
           {editingName ? (
             <div className="space-y-1.5 pt-1">
@@ -280,6 +287,14 @@ function AccountMenu() {
         >
           <Building2 className="size-3.5 mr-2 text-[#575657]" /> All workspaces
         </DropdownMenuItem>
+        {onOpenShortcuts && (
+          <DropdownMenuItem
+            onClick={onOpenShortcuts}
+            className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+          >
+            <Keyboard className="size-3.5 mr-2 text-[#575657]" /> Keyboard shortcuts
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem
           onClick={async () => {
@@ -295,28 +310,9 @@ function AccountMenu() {
   );
 }
 
-function NotificationBell() {
-  const navigate = useNavigate();
-  const notifications = useQuery(api.analytics.listNotifications);
-  const unread = notifications?.unreadCount ?? 0;
-  return (
-    <button
-      type="button"
-      className="relative flex size-9 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] items-center justify-center rounded-full text-[#575657] hover:bg-[#F1F1F3] hover:text-[#0D0D0D] transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
-      onClick={() => navigate("/app/notifications")}
-      aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-    >
-      <Bell className="size-4" />
-      {unread > 0 && (
-        <span
-          className="absolute top-2.5 right-2.5 size-2 rounded-full bg-[#D78FC6]"
-          aria-hidden="true"
-        />
-      )}
-    </button>
-  );
-}
-
+// ---------------------------------------------------------------------------
+// Guest Demo Banner
+// ---------------------------------------------------------------------------
 function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
   const { user } = useAuth();
   const convex = useConvex();
@@ -340,11 +336,11 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
   };
 
   return (
-    <div className="bg-[#0D0D0D] text-white px-4 py-2 text-[12px] flex items-center justify-between gap-3 border-b border-[#262626]">
+    <div className="bg-[#0D0D0D] text-white px-4 py-1.5 text-[12px] flex items-center justify-between gap-3 border-b border-[#262626] shrink-0">
       <div className="flex items-center gap-2 min-w-0">
         <span className="inline-block size-2 rounded-full bg-[#83DD79] shrink-0" />
         <span className="truncate text-white/90 font-normal">
-          You're exploring a demo. Create an account to keep your own work.
+          You're exploring a demo. Create an account to keep your work.
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -352,7 +348,7 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
           type="button"
           onClick={handleResetDemo}
           disabled={resetting}
-          className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white hover:bg-white/20 transition-colors disabled:opacity-50"
         >
           {resetting ? (
             <Loader2 className="size-3 animate-spin" />
@@ -364,7 +360,7 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
         <button
           type="button"
           onClick={() => navigate("/signup")}
-          className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#0D0D0D] hover:bg-[#F1F1F3] transition-colors"
+          className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#0D0D0D] hover:bg-[#F1F1F3] transition-colors"
         >
           Create account
         </button>
@@ -373,67 +369,948 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main AppShell
+// ---------------------------------------------------------------------------
 export function AppShell({
   children,
   workspaceId,
+  pageActions,
 }: {
   children: React.ReactNode;
   workspaceId?: string;
+  pageActions?: React.ReactNode;
 }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  return (
-    <div className="flex min-h-screen flex-col bg-[#FBFBFC] text-[#0D0D0D]">
-      <ScrollManager />
+  // If outside workspace
+  const isInsideWorkspace = isWorkspaceRoute(pathname);
 
-      {/* Guest demo banner - visible only to anonymous users */}
-      <GuestDemoBanner workspaceId={workspaceId} />
+  // Queries
+  const myWorkspaces = useQuery(
+    api.workspaces.listMyWorkspaces,
+    isInsideWorkspace ? {} : "skip"
+  );
+  const currentWorkspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
+  );
+  const notifications = useQuery(
+    api.analytics.listNotifications,
+    isInsideWorkspace ? {} : "skip"
+  );
 
-      {/* Top bar: height 56px, white, 1px bottom border, sticky */}
-      <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
-        <div className={SHELL_MAX}>
-          {/* Logo & Brand Wordmark from landing page */}
+  const unreadCount = notifications?.unreadCount ?? 0;
+
+  // Sidebar collapse state (persisted in localStorage)
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("forge_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("forge_sidebar_collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Mobile drawer open state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [pathname]);
+
+  // Command palette state
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  // Keyboard shortcuts dialog state
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  // New Issue dialog state
+  const [newIssueOpen, setNewIssueOpen] = useState(false);
+
+  // New Project dialog state
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+
+  // Pinned projects in localStorage
+  const storagePinKey = `forge_pinned_${workspaceId || "global"}_${user?._id || "anon"}`;
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(storagePinKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const togglePinProject = (projectId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setPinnedIds((prev) => {
+      const next = prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId];
+      try {
+        localStorage.setItem(storagePinKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Recent items in localStorage
+  const storageRecentKey = `forge_recent_${workspaceId || "global"}`;
+  const [recentItems, setRecentItems] = useState<Array<{ id: string; name: string; type: "project" | "issue"; path: string }>>(() => {
+    try {
+      const saved = localStorage.getItem(storageRecentKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Track recent visits
+  useEffect(() => {
+    if (!projects || projects.length === 0) return;
+    const matchProj = pathname.match(/^\/app\/projects\/([^/]+)/);
+    if (matchProj) {
+      const pId = matchProj[1];
+      const p = projects.find((x) => x._id === pId);
+      if (p) {
+        setRecentItems((prev) => {
+          const filtered = prev.filter((item) => item.id !== pId);
+          const next = [{ id: pId, name: p.name, type: "project" as const, path: `/app/projects/${pId}` }, ...filtered].slice(0, 5);
+          try {
+            localStorage.setItem(storageRecentKey, JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+    }
+  }, [pathname, projects, storageRecentKey]);
+
+  // Section collapse states
+  const [workspaceSectionCollapsed, setWorkspaceSectionCollapsed] = useState(false);
+  const [projectsSectionCollapsed, setProjectsSectionCollapsed] = useState(false);
+  const [recentSectionCollapsed, setRecentSectionCollapsed] = useState(false);
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
+
+  const toggleProjectExpanded = (pId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedProjects((prev) => ({ ...prev, [pId]: !prev[pId] }));
+  };
+
+  // Keyboard shortcut listener
+  useEffect(() => {
+    let lastKey = "";
+    let lastKeyTime = 0;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts inside text inputs/contenteditable
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.getAttribute("role") === "textbox");
+
+      // Global Command palette: Cmd+K / Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCommandOpen((prev) => !prev);
+        return;
+      }
+
+      // Close drawer on Escape
+      if (e.key === "Escape") {
+        if (mobileDrawerOpen) setMobileDrawerOpen(false);
+        return;
+      }
+
+      if (isInput) return;
+
+      // Single-key shortcuts
+      if (e.key === "[") {
+        e.preventDefault();
+        toggleCollapsed();
+        return;
+      }
+
+      if (e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        setNewIssueOpen(true);
+        return;
+      }
+
+      // Sequence: G then O / G then P
+      const now = Date.now();
+      if (e.key.toLowerCase() === "g") {
+        lastKey = "g";
+        lastKeyTime = now;
+        return;
+      }
+
+      if (lastKey === "g" && now - lastKeyTime < 1000) {
+        if (e.key.toLowerCase() === "o" && workspaceId) {
+          e.preventDefault();
+          navigate(`/app/workspaces/${workspaceId}`);
+          lastKey = "";
+          return;
+        }
+        if (e.key.toLowerCase() === "p" && workspaceId) {
+          e.preventDefault();
+          navigate(`/app/workspaces/${workspaceId}/projects`);
+          lastKey = "";
+          return;
+        }
+      }
+      lastKey = "";
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileDrawerOpen, workspaceId, navigate]);
+
+  // Current active project if on project page
+  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
+  const activeProject = projects?.find((p) => p._id === activeProjectId);
+
+  // If outside workspace (e.g. /app, /app/settings/profile, /invite)
+  if (!isInsideWorkspace) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[#FBFBFC] text-[#0D0D0D]">
+        <ScrollManager />
+        <GuestDemoBanner workspaceId={workspaceId} />
+
+        {/* 56px Top bar outside workspace */}
+        <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
+          <div className="mx-auto flex h-14 w-full max-w-[1100px] items-center justify-between px-4 sm:px-6">
+            <Link
+              to="/app"
+              className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
+              aria-label="Forge home"
+            >
+              <ForgeLogo className="size-6 text-[#0D0D0D]" />
+              <span className="text-[16px] font-semibold tracking-tight text-[#0D0D0D] select-none">
+                Forge
+              </span>
+            </Link>
+
+            <div className="flex shrink-0 items-center">
+              <AccountMenu onOpenShortcuts={() => setShortcutsOpen(true)} />
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1">
+          <FadeIn key={pathname} className="mx-auto w-full max-w-[1100px] px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8">
+            {children}
+          </FadeIn>
+        </main>
+
+        <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      </div>
+    );
+  }
+
+  // Active workspace object
+  const activeWs =
+    currentWorkspace?.workspace ||
+    myWorkspaces?.find((w) => w._id === workspaceId) ||
+    (workspaceId ? { _id: workspaceId as Id<"workspaces">, name: "Workspace" } : undefined);
+
+  // Projects list: 8 most recent
+  const visibleProjects = projects?.slice(0, 8) ?? [];
+  const hasMoreProjects = (projects?.length ?? 0) > 8;
+
+  // Workspace switcher component for sidebar
+  const workspaceSwitcherPill = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Switch workspace"
+          className={cn(
+            "group flex w-full items-center rounded-[10px] text-left transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
+            collapsed
+              ? "size-10 justify-center hover:bg-[#ECECEE]"
+              : "gap-2 px-2 py-1.5 hover:bg-[#ECECEE]"
+          )}
+        >
+          <div
+            className="flex size-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-white text-[11px] font-semibold text-[#0D0D0D]"
+            style={{
+              backgroundColor: activeWs ? getPastelForKey(activeWs.name) : "#F1F1F3",
+            }}
+          >
+            {activeWs?.name ? activeWs.name.charAt(0).toUpperCase() : "W"}
+          </div>
+          {!collapsed && (
+            <>
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#0D0D0D]">
+                {activeWs ? activeWs.name : "Loading..."}
+              </span>
+              <ChevronDown className="size-3.5 shrink-0 text-[#575657]" aria-hidden="true" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-64 rounded-[16px] border border-border bg-white p-1.5 shadow-none"
+      >
+        <DropdownMenuLabel className="px-2 py-1 text-xs text-[#575657] font-medium">
+          Switch workspace
+        </DropdownMenuLabel>
+        {myWorkspaces?.map((w) => (
+          <DropdownMenuItem
+            key={w._id}
+            onClick={() => navigate(workspacePath(w._id, ""))}
+            className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+          >
+            <span
+              className="mr-2 size-2 rounded-full"
+              style={{ backgroundColor: getPastelForKey(w.name) }}
+            />
+            <span className="min-w-0 flex-1 truncate">{w.name}</span>
+            <span className="text-[11px] text-[#575657]">{w.projectCount} proj</span>
+            {activeWs?._id === w._id && <Check className="size-3.5 ml-2 text-[#0D0D0D]" />}
+          </DropdownMenuItem>
+        ))}
+        {myWorkspaces && myWorkspaces.length === 0 && (
+          <p className="px-2.5 py-3 text-xs text-[#575657]">No workspaces yet.</p>
+        )}
+        <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem
+          onClick={() => navigate("/app")}
+          className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+        >
+          <Building2 className="size-3.5 mr-2 text-[#575657]" /> All workspaces
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate("/app")}
+          className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
+        >
+          <Plus className="size-3.5 mr-2" /> Create workspace
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // Sidebar content (shared by desktop sidebar and mobile drawer)
+  const sidebarContent = (
+    <TooltipProvider delayDuration={300}>
+      <aside
+        className={cn(
+          "flex h-full flex-col bg-[#F7F7F8] border-r border-border transition-all duration-200 select-none",
+          collapsed ? "w-14" : "w-64"
+        )}
+      >
+        {/* Top: Logo & collapse toggle */}
+        <div className="flex h-12 items-center justify-between px-3 border-b border-border/40 shrink-0">
           <Link
             to="/app"
-            className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
+            className={cn(
+              "flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85",
+              collapsed && "mx-auto justify-center"
+            )}
             aria-label="Forge home"
           >
-            <ForgeLogo className="size-6 text-[#0D0D0D]" />
-            <span className="text-[16px] font-semibold tracking-tight text-[#0D0D0D] select-none">
-              Forge
-            </span>
+            <ForgeLogo className="size-5 text-[#0D0D0D]" />
+            {!collapsed && (
+              <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
+                Forge
+              </span>
+            )}
           </Link>
 
-          <span className="h-4 w-px shrink-0 bg-border mx-1" aria-hidden="true" />
+          {!collapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                  aria-label="Collapse sidebar ([)"
+                >
+                  <PanelLeftClose className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Collapse sidebar ([)</TooltipContent>
+            </Tooltip>
+          )}
 
-          {/* Workspace Switcher */}
-          {workspaceId && (
-            <div className="flex min-w-0 items-center">
-              <WorkspaceSwitcher workspaceId={workspaceId} />
+          {collapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  className="hidden"
+                  aria-label="Expand sidebar ([)"
+                >
+                  <PanelLeftOpen className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Expand sidebar ([)</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {/* Workspace Switcher */}
+        <div className="p-2 border-b border-border/40 shrink-0">
+          {workspaceSwitcherPill}
+        </div>
+
+        {/* Quick Rows: Search & Inbox */}
+        <div className="p-2 space-y-0.5 border-b border-border/40 shrink-0">
+          {/* Search row */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setCommandOpen(true)}
+                className={cn(
+                  "flex h-8 w-full items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
+                  collapsed ? "justify-center" : "justify-between"
+                )}
+                aria-label="Search (Ctrl+K)"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Search className="size-4 shrink-0" />
+                  {!collapsed && <span className="font-medium">Search</span>}
+                </div>
+                {!collapsed && (
+                  <kbd className="rounded-[4px] border border-border/70 bg-white px-1.5 py-0.2 text-[10px] font-mono text-[#575657]">
+                    ⌘K
+                  </kbd>
+                )}
+              </button>
+            </TooltipTrigger>
+            {collapsed && <TooltipContent side="right">Search (⌘K)</TooltipContent>}
+          </Tooltip>
+
+          {/* Inbox row (Notifications) */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to={workspaceId ? `/app/workspaces/${workspaceId}/notifications` : "/app"}
+                className={cn(
+                  "flex h-8 w-full items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                  collapsed ? "justify-center relative" : "justify-between",
+                  pathname.includes("/notifications")
+                    ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                    : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                )}
+                aria-label={`Inbox ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Bell className="size-4 shrink-0" />
+                  {!collapsed && <span className="font-medium">Inbox</span>}
+                </div>
+                {unreadCount > 0 && (
+                  <span
+                    className={cn(
+                      "rounded-full bg-[#D78FC6] font-medium text-white flex items-center justify-center",
+                      collapsed
+                        ? "absolute top-1 right-1 size-2"
+                        : "px-1.5 py-0.2 text-[10px]"
+                    )}
+                  >
+                    {!collapsed && unreadCount}
+                  </span>
+                )}
+              </Link>
+            </TooltipTrigger>
+            {collapsed && (
+              <TooltipContent side="right">
+                Inbox {unreadCount > 0 ? `(${unreadCount} unread)` : ""}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </div>
+
+        {/* Scrollable Middle Navigation */}
+        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          {/* Section: Workspace */}
+          <div>
+            {!collapsed && (
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-[12px] font-medium text-[#575657] lowercase first-letter:capitalize">
+                  Workspace
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceSectionCollapsed((p) => !p)}
+                  className="text-[#575657] hover:text-[#0D0D0D]"
+                  aria-label="Toggle workspace section"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 transition-transform",
+                      workspaceSectionCollapsed && "-rotate-90"
+                    )}
+                  />
+                </button>
+              </div>
+            )}
+
+            {!workspaceSectionCollapsed && (
+              <nav aria-label="Workspace pages" className="space-y-0.5">
+                {WORKSPACE_NAV.map(({ label, segment, icon: Icon }) => {
+                  const to = workspaceId ? workspacePath(workspaceId, segment) : "/app";
+                  const active = isNavActive(pathname, to, segment === "");
+
+                  return (
+                    <Tooltip key={label}>
+                      <TooltipTrigger asChild>
+                        <Link
+                          to={to}
+                          className={cn(
+                            "flex h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                            collapsed ? "justify-center" : "gap-2.5",
+                            active
+                              ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                              : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                          )}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <Icon className="size-4 shrink-0" />
+                          {!collapsed && <span className="truncate">{label}</span>}
+                        </Link>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
+                    </Tooltip>
+                  );
+                })}
+              </nav>
+            )}
+          </div>
+
+          {/* Section: Pinned Projects (if any) */}
+          {!collapsed && pinnedIds.length > 0 && projects && (
+            <div>
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-[12px] font-medium text-[#575657] flex items-center gap-1">
+                  <Star className="size-3 text-[#D6C6A1]" /> Pinned
+                </span>
+              </div>
+              <div className="space-y-0.5">
+                {pinnedIds.map((pId) => {
+                  const proj = projects.find((p) => p._id === pId);
+                  if (!proj) return null;
+                  const active = activeProjectId === pId;
+                  const dotColor = proj.color || getPastelForKey(proj.key);
+
+                  return (
+                    <Link
+                      key={pId}
+                      to={`/app/projects/${pId}`}
+                      className={cn(
+                        "group flex h-8 items-center justify-between rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                        active
+                          ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                          : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="size-2 rounded-[2px] shrink-0"
+                          style={{ backgroundColor: dotColor }}
+                        />
+                        <span className="truncate">{proj.name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => togglePinProject(pId, e)}
+                        className="opacity-0 group-hover:opacity-100 text-[#D6C6A1] hover:text-[#0D0D0D]"
+                        title="Unpin project"
+                      >
+                        <Star className="size-3 fill-current" />
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {/* Nav Tabs: horizontal scroll below 768px with no scrollbar */}
-          {workspaceId && (
-            <div className="min-w-0 flex-1 px-1">
-              <WorkspaceNavTabs workspaceId={workspaceId} />
+          {/* Section: Projects */}
+          <div>
+            {!collapsed && (
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-[12px] font-medium text-[#575657]">Projects</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setNewProjectOpen(true)}
+                    className="inline-flex size-5 items-center justify-center rounded-[4px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                    title="Create project"
+                    aria-label="Create project"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProjectsSectionCollapsed((p) => !p)}
+                    className="text-[#575657] hover:text-[#0D0D0D]"
+                    aria-label="Toggle projects section"
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "size-3.5 transition-transform",
+                        projectsSectionCollapsed && "-rotate-90"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!projectsSectionCollapsed && (
+              <div className="space-y-0.5">
+                {/* Skeleton when projects is undefined */}
+                {!projects && (
+                  <div className="space-y-1 px-1">
+                    <div className="h-6 w-full rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+                    <div className="h-6 w-3/4 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+                    <div className="h-6 w-5/6 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {projects && projects.length === 0 && !collapsed && (
+                  <div className="px-2 py-3 text-center">
+                    <p className="text-[12px] text-[#575657]">No projects yet.</p>
+                    <button
+                      type="button"
+                      onClick={() => setNewProjectOpen(true)}
+                      className="mt-1 text-[11px] font-medium text-[#0D0D0D] hover:underline"
+                    >
+                      + Create project
+                    </button>
+                  </div>
+                )}
+
+                {/* Projects list */}
+                {visibleProjects.map((proj) => {
+                  const active = activeProjectId === proj._id;
+                  const isPinned = pinnedIds.includes(proj._id);
+                  const isExpanded = !!expandedProjects[proj._id];
+                  const dotColor = proj.color || getPastelForKey(proj.key);
+
+                  return (
+                    <div key={proj._id} className="space-y-0.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className={cn(
+                              "group flex h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors cursor-pointer",
+                              collapsed ? "justify-center" : "justify-between",
+                              active
+                                ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                                : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                            )}
+                            onClick={() => navigate(`/app/projects/${proj._id}`)}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {!collapsed && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => toggleProjectExpanded(proj._id, e)}
+                                  className="text-[#575657] hover:text-[#0D0D0D]"
+                                  aria-label="Expand project views"
+                                >
+                                  <ChevronRight
+                                    className={cn(
+                                      "size-3 transition-transform",
+                                      isExpanded && "rotate-90"
+                                    )}
+                                  />
+                                </button>
+                              )}
+                              <span
+                                className="size-2 rounded-[2px] shrink-0"
+                                style={{ backgroundColor: dotColor }}
+                              />
+                              {!collapsed && (
+                                <span className="truncate font-medium">{proj.name}</span>
+                              )}
+                            </div>
+
+                            {!collapsed && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono text-[10px] text-[#575657] opacity-0 group-hover:opacity-100 uppercase">
+                                  {proj.key}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => togglePinProject(proj._id, e)}
+                                  className={cn(
+                                    "p-0.5 transition-opacity",
+                                    isPinned
+                                      ? "text-[#D6C6A1] opacity-100"
+                                      : "text-[#575657] opacity-0 group-hover:opacity-100 hover:text-[#0D0D0D]"
+                                  )}
+                                  title={isPinned ? "Unpin" : "Pin project"}
+                                >
+                                  <Star
+                                    className={cn("size-3", isPinned && "fill-current")}
+                                  />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        {collapsed && (
+                          <TooltipContent side="right">
+                            {proj.name} ({proj.key})
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+
+                      {/* Expanded Views: Board, List, Analytics, Settings */}
+                      {!collapsed && isExpanded && (
+                        <div className="ml-5 pl-2 border-l border-border/60 space-y-0.5 pt-0.5">
+                          <Link
+                            to={`/app/projects/${proj._id}?view=board`}
+                            className={cn(
+                              "flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] transition-colors",
+                              active && pathname.includes("/projects") && !pathname.includes("/analytics") && !pathname.includes("/settings")
+                                ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                                : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                            )}
+                          >
+                            <KanbanSquare className="size-3.5 shrink-0" />
+                            <span>Board</span>
+                          </Link>
+                          <Link
+                            to={`/app/projects/${proj._id}?view=list`}
+                            className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                          >
+                            <List className="size-3.5 shrink-0" />
+                            <span>List</span>
+                          </Link>
+                          <Link
+                            to={`/app/projects/${proj._id}/analytics`}
+                            className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                          >
+                            <BarChart3 className="size-3.5 shrink-0" />
+                            <span>Analytics</span>
+                          </Link>
+                          <Link
+                            to={`/app/projects/${proj._id}/settings/workflows`}
+                            className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                          >
+                            <SlidersHorizontal className="size-3.5 shrink-0" />
+                            <span>Settings</span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* More row */}
+                {hasMoreProjects && !collapsed && (
+                  <Link
+                    to={workspaceId ? `/app/workspaces/${workspaceId}/projects` : "/app"}
+                    className="flex h-7 items-center px-2 text-[12px] font-medium text-[#575657] hover:text-[#0D0D0D]"
+                  >
+                    More projects ({(projects?.length ?? 0) - 8} more)...
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Section: Recent */}
+          {!collapsed && recentItems.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-[12px] font-medium text-[#575657] flex items-center gap-1">
+                  <Clock className="size-3" /> Recent
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRecentSectionCollapsed((p) => !p)}
+                  className="text-[#575657] hover:text-[#0D0D0D]"
+                  aria-label="Toggle recent section"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 transition-transform",
+                      recentSectionCollapsed && "-rotate-90"
+                    )}
+                  />
+                </button>
+              </div>
+
+              {!recentSectionCollapsed && (
+                <div className="space-y-0.5">
+                  {recentItems.map((item) => (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                    >
+                      <FolderKanban className="size-3.5 shrink-0 text-[#575657]" />
+                      <span className="truncate">{item.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+        </div>
 
-          {/* Actions: Notification bell + Avatar */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            <NotificationBell />
-            <AccountMenu />
+        {/* Pinned Bottom: "New issue" button & user row */}
+        <div className="p-2 border-t border-border/40 shrink-0 space-y-2">
+          {/* New issue black pill */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setNewIssueOpen(true)}
+                className={cn(
+                  "flex h-8 w-full items-center justify-center rounded-full bg-[#0D0D0D] text-[12px] font-medium text-white hover:bg-[#262626] transition-colors outline-none",
+                  collapsed ? "size-8 p-0 mx-auto" : "gap-1.5 px-3"
+                )}
+                aria-label="New issue (C)"
+              >
+                <Plus className="size-3.5" />
+                {!collapsed && <span>New issue</span>}
+              </button>
+            </TooltipTrigger>
+            {collapsed && <TooltipContent side="right">New issue (C)</TooltipContent>}
+          </Tooltip>
+
+          {/* User row / AccountMenu */}
+          <AccountMenu
+            onOpenShortcuts={() => setShortcutsOpen(true)}
+            collapsed={collapsed}
+          />
+        </div>
+      </aside>
+    </TooltipProvider>
+  );
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-[#FBFBFC] text-[#0D0D0D]">
+      <ScrollManager />
+
+      {/* Desktop Sidebar (>= 1024px) */}
+      <div className="hidden lg:flex shrink-0 h-full">{sidebarContent}</div>
+
+      {/* Mobile Drawer (< 1024px) */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          {/* Dim overlay */}
+          <div
+            className="fixed inset-0 bg-[#0D0D0D]/35 transition-opacity"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          {/* Drawer content */}
+          <div className="relative z-10 h-full w-72 max-w-[85vw] shadow-none">
+            {sidebarContent}
           </div>
         </div>
-      </header>
+      )}
 
-      {/* Content Container */}
-      <main className="flex-1">
-        <FadeIn key={pathname} className={PAGE_MAX}>
-          {children}
-        </FadeIn>
-      </main>
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        {/* Guest demo banner at top of content area */}
+        <GuestDemoBanner workspaceId={workspaceId} />
+
+        {/* Sticky slim top strip (48px) */}
+        <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center justify-between border-b border-border bg-white/95 px-4 sm:px-8 backdrop-blur-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger for mobile (< 1024px) */}
+            <button
+              type="button"
+              onClick={() => setMobileDrawerOpen(true)}
+              className="inline-flex size-9 lg:hidden items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="size-5" />
+            </button>
+
+            {/* Breadcrumbs */}
+            <AppBreadcrumbs
+              workspace={
+                activeWs
+                  ? { _id: activeWs._id as Id<"workspaces">, name: activeWs.name }
+                  : null
+              }
+              project={activeProject ? { _id: activeProject._id, name: activeProject.name, key: activeProject.key } : null}
+            />
+          </div>
+
+          {/* Right side page actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {pageActions}
+          </div>
+        </header>
+
+        {/* Page Content Viewport with independent scroll */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8 sm:py-8">
+            <FadeIn key={pathname}>
+              {children}
+            </FadeIn>
+          </div>
+        </main>
+      </div>
+
+      {/* Dialogs */}
+      {projects && workspaceId && (
+        <CreateIssueDialog
+          trigger={null}
+          open={newIssueOpen}
+          onOpenChange={setNewIssueOpen}
+          projects={projects}
+          canCreate={true}
+          workspaceId={workspaceId as Id<"workspaces">}
+          defaultProjectId={activeProjectId as Id<"projects"> | undefined}
+        />
+      )}
+
+      {workspaceId && (
+        <CreateProjectDialog
+          trigger={null}
+          open={newProjectOpen}
+          onOpenChange={setNewProjectOpen}
+          workspaceId={workspaceId as Id<"workspaces">}
+          canCreate={true}
+        />
+      )}
+
+      <CommandPaletteDialog
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        workspaceId={workspaceId}
+        projects={projects}
+        onNewIssue={() => setNewIssueOpen(true)}
+        onNewProject={() => setNewProjectOpen(true)}
+        onToggleSidebar={toggleCollapsed}
+      />
+
+      <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }
@@ -451,11 +1328,10 @@ export function RoleBadge({ role }: { role: string }) {
     <span
       className={cn(
         "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider",
-        tone,
+        tone
       )}
     >
       {role}
     </span>
   );
 }
-

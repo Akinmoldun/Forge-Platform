@@ -256,6 +256,28 @@ export default function OverviewPage() {
   const hasTeammate = (workspace.memberCount ?? 1) > 1;
   const showChecklist = !hasProject || !hasIssue || !hasTeammate;
 
+  // User greeting based on local time
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const userFirst = (user?.name?.trim() || user?.email?.split("@")[0] || "there").split(" ")[0];
+
+  // Today strip data using existing real projectIssues
+  const now = Date.now();
+  const oneWeekLater = now + 7 * 24 * 60 * 60 * 1000;
+  const currentUserId = user?._id;
+
+  const assignedToUserIssues = (projectIssues ?? []).filter(
+    (i) => currentUserId && i.assigneeId === currentUserId && !i.archivedAt && i.status?.category !== "completed" && i.status?.category !== "cancelled"
+  );
+
+  const dueThisWeekIssues = (projectIssues ?? []).filter(
+    (i) => i.dueDate && i.dueDate >= now - 24 * 60 * 60 * 1000 && i.dueDate <= oneWeekLater && !i.archivedAt && i.status?.category !== "completed" && i.status?.category !== "cancelled"
+  );
+
+  const needsReviewIssues = (projectIssues ?? []).filter(
+    (i) => (i.status?.name?.toLowerCase().includes("review") || i.status?.category === "in_progress") && !i.archivedAt
+  );
+
   // Filtered issue destination link
   const issuesTargetLink =
     projectList.length === 1
@@ -266,8 +288,8 @@ export default function OverviewPage() {
     <AppShell workspaceId={workspaceId}>
       <PageStack>
         <PageHeader
-          title={workspace.workspace.name}
-          description={`${workspace.projectCount} active projects, ${workspace.memberCount} members. Open work, delivery risk, and what changed most recently.`}
+          title={`${timeGreeting}, ${userFirst}`}
+          description={`${workspace.workspace.name} · ${workspace.projectCount} active projects, ${workspace.memberCount} members.`}
           meta={<RoleBadge role={workspace.role} />}
           actions={
             <div className="flex flex-wrap items-center gap-2">
@@ -319,6 +341,63 @@ export default function OverviewPage() {
             </div>
           )}
         </PageHeader>
+
+        {/* Phase 3: Today strip with 3 compact cards */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Link
+            to={issuesTargetLink}
+            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium text-[#575657]">Assigned to you</span>
+              <span className="size-2 rounded-full bg-[#6E94CB]" />
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                {assignedToUserIssues.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                View work →
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            to={issuesTargetLink}
+            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium text-[#575657]">Due this week</span>
+              <span className="size-2 rounded-full bg-[#D78FC6]" />
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                {dueThisWeekIssues.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                Check dates →
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            to={issuesTargetLink}
+            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium text-[#575657]">Needs your review</span>
+              <span className="size-2 rounded-full bg-[#BED390]" />
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                {needsReviewIssues.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                Review queue →
+              </span>
+            </div>
+          </Link>
+        </div>
 
         {/* 1. Get started checklist card (visible when workspace is new / steps incomplete) */}
         {showChecklist && (

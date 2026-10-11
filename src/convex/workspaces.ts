@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query, internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import {
@@ -140,7 +140,7 @@ export const listMyWorkspaces = query({
     return Promise.all(
       memberships.map(async (m) => {
         const workspace = await ctx.db.get(m.workspaceId);
-        if (!workspace) return null;
+        if (!workspace || workspace.isDeleting) return null;
         const projectCount = (
           await ctx.db
             .query("projects")
@@ -163,7 +163,7 @@ export const getWorkspace = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
     const ctxData = await findWorkspaceContext(ctx, args.workspaceId);
-    if (!ctxData) return null;
+    if (!ctxData || ctxData.workspace.isDeleting) return null;
     const projects = await ctx.db
       .query("projects")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
@@ -892,67 +892,111 @@ export const acceptMyInvitation = mutation({
 });
 
 /**
- * Deletes a workspace and all its data. Only the workspace owner can perform this.
+ * Initiates workspace deletion. Validates ownership and optional typed name confirmation.
+ * Marks workspace as deleting so it immediately disappears from listMyWorkspaces,
+ * then schedules chunked deletion jobs to delete records in small batches without
+ * hitting Convex read/write limits.
  */
 export const deleteWorkspace = mutation({
-  args: { workspaceId: v.id("workspaces") },
+  args: {
+    workspaceId: v.id("workspaces"),
+    typedName: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const { workspaceId, role } = await loadWorkspaceContext(ctx, args.workspaceId);
+    const { workspaceId, workspace, role } = await loadWorkspaceContext(ctx, args.workspaceId);
     if (role !== "owner") {
       throw new Error("Only the workspace owner can delete this workspace");
     }
 
-    // Use selective indexed queries for large tables to avoid full table scans
-    const issues = await ctx.db
-      .query("issues")
-      .withIndex("by_workspace_created", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-    for (const r of issues) await ctx.db.delete(r._id);
+    if (args.typedName !== undefined && args.typedName.trim() !== workspace.name.trim()) {
+      throw new Error("The confirmation name does not match the workspace name");
+    }
 
-    const activities = await ctx.db
-      .query("activityEvents")
-      .withIndex("by_workspace_created", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-    for (const r of activities) await ctx.db.delete(r._id);
+    // Mark as deleting immediately so it hides from queries right away
+    await ctx.db.patch(workspaceId, {
+      isDeleting: true,
+      updatedAt: Date.now(),
+    });
 
-    const memberships = await ctx.db
-      .query("memberships")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-    for (const r of memberships) await ctx.db.delete(r._id);
+    // Schedule background cleanup in small chunks
+    await ctx.scheduler.runAfter(0, internal.workspaces.deleteWorkspaceChunk, {
+      workspaceId,
+    });
 
-    const projects = await ctx.db
-      .query("projects")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-    for (const r of projects) await ctx.db.delete(r._id);
+    return { success: true };
+  },
+});
 
-    const labels = await ctx.db
-      .query("labels")
-      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
-      .collect();
-    for (const r of labels) await ctx.db.delete(r._id);
+const WORKSPACE_CHILD_TABLES = [
+  "issues",
+  "activityEvents",
+  "memberships",
+  "projects",
+  "labels",
+  "workflows",
+  "workflowStatuses",
+  "workflowTransitions",
+  "issueLabels",
+  "issueDependencies",
+  "comments",
+  "notifications",
+  "automationRules",
+  "invitations",
+] as const;
 
-    const remainingTables = [
-      "issueDependencies",
-      "issueLabels",
-      "workflows",
-      "workflowStatuses",
-      "workflowTransitions",
-      "invitations",
-      "comments",
-    ] as const;
+type WorkspaceChildTable = (typeof WORKSPACE_CHILD_TABLES)[number];
 
-    for (const table of remainingTables) {
-      const rows = await ctx.db.query(table).collect();
-      for (const row of rows) {
-        if ("workspaceId" in row && (row as { workspaceId: Id<"workspaces"> }).workspaceId === workspaceId) {
+const BATCH_SIZE = 100;
+
+export const deleteWorkspaceChunk = internalMutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
+  handler: async (ctx, args) => {
+    const ws = await ctx.db.get(args.workspaceId);
+    if (!ws) {
+      // Already fully deleted
+      return { done: true };
+    }
+
+    let deletedAny = false;
+
+    for (const table of WORKSPACE_CHILD_TABLES) {
+      let rows: Array<{ _id: Id<WorkspaceChildTable> }> = [];
+
+      if (table === "issues" || table === "activityEvents") {
+        rows = await ctx.db
+          .query(table)
+          .withIndex("by_workspace_created", (q) => q.eq("workspaceId", args.workspaceId))
+          .take(BATCH_SIZE);
+      } else {
+        rows = await ctx.db
+          .query(table)
+          .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+          .take(BATCH_SIZE);
+      }
+
+      if (rows.length > 0) {
+        for (const row of rows) {
           await ctx.db.delete(row._id);
         }
+        deletedAny = true;
+        // Break out of the loop after cleaning a batch of one table
+        // and schedule the next chunk to keep transaction sizes small and fast
+        break;
       }
     }
 
-    await ctx.db.delete(workspaceId);
-    return { success: true };
+    if (deletedAny) {
+      // More child records might remain; run the next chunk immediately
+      await ctx.scheduler.runAfter(0, internal.workspaces.deleteWorkspaceChunk, {
+        workspaceId: args.workspaceId,
+      });
+      return { done: false };
+    }
+
+    // All child records across all tables have been deleted; delete the workspace itself
+    await ctx.db.delete(args.workspaceId);
+    return { done: true };
   },
 });

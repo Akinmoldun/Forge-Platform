@@ -89,8 +89,10 @@ export async function resetGuestDemo(
 export async function deleteOrLeaveWorkspace(
   convex: ConvexReactClient,
   workspaceId: string,
+  typedName?: string,
 ): Promise<void> {
   await convex.mutation(api.workspaces.deleteWorkspace, {
     workspaceId: workspaceId as never,
+    typedName,
   });
 }

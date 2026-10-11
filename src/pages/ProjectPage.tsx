@@ -105,6 +105,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   };
 
+  const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
+  const [colStatusId, setColStatusId] = useState<string>("");
+
   // filters synced to URL
   const search = searchParams.get("q") ?? "";
   const priorityFilter = searchParams.get("priority") ?? "all";
@@ -179,38 +182,125 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   return (
     <AppShell workspaceId={project.project.workspaceId}>
       <div className="flex flex-col gap-5">
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
+        {/* Phase 2: Page Header pattern with color tile, name, mono key chip and role chip */}
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
-              <Badge variant="secondary" className="rounded-[4px] font-mono text-[11px]">
+              <span
+                className="size-6 rounded-[6px] shrink-0 border border-border flex items-center justify-center text-[11px] font-semibold text-[#0D0D0D]"
+                style={{ backgroundColor: project.project.color || "#6E94CB" }}
+              />
+              <h1 className="text-[32px] font-[600] leading-tight tracking-tight text-[#0D0D0D]">
+                {project.project.name}
+              </h1>
+              <span className="rounded-[4px] border border-border bg-[#F1F1F3] px-2 py-0.5 font-mono text-[11px] uppercase text-[#0D0D0D]">
                 {project.project.key}
-              </Badge>
-              <h1 className="font-display text-2xl tracking-[-0.02em]">{project.project.name}</h1>
+              </span>
               <RoleBadge role={project.role} />
               {risk && risk.hasData && <RiskBadge level={risk.level} score={risk.score} />}
             </div>
-            <p className="mt-1 text-[13px] text-muted-foreground">
+            <p className="mt-1 text-[13px] leading-5 text-[#575657]">
               {openCount} open · {project.doneIssueCount} done
               {project.project.description ? ` · ${project.project.description}` : ""}
             </p>
           </div>
+        </div>
+
+        {/* VIEW TABS & Toolbar row */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-2">
+          {/* View Tabs */}
+          <nav className="flex items-center gap-6 text-[13px] font-medium">
+            <button
+              type="button"
+              onClick={() => {
+                if (tab) navigate(`/app/projects/${projectId}?view=board`);
+                else setParam("view", "board");
+              }}
+              className={`pb-2.5 transition-colors relative outline-none ${
+                !tab && view === "board"
+                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D] -mb-[10px]"
+                  : "text-[#575657] hover:text-[#0D0D0D]"
+              }`}
+            >
+              Board
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (tab) navigate(`/app/projects/${projectId}?view=list`);
+                else setParam("view", "list");
+              }}
+              className={`pb-2.5 transition-colors relative outline-none ${
+                !tab && view === "list"
+                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D] -mb-[10px]"
+                  : "text-[#575657] hover:text-[#0D0D0D]"
+              }`}
+            >
+              List
+            </button>
+            <Link
+              to={`/app/projects/${projectId}/analytics`}
+              className={`pb-2.5 transition-colors relative outline-none ${
+                tab === "analytics"
+                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D] -mb-[10px]"
+                  : "text-[#575657] hover:text-[#0D0D0D]"
+              }`}
+            >
+              Analytics
+            </Link>
+            <Link
+              to={`/app/projects/${projectId}/settings/workflows`}
+              className="pb-2.5 text-[#575657] hover:text-[#0D0D0D] transition-colors outline-none"
+            >
+              Settings
+            </Link>
+          </nav>
+
+          {/* Compact toolbar: Search (expands on click), Filter, New issue button */}
           <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={view} onValueChange={(v) => setParam("view", v)}>
-              <TabsList>
-                <TabsTrigger value="board" className="gap-1.5">
-                  <KanbanSquare className="size-3.5" /> Board
-                </TabsTrigger>
-                <TabsTrigger value="list" className="gap-1.5">
-                  <Rows3 className="size-3.5" /> List
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button variant="outline" asChild>
-              <Link to={`/app/projects/${projectId}/analytics`}>
-                <TrendingUp /> Analytics
-              </Link>
-            </Button>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 size-3.5 text-[#575657]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setParam("q", e.target.value)}
+                placeholder="Search..."
+                className="h-8 w-28 sm:focus:w-48 transition-all rounded-full border border-border bg-white pl-8 pr-2.5 text-[12px] text-[#0D0D0D] outline-none focus:border-[#0D0D0D]"
+              />
+            </div>
+
+            <Select value={priorityFilter} onValueChange={(v) => setParam("priority", v)}>
+              <SelectTrigger className="h-8 rounded-full border-border bg-white text-[12px] px-3 sm:w-32">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All priorities</SelectItem>
+                {PRIORITIES.map((p) => (
+                  <SelectItem key={p} value={p} className="capitalize">
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={assigneeFilter} onValueChange={(v) => setParam("assignee", v)}>
+              <SelectTrigger className="h-8 rounded-full border-border bg-white text-[12px] px-3 sm:w-36">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All assignees</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {members?.map((m) => {
+                  const isMe = m.userId === user?._id;
+                  return (
+                    <SelectItem key={m.userId} value={m.userId}>
+                      {isMe ? `You (${m.name})` : m.name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+
             {project.role !== "viewer" && (
               <CreateIssueDialog
                 projects={(allProjects ?? [project.project]).map((p) => ({
@@ -222,65 +312,13 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
                 workspaceId={project.project.workspaceId}
                 canCreate={canWrite}
                 trigger={
-                  <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
-                    <Plus className="size-4 mr-1" /> New issue
+                  <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-8 px-3.5 text-[12px] font-medium">
+                    <Plus className="size-3.5 mr-1" /> New issue
                   </Button>
                 }
               />
             )}
           </div>
-        </div>
-
-        {/* Filter bar */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setParam("q", e.target.value)}
-              placeholder="Search issues…"
-              className="pl-9"
-            />
-          </div>
-          <Select value={priorityFilter} onValueChange={(v) => setParam("priority", v)}>
-            <SelectTrigger className="sm:w-40">
-              <ListFilter className="size-3.5 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All priorities</SelectItem>
-              {PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p} className="capitalize">
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={assigneeFilter} onValueChange={(v) => setParam("assignee", v)}>
-            <SelectTrigger className="sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All assignees</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              {members?.map((m) => {
-                const isMe = m.userId === user?._id;
-                return (
-                  <SelectItem key={m.userId} value={m.userId}>
-                    {isMe ? `You (${m.name})` : m.name}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          {risk && risk.hasData && (
-            <Link
-              to={`/app/projects/${projectId}/analytics`}
-              className="ml-auto hidden text-xs text-muted-foreground hover:text-foreground sm:block"
-            >
-              Risk: {risk.level} · why? →
-            </Link>
-          )}
         </div>
 
         {/* Content */}
@@ -299,6 +337,10 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
               canWrite={canWrite}
               onStatusChange={handleStatusChange}
               onIssueClick={(id) => navigate(`/app/issues/${id}`)}
+              onNewIssueInStatus={(statusId) => {
+                setColStatusId(statusId);
+                setColIssueDialogOpen(true);
+              }}
             />
           </div>
         ) : (
@@ -310,6 +352,22 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           />
         )}
       </div>
+
+      {canWrite && (
+        <CreateIssueDialog
+          open={colIssueDialogOpen}
+          onOpenChange={setColIssueDialogOpen}
+          trigger={null}
+          projects={(allProjects ?? [project.project]).map((p) => ({
+            _id: p._id,
+            name: p.name,
+            key: p.key,
+          }))}
+          defaultProjectId={project.project._id}
+          workspaceId={project.project.workspaceId}
+          canCreate={canWrite}
+        />
+      )}
     </AppShell>
   );
 }
@@ -663,6 +721,7 @@ function BoardView({
   canWrite,
   onStatusChange,
   onIssueClick,
+  onNewIssueInStatus,
 }: {
   board:
     | {
@@ -685,14 +744,20 @@ function BoardView({
   canWrite: boolean;
   onStatusChange: (issueId: string, toStatusId: string) => Promise<void>;
   onIssueClick: (id: string) => void;
+  onNewIssueInStatus?: (statusId: string) => void;
 }) {
   const [dragOverColId, setDragOverColId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   if (!board) return <ListSkeleton rows={3} />;
+  const now = Date.now();
+
   return (
-    <div className="grid gap-3 overflow-x-auto pb-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="flex gap-4 overflow-x-auto pb-4 pt-1 items-start">
       {board.columns.map((col) => {
         const isTarget = dragOverColId === col.status._id;
+        const statusColor = col.status.color || "#6E94CB";
+
         return (
           <div
             key={col.status._id}
@@ -708,6 +773,7 @@ function BoardView({
             onDrop={async (e) => {
               e.preventDefault();
               setDragOverColId(null);
+              setDraggingId(null);
               if (!canWrite) return;
               const raw = e.dataTransfer.getData("application/json");
               if (!raw) return;
@@ -719,68 +785,124 @@ function BoardView({
                 // ignore parse errors
               }
             }}
-            className={`rounded-[16px] border transition-colors p-3 ${
+            className={`w-[280px] shrink-0 rounded-[16px] border transition-colors p-3.5 flex flex-col max-h-[calc(100vh-210px)] ${
               isTarget
                 ? "border-[#0D0D0D] bg-[#EAEAEA]"
-                : "border-border bg-[#F1F1F3]/50"
+                : "border-border bg-white"
             }`}
+            style={{
+              backgroundColor: isTarget
+                ? "#ECECEE"
+                : `color-mix(in srgb, ${statusColor} 6%, #FFFFFF)`,
+            }}
           >
-            <div className="mb-2.5 flex items-center gap-1.5 px-1">
-              <StatusDot color={col.status.color} />
-              <span className="text-[13px] font-[500] text-[#0D0D0D]">{col.status.name}</span>
-              <span className="ml-auto font-mono text-[11px] text-[#575657]">{col.issues.length}</span>
+            {/* Column header with status pill (dot + name) in status color tint and issue count */}
+            <div className="mb-3 flex items-center justify-between px-0.5 shrink-0">
+              <div
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium border border-border"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${statusColor} 12%, #FFFFFF)`,
+                  color: "#0D0D0D",
+                }}
+              >
+                <span
+                  className="size-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: statusColor }}
+                />
+                <span className="truncate max-w-[140px]">{col.status.name}</span>
+              </div>
+              <span className="font-mono text-[11px] text-[#575657] font-medium">
+                {col.issues.length}
+              </span>
             </div>
-            <div className="space-y-2 min-h-[60px]">
+
+            {/* Vertical scroll area for cards inside column */}
+            <div className="space-y-2.5 overflow-y-auto flex-1 pr-0.5">
               {col.issues.length === 0 && (
-                <p className="px-1 py-4 text-center text-[11px] text-[#575657]">Nothing here</p>
+                <p className="px-1 py-8 text-center text-[12px] text-[#575657]">
+                  No issues in this column
+                </p>
               )}
-              {col.issues.map((i) => (
-                <div
-                  key={i._id}
-                  draggable={canWrite}
-                  onDragStart={(e) => {
-                    if (!canWrite) return;
-                    e.dataTransfer.setData(
-                      "application/json",
-                      JSON.stringify({ issueId: i._id, statusId: col.status._id }),
-                    );
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onClick={() => onIssueClick(i._id)}
-                  className={`w-full rounded-[14px] border border-border bg-white p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)] focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2 ${
-                    canWrite ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono font-medium text-[#575657]">
-                      {keyName}-{i.number}
-                    </span>
-                    <PriorityBadge priority={i.priority} />
+              {col.issues.map((i) => {
+                const isOverdue = i.dueDate && i.dueDate < now;
+                const isDragging = draggingId === i._id;
+
+                return (
+                  <div
+                    key={i._id}
+                    draggable={canWrite}
+                    onDragStart={(e) => {
+                      if (!canWrite) return;
+                      setDraggingId(i._id);
+                      e.dataTransfer.setData(
+                        "application/json",
+                        JSON.stringify({ issueId: i._id, statusId: col.status._id }),
+                      );
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => setDraggingId(null)}
+                    onClick={() => onIssueClick(i._id)}
+                    className={`w-full rounded-[12px] border bg-white p-3 text-left transition-transform duration-150 ${
+                      isDragging
+                        ? "scale-[1.02] border-[#0D0D0D]"
+                        : "border-border hover:border-[#0D0D0D]/40"
+                    } ${
+                      canWrite ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-mono font-medium text-[#575657]">
+                        {keyName}-{i.number}
+                      </span>
+                      <PriorityBadge priority={i.priority} />
+                    </div>
+
+                    <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">
+                      {i.title}
+                    </p>
+
+                    <div className="mt-2.5 flex items-center gap-1.5">
+                      {i.isBlocked && (
+                        <span className="rounded-full border border-[#D78FC6] bg-[#D78FC6]/15 px-1.5 py-0 text-[10px] font-medium text-[#0D0D0D]">
+                          blocked
+                        </span>
+                      )}
+                      {i.dueDate && (
+                        <span
+                          className={`text-[11px] font-medium ${
+                            isOverdue ? "text-[#D78FC6]" : "text-[#575657]"
+                          }`}
+                        >
+                          {formatDate(i.dueDate)}
+                        </span>
+                      )}
+                      {i.assigneeName && (
+                        <Avatar className="ml-auto size-5">
+                          {i.assigneeImage && (
+                            <AvatarImage src={i.assigneeImage} alt="" className="object-cover" />
+                          )}
+                          <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
+                            {i.assigneeName.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
-                  <div className="mt-2.5 flex items-center gap-1.5">
-                    {i.isBlocked && (
-                      <Badge variant="outline" className="border-[#B3261E]/30 bg-[#B3261E]/10 px-1.5 py-0 text-[10px] text-[#B3261E]">
-                        blocked
-                      </Badge>
-                    )}
-                    {i.dueDate && (
-                      <span className="text-[11px] text-[#575657]">{formatDate(i.dueDate)}</span>
-                    )}
-                    {i.assigneeName && (
-                      <Avatar className="ml-auto size-5">
-                        {i.assigneeImage && (
-                          <AvatarImage src={i.assigneeImage} alt="" className="object-cover" />
-                        )}
-                        <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
-                          {i.assigneeName.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {/* "+ New issue" row at column bottom */}
+            {canWrite && onNewIssueInStatus && (
+              <button
+                type="button"
+                onClick={() => onNewIssueInStatus(col.status._id)}
+                className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-border/80 text-[12px] font-medium text-[#575657] hover:border-[#0D0D0D] hover:bg-white hover:text-[#0D0D0D] transition-colors shrink-0"
+              >
+                <Plus className="size-3.5" />
+                <span>New issue</span>
+              </button>
+            )}
           </div>
         );
       })}
@@ -830,7 +952,7 @@ function ListView({
   return (
     <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-none">
       <table className="w-full text-[13px]">
-        <thead>
+        <thead className="sticky top-0 z-10">
           <tr className="border-b border-border bg-[#FBFBFC] text-left text-[11px] font-medium uppercase tracking-[0.06em] text-[#575657]">
             <th className="px-4 py-3">Issue</th>
             <th className="hidden px-4 py-3 sm:table-cell">Status</th>

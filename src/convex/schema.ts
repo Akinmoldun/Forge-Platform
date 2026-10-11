@@ -83,6 +83,7 @@ const schema = defineSchema(
       ownerId: v.id("users"),
       description: v.optional(v.string()),
       iconColor: v.optional(v.string()),
+      isDeleting: v.optional(v.boolean()),
       createdAt: v.number(),
       updatedAt: v.number(),
     }).index("slug", ["slug"]),
@@ -146,7 +147,9 @@ const schema = defineSchema(
       isDefault: v.boolean(),
       createdAt: v.number(),
       updatedAt: v.number(),
-    }).index("by_project", ["projectId"]),
+    })
+      .index("by_project", ["projectId"])
+      .index("by_workspace", ["workspaceId"]),
 
     workflowStatuses: defineTable({
       workspaceId: v.id("workspaces"),
@@ -157,7 +160,8 @@ const schema = defineSchema(
       color: v.optional(v.string()),
     })
       .index("by_workflow", ["workflowId"])
-      .index("by_workflow_position", ["workflowId", "position"]),
+      .index("by_workflow_position", ["workflowId", "position"])
+      .index("by_workspace", ["workspaceId"]),
 
     workflowTransitions: defineTable({
       workspaceId: v.id("workspaces"),
@@ -171,7 +175,8 @@ const schema = defineSchema(
     })
       .index("by_workflow", ["workflowId"])
       .index("by_from_status", ["fromStatusId"])
-      .index("by_from_to", ["fromStatusId", "toStatusId"]),
+      .index("by_from_to", ["fromStatusId", "toStatusId"])
+      .index("by_workspace", ["workspaceId"]),
 
     // -------------------------------------------------------------
     // Labels
@@ -189,7 +194,8 @@ const schema = defineSchema(
       labelId: v.id("labels"),
     })
       .index("by_issue", ["issueId"])
-      .index("by_issue_label", ["issueId", "labelId"]),
+      .index("by_issue_label", ["issueId", "labelId"])
+      .index("by_workspace", ["workspaceId"]),
 
     // -------------------------------------------------------------
     // Issues
@@ -229,7 +235,8 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_blocking", ["blockingIssueId"])
-      .index("by_blocked", ["blockedIssueId"]),
+      .index("by_blocked", ["blockedIssueId"])
+      .index("by_workspace", ["workspaceId"]),
 
     comments: defineTable({
       workspaceId: v.id("workspaces"),
@@ -241,7 +248,8 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_issue", ["issueId"])
-      .index("by_issue_created", ["issueId", "createdAt"]),
+      .index("by_issue_created", ["issueId", "createdAt"])
+      .index("by_workspace", ["workspaceId"]),
 
     // -------------------------------------------------------------
     // Events, notifications, automations
@@ -270,7 +278,9 @@ const schema = defineSchema(
       resourceId: v.optional(v.string()),
       readAt: v.optional(v.number()),
       createdAt: v.number(),
-    }).index("by_recipient_created", ["recipientId", "createdAt"]),
+    })
+      .index("by_recipient_created", ["recipientId", "createdAt"])
+      .index("by_workspace", ["workspaceId"]),
 
     automationRules: defineTable({
       workspaceId: v.id("workspaces"),
@@ -292,7 +302,9 @@ const schema = defineSchema(
       createdBy: v.id("users"),
       createdAt: v.number(),
       updatedAt: v.number(),
-    }).index("by_project", ["projectId"]),
+    })
+      .index("by_project", ["projectId"])
+      .index("by_workspace", ["workspaceId"]),
 
     // -------------------------------------------------------------
     // Email rate limits (max 20 sends/hour per recipient)

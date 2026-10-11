@@ -6,18 +6,40 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, ListSkeleton, timeAgo } from "@/components/forge";
 import { Bell, BellRing, CheckCheck, Inbox } from "lucide-react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
+import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReducedMotion } from "framer-motion";
 import { FadeIn } from "@/components/motion";
 
 export default function NotificationsPage() {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const id = workspaceId as Id<"workspaces"> | undefined;
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    id ? { workspaceId: id } : "skip",
+  );
   const notifications = useQuery(api.analytics.listNotifications);
   const markRead = useMutation(api.analytics.markNotificationRead);
   const markAllRead = useMutation(api.analytics.markAllNotificationsRead);
   const navigate = useNavigate();
   const reduce = useReducedMotion();
+
+  // If a user types a notifications URL while not inside a workspace, redirect them to /app
+  if (!workspaceId || workspace === null) {
+    return <Navigate to="/app" replace />;
+  }
+
+  if (workspace === undefined) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <div className="mx-auto max-w-3xl">
+          <ListSkeleton rows={5} />
+        </div>
+      </AppShell>
+    );
+  }
 
   const rows = notifications?.notifications ?? [];
   const unread = notifications?.unreadCount ?? 0;
@@ -36,12 +58,12 @@ export default function NotificationsPage() {
   };
 
   return (
-    <AppShell>
+    <AppShell workspaceId={workspaceId}>
       <div className="mx-auto max-w-3xl">
         <FadeIn>
           <div className="flex items-center justify-between pb-2">
             <div>
-              <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">Notifications</h1>
+              <h1 className="text-[32px] font-[600] leading-tight tracking-tight text-[#0D0D0D]">Inbox</h1>
               <p className="mt-1 text-[13px] leading-5 text-[#575657]">
                 {unread > 0 ? `${unread} unread` : "You're all caught up"}
               </p>
