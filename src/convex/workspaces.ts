@@ -797,32 +797,54 @@ export const deleteWorkspace = mutation({
       throw new Error("Only the workspace owner can delete this workspace");
     }
 
-    const deleteWorkspaceTableRows = async (table: "memberships" | "projects" | "issues" | "issueDependencies" | "issueLabels" | "labels" | "workflows" | "workflowStatuses" | "workflowTransitions" | "invitations" | "activityEvents" | "comments") => {
+    // Use selective indexed queries for large tables to avoid full table scans
+    const issues = await ctx.db
+      .query("issues")
+      .withIndex("by_workspace_created", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    for (const r of issues) await ctx.db.delete(r._id);
+
+    const activities = await ctx.db
+      .query("activityEvents")
+      .withIndex("by_workspace_created", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    for (const r of activities) await ctx.db.delete(r._id);
+
+    const memberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    for (const r of memberships) await ctx.db.delete(r._id);
+
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    for (const r of projects) await ctx.db.delete(r._id);
+
+    const labels = await ctx.db
+      .query("labels")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    for (const r of labels) await ctx.db.delete(r._id);
+
+    const remainingTables = [
+      "issueDependencies",
+      "issueLabels",
+      "workflows",
+      "workflowStatuses",
+      "workflowTransitions",
+      "invitations",
+      "comments",
+    ] as const;
+
+    for (const table of remainingTables) {
       const rows = await ctx.db.query(table).collect();
       for (const row of rows) {
         if ("workspaceId" in row && (row as { workspaceId: Id<"workspaces"> }).workspaceId === workspaceId) {
           await ctx.db.delete(row._id);
         }
       }
-    };
-
-    const tables = [
-      "memberships",
-      "projects",
-      "issues",
-      "issueDependencies",
-      "issueLabels",
-      "labels",
-      "workflows",
-      "workflowStatuses",
-      "workflowTransitions",
-      "invitations",
-      "activityEvents",
-      "comments",
-    ] as const;
-
-    for (const t of tables) {
-      await deleteWorkspaceTableRows(t);
     }
 
     await ctx.db.delete(workspaceId);

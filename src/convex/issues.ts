@@ -1012,7 +1012,7 @@ export const listWorkspaceIssues = query({
     let issues = (
       await ctx.db
         .query("issues")
-        .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+        .withIndex("by_workspace_created", (q) => q.eq("workspaceId", args.workspaceId))
         .collect()
     ).filter((i) => !i.archivedAt);
 

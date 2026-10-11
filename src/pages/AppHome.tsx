@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { ensureGuestWorkspace } from "@/lib/guestDemo";
+import { ensureGuestWorkspace, resetGuestDemo } from "@/lib/guestDemo";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ListSkeleton, formatDate } from "@/components/forge";
+import { formatDate } from "@/components/forge";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion";
 import {
   FolderKanban,
@@ -41,6 +41,7 @@ export default function AppHome() {
   const [creating, setCreating] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [autoSeeding, setAutoSeeding] = useState(false);
+  const [resettingDemo, setResettingDemo] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
   const create = useMutation(api.workspaces.createWorkspace);
   const acceptMyInvitation = useMutation(api.workspaces.acceptMyInvitation);
@@ -49,24 +50,40 @@ export default function AppHome() {
     setSeedError(null);
     setAutoSeeding(true);
     ensureGuestWorkspace(convex)
-      .then((res) => {
-        navigate(`/app/workspaces/${res.workspaceId}`, { replace: true });
+      .then(() => {
+        setAutoSeeding(false);
       })
       .catch((err) => {
         console.error("Auto-seeding guest workspace error:", err);
-        setSeedError(err instanceof Error ? err.message : "Failed to prepare demo workspace.");
+        setSeedError(err instanceof Error ? err.message : "Demo is unavailable right now");
         setAutoSeeding(false);
       });
-  }, [convex, navigate]);
+  }, [convex]);
+
+  const handleResetDemo = async () => {
+    setSeedError(null);
+    setResettingDemo(true);
+    setAutoSeeding(true);
+    try {
+      await resetGuestDemo(convex);
+      toast.success("Demo reset in progress");
+    } catch (err) {
+      console.error("Reset demo error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to reset demo");
+    } finally {
+      setResettingDemo(false);
+      setAutoSeeding(false);
+    }
+  };
 
   useEffect(() => {
-    if (user?.isAnonymous && workspaces !== undefined && !autoSeeding && !seedError) {
-      const hasDemo = workspaces.some((w) => w.name === "Demo: Northstar Labs");
-      if (!hasDemo) {
+    if (user?.isAnonymous && workspaces !== undefined && !autoSeeding && !seedError && !resettingDemo) {
+      const demoCount = workspaces.filter((w) => w.name.startsWith("Demo: ")).length;
+      if (demoCount === 0) {
         startDemoProvisioning();
       }
     }
-  }, [user?.isAnonymous, workspaces, autoSeeding, seedError, startDemoProvisioning]);
+  }, [user?.isAnonymous, workspaces, autoSeeding, seedError, resettingDemo, startDemoProvisioning]);
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2
@@ -106,33 +123,15 @@ export default function AppHome() {
     }
   };
 
-  if (autoSeeding) {
-    return (
-      <AppShell>
-        <div className="mx-auto max-w-[1200px] py-12">
-          <div className="mb-8 flex flex-col items-center justify-center text-center">
-            <Loader2 className="size-8 animate-spin text-[#0D0D0D] mb-3" />
-            <h2 className="text-[20px] font-medium text-[#0D0D0D]">Preparing your demo workspace...</h2>
-            <p className="mt-1 text-[13px] text-[#575657]">
-              Setting up Demo: Northstar Labs with sample projects, workflows, and teammates.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <ListSkeleton rows={4} />
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (seedError && user?.isAnonymous) {
+  // If initial seed completely failed and user has no workspaces, show error state with retry
+  if (seedError && user?.isAnonymous && (!workspaces || workspaces.length === 0)) {
     return (
       <AppShell>
         <div className="mx-auto max-w-[600px] flex flex-col items-center justify-center py-24 text-center">
           <div className="size-12 rounded-2xl bg-[#B3261E]/10 border border-[#B3261E]/20 text-[#B3261E] flex items-center justify-center mb-4">
             <Building2 className="size-6" />
           </div>
-          <h2 className="text-[18px] font-medium text-[#0D0D0D]">Could not load demo workspace</h2>
+          <h2 className="text-[18px] font-medium text-[#0D0D0D]">Demo is unavailable right now</h2>
           <p className="mt-1.5 text-[13px] text-[#575657] max-w-sm">
             {seedError}
           </p>
@@ -156,9 +155,47 @@ export default function AppHome() {
     );
   }
 
+  const isPreparingDemos = user?.isAnonymous && (autoSeeding || resettingDemo || (workspaces && workspaces.filter((w) => w.name.startsWith("Demo: ")).length < 3));
+
   return (
     <AppShell>
       <div className="mx-auto max-w-[1200px]">
+        {/* Guest Exploration Banner */}
+        {user?.isAnonymous && (
+          <FadeIn>
+            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-[12px] border border-border bg-[#F1F1F3] px-4 py-3 text-[13px] text-[#0D0D0D]">
+              <div className="flex items-center gap-2">
+                <span className="inline-block size-2 rounded-full bg-[#83DD79]" />
+                <span>You're exploring a demo. Create an account to keep your own work.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={resettingDemo}
+                  onClick={handleResetDemo}
+                  className="rounded-full bg-white h-8 px-3 text-[12px]"
+                >
+                  {resettingDemo ? (
+                    <>
+                      <Loader2 className="size-3 animate-spin mr-1.5" /> Resetting...
+                    </>
+                  ) : (
+                    "Reset demo"
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/signup")}
+                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-8 px-3 text-[12px]"
+                >
+                  Create account
+                </Button>
+              </div>
+            </div>
+          </FadeIn>
+        )}
+
         {/* Header: title 28px/500 tight letter-spacing, muted helper line, black pill CTA */}
         <FadeIn>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-2">
@@ -271,10 +308,43 @@ export default function AppHome() {
           </FadeIn>
         )}
 
-        {/* Workspaces Grid: 3 cols desktop, 2 cols tablet, 1 col mobile */}
+        {/* Demo creation progress indicator */}
+        {isPreparingDemos && (
+          <div className="mt-4 flex items-center gap-2 text-[13px] text-[#575657]">
+            <Loader2 className="size-4 animate-spin text-[#0D0D0D]" />
+            <span>Preparing your demo workspaces...</span>
+          </div>
+        )}
+
+        {/* Workspaces Grid */}
         <div className="mt-6">
-          {workspaces === undefined ? (
-            <ListSkeleton rows={3} />
+          {workspaces === undefined || (user?.isAnonymous && workspaces.length === 0) ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="h-44 rounded-[16px] border border-border bg-white p-5 animate-pulse flex flex-col justify-between">
+                <div className="size-10 rounded-xl bg-[#F1F1F3]" />
+                <div className="space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-[#F1F1F3]" />
+                  <div className="h-3 w-1/2 rounded bg-[#F1F1F3]" />
+                </div>
+                <div className="h-4 w-full rounded bg-[#F1F1F3]" />
+              </div>
+              <div className="h-44 rounded-[16px] border border-border bg-white p-5 animate-pulse flex flex-col justify-between">
+                <div className="size-10 rounded-xl bg-[#F1F1F3]" />
+                <div className="space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-[#F1F1F3]" />
+                  <div className="h-3 w-1/2 rounded bg-[#F1F1F3]" />
+                </div>
+                <div className="h-4 w-full rounded bg-[#F1F1F3]" />
+              </div>
+              <div className="h-44 rounded-[16px] border border-border bg-white p-5 animate-pulse flex flex-col justify-between">
+                <div className="size-10 rounded-xl bg-[#F1F1F3]" />
+                <div className="space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-[#F1F1F3]" />
+                  <div className="h-3 w-1/2 rounded bg-[#F1F1F3]" />
+                </div>
+                <div className="h-4 w-full rounded bg-[#F1F1F3]" />
+              </div>
+            </div>
           ) : workspaces.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-border bg-white p-12 text-center">
               <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6E94CB]/20 via-[#7957EC]/10 to-[#D78FC6]/20 text-[#0D0D0D] border border-border mb-3">
@@ -296,7 +366,6 @@ export default function AppHome() {
           ) : (
             <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {workspaces.map((w, index) => {
-                // Pastel tint options for icon tile
                 const pastelTints = [
                   "bg-[#6E94CB]/10 border-[#6E94CB]/20 text-[#6E94CB]",
                   "bg-[#83DD79]/15 border-[#83DD79]/30 text-[#83DD79]",
@@ -314,7 +383,6 @@ export default function AppHome() {
                       className="group w-full rounded-[16px] border border-border bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)] focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
                     >
                       <div className="flex items-start justify-between">
-                        {/* Building icon in pastel-tinted rounded square */}
                         <div
                           className={`flex size-10 items-center justify-center rounded-xl border ${tint}`}
                         >
@@ -339,6 +407,23 @@ export default function AppHome() {
                   </StaggerItem>
                 );
               })}
+
+              {/* Show placeholder skeleton if guest demo is still provisioning remaining workspaces */}
+              {user?.isAnonymous && isPreparingDemos && workspaces.length < 3 && (
+                Array.from({ length: 3 - workspaces.length }).map((_, i) => (
+                  <div
+                    key={`prep-skel-${i}`}
+                    className="h-44 rounded-[16px] border border-dashed border-border bg-white/60 p-5 animate-pulse flex flex-col justify-between"
+                  >
+                    <div className="size-10 rounded-xl bg-[#F1F1F3]" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-3/4 rounded bg-[#F1F1F3]" />
+                      <div className="h-3 w-1/2 rounded bg-[#F1F1F3]" />
+                    </div>
+                    <div className="h-4 w-full rounded bg-[#F1F1F3]" />
+                  </div>
+                ))
+              )}
             </Stagger>
           )}
         </div>

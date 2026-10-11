@@ -21,7 +21,11 @@ export const emailOtp = Email({
       );
     }
     const normalized = normalizeEmail(params.email);
-    if (account.providerAccountId.trim().toLowerCase() !== normalized) {
+    const providerAccountId =
+      typeof account?.providerAccountId === "string"
+        ? account.providerAccountId
+        : String(account?.providerAccountId ?? "");
+    if (providerAccountId.trim().toLowerCase() !== normalized) {
       throw new Error(
         "Short verification code requires a matching `email` in params of `signIn`.",
       );
