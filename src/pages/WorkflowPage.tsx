@@ -30,8 +30,8 @@ import {
   type AutomationRow,
 } from "@/components/workflow/AutomationRulesPanel";
 import {
-  WorkflowCanvas,
   AddStatusNotice,
+  WorkflowCanvas,
   type WorkflowIssueCard,
   type WorkflowStatusNodeData,
   type WorkflowTransition,
@@ -184,16 +184,6 @@ export default function WorkflowPage() {
       console.warn("Failed to save demo statuses:", e);
     }
     toast.success(`Added stage "${newStatus.name}" to workflow`);
-  };
-
-  const handleResetDemoStatuses = () => {
-    setLocalStatuses([]);
-    try {
-      localStorage.removeItem(`forge_demo_statuses_${effectiveProjectId}`);
-    } catch (e) {
-      console.warn("Failed to reset demo statuses:", e);
-    }
-    toast.success("Reset custom workflow demo states");
   };
 
   const canEdit = Boolean(
@@ -538,27 +528,12 @@ export default function WorkflowPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Visual pipeline</h2>
-                {localStatuses.length > 0 && (
-                  <Badge variant="outline" className="bg-[#7957EC]/10 text-[#7957EC] border-[#7957EC]/30 text-[10px] font-mono">
-                    +{localStatuses.length} demo stages
-                  </Badge>
-                )}
               </div>
               <p className="mt-0.5 text-[12px] text-[#575657]">
                 Interactive end-to-end pipeline view with transition protection rules and bottleneck tracking.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {localStatuses.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetDemoStatuses}
-                  className="h-7 text-[11px] text-[#575657] hover:text-[#0D0D0D]"
-                >
-                  <RotateCcw className="size-3 mr-1" /> Reset demo stages
-                </Button>
-              )}
               {canEdit ? (
                 <Badge variant="outline" className="rounded-full border-[#83DD79]/60 bg-[#83DD79]/10 text-[11px] font-medium text-[#0D0D0D]">
                   <ShieldCheck className="mr-1 size-3 text-[#83DD79]" /> Admin: editing enabled
@@ -708,9 +683,13 @@ export default function WorkflowPage() {
               setSelectedStatusId((prev) => (prev === id ? null : id))
             }
             onEditTransition={(id) => setEditingTransitionId(id)}
+            onAddStatus={handleAddStatus}
           />
-          <div className="mt-3">
-            <AddStatusNotice projectId={effectiveProjectId} onAddStatus={handleAddStatus} />
+          <div className="mt-4 pt-3 border-t border-border/60">
+            <AddStatusNotice
+              projectId={effectiveProjectId}
+              onAddStatus={handleAddStatus}
+            />
           </div>
         </Panel>
 

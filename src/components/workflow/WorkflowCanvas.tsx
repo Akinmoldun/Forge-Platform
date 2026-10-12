@@ -281,6 +281,7 @@ export function WorkflowCanvas({
   selectedId,
   onSelect,
   onEditTransition,
+  onAddStatus: _onAddStatus,
   maxCards = 3,
 }: {
   statuses: WorkflowStatusNodeData[];
@@ -291,6 +292,7 @@ export function WorkflowCanvas({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onEditTransition: (transitionId: string) => void;
+  onAddStatus?: (status: { name: string; category: string; color: string }) => void;
   maxCards?: number;
 }) {
   if (statuses.length === 0) {

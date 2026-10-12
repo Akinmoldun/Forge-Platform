@@ -481,12 +481,19 @@ export function PriorityBreakdownWidget({
     ? issues.filter((i) => (i.priority || "none").toLowerCase() === selectedPriority.toLowerCase())
     : issues;
 
+  const PRIORITY_THEMES: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    urgent: { bg: "bg-[#FDE8F3]/70", border: "border-[#D78FC6]/50", text: "text-[#A63590]", dot: "#D78FC6" },
+    high: { bg: "bg-[#FAF4E7]/80", border: "border-[#D6C6A1]/60", text: "text-[#8C7646]", dot: "#D6C6A1" },
+    medium: { bg: "bg-[#EAF2FC]/80", border: "border-[#6E94CB]/50", text: "text-[#2B548F]", dot: "#6E94CB" },
+    low: { bg: "bg-[#F1F1F3]/80", border: "border-border", text: "text-[#575657]", dot: "#9A9A9F" },
+  };
+
   return (
-    <div className="flex h-full flex-col justify-between select-none">
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/70 pb-2.5 shrink-0">
+      <div className="flex items-center justify-between border-b border-border/70 pb-3 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-semibold text-[#0D0D0D]">Priority breakdown</span>
+          <span className="text-[15px] font-semibold text-[#0D0D0D]">Priority breakdown</span>
           <InfoHint text="Breakdown of all open workspace issues by priority. Click any card to filter and inspect issues below." />
         </div>
         <div className="flex items-center gap-2">
@@ -494,26 +501,26 @@ export function PriorityBreakdownWidget({
             <button
               type="button"
               onClick={() => setSelectedPriority(null)}
-              className="text-[11px] font-medium text-[#7957EC] hover:underline transition-colors"
+              className="text-[12px] font-semibold text-[#7957EC] hover:underline transition-colors cursor-pointer"
             >
-              Reset filter
+              Show all ({issues.length || rollup.open})
             </button>
           ) : (
-            <span className="text-[11px] text-[#575657] tabular-nums font-medium">
+            <span className="text-[12px] text-[#575657] tabular-nums font-medium">
               {issues.length > 0 ? `${issues.length} open issues` : `${rollup.open} total`}
             </span>
           )}
         </div>
       </div>
 
-      {/* Main content body: spacious priority cards + scrollable issues */}
-      <div className="flex-1 min-h-0 flex flex-col pt-2.5 space-y-3">
+      {/* Main content body */}
+      <div className="flex-1 min-h-0 flex flex-col pt-3 space-y-3">
         {/* 4 Interactive Priority Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
           {priorityOrder.map((p) => {
             const count = priorityMap.get(p) ?? 0;
             const pct = Math.round((count / totalOpen) * 100);
-            const color = PRIORITY_PALETTE[p] || "#9A9A9F";
+            const theme = PRIORITY_THEMES[p] || PRIORITY_THEMES.low;
             const isSelected = selectedPriority === p;
 
             return (
@@ -522,77 +529,78 @@ export function PriorityBreakdownWidget({
                 type="button"
                 onClick={() => setSelectedPriority(isSelected ? null : p)}
                 className={cn(
-                  "flex flex-col justify-between rounded-[12px] border p-2.5 text-left transition-all cursor-pointer",
+                  "flex flex-col justify-between rounded-[14px] border p-3 text-left transition-all cursor-pointer",
+                  theme.bg,
                   isSelected
-                    ? "border-[#0D0D0D] bg-[#F1F1F3] ring-2 ring-[#0D0D0D] shadow-xs"
-                    : "border-border bg-[#FBFBFC] hover:border-[#0D0D0D]/40 hover:bg-white hover:shadow-xs",
+                    ? "border-[#0D0D0D] ring-2 ring-[#0D0D0D] shadow-sm bg-white"
+                    : `${theme.border} hover:border-[#0D0D0D]/40 hover:bg-white hover:shadow-xs`,
                 )}
               >
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: color }} aria-hidden="true" />
-                    <span className="text-[11px] uppercase tracking-wider font-semibold text-[#0D0D0D] truncate">
+                    <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: theme.dot }} aria-hidden="true" />
+                    <span className={cn("text-[11px] uppercase tracking-wider font-bold truncate", theme.text)}>
                       {p}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#575657] font-mono tabular-nums">
+                  <span className="text-[10px] text-[#575657] font-mono tabular-nums font-medium">
                     {pct}%
                   </span>
                 </div>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-[18px] font-bold text-[#0D0D0D] tabular-nums leading-none">
+                <div className="mt-2.5 flex items-baseline justify-between">
+                  <span className="text-[20px] font-bold text-[#0D0D0D] tabular-nums leading-none">
                     {count}
                   </span>
-                  <span className="text-[10px] text-[#575657]">issues</span>
+                  <span className="text-[11px] text-[#575657]">items</span>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Scrollable issues section with ample room */}
-        <div className="flex-1 min-h-0 flex flex-col border border-border/70 rounded-[12px] bg-[#FBFBFC] p-2 overflow-hidden">
-          <div className="flex items-center justify-between px-1 pb-1.5 text-[11px] text-[#575657] shrink-0 border-b border-border/50">
-            <span className="font-medium text-[#0D0D0D]">
+        {/* Scrollable issues section with plenty of room */}
+        <div className="flex-1 min-h-0 flex flex-col rounded-[14px] border border-border/80 bg-white p-3 overflow-hidden">
+          <div className="flex items-center justify-between pb-2 text-[12px] text-[#575657] shrink-0 border-b border-border/60">
+            <span className="font-semibold text-[#0D0D0D]">
               {selectedPriority
-                ? `${selectedPriority.toUpperCase()} Priority Items`
-                : "All Open Priority Items"}
+                ? `${selectedPriority.toUpperCase()} Priority (${filteredIssues.length})`
+                : `Open Priority Queue (${filteredIssues.length})`}
             </span>
-            <span className="tabular-nums text-[10px]">
-              {filteredIssues.length} item{filteredIssues.length !== 1 ? "s" : ""}
+            <span className="text-[11px] text-[#575657]">
+              Click any item to open
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-1 pt-1.5 space-y-1.5 overscroll-contain">
+          <div className="flex-1 overflow-y-auto pr-1.5 pt-2 space-y-2 overscroll-contain">
             {filteredIssues.length === 0 ? (
-              <div className="py-8 text-center text-[12px] text-[#575657]">
+              <div className="py-12 text-center text-[13px] text-[#575657]">
                 No {selectedPriority || ""} open issues found in this scope.
               </div>
             ) : (
-              filteredIssues.slice(0, 50).map((iss) => {
+              filteredIssues.slice(0, 60).map((iss) => {
                 const pColor = PRIORITY_PALETTE[iss.priority.toLowerCase()] || "#9A9A9F";
                 return (
                   <Link
                     key={iss._id}
                     to={`/app/issues/${iss._id}`}
-                    className="flex items-center justify-between gap-2.5 rounded-[9px] border border-border/70 bg-white p-2 px-2.5 text-left transition-all hover:bg-[#F6F6F7] hover:border-[#0D0D0D]/30 hover:shadow-xs group"
+                    className="flex items-center justify-between gap-3 rounded-[10px] border border-border/70 bg-[#FBFBFC] p-2.5 px-3 text-left transition-all hover:bg-white hover:border-[#0D0D0D]/40 hover:shadow-xs group"
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <span
                         className="size-2 rounded-full shrink-0"
                         style={{ backgroundColor: pColor }}
                         title={`Priority: ${iss.priority}`}
                       />
                       {iss.projectKey && (
-                        <span className="shrink-0 font-mono text-[10px] font-semibold text-[#575657] bg-[#F1F1F3] px-1.5 py-0.5 rounded">
+                        <span className="shrink-0 font-mono text-[10px] font-bold text-[#0D0D0D] bg-[#F1F1F3] px-1.5 py-0.5 rounded-[4px] border border-border/50">
                           {iss.projectKey}-{iss.number}
                         </span>
                       )}
-                      <span className="truncate text-[12px] font-medium text-[#0D0D0D] group-hover:text-[#0D0D0D]">
+                      <span className="truncate text-[12.5px] font-medium text-[#0D0D0D] group-hover:text-[#0D0D0D]">
                         {iss.title}
                       </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-[#F1F1F3] px-2 py-0.5 text-[10px] font-medium text-[#575657] capitalize">
+                    <span className="shrink-0 rounded-full border border-border/60 bg-white px-2 py-0.5 text-[10px] font-medium text-[#575657] capitalize">
                       {iss.statusName}
                     </span>
                   </Link>

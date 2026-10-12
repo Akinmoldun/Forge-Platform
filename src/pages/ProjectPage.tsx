@@ -33,7 +33,6 @@ import {
   EmptyState,
   ListSkeleton,
   RiskBadge,
-  StatusDot,
   formatDate,
   formatDuration,
   timeAgo,
@@ -560,25 +559,28 @@ function AnalyticsTab({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex h-40 items-end gap-2 pt-2">
-              {summary.throughput.map((t, i) => (
-                <div key={t.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-                  <span className={`text-[10px] font-semibold tabular-nums text-[#0D0D0D] transition-opacity ${t.count > 0 ? "opacity-100" : "opacity-0"}`}>
-                    {t.count}
-                  </span>
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${Math.max(4, (t.count / maxThroughput) * 100)}%` }}
-                    transition={{ duration: 0.55, delay: i * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
-                    className={`w-full max-w-8 rounded-t-md transition-all ${
-                      t.count > 0
-                        ? "bg-gradient-to-t from-[#9FDA85] to-[#83DD79] hover:brightness-105"
-                        : "bg-[#F1F1F3]"
-                    }`}
-                  />
-                  <span className="text-[9px] font-mono text-[#575657]">{t.label}</span>
-                </div>
-              ))}
+            <div className="flex h-44 items-end gap-3 pt-3">
+              {summary.throughput.map((t, i) => {
+                const count = t.count;
+                return (
+                  <div key={t.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5 group">
+                    <span className={`text-[11px] font-bold tabular-nums text-[#0D0D0D] transition-opacity ${count > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                      {count}
+                    </span>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${count > 0 ? Math.max(16, (count / maxThroughput) * 100) : 6}%` }}
+                      transition={{ duration: 0.55, delay: i * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
+                      className={`w-full max-w-9 rounded-t-[6px] transition-all ${
+                        count > 0
+                          ? "bg-gradient-to-t from-[#83DD79] via-[#9FDA85] to-[#BED390] shadow-xs hover:brightness-105"
+                          : "bg-[#EAEAEF] hover:bg-[#DEDEE5]"
+                      }`}
+                    />
+                    <span className="text-[10px] font-mono text-[#575657] font-medium">{t.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -732,28 +734,31 @@ function AnalyticsTab({
             <CardDescription className="text-xs text-[#575657]">Distribution across the project workflow</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-8 lg:grid-cols-2">
-            <div className="space-y-3">
-              {summary.byStatus.map((s, i) => (
-                <div key={s.statusName}>
-                  <div className="flex items-baseline justify-between text-xs">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <StatusDot color={s.color} />
-                      <span className="truncate font-medium text-[#0D0D0D]">{s.statusName}</span>
-                    </span>
-                    <span className="ml-2 shrink-0 tabular-nums text-[#575657] text-[11px]">
-                      {s.count} · {summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0}%
-                    </span>
+            <div className="space-y-3.5">
+              {summary.byStatus.map((s, i) => {
+                const barColor = s.color && s.color !== "#8b8b93" ? s.color : "#6E94CB";
+                return (
+                  <div key={s.statusName}>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
+                        <span className="truncate font-medium text-[#0D0D0D]">{s.statusName}</span>
+                      </span>
+                      <span className="ml-2 shrink-0 tabular-nums text-[#575657] text-[11px] font-mono">
+                        {s.count} · {summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0}%
+                      </span>
+                    </div>
+                    <MotionBar
+                      pct={summary.total > 0 ? (s.count / summary.total) * 100 : 0}
+                      className="mt-1.5 h-2 rounded-full"
+                      barStyle={{ backgroundColor: barColor }}
+                      delay={i * 0.04}
+                    />
                   </div>
-                  <MotionBar
-                    pct={summary.total > 0 ? (s.count / summary.total) * 100 : 0}
-                    className="mt-1.5 h-1.5 rounded-full"
-                    barStyle={{ backgroundColor: s.color }}
-                    delay={i * 0.04}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {summary.byPriority.map((p, i) => {
                 const priorityColor =
                   p.priority === "urgent" ? "#D78FC6"
@@ -764,14 +769,17 @@ function AnalyticsTab({
                 return (
                   <div key={p.priority}>
                     <div className="flex items-baseline justify-between text-xs">
-                      <span className="capitalize font-medium text-[#0D0D0D]">{p.priority}</span>
-                      <span className="tabular-nums text-[#575657] text-[11px]">
+                      <span className="capitalize font-medium text-[#0D0D0D] flex items-center gap-2">
+                        <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: priorityColor }} />
+                        <span>{p.priority}</span>
+                      </span>
+                      <span className="tabular-nums text-[#575657] text-[11px] font-mono">
                         {p.count} · {summary.openCount > 0 ? Math.round((p.count / summary.openCount) * 100) : 0}%
                       </span>
                     </div>
                     <MotionBar
                       pct={summary.openCount > 0 ? (p.count / summary.openCount) * 100 : 0}
-                      className="mt-1.5 h-1.5 rounded-full"
+                      className="mt-1.5 h-2 rounded-full"
                       barStyle={{ backgroundColor: priorityColor }}
                       delay={i * 0.04}
                     />

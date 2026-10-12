@@ -477,7 +477,7 @@ const DEMO_ISSUE_SPECS = [
     title: "Resolve intermittent WebSocket reconnection dropouts on mobile clients",
     description: "Mobile clients experience dropped socket connections during network handoffs between Wi-Fi and 5G.\n\n### Acceptance Criteria\n- [x] Exponential backoff jitter on reconnect retry loop\n- [ ] Preserve pending mutations in offline buffer queue\n- [ ] Heartbeat ping interval tuned to 25s",
     priority: "urgent" as const,
-    stageCategory: "started",
+    stageCategory: "active",
     estimatePoints: 5,
     daysAgo: 3,
   },
@@ -501,7 +501,7 @@ const DEMO_ISSUE_SPECS = [
     title: "Optimize database index coverage on composite workspace member lookups",
     description: "Slow queries detected on `by_workspace_user` index during concurrent dashboard loads.\n\n- Add composite index on `(workspaceId, role, joinedAt)`\n- Benchmark p99 query latency under 15ms",
     priority: "high" as const,
-    stageCategory: "started",
+    stageCategory: "active",
     estimatePoints: 5,
     daysAgo: 7,
   },
@@ -551,7 +551,7 @@ const DEMO_ISSUE_SPECS = [
     title: "Refactor command palette fuzzy search to index labels and custom properties",
     description: "Enhance Cmd+K fuzzy matching with keyword weighting for labels, assignees, and project keys.",
     priority: "medium" as const,
-    stageCategory: "started",
+    stageCategory: "active",
     estimatePoints: 5,
     daysAgo: 6,
   },
@@ -597,6 +597,88 @@ const DEMO_ISSUE_SPECS = [
     estimatePoints: 2,
     daysAgo: 18,
   },
+  {
+    title: "Draft architecture RFC for multi-region replication failover cluster",
+    description: "Evaluate active-passive versus multi-leader Postgres topology under high write concurrency.\n\n- [ ] Measure p99 latency across EU-Central and US-East\n- [ ] Draft fallback conflict resolution protocol",
+    priority: "high" as const,
+    stageCategory: "backlog",
+    estimatePoints: 8,
+    daysAgo: 9,
+  },
+  {
+    title: "Build real-time presence indicators on active kanban columns",
+    description: "Display subtle avatar halos on columns currently inspected or edited by active team members.",
+    priority: "medium" as const,
+    stageCategory: "unstarted",
+    estimatePoints: 5,
+    daysAgo: 3,
+  },
+  {
+    title: "Implement distributed rate limiter with sliding window algorithm",
+    description: "Enforce per-workspace API quotas using Redis sliding logs to protect against traffic bursts.",
+    priority: "urgent" as const,
+    stageCategory: "active",
+    estimatePoints: 5,
+    daysAgo: 4,
+  },
+  {
+    title: "Audit cross-tenant data isolation in multi-tenant background cron tasks",
+    description: "Verify that all background workers strictly query within the scoped tenant workspace ID context.",
+    priority: "high" as const,
+    stageCategory: "review",
+    estimatePoints: 5,
+    daysAgo: 3,
+  },
+  {
+    title: "PR #389: Virtualize issue table rendering for 15,000+ item backlog queries",
+    description: "Render only visible row viewport nodes using windowing to eliminate frame stutters on massive datasets.",
+    priority: "medium" as const,
+    stageCategory: "review",
+    estimatePoints: 5,
+    daysAgo: 2,
+  },
+  {
+    title: "Ship automated database point-in-time recovery to staging cluster",
+    description: "Validate automated hourly WAL archive backups and execute dry-run cluster restoration.",
+    priority: "high" as const,
+    stageCategory: "completed",
+    estimatePoints: 8,
+    daysAgo: 10,
+    cycleDays: 4,
+  },
+  {
+    title: "Drop legacy Internet Explorer polyfills from production bundle",
+    description: "Removes unnecessary runtime polyfill overhead and reduces initial vendor payload size by 38KB.",
+    priority: "low" as const,
+    stageCategory: "cancelled",
+    estimatePoints: 1,
+    daysAgo: 25,
+  },
+  {
+    title: "Resolve race condition in payment webhook invoice reconciliation",
+    description: "When invoice.paid and customer.subscription.updated fire simultaneously, prevent duplicate email notifications.",
+    priority: "urgent" as const,
+    stageCategory: "active",
+    estimatePoints: 5,
+    daysAgo: 1,
+  },
+  {
+    title: "QA verify cross-browser keyboard accessibility on workflow rule builder",
+    description: "Ensure screen readers and keyboard-only focus loops traverse rule condition rows accurately.",
+    priority: "medium" as const,
+    stageCategory: "review",
+    estimatePoints: 3,
+    daysAgo: 2,
+  },
+  {
+    title: "Optimize cold start serverless container boot time below 350ms",
+    description: "Bundle tree-shaken ESM modules and pre-warm execution contexts during traffic surge periods.",
+    priority: "high" as const,
+    stageCategory: "completed",
+    estimatePoints: 5,
+    daysAgo: 19,
+    cycleDays: 3,
+  },
 ];
 
 async function seedIssuesForProjectHelper(
@@ -632,12 +714,24 @@ async function seedIssuesForProjectHelper(
     const match = statusDocs.find((s: any) => {
       const sCat = (s.category || "").toLowerCase();
       const sName = (s.name || "").toLowerCase();
-      if (cat === "started") return sCat === "started" || sName.includes("progress") || sName.includes("active");
-      if (cat === "review") return sCat === "review" || sName.includes("review") || sName.includes("qa");
-      if (cat === "completed") return sCat === "completed" || sName.includes("done") || sName.includes("shipped");
-      if (cat === "cancelled") return sCat === "cancelled" || sName.includes("cancel");
-      if (cat === "unstarted") return sCat === "unstarted" || sName.includes("todo") || sName.includes("ready");
-      if (cat === "backlog") return sCat === "backlog" || sName.includes("backlog");
+      if (cat === "started" || cat === "active") {
+        return sCat === "active" || sCat === "started" || sName.includes("progress") || sName.includes("dev") || sName.includes("active");
+      }
+      if (cat === "review") {
+        return sCat === "review" || sName.includes("review") || sName.includes("qa") || sName.includes("changes");
+      }
+      if (cat === "completed" || cat === "done") {
+        return sCat === "completed" || sName.includes("done") || sName.includes("shipped");
+      }
+      if (cat === "cancelled") {
+        return sCat === "cancelled" || sName.includes("cancel") || sName.includes("won't fix");
+      }
+      if (cat === "unstarted" || cat === "todo") {
+        return sCat === "unstarted" || sName.includes("todo") || sName.includes("ready");
+      }
+      if (cat === "backlog") {
+        return sCat === "backlog" || sName.includes("backlog") || sName.includes("triage");
+      }
       return false;
     });
     return match ? match._id : statusDocs[0]._id;
@@ -657,7 +751,7 @@ async function seedIssuesForProjectHelper(
       const cycle = (spec.cycleDays ?? 4) * DAY;
       completedAt = now - Math.max(1, spec.daysAgo - 4) * DAY;
       startedAt = completedAt - cycle;
-    } else if (spec.stageCategory === "started" || spec.stageCategory === "review") {
+    } else if (spec.stageCategory === "active" || spec.stageCategory === "review") {
       startedAt = createdAt + 1 * DAY;
     }
 
@@ -691,6 +785,38 @@ async function seedIssuesForProjectHelper(
       updatedAt: completedAt ?? (now - 1 * DAY),
     });
     count++;
+  }
+
+  // Ensure EVERY single statusDoc in the project has at least 3 issues
+  for (let sIdx = 0; sIdx < statusDocs.length; sIdx++) {
+    const s = statusDocs[sIdx];
+    const sIssues = await ctx.db
+      .query("issues")
+      .withIndex("by_status", (q: any) => q.eq("statusId", s._id))
+      .collect();
+
+    if (sIssues.length < 3) {
+      const needed = 3 - sIssues.length;
+      for (let k = 0; k < needed; k++) {
+        const itemNum = k + 1;
+        await ctx.db.insert("issues", {
+          workspaceId,
+          projectId,
+          number: nextNumber++,
+          title: `[${s.name}] Implement automated validation and engineering specs #${itemNum}`,
+          description: `### Scope\nItem actively tracked in stage **${s.name}** (${s.category}).\n\n### Acceptance Criteria\n- [x] Initial design specification ratified\n- [ ] Regression test matrix passed\n- [ ] Sign-off approved`,
+          statusId: s._id,
+          priority: itemNum === 1 ? "high" : "medium",
+          assigneeId: memberUserIds[(sIdx + k) % memberUserIds.length],
+          reporterId: userId,
+          dueDate: now + (k + 4) * DAY,
+          estimatePoints: itemNum === 1 ? 5 : 3,
+          createdAt: now - (k + 2) * DAY,
+          updatedAt: now,
+        });
+        count++;
+      }
+    }
   }
 
   await ctx.db.patch(projectId, { updatedAt: now });

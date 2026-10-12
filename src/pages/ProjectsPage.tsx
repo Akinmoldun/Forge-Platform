@@ -32,10 +32,7 @@ import {
   CircleSlash,
   FolderKanban,
   Timer,
-  Sparkles,
-  Loader2,
 } from "lucide-react";
-import { toast } from "sonner";
 
 type StatusFilter = "all" | "planning" | "active" | "paused" | "completed";
 
@@ -90,26 +87,12 @@ export default function ProjectsPage() {
 
 
   const [populatingAll, setPopulatingAll] = useState(false);
-  const [populatingProjectId, setPopulatingProjectId] = useState<Id<"projects"> | null>(null);
 
   const emptyProjects = useMemo(() => {
     return (projects ?? []).filter((p) => p.issueCount === 0);
   }, [projects]);
 
   const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
-  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
-
-  const handlePopulateProject = async (projectId: Id<"projects">) => {
-    try {
-      setPopulatingProjectId(projectId);
-      await populateProjectMutation({ projectId });
-      toast.success("Project populated with sample issues");
-    } catch {
-      toast.error("Failed to populate issues");
-    } finally {
-      setPopulatingProjectId(null);
-    }
-  };
 
   useEffect(() => {
     if (projects && emptyProjects.length > 0 && canWrite && !populatingAll) {
@@ -397,28 +380,12 @@ export default function ProjectsPage() {
                               <span className="text-[#0D0D0D]">{ownerName}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                              {p.issueCount === 0 && canWrite ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handlePopulateProject(p._id)}
-                                  disabled={populatingProjectId === p._id || populatingAll}
-                                  className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2.5 py-1 text-[11px] font-medium text-[#2B548F] hover:bg-[#6E94CB]/20 transition-colors"
-                                >
-                                  {populatingProjectId === p._id ? (
-                                    <Loader2 className="size-3 animate-spin" />
-                                  ) : (
-                                    <Sparkles className="size-3 text-[#6E94CB]" />
-                                  )}
-                                  <span>Populate issues</span>
-                                </button>
-                              ) : (
-                                <span className="font-medium text-[#0D0D0D]">
-                                  {p.issueCount}{" "}
-                                  <span className="text-[11px] font-normal text-[#575657]">
-                                    {p.openIssueCount} open
-                                  </span>
+                              <span className="font-medium text-[#0D0D0D]">
+                                {p.issueCount}{" "}
+                                <span className="text-[11px] font-normal text-[#575657]">
+                                  {p.openIssueCount} open
                                 </span>
-                              )}
+                              </span>
                               {risk ? (
                                 <RiskBadge level={risk.level} score={risk.score} />
                               ) : (

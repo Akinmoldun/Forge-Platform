@@ -190,7 +190,7 @@ export function DraggableWidgetGrid({
   }, [containerWidth, columns, gap]);
 
   const rowHeight = useMemo(() => {
-    return colWidth * rowRatio;
+    return Math.max(220, colWidth * rowRatio);
   }, [colWidth, rowRatio]);
 
   const colStep = useMemo(() => colWidth + gap, [colWidth, gap]);
