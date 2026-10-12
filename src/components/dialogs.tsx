@@ -96,11 +96,7 @@ export function CreateProjectDialog({
       });
       setOpen(false);
       reset();
-      toast.success(
-        populateDemoIssues
-          ? `Project ${key.trim().toUpperCase()} created with sample issues`
-          : `Project ${key.trim().toUpperCase()} created`,
-      );
+      toast.success(`Project ${key.trim().toUpperCase()} created`);
       onCreated?.(result.projectId);
       navigate(`/app/projects/${result.projectId}`);
     } catch (e) {
@@ -186,21 +182,6 @@ export function CreateProjectDialog({
               placeholder="What is this project about?"
               className="rounded-[12px] text-[13px]"
             />
-          </div>
-          <div className="flex items-start gap-2.5 rounded-[12px] border border-border/80 bg-[#FBFBFC] p-3">
-            <input
-              id="cp-populate"
-              type="checkbox"
-              checked={populateDemoIssues}
-              onChange={(e) => setPopulateDemoIssues(e.target.checked)}
-              className="mt-0.5 size-4 rounded accent-[#0D0D0D]"
-            />
-            <label htmlFor="cp-populate" className="text-[12px] text-[#0D0D0D] cursor-pointer select-none">
-              <span className="font-semibold block">Seed with sample workflow issues</span>
-              <span className="text-[#575657] block mt-0.5">
-                Populates 15 realistic issues across all statuses (Backlog, Todo, In Progress, Review, Done) to test boards and analytics immediately.
-              </span>
-            </label>
           </div>
         </div>
         <DialogFooter>

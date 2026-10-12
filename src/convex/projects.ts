@@ -178,8 +178,8 @@ export const createProject = mutation({
       });
     }
 
-    // If requested, seed initial demo issues across all statuses
-    if (args.populateDemoIssues) {
+    // Seed initial demo issues across all statuses by default
+    if (args.populateDemoIssues !== false) {
       await seedIssuesForProjectHelper(ctx, {
         workspaceId,
         projectId,

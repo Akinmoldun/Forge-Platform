@@ -60,39 +60,7 @@ import { toast } from "sonner";
 
 type PendingMap = Record<string, Partial<Record<RuleKey, boolean>>>;
 
-const DEMO_PRESET_PACKS = [
-  {
-    name: "Engineering CI/CD",
-    stages: [
-      { name: "Triage", category: "backlog", color: "#9A9A9F" },
-      { name: "Architecture Spec", category: "unstarted", color: "#6E94CB" },
-      { name: "In Development", category: "started", color: "#7957EC" },
-      { name: "Code Review", category: "review", color: "#D78FC6" },
-      { name: "QA & Staging", category: "review", color: "#D6C6A1" },
-      { name: "Production Shipped", category: "completed", color: "#83DD79" },
-    ],
-  },
-  {
-    name: "Design & UX",
-    stages: [
-      { name: "User Feedback", category: "backlog", color: "#9A9A9F" },
-      { name: "Wireframing", category: "unstarted", color: "#6E94CB" },
-      { name: "Interactive Prototype", category: "started", color: "#7957EC" },
-      { name: "Design Critique", category: "review", color: "#D78FC6" },
-      { name: "Design Handoff", category: "completed", color: "#83DD79" },
-    ],
-  },
-  {
-    name: "Security & Compliance",
-    stages: [
-      { name: "Vulnerability Intake", category: "backlog", color: "#9A9A9F" },
-      { name: "Threat Assessment", category: "started", color: "#7957EC" },
-      { name: "Security Audit", category: "review", color: "#D78FC6" },
-      { name: "Penetration Testing", category: "review", color: "#D6C6A1" },
-      { name: "Security Cleared", category: "completed", color: "#83DD79" },
-    ],
-  },
-];
+
 
 const SAMPLE_STAGE_ISSUES: Record<string, Array<{ title: string; priority: string }>> = {
   backlog: [
@@ -186,41 +154,17 @@ export default function WorkflowPage() {
   const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
   const [isPopulating, setIsPopulating] = useState(false);
 
-  const handlePopulateProjectIssues = async () => {
-    if (!effectiveProjectId || isPopulating) return;
-    setIsPopulating(true);
-    try {
-      const res = await populateProjectMutation({
+  // Automatically ensure the selected project has issues populated silently if empty
+  useEffect(() => {
+    if (effectiveProjectId && workflowData && (issues?.length ?? 0) === 0 && !isPopulating) {
+      setIsPopulating(true);
+      populateProjectMutation({
         projectId: effectiveProjectId as Id<"projects">,
-      });
-      toast.success(`Populated ${res.count} diverse issues across all categories and stages`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to populate issues");
-    } finally {
-      setIsPopulating(false);
+      })
+        .catch(() => {})
+        .finally(() => setIsPopulating(false));
     }
-  };
-
-  const handleAddPresetPack = (packIndex: number) => {
-    const pack = DEMO_PRESET_PACKS[packIndex];
-    if (!pack) return;
-    const now = Date.now();
-    const newStatuses = pack.stages.map((s, idx) => ({
-      _id: `custom_status_${now}_${idx}`,
-      name: s.name,
-      category: s.category,
-      color: s.color,
-      position: (workflowData?.statuses?.length ?? 5) + localStatuses.length + idx,
-    }));
-    const next = [...localStatuses, ...newStatuses];
-    setLocalStatuses(next);
-    try {
-      localStorage.setItem(`forge_demo_statuses_${effectiveProjectId}`, JSON.stringify(next));
-    } catch (e) {
-      console.warn("Failed to save demo statuses:", e);
-    }
-    toast.success(`Applied ${pack.name} with ${pack.stages.length} workflow stages`);
-  };
+  }, [effectiveProjectId, workflowData, issues?.length, isPopulating, populateProjectMutation]);
 
   const handleAddStatus = (newStatus: { name: string; category: string; color: string }) => {
     const customId = `custom_status_${Date.now()}`;
@@ -453,23 +397,7 @@ export default function WorkflowPage() {
             ]}
             className="min-w-[11rem]"
           />
-          {canEdit && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handlePopulateProjectIssues}
-              disabled={isPopulating}
-              className="text-[12px] h-8 rounded-full border-border bg-white text-[#575657] hover:text-[#0D0D0D]"
-              title="Populate project with 14 diverse demo issues across all categories"
-            >
-              {isPopulating ? (
-                <Loader2 className="size-3.5 mr-1 animate-spin" />
-              ) : (
-                <Sparkles className="size-3.5 mr-1 text-[#6E94CB]" />
-              )}
-              {isPopulating ? "Populating..." : "Populate sample issues"}
-            </Button>
-          )}
+
           <Button
             size="sm"
             onClick={saveWorkflow}
@@ -644,101 +572,7 @@ export default function WorkflowPage() {
             </div>
           </div>
 
-          {/* Pipeline quick category strip with instant stage addition */}
-          <div className="mt-3.5 space-y-2.5 border-t border-border/60 pt-3">
-            {/* 1. Pre-built workflow template packs */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="font-medium text-[#0D0D0D] mr-1 flex items-center gap-1">
-                  <Sparkles className="size-3 text-[#7957EC]" /> Workflow presets:
-                </span>
-                {DEMO_PRESET_PACKS.map((pack, idx) => (
-                  <button
-                    key={pack.name}
-                    type="button"
-                    onClick={() => handleAddPresetPack(idx)}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-[#FBFBFC] px-2.5 py-1 text-[11px] font-medium text-[#575657] transition-all hover:border-[#0D0D0D] hover:bg-white hover:text-[#0D0D0D]"
-                  >
-                    <Plus className="size-3 text-[#7957EC]" />
-                    <span>{pack.name}</span>
-                  </button>
-                ))}
-              </div>
 
-              {localStatuses.length === 0 && (
-                <span className="text-[11px] text-[#575657]">Click any preset to add demo stages across all categories</span>
-              )}
-            </div>
-
-            {/* 2. Quick add stage pills across all 6 categories */}
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span className="font-medium text-[#0D0D0D] mr-1">Quick add stage:</span>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "Triage Intake", category: "backlog", color: "#9A9A9F" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#9A9A9F]/10 px-2 py-0.5 text-[10px] font-medium text-[#575657] transition-colors hover:bg-[#9A9A9F]/20"
-                title="Add stage in Backlog category"
-              >
-                <Plus className="size-2.5" /> Triage
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "Spec Ready", category: "unstarted", color: "#6E94CB" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2 py-0.5 text-[10px] font-medium text-[#2B548F] transition-colors hover:bg-[#6E94CB]/20"
-                title="Add stage in Unstarted category"
-              >
-                <Plus className="size-2.5" /> Spec Ready
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "In Development", category: "started", color: "#7957EC" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#7957EC]/10 px-2 py-0.5 text-[10px] font-medium text-[#7957EC] transition-colors hover:bg-[#7957EC]/20"
-                title="Add stage in In Progress category"
-              >
-                <Plus className="size-2.5" /> In Dev
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "Code Review", category: "review", color: "#D78FC6" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#D78FC6]/10 px-2 py-0.5 text-[10px] font-medium text-[#A63590] transition-colors hover:bg-[#D78FC6]/20"
-                title="Add stage in Review category"
-              >
-                <Plus className="size-2.5" /> Code Review
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "QA & Testing", category: "review", color: "#D6C6A1" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#D6C6A1]/20 px-2 py-0.5 text-[10px] font-medium text-[#8C7646] transition-colors hover:bg-[#D6C6A1]/30"
-                title="Add stage in QA / Review category"
-              >
-                <Plus className="size-2.5" /> QA & Testing
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "Staging Release", category: "review", color: "#6E94CB" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2 py-0.5 text-[10px] font-medium text-[#2B548F] transition-colors hover:bg-[#6E94CB]/20"
-                title="Add stage in Staging / Review category"
-              >
-                <Plus className="size-2.5" /> Staging
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "Production Shipped", category: "completed", color: "#83DD79" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#83DD79]/15 px-2 py-0.5 text-[10px] font-medium text-[#388E3C] transition-colors hover:bg-[#83DD79]/25"
-                title="Add stage in Completed category"
-              >
-                <Plus className="size-2.5" /> Shipped
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddStatus({ name: "Won't Fix", category: "cancelled", color: "#E5857F" })}
-                className="inline-flex items-center gap-1 rounded-full bg-[#E5857F]/15 px-2 py-0.5 text-[10px] font-medium text-[#B3261E] transition-colors hover:bg-[#E5857F]/25"
-                title="Add stage in Cancelled category"
-              >
-                <Plus className="size-2.5" /> Cancelled
-              </button>
-            </div>
-          </div>
 
           {/* Interactive Pipeline Track */}
           <div className="mt-4">

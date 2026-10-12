@@ -123,22 +123,32 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
   const [isPopulating, setIsPopulating] = useState(false);
 
-  const handlePopulateDemoIssues = async () => {
+  const handlePopulateDemoIssues = async (silent = false) => {
     if (!project || isPopulating) return;
     setIsPopulating(true);
     try {
       const res = await populateProjectMutation({
         projectId: project.project._id,
       });
-      toast.success(`Populated ${res.count} demo issues across all stages, priorities, and assignees`);
+      if (!silent) {
+        toast.success(`Populated ${res.count} demo issues across all stages, priorities, and assignees`);
+      }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to populate issues");
+      if (!silent) {
+        toast.error(e instanceof Error ? e.message : "Failed to populate issues");
+      }
     } finally {
       setIsPopulating(false);
     }
   };
 
   const totalBoardIssues = board?.columns.reduce((acc, c) => acc + c.issues.length, 0) ?? 0;
+
+  useEffect(() => {
+    if (project && board && totalBoardIssues === 0 && !isPopulating) {
+      handlePopulateDemoIssues(true);
+    }
+  }, [project, board, totalBoardIssues]);
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";
@@ -333,19 +343,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
               </SelectContent>
             </Select>
 
-            {canWrite && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePopulateDemoIssues}
-                disabled={isPopulating}
-                className="h-8 rounded-full border-border bg-white text-[12px] px-3 font-medium text-[#575657] hover:text-[#0D0D0D]"
-                title="Populate project with 14 diverse demo issues across all categories"
-              >
-                {isPopulating ? <Loader2 className="size-3 mr-1 animate-spin" /> : <Sparkles className="size-3 mr-1 text-[#6E94CB]" />}
-                <span>{isPopulating ? "Populating..." : "Populate demo issues"}</span>
-              </Button>
-            )}
+
 
             {project.role !== "viewer" && (
               <CreateIssueDialog
@@ -374,31 +372,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           <ActivityTab activity={projectActivity} keyName={project.project.key} />
         ) : view === "board" ? (
           <div className="space-y-3">
-            {/* Empty board banner with 1-click sample issues population */}
-            {totalBoardIssues === 0 && canWrite && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-dashed border-[#6E94CB]/40 bg-[#6E94CB]/5 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-[#6E94CB]/10 text-[#6E94CB]">
-                    <Sparkles className="size-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-semibold text-[#0D0D0D]">Empty project board</h3>
-                    <p className="text-[12px] text-[#575657]">
-                      This project has no issues yet. Populate with 14 diverse issues across all categories, states, and priorities to explore workflows and analytics.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handlePopulateDemoIssues}
-                  disabled={isPopulating}
-                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] text-[12px] font-medium"
-                >
-                  {isPopulating ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Sparkles className="size-3.5 mr-1 text-[#83DD79]" />}
-                  {isPopulating ? "Populating..." : "Populate sample issues"}
-                </Button>
-              </div>
-            )}
+
             {showTip && (
               <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
                 <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>

@@ -117,6 +117,21 @@ export default function OverviewPage() {
     }));
   }, [projectIssues, projects, user]);
 
+  const allWorkspaceIssues: OverviewIssueItem[] = useMemo(() => {
+    const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
+    return (projectIssues ?? []).map((i) => ({
+      _id: i._id,
+      projectId: i.projectId,
+      projectKey: projectKeyMap.get(i.projectId) ?? undefined,
+      number: i.number,
+      title: i.title,
+      statusName: i.status?.name || "Todo",
+      statusColor: i.status?.color,
+      priority: i.priority || "none",
+      assigneeId: i.assigneeId,
+    }));
+  }, [projectIssues, projects]);
+
   // Edit mode state (sample data permanently disabled)
   const [isEditing, setIsEditing] = useState(false);
 
@@ -245,7 +260,7 @@ export default function OverviewPage() {
         return (
           <PriorityBreakdownWidget
             rollup={realRollup}
-            issues={realIssues}
+            issues={allWorkspaceIssues}
             workspaceId={id}
           />
         );
@@ -297,20 +312,14 @@ export default function OverviewPage() {
 
 
 
-  const handlePopulateAll = async () => {
-    if (populatingAll) return;
-    setPopulatingAll(true);
-    try {
-      const res = await populateAllMutation({ workspaceId: id });
-      toast.success(
-        `Populated ${res.populatedCount} projects with ${res.totalIssuesCreated} demo issues`,
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to populate projects");
-    } finally {
-      setPopulatingAll(false);
+  useEffect(() => {
+    if (emptyProjectCount > 0 && canWrite && !populatingAll) {
+      setPopulatingAll(true);
+      populateAllMutation({ workspaceId: id })
+        .catch(() => {})
+        .finally(() => setPopulatingAll(false));
     }
-  };
+  }, [emptyProjectCount, canWrite, populatingAll, id, populateAllMutation]);
 
   // Filtered issue destination link
   const issuesTargetLink =
@@ -375,37 +384,7 @@ export default function OverviewPage() {
           )}
         </PageHeader>
 
-        {/* Empty project quick populator banner */}
-        {canWrite && emptyProjectCount > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-dashed border-[#6E94CB]/40 bg-[#6E94CB]/5 p-3.5 px-4">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-full bg-[#6E94CB]/10 text-[#6E94CB]">
-                <Sparkles className="size-3.5" />
-              </div>
-              <div>
-                <span className="text-[13px] font-semibold text-[#0D0D0D]">
-                  {emptyProjectCount} empty project{emptyProjectCount > 1 ? "s" : ""}
-                </span>
-                <span className="text-[12px] text-[#575657] ml-2">
-                  Populate with realistic issues across all categories and states to explore boards and workflows.
-                </span>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              onClick={handlePopulateAll}
-              disabled={populatingAll}
-              className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] text-[12px] font-medium h-8 px-3.5"
-            >
-              {populatingAll ? (
-                <Loader2 className="size-3 mr-1 animate-spin" />
-              ) : (
-                <Sparkles className="size-3 mr-1 text-[#83DD79]" />
-              )}
-              {populatingAll ? "Populating..." : "Populate all empty projects"}
-            </Button>
-          </div>
-        )}
+
 
         {/* Phase 3: Today strip with 3 compact cards */}
         <div className="grid gap-3 sm:grid-cols-3">

@@ -166,10 +166,11 @@ export function CommandPaletteDialog({
         className="max-w-[620px] w-full rounded-[20px] border border-border bg-white p-0 shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden"
       >
         <CommandPrimitive
+          shouldFilter={false}
           className="flex h-full w-full flex-col overflow-hidden bg-white text-[#0D0D0D]"
         >
           {/* Input row */}
-          <div className="flex h-13 items-center gap-3 border-b border-border/80 px-4 bg-white">
+          <div className="flex h-14 items-center gap-3 border-b border-border/80 px-4 bg-white">
             <Search className="size-4 shrink-0 text-[#575657]" />
             <CommandPrimitive.Input
               value={search}
@@ -177,8 +178,8 @@ export function CommandPaletteDialog({
                 setSearch(val);
                 if (activeChip) setActiveChip(null);
               }}
-              placeholder="Search issues, projects, pages, or pick an idea card below..."
-              className="flex-1 bg-transparent text-[14px] text-[#0D0D0D] placeholder:text-[#575657]/60 outline-none"
+              placeholder="Search issues, projects, pages, or pick a suggestion..."
+              className="flex-1 bg-transparent text-[14px] text-[#0D0D0D] placeholder:text-[#575657]/70 outline-none"
               autoFocus
             />
             {search && (
@@ -200,9 +201,9 @@ export function CommandPaletteDialog({
           </div>
 
           {/* Quick Filter Idea Chips Row */}
-          <div className="flex items-center gap-1.5 border-b border-border/60 bg-[#FBFBFC] px-3.5 py-2 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] font-medium text-[#575657] shrink-0 mr-1 flex items-center gap-1">
-              <Sparkles className="size-3 text-[#7957EC]" /> Quick filters:
+          <div className="flex items-center gap-1.5 border-b border-border/60 bg-[#FBFBFC] px-3.5 py-2.5 overflow-x-auto no-scrollbar">
+            <span className="text-[11px] font-semibold text-[#0D0D0D] shrink-0 mr-1 flex items-center gap-1">
+              <Sparkles className="size-3 text-[#7957EC]" /> Suggestions:
             </span>
             {FAST_FILTER_CHIPS.map((chip) => {
               const Icon = chip.icon;
@@ -213,10 +214,10 @@ export function CommandPaletteDialog({
                   type="button"
                   onClick={() => handleApplyChip(chip.id, chip.query)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors shrink-0",
+                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all shrink-0 cursor-pointer",
                     isSelected
-                      ? "bg-[#0D0D0D] text-white"
-                      : "bg-white border border-border text-[#575657] hover:text-[#0D0D0D] hover:border-[#0D0D0D]/40"
+                      ? "bg-[#0D0D0D] text-white shadow-xs"
+                      : "bg-white border border-border text-[#575657] hover:text-[#0D0D0D] hover:border-[#0D0D0D]/40 hover:bg-[#F6F6F7]"
                   )}
                 >
                   <span
@@ -231,92 +232,87 @@ export function CommandPaletteDialog({
           </div>
 
           {/* Body list */}
-          <CommandPrimitive.List className="max-h-[440px] overflow-y-auto no-scrollbar p-3 space-y-3">
-            <CommandPrimitive.Empty className="py-8 text-center text-[13px] text-[#575657]">
-              No matching results. Try clicking an idea card or project below.
-            </CommandPrimitive.Empty>
-
-            {/* When search query is empty, show interactive Idea Cards & Project jump grid */}
-            {isQueryEmpty && (
-              <>
-                {/* 1. Projects quick jump idea cards */}
-                {projects && projects.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between px-1 pb-1.5 text-[11px] font-medium text-[#575657]">
-                      <span>Projects ({projects.length})</span>
-                      <span className="text-[10px]">Click to jump directly</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {projects.slice(0, 6).map((proj) => (
-                        <button
-                          key={proj._id}
-                          type="button"
-                          onClick={() => handleSelect(() => navigate(`/app/projects/${proj._id}`))}
-                          className="flex items-start gap-2.5 rounded-[12px] border border-border/80 bg-[#FBFBFC] p-2.5 text-left transition-all hover:bg-white hover:border-[#0D0D0D]/30 hover:shadow-xs group"
-                        >
-                          <EmblemIllustration
-                            emblemKey={proj.iconKey || "compass"}
-                            name={proj.name}
-                            id={proj._id}
-                            size={22}
-                            className="mt-0.5 shrink-0"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="rounded-[4px] bg-[#F1F1F3] px-1 font-mono text-[9px] font-semibold text-[#0D0D0D]">
-                                {proj.key}
-                              </span>
-                            </div>
-                            <p className="mt-0.5 truncate text-[12px] font-medium text-[#0D0D0D] group-hover:text-[#0D0D0D]">
-                              {proj.name}
-                            </p>
-                            {proj.openIssueCount !== undefined && (
-                              <p className="text-[10px] text-[#575657] mt-0.5">
-                                {proj.openIssueCount} open work items
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Topic Idea Cards (1-click to auto-search without typing) */}
-                <div>
-                  <div className="flex items-center justify-between px-1 pb-1.5 text-[11px] font-medium text-[#575657]">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="size-3 text-[#6E94CB]" /> Suggested ideas & tasks
-                    </span>
-                    <span className="text-[10px]">Click to search instantly</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {IDEA_SUGGESTIONS.map((idea) => (
-                      <button
-                        key={idea.query}
-                        type="button"
-                        onClick={() => handleApplyIdea(idea.query)}
-                        className="flex flex-col justify-between rounded-[12px] border border-border bg-white p-2.5 text-left transition-all hover:border-[#0D0D0D]/40 hover:bg-[#F6F6F7]"
-                      >
-                        <div className="flex items-center justify-between text-[13px]">
-                          <span>{idea.icon}</span>
-                          <span className="text-[9px] text-[#575657] font-mono">{idea.category}</span>
-                        </div>
-                        <p className="mt-1.5 text-[11px] font-medium text-[#0D0D0D] line-clamp-2 leading-tight">
-                          {idea.label}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+          <CommandPrimitive.List className="max-h-[460px] overflow-y-auto no-scrollbar p-3 space-y-3.5">
+            {/* 1. Interactive Projects section */}
+            {projects && projects.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between px-1 pb-1.5 text-[11px] font-semibold text-[#0D0D0D]">
+                  <span className="flex items-center gap-1.5">
+                    <FolderKanban className="size-3 text-[#6E94CB]" /> Projects ({projects.length})
+                  </span>
+                  <span className="text-[10px] text-[#575657] font-normal">Click to open board</span>
                 </div>
-              </>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {projects.slice(0, 6).map((proj) => (
+                    <button
+                      key={proj._id}
+                      type="button"
+                      onClick={() => handleSelect(() => navigate(`/app/projects/${proj._id}`))}
+                      className="flex items-start gap-2.5 rounded-[12px] border border-border/80 bg-[#FBFBFC] p-2.5 text-left transition-all hover:bg-white hover:border-[#0D0D0D]/30 hover:shadow-xs group cursor-pointer"
+                    >
+                      <EmblemIllustration
+                        emblemKey={proj.iconKey || "compass"}
+                        name={proj.name}
+                        id={proj._id}
+                        size={22}
+                        className="mt-0.5 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded-[4px] bg-[#F1F1F3] px-1 font-mono text-[9px] font-semibold text-[#0D0D0D]">
+                            {proj.key}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-[12px] font-medium text-[#0D0D0D] group-hover:text-[#0D0D0D]">
+                          {proj.name}
+                        </p>
+                        {proj.openIssueCount !== undefined && (
+                          <p className="text-[10px] text-[#575657] mt-0.5">
+                            {proj.openIssueCount} open work items
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* Issues group (matching search or top active issues) */}
-            {matchedIssues.length > 0 && (
+            {/* 2. Topic Suggestions Cards (instant search queries) */}
+            {isQueryEmpty && (
+              <div>
+                <div className="flex items-center justify-between px-1 pb-1.5 text-[11px] font-semibold text-[#0D0D0D]">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="size-3 text-[#7957EC]" /> Suggested tasks & topics
+                  </span>
+                  <span className="text-[10px] text-[#575657] font-normal">1-click search</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {IDEA_SUGGESTIONS.map((idea) => (
+                    <button
+                      key={idea.query}
+                      type="button"
+                      onClick={() => handleApplyIdea(idea.query)}
+                      className="flex flex-col justify-between rounded-[12px] border border-border bg-white p-2.5 text-left transition-all hover:border-[#0D0D0D]/40 hover:bg-[#F6F6F7] cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between text-[13px]">
+                        <span>{idea.icon}</span>
+                        <span className="text-[9px] text-[#575657] font-mono group-hover:text-[#0D0D0D]">{idea.category}</span>
+                      </div>
+                      <p className="mt-1.5 text-[11px] font-medium text-[#0D0D0D] line-clamp-2 leading-tight">
+                        {idea.label}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Issues group (matching search or top active issues) */}
+            {matchedIssues.length > 0 ? (
               <CommandPrimitive.Group
                 heading={isQueryEmpty ? "Active & recent work items" : `Matched issues (${matchedIssues.length})`}
-                className="px-1 pb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-[#575657]"
+                className="px-1 pb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-[#0D0D0D]"
               >
                 {matchedIssues.map((iss) => {
                   const keyStr = iss.projectKey ? `${iss.projectKey}-${iss.number}` : `#${iss.number}`;
@@ -327,7 +323,7 @@ export function CommandPaletteDialog({
                       key={iss._id}
                       value={`issue ${keyStr} ${iss.title} ${iss.priority} ${iss.status?.name || ""}`}
                       onSelect={() => handleSelect(() => navigate(`/app/issues/${iss._id}`))}
-                      className="flex h-11 items-center justify-between gap-3 rounded-[10px] px-3 text-[13px] text-[#0D0D0D] cursor-pointer aria-selected:bg-[#ECECEE] transition-colors border border-transparent hover:border-border/60"
+                      className="flex h-11 items-center justify-between gap-3 rounded-[10px] px-3 text-[13px] text-[#0D0D0D] cursor-pointer aria-selected:bg-[#ECECEE] transition-colors border border-transparent hover:border-border/60 hover:bg-[#F6F6F7]"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <span
@@ -335,7 +331,7 @@ export function CommandPaletteDialog({
                           style={{ backgroundColor: pColor }}
                           title={`Priority: ${iss.priority || "none"}`}
                         />
-                        <span className="shrink-0 font-mono text-[10px] font-medium text-[#575657] bg-[#F1F1F3] px-1.5 py-0.5 rounded">
+                        <span className="shrink-0 font-mono text-[10px] font-semibold text-[#575657] bg-[#F1F1F3] px-1.5 py-0.5 rounded">
                           {keyStr}
                         </span>
                         <span className="font-medium truncate text-[12px]">{iss.title}</span>
@@ -352,7 +348,11 @@ export function CommandPaletteDialog({
                   );
                 })}
               </CommandPrimitive.Group>
-            )}
+            ) : !isQueryEmpty ? (
+              <div className="py-6 text-center text-[12px] text-[#575657]">
+                No issues match "{search}". Try picking a suggestion above.
+              </div>
+            ) : null}
 
             {/* Navigation Pages */}
             <CommandPrimitive.Group

@@ -499,7 +499,12 @@ async function runEnsure(ctx: any) {
         .query("memberships")
         .withIndex("by_workspace", (q: any) => q.eq("workspaceId", ws._id))
         .collect();
-      if (issues.length < 15 || members.length < 4) {
+      const projects = await ctx.db
+        .query("projects")
+        .withIndex("by_workspace", (q: any) => q.eq("workspaceId", ws._id))
+        .collect();
+      const hasEmptyProject = projects.some((p: any) => p.issueCount === 0);
+      if (issues.length < 100 || members.length < 4 || projects.length < 3 || hasEmptyProject) {
         isThin = true;
         break;
       }
@@ -585,35 +590,35 @@ async function runEnsure(ctx: any) {
     labelIdMap.set(l.name, lId);
   }
 
-  // Build Project 1 (MOB) synchronously for fast paint within 1-2s
+  // Build all 5 Northstar projects synchronously so all projects have rich issues immediately
   const allUsers = [user._id, ...teammateUserIds];
-  const mobSpec = NORTHSTAR_PROJECT_SPECS[0];
-  await buildProject(ctx, {
-    workspaceId: ws1Id,
-    ownerId: user._id,
-    name: mobSpec.name,
-    key: mobSpec.key,
-    description: mobSpec.description,
-    iconKey: mobSpec.iconKey,
-    titles: NORTHSTAR_PROJECT_TITLES["MOB"],
-    targetCount: mobSpec.targetCount,
-    allUsers,
-    labels: Array.from(labelIdMap.values()),
-    projectIndex: 0,
-    baseCreatedAt: createdAt,
-    now,
-  });
+  const allLabelIds = Array.from(labelIdMap.values());
+
+  for (let pIdx = 0; pIdx < NORTHSTAR_PROJECT_SPECS.length; pIdx++) {
+    const spec = NORTHSTAR_PROJECT_SPECS[pIdx];
+    await buildProject(ctx, {
+      workspaceId: ws1Id,
+      ownerId: user._id,
+      name: spec.name,
+      key: spec.key,
+      description: spec.description,
+      iconKey: spec.iconKey,
+      titles: NORTHSTAR_PROJECT_TITLES[spec.key] ?? NORTHSTAR_PROJECT_TITLES["MOB"],
+      targetCount: spec.targetCount,
+      allUsers,
+      labels: allLabelIds,
+      projectIndex: pIdx,
+      baseCreatedAt: createdAt,
+      now,
+    });
+  }
 
   // Seed sample notifications for guest user
   await createGuestNotifications(ctx, user._id, teammateUserIds, ws1Id);
 
-  // Schedule remaining batches
-  await ctx.scheduler.runAfter(10, (internal as any).guestDemo?.seed?.seedNorthstarRemaining, {
-    workspaceId: ws1Id,
+  // Schedule Workspace 2: Pixel Forge
+  await ctx.scheduler.runAfter(10, (internal as any)["guestDemo/seed"].seedPixelForge, {
     ownerId: user._id,
-    allUsers,
-    labelIds: Array.from(labelIdMap.values()),
-    baseCreatedAt: createdAt,
   });
 
   return {
@@ -863,7 +868,7 @@ export const seedPixelForge = internalMutation({
     });
 
     // Schedule remaining projects for Pixel Forge
-    await ctx.scheduler.runAfter(10, (internal as any).guestDemo?.seed?.seedPixelForgeRemaining, {
+    await ctx.scheduler.runAfter(10, (internal as any)["guestDemo/seed"].seedPixelForgeRemaining, {
       workspaceId: ws2Id,
       ownerId: args.ownerId,
       allUsers,
@@ -923,7 +928,7 @@ export const seedPixelForgeRemaining = internalMutation({
     });
 
     // Schedule Workspace 3: Quiet Harbor
-    await ctx.scheduler.runAfter(10, (internal as any).guestDemo?.seed?.seedQuietHarbor, {
+    await ctx.scheduler.runAfter(10, (internal as any)["guestDemo/seed"].seedQuietHarbor, {
       ownerId: args.ownerId,
     });
   },

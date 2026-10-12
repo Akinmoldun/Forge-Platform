@@ -15,12 +15,12 @@ import {
 import type { Id } from "./_generated/dataModel";
 
 const DEFAULT_WORKFLOW = [
-  { name: "Backlog", category: "backlog" as const, color: "#8b8b93" },
-  { name: "Todo", category: "backlog" as const, color: "#7a7a85" },
-  { name: "In Progress", category: "active" as const, color: "#4f8ff7" },
-  { name: "Review", category: "review" as const, color: "#b98af5" },
-  { name: "Done", category: "completed" as const, color: "#3ecf8e" },
-  { name: "Cancelled", category: "cancelled" as const, color: "#f06a6a" },
+  { name: "Backlog", category: "backlog" as const, color: "#64748B" },
+  { name: "Todo", category: "unstarted" as const, color: "#0284C7" },
+  { name: "In Progress", category: "active" as const, color: "#6366F1" },
+  { name: "Review", category: "review" as const, color: "#EC4899" },
+  { name: "Done", category: "completed" as const, color: "#10B981" },
+  { name: "Cancelled", category: "cancelled" as const, color: "#EF4444" },
 ];
 
 // Allowed transitions of the default workflow: forward flow + reopen paths
@@ -47,7 +47,7 @@ const DEFAULT_TRANSITIONS: Array<[string, string]> = [
 
 export const DEFAULT_STATUS_ROWS = [
   ...DEFAULT_WORKFLOW.slice(0, 4),
-  { name: "Changes Requested", category: "review" as const, color: "#e6a23c" },
+  { name: "Changes Requested", category: "review" as const, color: "#F59E0B" },
   ...DEFAULT_WORKFLOW.slice(4),
 ];
 
