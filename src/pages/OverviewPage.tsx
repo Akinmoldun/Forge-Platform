@@ -120,6 +120,13 @@ export default function OverviewPage() {
   // Edit mode state (sample data permanently disabled)
   const [isEditing, setIsEditing] = useState(false);
 
+  const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
+  const [populatingAll, setPopulatingAll] = useState(false);
+  const emptyProjectCount = useMemo(
+    () => (projects ?? []).filter((p) => p.issueCount === 0).length,
+    [projects],
+  );
+
   // Persistence in localStorage per user and workspace
   const storageKey = `forge_overview_layout_${workspaceId}_${userId}`;
 
@@ -288,12 +295,7 @@ export default function OverviewPage() {
     (i) => (i.status?.name?.toLowerCase().includes("review") || i.status?.category === "in_progress") && !i.archivedAt
   );
 
-  const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
-  const [populatingAll, setPopulatingAll] = useState(false);
-  const emptyProjectCount = useMemo(
-    () => (projects ?? []).filter((p) => p.issueCount === 0).length,
-    [projects],
-  );
+
 
   const handlePopulateAll = async () => {
     if (populatingAll) return;

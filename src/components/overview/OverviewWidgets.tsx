@@ -7,8 +7,6 @@ import {
   UserPlus,
   Clock,
   FolderKanban,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { WidgetItem } from "@/components/ui/draggable-widget-grid";
 import { InfoHint } from "@/components/app-ui";
@@ -467,7 +465,7 @@ export function StatusDistributionWidget({
 export function PriorityBreakdownWidget({
   rollup,
   issues = [],
-  workspaceId,
+  workspaceId: _workspaceId,
 }: {
   rollup: OverviewDataProps["rollup"];
   issues?: OverviewIssueItem[];

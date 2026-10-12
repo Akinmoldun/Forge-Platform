@@ -1,4 +1,4 @@
-import { useQuery, useConvex } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -36,7 +36,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { populateDemoIssuesForProject } from "@/lib/demoIssuePopulator";
 
 type StatusFilter = "all" | "planning" | "active" | "paused" | "completed";
 
@@ -89,7 +88,7 @@ export default function ProjectsPage() {
   const canWrite = workspace ? workspace.role !== "viewer" : false;
   const loading = projects === undefined || members === undefined || risksLoading;
 
-  const convex = useConvex();
+
   const [populatingProjectId, setPopulatingProjectId] = useState<string | null>(null);
   const [populatingAll, setPopulatingAll] = useState(false);
 

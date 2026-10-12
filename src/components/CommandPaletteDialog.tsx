@@ -29,7 +29,6 @@ import {
   Clock,
   AlertCircle,
   X,
-  Compass,
   ArrowRight,
 } from "lucide-react";
 import { EmblemIllustration } from "@/components/Illustrations";
@@ -150,7 +149,7 @@ export function CommandPaletteDialog({
         const titleMatch = iss.title.toLowerCase().includes(q);
         const keyMatch = fullKey.includes(q);
         const priorityMatch = (iss.priority || "").toLowerCase().includes(q);
-        const statusMatch = (iss.statusName || "").toLowerCase().includes(q);
+        const statusMatch = (iss.status?.name || "").toLowerCase().includes(q);
         return titleMatch || keyMatch || priorityMatch || statusMatch;
       })
       .slice(0, 10);
@@ -326,7 +325,7 @@ export function CommandPaletteDialog({
                   return (
                     <CommandPrimitive.Item
                       key={iss._id}
-                      value={`issue ${keyStr} ${iss.title} ${iss.priority} ${iss.statusName}`}
+                      value={`issue ${keyStr} ${iss.title} ${iss.priority} ${iss.status?.name || ""}`}
                       onSelect={() => handleSelect(() => navigate(`/app/issues/${iss._id}`))}
                       className="flex h-11 items-center justify-between gap-3 rounded-[10px] px-3 text-[13px] text-[#0D0D0D] cursor-pointer aria-selected:bg-[#ECECEE] transition-colors border border-transparent hover:border-border/60"
                     >
@@ -342,9 +341,9 @@ export function CommandPaletteDialog({
                         <span className="font-medium truncate text-[12px]">{iss.title}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {iss.statusName && (
+                        {iss.status?.name && (
                           <span className="rounded-full bg-[#F1F1F3] px-2 py-0.5 text-[10px] font-medium text-[#575657] capitalize">
-                            {iss.statusName}
+                            {iss.status.name}
                           </span>
                         )}
                         <ArrowRight className="size-3 text-[#575657]/50" />

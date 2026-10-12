@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useConvex } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -54,7 +54,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { populateDemoIssuesForProject } from "@/lib/demoIssuePopulator";
 
 type ViewMode = "board" | "list";
 
@@ -666,7 +665,7 @@ function AnalyticsTab({
               </p>
             ) : (
               <div className="space-y-3.5">
-                {summary.workload.map((w, i) => {
+                {summary.workload.map((w) => {
                   const maxLoad = Math.max(1, summary.workload[0].openIssues);
                   const totalPct = Math.max(3, (w.openIssues / maxLoad) * 100);
                   const overdueShare = w.openIssues > 0 ? (w.overdue / w.openIssues) * 100 : 0;

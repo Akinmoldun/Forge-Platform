@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useConvex } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -57,7 +57,6 @@ import {
 } from "lucide-react";
 import { DragScroll } from "@/components/DragScroll";
 import { toast } from "sonner";
-import { populateDemoIssuesForProject } from "@/lib/demoIssuePopulator";
 
 type PendingMap = Record<string, Partial<Record<RuleKey, boolean>>>;
 
@@ -217,7 +216,9 @@ export default function WorkflowPage() {
     setLocalStatuses(next);
     try {
       localStorage.setItem(`forge_demo_statuses_${effectiveProjectId}`, JSON.stringify(next));
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to save demo statuses:", e);
+    }
     toast.success(`Applied ${pack.name} with ${pack.stages.length} workflow stages`);
   };
 
@@ -236,7 +237,9 @@ export default function WorkflowPage() {
     setLocalStatuses(next);
     try {
       localStorage.setItem(`forge_demo_statuses_${effectiveProjectId}`, JSON.stringify(next));
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to save demo statuses:", e);
+    }
     toast.success(`Added stage "${newStatus.name}" to workflow`);
   };
 
@@ -244,7 +247,9 @@ export default function WorkflowPage() {
     setLocalStatuses([]);
     try {
       localStorage.removeItem(`forge_demo_statuses_${effectiveProjectId}`);
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to reset demo statuses:", e);
+    }
     toast.success("Reset custom workflow demo states");
   };
 
@@ -254,7 +259,13 @@ export default function WorkflowPage() {
 
   const statuses: WorkflowStatusNodeData[] = useMemo(() => {
     const remote = [...(workflowData?.statuses ?? [])].sort((a, b) => a.position - b.position);
-    const combined = [...remote];
+    const combined: WorkflowStatusNodeData[] = remote.map((s) => ({
+      _id: s._id,
+      name: s.name,
+      category: s.category,
+      color: s.color,
+      position: s.position,
+    }));
     for (const ls of localStatuses) {
       if (!combined.some((s) => s.name.toLowerCase() === ls.name.toLowerCase())) {
         combined.push(ls as WorkflowStatusNodeData);
@@ -264,7 +275,14 @@ export default function WorkflowPage() {
   }, [workflowData, localStatuses]);
 
   const transitions: WorkflowTransition[] = useMemo(() => {
-    const list = [...(workflowData?.transitions ?? [])].map((t) => ({ ...t }));
+    const list: WorkflowTransition[] = [...(workflowData?.transitions ?? [])].map((t) => ({
+      _id: t._id,
+      fromStatusId: t.fromStatusId,
+      toStatusId: t.toStatusId,
+      requiresAssignee: t.requiresAssignee,
+      requiresComment: t.requiresComment,
+      requiresApproval: t.requiresApproval,
+    }));
     // Synthesize transitions for any custom or demo statuses
     for (let i = 0; i < statuses.length - 1; i++) {
       const curr = statuses[i];
