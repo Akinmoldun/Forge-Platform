@@ -501,7 +501,7 @@ html.js-reveal .reveal-visible {
 }
 
 /* Universal scrollbar concealment across the app: mouse wheel/touch still scroll */
-.no-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
 *::-webkit-scrollbar,
 *::-webkit-scrollbar-button,
 *::-webkit-scrollbar-thumb,
@@ -509,6 +509,11 @@ html.js-reveal .reveal-visible {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+}
+
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 * {

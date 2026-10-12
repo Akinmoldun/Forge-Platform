@@ -10,19 +10,45 @@ export const getWorkflow = query({
     const projectCtx = await findProjectContext(ctx, args.projectId);
     if (!projectCtx) return { workflow: null, statuses: [], transitions: [] };
     const { project } = projectCtx;
-    const workflow = await ctx.db
+    const workspaceId = projectCtx.workspaceId;
+    let workflow = await ctx.db
       .query("workflows")
       .withIndex("by_project", (q) => q.eq("projectId", project._id))
       .first();
-    if (!workflow) return { workflow: null, statuses: [], transitions: [] };
-    const statuses = await ctx.db
-      .query("workflowStatuses")
-      .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
-      .collect();
-    const transitions = await ctx.db
-      .query("workflowTransitions")
-      .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
-      .collect();
+    if (!workflow) {
+      workflow = await ctx.db
+        .query("workflows")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .first();
+    }
+    let statuses = workflow
+      ? await ctx.db
+          .query("workflowStatuses")
+          .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
+          .collect()
+      : [];
+
+    if (statuses.length === 0) {
+      const wsStatuses = await ctx.db
+        .query("workflowStatuses")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .collect();
+      const seen = new Set<string>();
+      statuses = wsStatuses.filter((s) => {
+        if (seen.has(s.name.toLowerCase())) return false;
+        seen.add(s.name.toLowerCase());
+        return true;
+      });
+      statuses.sort((a, b) => a.position - b.position);
+    }
+
+    const transitions = workflow
+      ? await ctx.db
+          .query("workflowTransitions")
+          .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
+          .collect()
+      : [];
+
     return { workflow, statuses, transitions };
   },
 });

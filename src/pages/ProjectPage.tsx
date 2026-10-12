@@ -394,6 +394,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
               board={board}
               keyName={project.project.key}
               canWrite={canWrite}
+              searchQuery={debouncedSearch}
+              priorityFilter={priorityFilter}
+              assigneeFilter={assigneeFilter}
               onStatusChange={handleStatusChange}
               onIssueClick={(id) => navigate(`/app/issues/${id}`)}
               onNewIssueInStatus={(statusId) => {
@@ -854,6 +857,9 @@ function BoardView({
   board,
   keyName,
   canWrite,
+  searchQuery,
+  priorityFilter,
+  assigneeFilter,
   onStatusChange,
   onIssueClick,
   onNewIssueInStatus,
@@ -878,6 +884,9 @@ function BoardView({
     | undefined;
   keyName: string;
   canWrite: boolean;
+  searchQuery?: string;
+  priorityFilter?: string;
+  assigneeFilter?: string;
   onStatusChange: (issueId: string, toStatusId: string) => Promise<void>;
   onIssueClick: (id: string) => void;
   onNewIssueInStatus?: (statusId: string) => void;
@@ -901,8 +910,36 @@ function BoardView({
             categoryLower === "cancelled" ||
             statusNameLower.includes("changes requested") ||
             statusNameLower.includes("cancelled");
+
+          // Filter column issues by search, priority, assignee
+          const filteredIssues = col.issues.filter((i) => {
+            if (
+              priorityFilter &&
+              priorityFilter !== "all" &&
+              i.priority.toLowerCase() !== priorityFilter.toLowerCase()
+            ) {
+              return false;
+            }
+            if (assigneeFilter && assigneeFilter !== "all") {
+              if (assigneeFilter === "unassigned" && i.assigneeName) return false;
+              if (
+                assigneeFilter !== "unassigned" &&
+                (i as { assigneeId?: string }).assigneeId !== assigneeFilter
+              ) {
+                return false;
+              }
+            }
+            if (searchQuery && searchQuery.trim()) {
+              const q = searchQuery.toLowerCase().trim();
+              const matchesTitle = i.title.toLowerCase().includes(q);
+              const matchesKey = `${keyName}-${i.number}`.toLowerCase().includes(q);
+              if (!matchesTitle && !matchesKey) return false;
+            }
+            return true;
+          });
+
           const isCollapsed =
-            col.issues.length === 0 && isMinorCol && !expandedCols[col.status._id];
+            filteredIssues.length === 0 && isMinorCol && !expandedCols[col.status._id];
 
           // Collapsed 48px rail for empty Cancelled / Changes Requested
           if (isCollapsed) {
@@ -931,8 +968,8 @@ function BoardView({
           }
 
           const limit = columnLimit[col.status._id] ?? 20;
-          const visibleIssues = col.issues.slice(0, limit);
-          const hasMore = col.issues.length > limit;
+          const visibleIssues = filteredIssues.slice(0, limit);
+          const hasMore = filteredIssues.length > limit;
 
           return (
             <div
@@ -973,13 +1010,13 @@ function BoardView({
                   category={col.status.category || col.status.name}
                 />
                 <span className="font-mono text-[11px] text-[#575657] font-medium">
-                  {col.issues.length}
+                  {filteredIssues.length}
                 </span>
               </div>
 
               {/* Cards list (grows with content, no inner scroll) */}
               <div className="space-y-2.5">
-                {col.issues.length === 0 && (
+                {filteredIssues.length === 0 && (
                   <p className="px-1 py-8 text-center text-[12px] text-[#575657]">
                     No issues in this column
                   </p>
@@ -1073,7 +1110,7 @@ function BoardView({
                     }
                     className="w-full py-1.5 rounded-[8px] text-[12px] font-medium text-[#575657] hover:bg-[#F1F1F3] hover:text-[#0D0D0D] transition-colors text-center"
                   >
-                    Show {col.issues.length - limit} more
+                    Show {filteredIssues.length - limit} more
                   </button>
                 )}
               </div>

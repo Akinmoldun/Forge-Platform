@@ -178,19 +178,40 @@ export const getBoard = query({
       statuses.sort((a, b) => a.position - b.position);
     }
 
-    // If still empty, synthesize the 7 standard statuses
-    if (statuses.length === 0) {
-      statuses = DEFAULT_STATUS_ROWS.map((s, idx) => ({
-        _id: `status_${s.name.toLowerCase().replace(/\s+/g, "_")}` as Id<"workflowStatuses">,
-        _creationTime: 0,
-        workspaceId,
-        workflowId: (workflow?._id ?? ("" as Id<"workflows">)),
-        name: s.name,
-        category: s.category,
-        position: idx,
-        color: s.color,
-      }));
+    // Ensure all 7 standard statuses exist in statuses
+    const existingNames = new Set(statuses.map((s) => s.name.toLowerCase()));
+    for (const s of DEFAULT_STATUS_ROWS) {
+      if (!existingNames.has(s.name.toLowerCase())) {
+        statuses.push({
+          _id: `status_${s.name.toLowerCase().replace(/\s+/g, "_")}` as Id<"workflowStatuses">,
+          _creationTime: 0,
+          workspaceId,
+          workflowId: (workflow?._id ?? ("" as Id<"workflows">)),
+          name: s.name,
+          category: s.category,
+          position: statuses.length,
+          color: s.color,
+        });
+      }
     }
+
+    const CANONICAL_ORDER = [
+      "backlog",
+      "todo",
+      "in progress",
+      "review",
+      "changes requested",
+      "done",
+      "cancelled",
+    ];
+    statuses.sort((a, b) => {
+      const idxA = CANONICAL_ORDER.indexOf(a.name.toLowerCase());
+      const idxB = CANONICAL_ORDER.indexOf(b.name.toLowerCase());
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.position - b.position;
+    });
 
     const issues = (
       await ctx.db

@@ -40,16 +40,54 @@ function typeOf(eventType: string): string {
 }
 
 function describe(eventType: string, payload: Record<string, unknown> | undefined): string {
-  const action = eventType.split(".")[1] ?? "";
-  const name =
-    (payload?.name as string | undefined) ??
-    (payload?.identifier as string | undefined) ??
-    (payload?.issueKey as string | undefined) ??
-    (payload?.issue as string | undefined) ??
-    (payload?.field as string | undefined) ??
-    (payload?.title as string | undefined);
-  const label = action.replace(/_/g, " ");
-  return name ? `${label} ${name}` : label;
+  const p = payload ?? {};
+  switch (eventType) {
+    case "issue.created": {
+      const key = p.issueKey as string | undefined;
+      const title = (p.title || p.name) as string | undefined;
+      return `created issue ${key ? `${key} ` : ""}${title ? `“${title}”` : ""}`;
+    }
+    case "issue.status_changed": {
+      const from = (p.from as string) || (p.fromName as string);
+      const to = (p.to as string) || (p.toName as string);
+      const key = (p.issueKey || "an issue") as string;
+      if (from && to) {
+        return `moved ${key} from ${from} to ${to}`;
+      }
+      return `moved ${key} to ${to || "the next status"}`;
+    }
+    case "issue.assigned": {
+      const key = (p.issueKey || "issue") as string;
+      const assignee = (p.assigneeName || p.assignee || "a team member") as string;
+      return `assigned ${key} to ${assignee}`;
+    }
+    case "issue.priority_changed": {
+      const key = (p.issueKey || "issue") as string;
+      const priority = (p.to || p.priority || "updated") as string;
+      return `changed priority of ${key} to ${priority}`;
+    }
+    case "issue.commented":
+      return `commented on ${p.issueKey || "an issue"}`;
+    case "issue.updated":
+      return `updated ${p.issueKey || "an issue"}`;
+    case "project.created":
+      return `created project ${p.name || ""}`;
+    case "project.updated":
+      return `updated settings for project ${p.name || ""}`;
+    case "membership.created":
+    case "membership.joined":
+      return `joined the workspace as ${p.role || "member"}`;
+    case "membership.role_changed":
+      return `updated member role to ${p.role || "member"}`;
+    case "workflow.transitioned":
+    case "workflow.updated":
+      return `updated workflow transition rules`;
+    default: {
+      const action = eventType.split(".")[1]?.replace(/_/g, " ") ?? "updated";
+      const target = (p.name || p.title || p.issueKey || "") as string;
+      return target ? `${action} ${target}` : `${action} an item`;
+    }
+  }
 }
 
 /**
@@ -122,16 +160,20 @@ export default function ActivityPage() {
     });
   }, [activity, search, type, actor, since]);
 
+  const [displayCount, setDisplayCount] = useState(30);
+
+  const paginated = useMemo(() => filtered.slice(0, displayCount), [filtered, displayCount]);
+
   const grouped = useMemo(() => {
-    const groups: Array<{ key: string; label: string; items: typeof filtered }> = [];
-    for (const event of filtered) {
+    const groups: Array<{ key: string; label: string; items: typeof paginated }> = [];
+    for (const event of paginated) {
       const key = dayKey(event.createdAt);
       const last = groups[groups.length - 1];
       if (last && last.key === key) last.items.push(event);
       else groups.push({ key, label: dayLabel(event.createdAt), items: [event] });
     }
     return groups;
-  }, [filtered]);
+  }, [paginated]);
 
   if (workspace === null) {
     return (
@@ -260,8 +302,8 @@ export default function ActivityPage() {
               <div className="space-y-4">
                 {grouped.map((group) => (
                   <section key={group.key}>
-                    <div className="mb-2 flex items-center gap-3">
-                      <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    <div className="sticky top-0 z-10 bg-[#FBFBFC]/95 backdrop-blur-sm py-2 mb-2 flex items-center gap-3">
+                      <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#0D0D0D]">
                         {group.label}
                       </h2>
                       <div className="h-px flex-1 bg-border" aria-hidden />
@@ -295,6 +337,19 @@ export default function ActivityPage() {
                     </ul>
                   </section>
                 ))}
+
+                {filtered.length > displayCount && (
+                  <div className="pt-3 pb-6 text-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDisplayCount((prev) => prev + 30)}
+                      className="text-[12px] font-medium cursor-pointer"
+                    >
+                      Load more activity ({filtered.length - displayCount} remaining)
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>

@@ -115,7 +115,7 @@ export const QUIET_HARBOR_PROJECT_SPECS: ProjectSpec[] = [
     name: "Cloud Operations",
     description: "CI/CD deployment pipelines, automated backups, and SSL automation",
     iconKey: "anchor",
-    targetCount: 9,
+    targetCount: 35,
   },
 ];
 

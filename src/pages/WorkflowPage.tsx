@@ -24,6 +24,7 @@ import {
   StatCard,
 } from "@/components/app-ui";
 import { EmptyState, ListSkeleton } from "@/components/forge";
+import { StatusPill } from "@/components/Illustrations";
 import { ProgressRing } from "@/components/motion";
 import {
   AutomationRulesPanel,
@@ -523,108 +524,102 @@ export default function WorkflowPage() {
         )}
 
         {/* Visual Pipeline */}
-        <div className="rounded-[16px] border border-border bg-white p-5">
+        <div className="rounded-[16px] border border-border bg-white p-5 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Visual pipeline</h2>
+                <h2 className="text-[14px] font-medium text-[#0D0D0D]">Visual pipeline</h2>
               </div>
               <p className="mt-0.5 text-[12px] text-[#575657]">
-                Interactive end-to-end pipeline view with transition protection rules and bottleneck tracking.
+                Interactive end-to-end pipeline view with transition protection rules and stage meanings.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {canEdit ? (
-                <Badge variant="outline" className="rounded-full border-[#83DD79]/60 bg-[#83DD79]/10 text-[11px] font-medium text-[#0D0D0D]">
+                <Badge variant="outline" className="rounded-full border-[#83DD79]/60 bg-[#83DD79]/10 text-[11px] font-medium text-[#0D0D0D] px-2.5 py-0.5">
                   <ShieldCheck className="mr-1 size-3 text-[#83DD79]" /> Admin: editing enabled
                 </Badge>
               ) : (
-                <Badge variant="outline" className="rounded-full border-border bg-[#F1F1F3] text-[11px] font-medium text-[#575657]">
+                <Badge variant="outline" className="rounded-full border-border bg-[#F1F1F3] text-[11px] font-medium text-[#575657] px-2.5 py-0.5">
                   <Lock className="mr-1 size-3 text-[#575657]" /> Read-only (Admin role required)
                 </Badge>
               )}
             </div>
           </div>
 
-
-
           {/* Interactive Pipeline Track */}
           <div className="mt-4">
-            <DragScroll>
-              <div className="flex items-center gap-3 py-2">
+            <DragScroll className="py-1">
+              <div className="flex items-center gap-3 min-w-max">
                 {statuses.map((status, idx) => {
                   const outgoingRules = transitions.filter((t) => t.fromStatusId === status._id);
                   const activeRules: string[] = [];
-                  if (outgoingRules.some((t) => t.requiresAssignee)) activeRules.push("Requires assignee");
-                  if (outgoingRules.some((t) => t.requiresComment)) activeRules.push("Requires comment");
-                  if (outgoingRules.some((t) => t.requiresApproval)) activeRules.push("Requires approval");
+                  if (outgoingRules.some((t) => t.requiresAssignee)) activeRules.push("needs assignee");
+                  if (outgoingRules.some((t) => t.requiresComment)) activeRules.push("needs comment");
+                  if (outgoingRules.some((t) => t.requiresApproval)) activeRules.push("needs approval");
+                  const visibleRules = activeRules.slice(0, 2);
 
                   const issueCount = counts.get(status._id) ?? 0;
-                  const isBottleneck = issueCount > 0 && issueCount === Math.max(...[...counts.values()]);
-                  const pct = totalIssues > 0 ? Math.round((issueCount / totalIssues) * 100) : 0;
+
+                  const sNameLower = status.name.toLowerCase();
+                  const sCatLower = (status.category || "").toLowerCase();
+                  let stageMeaning = "ready for work";
+                  if (sNameLower.includes("backlog") || sCatLower === "backlog") {
+                    stageMeaning = "ideas and unplanned work";
+                  } else if (sNameLower === "todo" || sCatLower === "unstarted") {
+                    stageMeaning = "ready to start";
+                  } else if (sNameLower.includes("progress") || sCatLower === "active" || sCatLower === "started") {
+                    stageMeaning = "being worked on";
+                  } else if (sNameLower.includes("review") || sCatLower === "review") {
+                    stageMeaning = "waiting for a check";
+                  } else if (sNameLower.includes("changes requested")) {
+                    stageMeaning = "needs fixes";
+                  } else if (sNameLower.includes("done") || sCatLower === "completed") {
+                    stageMeaning = "finished";
+                  } else if (sNameLower.includes("cancelled") || sCatLower === "cancelled") {
+                    stageMeaning = "dropped";
+                  }
 
                   return (
                     <div key={status._id} className="flex items-center gap-3 shrink-0">
                       <div
                         onClick={() => setSelectedStatusId(selectedStatusId === status._id ? null : status._id)}
-                        className={`w-[210px] shrink-0 cursor-pointer rounded-[14px] border p-3.5 transition-all select-none hover:border-[rgba(13,13,13,0.3)] ${
+                        className={`w-[220px] shrink-0 cursor-pointer rounded-[14px] border p-3.5 transition-all select-none hover:border-[rgba(13,13,13,0.3)] ${
                           selectedStatusId === status._id
                             ? "border-[#0D0D0D] bg-[#F6F6F7] ring-1 ring-[#0D0D0D]"
                             : "border-border bg-white"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className="size-2.5 rounded-full shrink-0"
-                              style={{ backgroundColor: status.color || "#8b8b93" }}
-                              aria-hidden="true"
-                            />
-                            <span className="text-[13px] font-[500] text-[#0D0D0D] truncate">{status.name}</span>
-                          </div>
-                          <span className="text-[11px] font-mono font-medium text-[#575657] tabular-nums shrink-0">
+                          <StatusPill name={status.name} category={status.category} />
+                          <span className="font-mono text-[11px] font-medium text-[#575657] tabular-nums shrink-0">
                             {issueCount}
                           </span>
                         </div>
 
-                        <div className="mt-1.5 flex items-center justify-between text-[10px] text-[#575657]">
-                          <span className="capitalize">{status.category}</span>
-                          <span>{pct}% load</span>
-                        </div>
+                        <p className="mt-2 text-[12px] text-[#575657] leading-snug">
+                          {stageMeaning}
+                        </p>
 
-                        {/* Progress load bar */}
-                        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
-                          <div
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{
-                              width: `${Math.min(100, Math.max(4, pct))}%`,
-                              backgroundColor: status.color || "#7957EC",
-                            }}
-                          />
-                        </div>
-
-                        <div className="mt-2.5 space-y-1">
-                          {isBottleneck && issueCount > 3 && (
-                            <span className="inline-flex items-center rounded-full bg-[#D6C6A1]/30 px-2 py-0.5 text-[10px] font-medium text-[#8C7646]">
-                              Highest queue
-                            </span>
-                          )}
-                          {activeRules.length > 0 ? (
-                            activeRules.map((rule) => (
-                              <div key={rule} className="flex items-center gap-1.5 text-[10px] text-[#0D0D0D] font-medium">
-                                <span className="size-1 rounded-full bg-[#B3261E]" />
-                                <span>{rule}</span>
-                              </div>
+                        <div className="mt-2.5 flex flex-wrap gap-1 min-h-[20px]">
+                          {visibleRules.length > 0 ? (
+                            visibleRules.map((rule) => (
+                              <span
+                                key={rule}
+                                className="rounded-[4px] border border-border/80 bg-[#F1F1F3] px-1.5 py-0.5 text-[10px] font-medium text-[#575657]"
+                              >
+                                {rule}
+                              </span>
                             ))
                           ) : (
-                            <p className="text-[10px] text-[#575657]">No restrictions</p>
+                            <span className="text-[10px] text-[#575657]/70">Standard transition</span>
                           )}
                         </div>
                       </div>
 
                       {idx < statuses.length - 1 && (
                         <div className="flex flex-col items-center shrink-0">
-                          <ArrowRight className="size-4 text-[#9A9A9F]" />
+                          <ArrowRight className="size-3.5 text-[#575657]/40" />
                         </div>
                       )}
                     </div>
@@ -685,12 +680,14 @@ export default function WorkflowPage() {
             onEditTransition={(id) => setEditingTransitionId(id)}
             onAddStatus={handleAddStatus}
           />
-          <div className="mt-4 pt-3 border-t border-border/60">
-            <AddStatusNotice
-              projectId={effectiveProjectId}
-              onAddStatus={handleAddStatus}
-            />
-          </div>
+          {statuses.length === 0 && (
+            <div className="mt-4 pt-3 border-t border-border/60">
+              <AddStatusNotice
+                projectId={effectiveProjectId}
+                onAddStatus={handleAddStatus}
+              />
+            </div>
+          )}
         </Panel>
 
         {/* Rules + automations */}

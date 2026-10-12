@@ -85,16 +85,37 @@ export function DragScroll({
     }
   };
 
-  const onMouseUp = () => {
-    isDown.current = false;
-    if (isDraggingOverThreshold.current) {
-      setIsDragging(false);
-      // Brief timeout to prevent click triggers
-      setTimeout(() => {
-        isDraggingOverThreshold.current = false;
-      }, 50);
+  const onWheel = (e: React.WheelEvent) => {
+    const el = containerRef.current;
+    if (!el) return;
+    // Allow native horizontal swipe (trackpad)
+    if (Math.abs(e.deltaX) > 0) return;
+    // If shiftKey is pressed or vertical wheel used, pan horizontally
+    if (e.shiftKey || Math.abs(e.deltaY) > 0) {
+      el.scrollLeft += e.deltaY;
     }
   };
+
+  const handleGlobalMouseUp = () => {
+    if (isDown.current) {
+      isDown.current = false;
+      if (isDraggingOverThreshold.current) {
+        setIsDragging(false);
+        setTimeout(() => {
+          isDraggingOverThreshold.current = false;
+        }, 50);
+      }
+    }
+  };
+
+  const onMouseUp = () => {
+    handleGlobalMouseUp();
+  };
+
+  useEffect(() => {
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, []);
 
   return (
     <div className="relative w-full">
@@ -126,9 +147,9 @@ export function DragScroll({
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
+        onWheel={onWheel}
         className={cn(
-          "w-full overflow-x-auto no-scrollbar select-none",
+          "w-full overflow-x-auto no-scrollbar select-none touch-pan-x",
           isDragging ? "cursor-grabbing" : "cursor-grab",
           className
         )}

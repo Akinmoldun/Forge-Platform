@@ -229,6 +229,22 @@ export function CommandPaletteDialog({
     return pages.filter((p) => p.label.toLowerCase().includes(trimmedSearch));
   }, [pages, trimmedSearch, isQueryEmpty, activeTab]);
 
+  const actionsList = useMemo(() => [
+    { id: "new-issue", label: "New issue", keywords: "new issue create task ticket", icon: Plus, handler: onNewIssue },
+    { id: "new-project", label: "New project", keywords: "new project create folder", icon: FolderKanban, handler: onNewProject },
+    { id: "invite-member", label: "Invite member", keywords: "invite member teammate user", icon: UserPlus, handler: onInviteMember },
+    { id: "toggle-sidebar", label: "Toggle sidebar", keywords: "toggle sidebar collapse expand menu", icon: PanelLeft, handler: onToggleSidebar },
+  ].filter((a): a is { id: string; label: string; keywords: string; icon: typeof Plus; handler: () => void } => Boolean(a.handler)), [onNewIssue, onNewProject, onInviteMember, onToggleSidebar]);
+
+  const matchedActions = useMemo(() => {
+    if (activeTab === "projects" || activeTab === "pages") return [];
+    if (isQueryEmpty) return actionsList;
+    return actionsList.filter((a) =>
+      a.label.toLowerCase().includes(trimmedSearch) ||
+      a.keywords.toLowerCase().includes(trimmedSearch)
+    );
+  }, [actionsList, trimmedSearch, isQueryEmpty, activeTab]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader className="sr-only">
@@ -237,7 +253,7 @@ export function CommandPaletteDialog({
       </DialogHeader>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[660px] w-full rounded-[22px] border border-border bg-white p-0 shadow-[0_24px_60px_rgba(0,0,0,0.12)] overflow-hidden"
+        className="max-w-[560px] w-full rounded-[16px] border border-border bg-white p-0 shadow-none overflow-hidden"
       >
         <CommandPrimitive
           shouldFilter={false}
@@ -302,9 +318,9 @@ export function CommandPaletteDialog({
 
           {/* Body list with ample space */}
           <CommandPrimitive.List className="max-h-[480px] overflow-y-auto no-scrollbar p-4 space-y-4">
-            {/* 1. Instant Idea / Task Suggestion Cards (when query is empty and on 'all') */}
-            {isQueryEmpty && activeTab === "all" && (
-              <div>
+            {/* 1. Instant Idea / Task Suggestion Cards (persistent suggestions) */}
+            {activeTab === "all" && (
+              <div className="pb-1">
                 <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-[#0D0D0D]">
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="size-3 text-[#7957EC]" /> Suggested tasks & topics
@@ -317,7 +333,7 @@ export function CommandPaletteDialog({
                       key={idea.query}
                       type="button"
                       onClick={() => handleApplyIdea(idea.query)}
-                      className="flex flex-col justify-between rounded-[12px] border border-border bg-[#FBFBFC] p-2.5 text-left transition-all hover:border-[#0D0D0D]/40 hover:bg-white hover:shadow-xs cursor-pointer group"
+                      className="flex flex-col justify-between rounded-[10px] border border-border bg-[#FBFBFC] p-2.5 text-left transition-all hover:border-[#0D0D0D]/40 hover:bg-white cursor-pointer group"
                     >
                       <div className="flex items-center justify-between text-[13px]">
                         <span>{idea.icon}</span>
@@ -453,56 +469,27 @@ export function CommandPaletteDialog({
               </CommandPrimitive.Group>
             )}
 
-            {/* 5. Quick Actions */}
-            {isQueryEmpty && activeTab === "all" && (
+            {/* 5. Quick Actions (live searchable) */}
+            {matchedActions.length > 0 && (
               <CommandPrimitive.Group
                 heading="Actions"
                 className="px-1 pb-1 [&_[cmdk-group-heading]]:px-1 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-[#0D0D0D]"
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {onNewIssue && (
-                    <CommandPrimitive.Item
-                      value="action new issue create task"
-                      onSelect={() => handleSelect(onNewIssue)}
-                      className="flex h-9 items-center gap-2 rounded-[8px] px-2.5 text-[12px] text-[#0D0D0D] cursor-pointer bg-white border border-border/70 hover:bg-[#F6F6F7] aria-selected:bg-[#ECECEE] transition-colors"
-                    >
-                      <Plus className="size-3.5 text-[#0D0D0D]" />
-                      <span className="font-medium truncate">New issue</span>
-                    </CommandPrimitive.Item>
-                  )}
-
-                  {onNewProject && (
-                    <CommandPrimitive.Item
-                      value="action new project create folder"
-                      onSelect={() => handleSelect(onNewProject)}
-                      className="flex h-9 items-center gap-2 rounded-[8px] px-2.5 text-[12px] text-[#0D0D0D] cursor-pointer bg-white border border-border/70 hover:bg-[#F6F6F7] aria-selected:bg-[#ECECEE] transition-colors"
-                    >
-                      <FolderKanban className="size-3.5 text-[#0D0D0D]" />
-                      <span className="font-medium truncate">New project</span>
-                    </CommandPrimitive.Item>
-                  )}
-
-                  {onInviteMember && (
-                    <CommandPrimitive.Item
-                      value="action invite member team"
-                      onSelect={() => handleSelect(onInviteMember)}
-                      className="flex h-9 items-center gap-2 rounded-[8px] px-2.5 text-[12px] text-[#0D0D0D] cursor-pointer bg-white border border-border/70 hover:bg-[#F6F6F7] aria-selected:bg-[#ECECEE] transition-colors"
-                    >
-                      <UserPlus className="size-3.5 text-[#0D0D0D]" />
-                      <span className="font-medium truncate">Invite member</span>
-                    </CommandPrimitive.Item>
-                  )}
-
-                  {onToggleSidebar && (
-                    <CommandPrimitive.Item
-                      value="action toggle sidebar collapse expand"
-                      onSelect={() => handleSelect(onToggleSidebar)}
-                      className="flex h-9 items-center gap-2 rounded-[8px] px-2.5 text-[12px] text-[#0D0D0D] cursor-pointer bg-white border border-border/70 hover:bg-[#F6F6F7] aria-selected:bg-[#ECECEE] transition-colors"
-                    >
-                      <PanelLeft className="size-3.5 text-[#0D0D0D]" />
-                      <span className="font-medium truncate">Toggle sidebar</span>
-                    </CommandPrimitive.Item>
-                  )}
+                  {matchedActions.map((act) => {
+                    const Icon = act.icon;
+                    return (
+                      <CommandPrimitive.Item
+                        key={act.id}
+                        value={`action ${act.label} ${act.keywords}`}
+                        onSelect={() => handleSelect(act.handler)}
+                        className="flex h-9 items-center gap-2 rounded-[8px] px-2.5 text-[12px] text-[#0D0D0D] cursor-pointer bg-white border border-border/70 hover:bg-[#F6F6F7] aria-selected:bg-[#ECECEE] transition-colors"
+                      >
+                        <Icon className="size-3.5 text-[#0D0D0D]" />
+                        <span className="font-medium truncate">{act.label}</span>
+                      </CommandPrimitive.Item>
+                    );
+                  })}
                 </div>
               </CommandPrimitive.Group>
             )}

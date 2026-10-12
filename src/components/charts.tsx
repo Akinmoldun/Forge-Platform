@@ -73,7 +73,7 @@ export function BarChart({
   return (
     <div className={cn("relative w-full", className)}>
       <div
-        className="flex w-full items-end gap-1.5"
+        className="flex w-full items-end gap-1"
         style={{ height }}
         onMouseLeave={() => setHover(null)}
       >
@@ -83,7 +83,7 @@ export function BarChart({
           return (
             <div
               key={d.label}
-              className="relative flex h-full min-w-0 flex-1 flex-col justify-end gap-1.5"
+              className="relative flex h-full min-w-0 flex-1 flex-col justify-end gap-1"
               onMouseEnter={() => setHover(i)}
               onFocus={() => setHover(i)}
               onBlur={() => setHover(null)}
@@ -106,9 +106,8 @@ export function BarChart({
                   ...(active ? { filter: "brightness(0.95)" } : {}),
                 }}
                 initial={{ height: reduce ? `${pct}%` : "0%" }}
-                whileInView={{ height: `${pct}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: reduce ? 0 : 0.6, ease: EASE, delay: reduce ? 0 : i * 0.03 }}
+                animate={{ height: `${pct}%` }}
+                transition={{ duration: reduce ? 0 : 0.4, ease: EASE, delay: reduce ? 0 : i * 0.02 }}
               />
               <div className="h-4 shrink-0 overflow-hidden text-center text-[10px] text-[#575657]">
                 <span className="block truncate">{d.label}</span>
@@ -250,9 +249,8 @@ export function LineChart({
           d={area}
           fill={`url(#${gradientId})`}
           initial={{ opacity: reduce ? 1 : 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: reduce ? 0 : 0.6 }}
+          animate={{ d: area, opacity: 1 }}
+          transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
         />
         <motion.path
           d={line}
@@ -263,9 +261,8 @@ export function LineChart({
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
           initial={{ pathLength: reduce ? 1 : 0 }}
-          whileInView={{ pathLength: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: reduce ? 0 : 0.8, ease: EASE }}
+          animate={{ d: line, pathLength: 1 }}
+          transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
         />
         {/* No dots on points as requested */}
         {hover !== null && (

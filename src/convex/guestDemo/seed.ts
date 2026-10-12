@@ -340,6 +340,29 @@ const QUIET_HARBOR_TITLES: Record<string, string[]> = {
     "Setup centralized log aggregation with vector and Datadog",
     "Automate DNS record migration to Cloudflare nameservers",
     "Implement multi-region failover routing for client portals",
+    "Rotate stale Kubernetes secrets and service account tokens",
+    "Tune Redis cluster memory eviction policies under heavy load",
+    "Configure Prometheus alerts for egress network anomalies",
+    "Migrate PostgreSQL read replica to isolated VPC subnet",
+    "Audit Docker image vulnerabilities using Trivy in CI pipeline",
+    "Implement canary deployment rollout with automated rollback",
+    "Setup OpenTelemetry distributed tracing across microservices",
+    "Enforce multi-factor authentication on AWS root account and IAM",
+    "Automate cloud cost anomaly alerts via Slack webhook",
+    "Upgrade ingress-nginx controller to latest security release",
+    "Provision elastic block store snapshot lifecycle management",
+    "Configure rate limiting headers in Cloudflare edge workers",
+    "Audit IAM role least-privilege policies across dev clusters",
+    "Set up automated TLS certificate auto-renewal with Let's Encrypt",
+    "Benchmark network latency across multi-cloud edge regions",
+    "Implement zero-downtime database migration schema runner",
+    "Tune autoscaling target CPU thresholds for API gateway pods",
+    "Setup blue-green deployment pipeline for staging environment",
+    "Configure Grafana dashboards for cluster resource saturation",
+    "Deploy eBPF-based security monitoring in production nodes",
+    "Implement automated daily backup verification drills",
+    "Establish disaster recovery runbook and RTO failover testing",
+    "Configure egress proxy for restricted third-party webhook calls",
   ],
 };
 
@@ -1423,6 +1446,14 @@ async function buildProject(
       else if (i <= 48) stage = "Changes Requested";
       else if (i <= 53) stage = "Todo";
       else stage = "Backlog";
+    } else if (key === "OPS") {
+      // Cloud Operations: 13 done, 22 open (matches "22 open · 13 done", ~37% done, medium risk)
+      if (i <= 13) stage = "Done";
+      else if (i <= 20) stage = "In Progress";
+      else if (i <= 25) stage = "Review";
+      else if (i <= 28) stage = "Changes Requested";
+      else if (i <= 31) stage = "Todo";
+      else stage = "Backlog";
     } else {
       // General balanced distribution for secondary demo workspaces
       if (pct <= 55) stage = "Done";
@@ -1492,6 +1523,9 @@ async function buildProject(
       } else if (key === "WEB" && i === 59) {
         // 1 overdue issue in WEB -> Medium risk
         dueDate = getRealisticWorkingTimestamp(now, 2, i + 11);
+      } else if (key === "OPS" && (i === 14 || i === 19)) {
+        // 2 overdue issues in OPS -> Medium risk
+        dueDate = getRealisticWorkingTimestamp(now, 2, i + 7);
       } else if (i % 4 === 0) {
         // Upcoming due dates in the next 3-14 days
         dueDate = now + (3 + (i % 10)) * DAY;

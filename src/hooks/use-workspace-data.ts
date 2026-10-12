@@ -394,57 +394,83 @@ export function startOfWeek(timestamp: number): number {
   return date.getTime();
 }
 
+/** Generate contiguous sequence of weekly bucket timestamps. */
+export function getContiguousWeeks(since: number, now: number = Date.now()): number[] {
+  const currentWeek = startOfWeek(now);
+  const start = since > 0 ? startOfWeek(since) : currentWeek - 11 * 7 * DAY;
+  const weeks: number[] = [];
+  for (let w = start; w <= currentWeek; w += 7 * DAY) {
+    weeks.push(w);
+  }
+  return weeks;
+}
+
 /**
  * Average cycle time per week for issues that started and completed inside the
- * window. `issues` is the real issue list, not an estimate.
+ * window. Contiguous unified weekly buckets.
  */
 export function cycleTimeByWeek(
   issues: WorkspaceIssue[],
   since: number,
+  now: number = Date.now(),
 ): Array<{ label: string; value: number }> {
+  const weeks = getContiguousWeeks(since, now);
   const buckets = new Map<number, number[]>();
+  for (const w of weeks) buckets.set(w, []);
+
   for (const issue of issues) {
     if (!issue.startedAt || !issue.completedAt) continue;
     if (issue.completedAt < since) continue;
     const week = startOfWeek(issue.completedAt);
+    if (!buckets.has(week)) continue;
     const days = (issue.completedAt - issue.startedAt) / DAY;
-    const list = buckets.get(week) ?? [];
-    list.push(days);
-    buckets.set(week, list);
+    buckets.get(week)!.push(days);
   }
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([week, values]) => ({
-      label: weekLabel(week),
-      value: Math.round((mean(values) ?? 0) * 10) / 10,
-    }));
+
+  return weeks.map((w) => {
+    const vals = buckets.get(w) ?? [];
+    return {
+      label: weekLabel(w),
+      value: vals.length > 0 ? Math.round((mean(vals) ?? 0) * 10) / 10 : 0,
+    };
+  });
 }
 
-/** Completed issues bucketed into the week they were completed. */
+/** Completed issues bucketed into the week they were completed with unified contiguous buckets. */
 export function throughputByWeek(
   issues: WorkspaceIssue[],
   since: number,
+  now: number = Date.now(),
 ): Array<{ label: string; value: number }> {
+  const weeks = getContiguousWeeks(since, now);
   const buckets = new Map<number, number>();
+  for (const w of weeks) buckets.set(w, 0);
+
   for (const issue of issues) {
     if (!issue.completedAt || issue.completedAt < since) continue;
     const week = startOfWeek(issue.completedAt);
-    buckets.set(week, (buckets.get(week) ?? 0) + 1);
+    if (buckets.has(week)) {
+      buckets.set(week, (buckets.get(week) ?? 0) + 1);
+    }
   }
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([week, count]) => ({ label: weekLabel(week), value: count }));
+
+  return weeks.map((w) => ({
+    label: weekLabel(w),
+    value: buckets.get(w) ?? 0,
+  }));
 }
 
 /**
- * Review wait per issue, rebuilt from the recorded status-change history:
- * time between entering a status in the "review" category and completing.
+ * Review wait per issue, rebuilt from recorded status-change history
+ * with unified contiguous weekly buckets.
  */
 export function reviewWaitByWeek(
   events: StatusChangeEvent[],
   issuesById: Map<string, WorkspaceIssue>,
   since: number,
+  now: number = Date.now(),
 ): Array<{ label: string; value: number }> {
+  const weeks = getContiguousWeeks(since, now);
   const enteredReview = new Map<string, number>();
   const waits: Array<{ week: number; days: number }> = [];
 
@@ -471,17 +497,20 @@ export function reviewWaitByWeek(
   }
 
   const buckets = new Map<number, number[]>();
+  for (const w of weeks) buckets.set(w, []);
   for (const wait of waits) {
-    const list = buckets.get(wait.week) ?? [];
-    list.push(wait.days);
-    buckets.set(wait.week, list);
+    if (buckets.has(wait.week)) {
+      buckets.get(wait.week)!.push(wait.days);
+    }
   }
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([week, values]) => ({
-      label: weekLabel(week),
-      value: Math.round((mean(values) ?? 0) * 10) / 10,
-    }));
+
+  return weeks.map((w) => {
+    const vals = buckets.get(w) ?? [];
+    return {
+      label: weekLabel(w),
+      value: vals.length > 0 ? Math.round((mean(vals) ?? 0) * 10) / 10 : 0,
+    };
+  });
 }
 
 /** Average review wait in days across the same event history. */
