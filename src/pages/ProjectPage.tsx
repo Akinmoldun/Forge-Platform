@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -50,8 +50,6 @@ import {
   Lock,
   X,
   ChevronDown,
-  Sparkles,
-  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -123,7 +121,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
   const [isPopulating, setIsPopulating] = useState(false);
 
-  const handlePopulateDemoIssues = async (silent = false) => {
+  const handlePopulateDemoIssues = useCallback(async (silent = false) => {
     if (!project || isPopulating) return;
     setIsPopulating(true);
     try {
@@ -140,7 +138,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     } finally {
       setIsPopulating(false);
     }
-  };
+  }, [project, isPopulating, populateProjectMutation]);
 
   const totalBoardIssues = board?.columns.reduce((acc, c) => acc + c.issues.length, 0) ?? 0;
 
@@ -148,7 +146,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     if (project && board && totalBoardIssues === 0 && !isPopulating) {
       handlePopulateDemoIssues(true);
     }
-  }, [project, board, totalBoardIssues]);
+  }, [project, board, totalBoardIssues, isPopulating, handlePopulateDemoIssues]);
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";

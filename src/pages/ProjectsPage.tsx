@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "convex/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -90,12 +90,26 @@ export default function ProjectsPage() {
 
 
   const [populatingAll, setPopulatingAll] = useState(false);
+  const [populatingProjectId, setPopulatingProjectId] = useState<Id<"projects"> | null>(null);
 
   const emptyProjects = useMemo(() => {
     return (projects ?? []).filter((p) => p.issueCount === 0);
   }, [projects]);
 
   const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
+  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
+
+  const handlePopulateProject = async (projectId: Id<"projects">) => {
+    try {
+      setPopulatingProjectId(projectId);
+      await populateProjectMutation({ projectId });
+      toast.success("Project populated with sample issues");
+    } catch {
+      toast.error("Failed to populate issues");
+    } finally {
+      setPopulatingProjectId(null);
+    }
+  };
 
   useEffect(() => {
     if (projects && emptyProjects.length > 0 && canWrite && !populatingAll) {

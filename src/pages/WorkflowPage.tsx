@@ -52,8 +52,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Zap,
-  Sparkles,
-  Plus,
 } from "lucide-react";
 import { DragScroll } from "@/components/DragScroll";
 import { toast } from "sonner";
@@ -156,7 +154,8 @@ export default function WorkflowPage() {
 
   // Automatically ensure the selected project has issues populated silently if empty
   useEffect(() => {
-    if (effectiveProjectId && workflowData && (issues?.length ?? 0) === 0 && !isPopulating) {
+    const totalIssues = board?.columns.reduce((acc, col) => acc + col.issues.length, 0) ?? 0;
+    if (effectiveProjectId && workflowData && board && totalIssues === 0 && !isPopulating) {
       setIsPopulating(true);
       populateProjectMutation({
         projectId: effectiveProjectId as Id<"projects">,
@@ -164,7 +163,7 @@ export default function WorkflowPage() {
         .catch(() => {})
         .finally(() => setIsPopulating(false));
     }
-  }, [effectiveProjectId, workflowData, issues?.length, isPopulating, populateProjectMutation]);
+  }, [effectiveProjectId, workflowData, board, isPopulating, populateProjectMutation]);
 
   const handleAddStatus = (newStatus: { name: string; category: string; color: string }) => {
     const customId = `custom_status_${Date.now()}`;

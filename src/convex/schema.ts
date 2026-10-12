@@ -25,12 +25,19 @@ export type Priority = "urgent" | "high" | "medium" | "low" | "none";
 
 export const statusCategoryValidator = v.union(
   v.literal("backlog"),
+  v.literal("unstarted"),
   v.literal("active"),
   v.literal("review"),
   v.literal("completed"),
   v.literal("cancelled"),
 );
-export type StatusCategory = "backlog" | "active" | "review" | "completed" | "cancelled";
+export type StatusCategory =
+  | "backlog"
+  | "unstarted"
+  | "active"
+  | "review"
+  | "completed"
+  | "cancelled";
 
 export const dependencyTypeValidator = v.union(
   v.literal("blocks"),

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { LoadingBlock, PageHeader, PageStack } from "@/components/app-ui";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
-import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,8 +48,6 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  Sparkles,
-  Loader2,
 } from "lucide-react";
 
 export default function OverviewPage() {
@@ -142,6 +139,17 @@ export default function OverviewPage() {
     [projects],
   );
 
+  const canWrite = Boolean(workspace && workspace.role !== "viewer");
+
+  useEffect(() => {
+    if (emptyProjectCount > 0 && canWrite && !populatingAll) {
+      setPopulatingAll(true);
+      populateAllMutation({ workspaceId: id })
+        .catch(() => {})
+        .finally(() => setPopulatingAll(false));
+    }
+  }, [emptyProjectCount, canWrite, populatingAll, id, populateAllMutation]);
+
   // Persistence in localStorage per user and workspace
   const storageKey = `forge_overview_layout_${workspaceId}_${userId}`;
 
@@ -220,7 +228,6 @@ export default function OverviewPage() {
     );
   }
 
-  const canWrite = workspace.role !== "viewer";
   const projectList = projects ?? [];
 
   const renderWidgetItem = (item: WidgetItem) => {
@@ -309,17 +316,6 @@ export default function OverviewPage() {
   const needsReviewIssues = (projectIssues ?? []).filter(
     (i) => (i.status?.name?.toLowerCase().includes("review") || i.status?.category === "in_progress") && !i.archivedAt
   );
-
-
-
-  useEffect(() => {
-    if (emptyProjectCount > 0 && canWrite && !populatingAll) {
-      setPopulatingAll(true);
-      populateAllMutation({ workspaceId: id })
-        .catch(() => {})
-        .finally(() => setPopulatingAll(false));
-    }
-  }, [emptyProjectCount, canWrite, populatingAll, id, populateAllMutation]);
 
   // Filtered issue destination link
   const issuesTargetLink =
