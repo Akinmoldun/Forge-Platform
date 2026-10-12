@@ -448,19 +448,22 @@ export function reviewWaitByWeek(
   const enteredReview = new Map<string, number>();
   const waits: Array<{ week: number; days: number }> = [];
 
-  for (const event of events) {
-    const payload = (event.payload ?? {}) as { to?: string; to_status_id?: string };
+  const chronological = [...events].sort((a, b) => a.createdAt - b.createdAt);
+
+  for (const event of chronological) {
+    const payload = (event.payload ?? {}) as { from?: string; to?: string; to_status_id?: string };
     const toName = (payload.to ?? "").toLowerCase();
+    const fromName = (payload.from ?? "").toLowerCase();
     const issue = issuesById.get(event.entityId);
     if (!issue) continue;
     if (toName === "review") {
       enteredReview.set(event.entityId, event.createdAt);
-    } else if (toName === "done" || issue.completedAt) {
+    } else if (toName === "done" || fromName === "review" || issue.completedAt) {
       const entered = enteredReview.get(event.entityId);
-      if (entered !== undefined) {
+      if (entered !== undefined && event.createdAt >= entered) {
         const end = event.createdAt;
         if (end >= since) {
-          waits.push({ week: startOfWeek(end), days: (end - entered) / DAY });
+          waits.push({ week: startOfWeek(end), days: Math.max(0.1, (end - entered) / DAY) });
         }
         enteredReview.delete(event.entityId);
       }

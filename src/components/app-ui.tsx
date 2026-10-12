@@ -259,10 +259,19 @@ export function StatusBadge({
 }
 
 export function ProjectStatusBadge({ status }: { status: string }) {
+  const norm = (status || "").toLowerCase();
+  const dotColor =
+    norm === "active"
+      ? "bg-[#6E94CB]"
+      : norm === "completed"
+      ? "bg-[#9FDA85]"
+      : norm === "paused"
+      ? "bg-[#D6C6A1]"
+      : "bg-[#575657]";
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[10px] uppercase font-medium tracking-wider text-[#0D0D0D]">
-      <StatusIllustration category={status} size={11} />
-      {status}
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
+      <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />
+      <span className="capitalize">{status}</span>
     </span>
   );
 }
@@ -420,10 +429,18 @@ export function SegmentedControl<T extends string>({
 
 /* ------------------------------------------------------------------ table */
 
-export function TableWrap({ children, className }: { children: ReactNode; className?: string }) {
+export function TableWrap({
+  children,
+  className,
+  tableClassName,
+}: {
+  children: ReactNode;
+  className?: string;
+  tableClassName?: string;
+}) {
   return (
     <div className={cn("w-full overflow-x-auto rounded-[16px] border border-border bg-white shadow-none", className)}>
-      <table className="w-full min-w-[640px] border-collapse text-[13px]">{children}</table>
+      <table className={cn("w-full border-collapse text-[13px]", tableClassName ?? "min-w-[640px]")}>{children}</table>
     </div>
   );
 }

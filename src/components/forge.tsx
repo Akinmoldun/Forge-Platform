@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, TriangleAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
 export type PriorityValue = (typeof PRIORITIES)[number];
@@ -34,10 +35,19 @@ export function PriorityBadge({ priority }: { priority: string }) {
   );
 }
 
+const RISK_DOTS: Record<string, string> = {
+  low: "bg-[#9FDA85]",
+  medium: "bg-[#D6C6A1]",
+  high: "bg-[#D78FC6]",
+  critical: "bg-[#E06A6A]",
+};
+
 export function RiskBadge({ level, score }: { level: string; score?: number }) {
+  const norm = (level || "low").toLowerCase();
+  const dot = RISK_DOTS[norm] || "bg-[#9FDA85]";
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
-      <StatusIllustration category={level === "low" ? "done" : level === "medium" ? "review" : "cancelled"} size={11} />
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D] whitespace-nowrap">
+      <span className={cn("size-1.5 rounded-full shrink-0", dot)} />
       <span className="capitalize">{level} risk</span>
       {score !== undefined && <span className="text-[#575657]">· {score}</span>}
     </span>
@@ -46,7 +56,11 @@ export function RiskBadge({ level, score }: { level: string; score?: number }) {
 
 export function StatusDot({ color, name }: { color?: string; name?: string }) {
   return (
-    <StatusIllustration category={name || color || "backlog"} name={name} size={12} />
+    <span
+      className="inline-block size-2 rounded-full shrink-0"
+      style={{ backgroundColor: color || "#575657" }}
+      aria-label={name}
+    />
   );
 }
 

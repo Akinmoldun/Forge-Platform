@@ -210,6 +210,7 @@ export function CreateIssueDialog({
   projects,
   canCreate,
   defaultProjectId,
+  defaultStatusId,
   workspaceId,
   trigger,
   open: controlledOpen,
@@ -219,6 +220,7 @@ export function CreateIssueDialog({
   projects: Array<{ _id: Id<"projects">; name: string; key: string }>;
   canCreate: boolean;
   defaultProjectId?: Id<"projects">;
+  defaultStatusId?: string;
   workspaceId?: Id<"workspaces">;
   trigger?: React.ReactNode;
   open?: boolean;
@@ -251,10 +253,16 @@ export function CreateIssueDialog({
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<string>("none");
-  const [statusId, setStatusId] = useState<string>("");
+  const [statusId, setStatusId] = useState<string>(defaultStatusId ?? "");
   const [assigneeId, setAssigneeId] = useState<string>("none");
   const [description, setDescription] = useState("");
   const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    if (open && defaultStatusId) {
+      setStatusId(defaultStatusId);
+    }
+  }, [open, defaultStatusId]);
 
   // Sync defaultProjectId when prop changes
   useEffect(() => {

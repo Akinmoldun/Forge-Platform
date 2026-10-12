@@ -69,6 +69,7 @@ export default function AnalyticsPage() {
   const [range, setRange] = useState<string>("90");
   const [projectFilter, setProjectFilter] = useState("all");
   const [memberFilter, setMemberFilter] = useState("all");
+  const [statusScope, setStatusScope] = useState<"open" | "all">("open");
 
   const projectList = useMemo(() => projects ?? [], [projects]);
   const scopedProjectIds = useMemo(
@@ -127,18 +128,30 @@ export default function AnalyticsPage() {
   const avgReview = averageReviewWait(reviewSeries);
 
   const byStatus = useMemo(() => {
-    const map = new Map<string, { count: number; color: string }>();
-    for (const issue of openIssues) {
-      const name = issue.status?.name ?? "Unknown";
-      const entry = map.get(name) ?? {
-        count: 0,
-        color: issue.status?.color || STATUS_COLORS[map.size % STATUS_COLORS.length],
-      };
-      entry.count += 1;
-      map.set(name, entry);
+    const targetIssues = statusScope === "open" ? openIssues : scopedIssues;
+    const map = new Map<string, number>();
+    for (const issue of targetIssues) {
+      const name = issue.status?.name ?? "Backlog";
+      const norm = name.toLowerCase();
+      map.set(norm, (map.get(norm) ?? 0) + 1);
     }
-    return [...map.entries()].map(([label, v]) => ({ label, ...v }));
-  }, [openIssues]);
+
+    const SEVEN_STATUSES = [
+      { label: "Backlog", key: "backlog", color: "#9A9A9F" },
+      { label: "Todo", key: "todo", color: "#6E94CB" },
+      { label: "In Progress", key: "in progress", color: "#7957EC" },
+      { label: "Review", key: "review", color: "#D78FC6" },
+      { label: "Changes Requested", key: "changes requested", color: "#D6C6A1" },
+      { label: "Done", key: "done", color: "#83DD79" },
+      { label: "Cancelled", key: "cancelled", color: "#E5857F" },
+    ];
+
+    return SEVEN_STATUSES.map((s) => ({
+      label: s.label,
+      count: map.get(s.key) ?? 0,
+      color: s.color,
+    }));
+  }, [statusScope, openIssues, scopedIssues]);
 
   const byPriority = useMemo(() => {
     const map = new Map<string, number>();
@@ -302,10 +315,12 @@ export default function AnalyticsPage() {
                 title="Cycle time"
                 description="Average days from start to completion, by week."
                 hint="A downward trend means work is moving through the workflow faster."
+                aria-label={`Cycle time trend chart, average ${formatDuration(avgCycle)} across weeks`}
               >
                 <LineChart
                   data={cycleSeries}
                   yLabel="Avg days"
+                  color="#6E94CB"
                   formatValue={(v) => `${v.toFixed(1)}d`}
                   height={160}
                 />
@@ -315,14 +330,21 @@ export default function AnalyticsPage() {
                 title="Weekly throughput"
                 description="Issues completed each week."
                 hint="Throughput counts completions, not started work. A flat line with a long queue means work is stalling before it finishes."
+                aria-label={`Weekly throughput chart, ${throughputTotal} issues completed in selected range`}
               >
-                <BarChart data={throughputSeries} height={160} />
+                <BarChart
+                  data={throughputSeries}
+                  color="#9FDA85"
+                  gradientTo="#D8F0CC"
+                  height={160}
+                />
               </Panel>
 
               <Panel
                 title="Review wait time"
                 description="Average days an issue sat in review before completing."
                 hint="Derived from status-change history. Only issues that entered a status named 'Review' and then completed are included."
+                aria-label={`Review wait time chart, average ${formatDuration(avgReview)} across weeks`}
               >
                 {eventsLoading ? (
                   <p className="text-xs text-muted-foreground">Loading status history...</p>
@@ -330,6 +352,7 @@ export default function AnalyticsPage() {
                   <LineChart
                     data={reviewSeries}
                     yLabel="Avg days"
+                    color="#D78FC6"
                     formatValue={(v) => `${v.toFixed(1)}d`}
                     height={160}
                     emptyLabel="No review transitions recorded yet"
@@ -341,6 +364,7 @@ export default function AnalyticsPage() {
                 title="Workload per member"
                 description="Open issues assigned, with overdue and high-priority counts."
                 hint="Bars are scaled to the busiest member so the shape of the load is visible at a glance."
+                aria-label={`Workload per member chart, showing ${workload.length} team members`}
               >
                 {workload.length === 0 ? (
                   <PanelEmpty
@@ -349,35 +373,51 @@ export default function AnalyticsPage() {
                   />
                 ) : (
                   <div className="space-y-3">
-                    {workload.slice(0, 8).map((w) => (
-                      <div key={w.userId} className="flex items-center gap-3">
-                        <InitialsAvatar
-                          name={w.name}
-                          image={(members ?? []).find((m) => m.userId === w.userId)?.image}
-                          size={24}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="truncate text-[13px]">{w.name}</span>
-                            <span className="shrink-0 text-[11px] text-muted-foreground">
-                              {w.open} open
-                              {w.overdue > 0 && (
-                                <span className="ml-1.5 text-red-400">{w.overdue} overdue</span>
-                              )}
-                              {w.urgent > 0 && (
-                                <span className="ml-1.5 text-amber-400">{w.urgent} high</span>
-                              )}
-                            </span>
-                          </div>
-                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                            <div
-                              className="h-full rounded-full bg-foreground/70"
-                              style={{ width: `${(w.open / maxWorkload) * 100}%` }}
-                            />
+                    {workload.slice(0, 8).map((w) => {
+                      const totalPct = Math.max(2, (w.open / maxWorkload) * 100);
+                      const overdueShare = w.open > 0 ? (w.overdue / w.open) * 100 : 0;
+                      const normalShare = 100 - overdueShare;
+                      return (
+                        <div key={w.userId} className="flex items-center gap-3">
+                          <InitialsAvatar
+                            name={w.name}
+                            image={(members ?? []).find((m) => m.userId === w.userId)?.image}
+                            size={24}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-[13px] font-medium text-[#0D0D0D]">{w.name}</span>
+                              <span className="shrink-0 text-[11px] text-[#575657]">
+                                {w.open} open
+                                {w.overdue > 0 && (
+                                  <span className="ml-1.5 text-[#D78FC6] font-medium">{w.overdue} overdue</span>
+                                )}
+                                {w.urgent > 0 && (
+                                  <span className="ml-1.5 text-[#D6C6A1]">{w.urgent} high</span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
+                              <div
+                                className="h-full rounded-full flex overflow-hidden transition-all duration-500"
+                                style={{ width: `${totalPct}%` }}
+                              >
+                                <div
+                                  className="h-full bg-[#6E94CB]"
+                                  style={{ width: `${normalShare}%` }}
+                                />
+                                {w.overdue > 0 && (
+                                  <div
+                                    className="h-full bg-[#D78FC6]"
+                                    style={{ width: `${overdueShare}%` }}
+                                  />
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </Panel>
@@ -386,11 +426,42 @@ export default function AnalyticsPage() {
             <div className="grid gap-4 lg:grid-cols-2">
               <Panel
                 title="Issues by status"
-                description="Open issues grouped by workflow status."
-                hint="A large backlog in one status usually means a queue, not a plan."
+                description={
+                  statusScope === "open"
+                    ? "Showing open issues only across all 7 statuses."
+                    : "Showing all issues including completed and cancelled across all 7 statuses."
+                }
+                hint="Distribution of issues across workflow statuses."
+                aria-label={`Issues by status chart, showing ${statusScope === "open" ? "open" : "all"} issues`}
+                actions={
+                  <div className="flex items-center rounded-full border border-border bg-[#F1F1F3] p-0.5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setStatusScope("open")}
+                      className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+                        statusScope === "open"
+                          ? "bg-white text-[#0D0D0D]"
+                          : "text-[#575657] hover:text-[#0D0D0D]"
+                      }`}
+                    >
+                      Open only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatusScope("all")}
+                      className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+                        statusScope === "all"
+                          ? "bg-white text-[#0D0D0D]"
+                          : "text-[#575657] hover:text-[#0D0D0D]"
+                      }`}
+                    >
+                      All
+                    </button>
+                  </div>
+                }
               >
                 {statusTotal === 0 ? (
-                  <PanelEmpty title="No open issues in scope" />
+                  <PanelEmpty title="No issues in scope" />
                 ) : (
                   <StackedBar
                     segments={byStatus.map((s) => ({
@@ -405,6 +476,7 @@ export default function AnalyticsPage() {
               <Panel
                 title="Issues by priority"
                 description="Open issues grouped by priority."
+                aria-label={`Issues by priority chart, showing ${priorityTotal} issues`}
               >
                 {priorityTotal === 0 ? (
                   <PanelEmpty title="No open issues in scope" />

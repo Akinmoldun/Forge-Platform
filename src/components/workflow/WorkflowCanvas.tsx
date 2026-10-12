@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { InitialsAvatar, PanelEmpty, StatusBadge } from "@/components/app-ui";
 import { PriorityBadge, timeAgo } from "@/components/forge";
+import { StatusPill } from "@/components/Illustrations";
+import { DragScroll } from "@/components/DragScroll";
 import { cn } from "@/lib/utils";
 
 export type WorkflowStatusNodeData = {
@@ -219,7 +221,7 @@ export function WorkflowStatusColumn({
   projectKey,
   selected,
   onSelect,
-  max,
+  max = 3,
 }: {
   status: WorkflowStatusNodeData;
   issues: WorkflowIssueCard[];
@@ -228,61 +230,38 @@ export function WorkflowStatusColumn({
   projectKey: string;
   selected: boolean;
   onSelect: () => void;
-  max: number;
+  max?: number;
 }) {
-  const reduce = useReducedMotion();
   const done = status.category === "completed" || status.category === "cancelled";
 
   return (
-    <motion.section
-      layout={!reduce}
-      initial={reduce ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduce ? 0 : 0.3, ease: [0.2, 0.7, 0.2, 1] }}
+    <div
       className={cn(
-        "flex w-full shrink-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors sm:w-[17rem]",
-        selected ? "border-white/30 ring-1 ring-white/15" : "border-border hover:border-white/20",
+        "flex w-[272px] min-w-[272px] max-w-[272px] shrink-0 flex-col overflow-hidden rounded-[14px] border bg-white transition-colors",
+        selected ? "border-[#0D0D0D] ring-1 ring-[#0D0D0D]" : "border-border hover:border-black/20",
       )}
       aria-label={`${status.name} status`}
     >
-      <button
-        type="button"
+      <div
         onClick={onSelect}
-        aria-pressed={selected}
-        className="flex items-start gap-2 border-b border-border px-3 py-2.5 text-left outline-none transition-colors hover:bg-secondary/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex items-center justify-between gap-2 border-b border-border/80 px-3.5 py-2.5 bg-[#FBFBFC] cursor-pointer"
       >
-        <span
-          className="mt-1 size-2 shrink-0 rounded-full"
-          style={{ backgroundColor: status.color ?? "#8b8b93" }}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium">{status.name}</span>
-          <span className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[9px] uppercase tracking-wider",
-                CATEGORY_TONE[status.category] ?? CATEGORY_TONE.backlog,
-              )}
-            >
-              {status.category}
-            </Badge>
-            <span className="text-[11px] tabular-nums text-muted-foreground">
-              {count} issue{count === 1 ? "" : "s"}
-            </span>
-          </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <StatusPill name={status.name} category={status.category} />
+        </div>
+        <span className="font-mono text-[11px] text-[#575657] tabular-nums shrink-0">
+          {count}
         </span>
-      </button>
+      </div>
 
-      <div className="min-h-[4.5rem] flex-1 p-2">
+      <div className="p-3 space-y-2 flex-1">
         {issues.length === 0 ? (
-          <p className="px-1 py-3 text-center text-[11px] text-muted-foreground">
-            No issues here
+          <p className="px-1 py-4 text-center text-[12px] text-[#575657]">
+            No issues
           </p>
         ) : (
           <ul className="space-y-1.5">
-            {issues.slice(0, max).map((issue) => (
+            {issues.slice(0, 3).map((issue) => (
               <WorkflowStatusNode
                 key={issue._id}
                 issue={issue}
@@ -292,13 +271,13 @@ export function WorkflowStatusColumn({
             ))}
           </ul>
         )}
-        {issues.length > max && (
-          <p className="mt-2 px-1 text-[11px] text-muted-foreground">
-            +{count - max} more in this status
+        {count > 3 && (
+          <p className="pt-1 px-1 text-[11px] text-[#575657]">
+            +{count - 3} more
           </p>
         )}
       </div>
-    </motion.section>
+    </div>
   );
 }
 
@@ -311,7 +290,7 @@ export function WorkflowCanvas({
   selectedId,
   onSelect,
   onEditTransition,
-  maxCards = 6,
+  maxCards = 3,
 }: {
   statuses: WorkflowStatusNodeData[];
   issuesByStatus: Map<string, WorkflowIssueCard[]>;
@@ -333,39 +312,41 @@ export function WorkflowCanvas({
   }
 
   return (
-    <div className="-mx-1 flex flex-col gap-2 overflow-x-auto px-1 pb-2 sm:flex-row sm:items-stretch sm:gap-1.5">
-      {statuses.map((status, index) => {
-        const next = statuses[index + 1];
-        const transition = next
-          ? transitions.find(
-              (t) => t.fromStatusId === status._id && t.toStatusId === next._id,
-            ) ?? null
-          : null;
-        return (
-          <div key={status._id} className="flex flex-col sm:flex-row sm:items-stretch">
-            <WorkflowStatusColumn
-              status={status}
-              issues={issuesByStatus.get(status._id) ?? []}
-              count={counts.get(status._id) ?? 0}
-              projectKey={projectKey}
-              selected={selectedId === status._id}
-              onSelect={() => onSelect(status._id)}
-              max={maxCards}
-            />
-            {next && (
-              <div className="flex justify-center py-0.5 sm:py-0">
-                <TransitionConnector
-                  transition={transition}
-                  fromName={status.name}
-                  toName={next.name}
-                  onClick={transition ? () => onEditTransition(transition._id) : undefined}
-                />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <DragScroll>
+      <div className="flex items-start gap-3 py-1">
+        {statuses.map((status, index) => {
+          const next = statuses[index + 1];
+          const transition = next
+            ? transitions.find(
+                (t) => t.fromStatusId === status._id && t.toStatusId === next._id,
+              ) ?? null
+            : null;
+          return (
+            <div key={status._id} className="flex items-center gap-3 shrink-0">
+              <WorkflowStatusColumn
+                status={status}
+                issues={issuesByStatus.get(status._id) ?? []}
+                count={counts.get(status._id) ?? 0}
+                projectKey={projectKey}
+                selected={selectedId === status._id}
+                onSelect={() => onSelect(status._id)}
+                max={maxCards}
+              />
+              {next && (
+                <div className="flex items-center justify-center shrink-0">
+                  <TransitionConnector
+                    transition={transition}
+                    fromName={status.name}
+                    toName={next.name}
+                    onClick={transition ? () => onEditTransition(transition._id) : undefined}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </DragScroll>
   );
 }
 

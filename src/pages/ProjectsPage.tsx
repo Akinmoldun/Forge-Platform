@@ -221,102 +221,179 @@ export default function ProjectsPage() {
                 </div>
               ) : (
                 <>
-                  <TableWrap>
-                    <thead>
-                      <tr>
-                        <Th className="text-left">Project</Th>
-                        <Th className="text-left">Status</Th>
-                        <Th className="text-left">Owner</Th>
-                        <Th className="text-left">Progress</Th>
-                        <Th align="right">Issues</Th>
-                        <Th className="text-left">Risk</Th>
-                        <Th align="right">Last activity</Th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {filtered.map((p) => {
-                        const risk = riskByProject.get(p._id);
-                        const pct = p.issueCount ? Math.round((p.doneIssueCount / p.issueCount) * 100) : 0;
-                        const ownerName = ownerById.get(p.createdBy) ?? "Unknown";
-                        return (
-                          <tr
-                            key={p._id}
-                            className="group h-16 min-h-[64px] transition-colors hover:bg-[#FBFBFC]"
-                          >
-                            <Td className="whitespace-nowrap">
-                              <Link
-                                to={`/app/projects/${p._id}`}
-                                className="block outline-none focus-visible:underline"
-                              >
-                                <span className="flex items-center gap-2.5">
+                  <div className="hidden min-[900px]:block">
+                    <TableWrap tableClassName="w-full table-fixed border-collapse text-[13px]">
+                      <colgroup>
+                        <col />
+                        <col style={{ width: "100px" }} />
+                        <col style={{ width: "160px" }} />
+                        <col style={{ width: "140px" }} />
+                        <col style={{ width: "130px" }} />
+                        <col style={{ width: "110px" }} />
+                        <col style={{ width: "120px" }} />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <Th className="text-left">Project</Th>
+                          <Th className="w-[100px] text-left">Status</Th>
+                          <Th className="w-[160px] text-left">Owner</Th>
+                          <Th className="w-[140px] text-left">Progress</Th>
+                          <Th className="w-[130px] text-right" align="right">Issues</Th>
+                          <Th className="w-[110px] text-left">Risk</Th>
+                          <Th className="w-[120px] text-right" align="right">Last activity</Th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {filtered.map((p) => {
+                          const risk = riskByProject.get(p._id);
+                          const pct = p.issueCount ? Math.round((p.doneIssueCount / p.issueCount) * 100) : 0;
+                          const ownerName = ownerById.get(p.createdBy) ?? "Unknown";
+                          return (
+                            <tr
+                              key={p._id}
+                              className="group h-16 min-h-[64px] transition-colors hover:bg-[#FBFBFC]"
+                            >
+                              <Td className="whitespace-nowrap overflow-hidden">
+                                <Link
+                                  to={`/app/projects/${p._id}`}
+                                  className="flex items-center gap-2.5 min-w-0 outline-none focus-visible:underline"
+                                >
                                   <EmblemIllustration
                                     emblemKey={p.iconKey}
                                     name={p.name}
                                     id={p._id}
                                     size={24}
                                   />
-                                  <span className="rounded-[4px] border border-border bg-[#F1F1F3] px-1.5 py-0.5 font-mono text-[10px] text-[#575657]">
+                                  <span className="shrink-0 rounded-[4px] border border-border bg-[#F1F1F3] px-1.5 py-0.5 font-mono text-[10px] text-[#575657]">
                                     {p.key}
                                   </span>
                                   <span className="truncate font-medium text-[#0D0D0D]">{p.name}</span>
+                                </Link>
+                              </Td>
+                              <Td className="w-[100px] whitespace-nowrap">
+                                <ProjectStatusBadge status={p.status} />
+                              </Td>
+                              <Td className="w-[160px] whitespace-nowrap">
+                                <span className="flex items-center gap-2 min-w-0">
+                                  <AvatarIllustration
+                                    name={ownerName}
+                                    id={p.createdBy}
+                                    size={24}
+                                  />
+                                  <span className="truncate text-[13px] text-[#0D0D0D]">{ownerName}</span>
                                 </span>
-                                {p.description && (
-                                  <span className="mt-0.5 line-clamp-1 block max-w-sm text-[11px] text-[#575657]">
-                                    {p.description}
+                              </Td>
+                              <Td className="w-[140px] whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#F1F1F3]">
+                                    <div
+                                      className="h-full rounded-full bg-[#0D0D0D]"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] tabular-nums text-[#575657]">
+                                    {pct}%
+                                  </span>
+                                </div>
+                              </Td>
+                              <Td align="right" className="w-[130px] whitespace-nowrap text-right">
+                                <span className="text-[13px] font-medium text-[#0D0D0D]">{p.issueCount}</span>
+                                <span className="ml-1.5 text-[11px] text-[#575657]">
+                                  {p.openIssueCount} open
+                                </span>
+                              </Td>
+                              <Td className="w-[110px] whitespace-nowrap">
+                                {risk ? (
+                                  <RiskBadge level={risk.level} score={risk.score} />
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
+                                    <span className="size-1.5 rounded-full shrink-0 bg-[#9FDA85]" />
+                                    <span>Low risk</span>
                                   </span>
                                 )}
-                              </Link>
-                            </Td>
-                            <Td className="whitespace-nowrap">
-                              <ProjectStatusBadge status={p.status} />
-                            </Td>
-                            <Td className="whitespace-nowrap">
-                              <span className="flex items-center gap-2">
-                                <AvatarIllustration
-                                  name={ownerName}
-                                  id={p.createdBy}
-                                  size={24}
-                                />
-                                <span className="truncate text-[13px] text-[#0D0D0D]">{ownerName}</span>
-                              </span>
-                            </Td>
-                            <Td className="whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[#F1F1F3]">
-                                  <div
-                                    className="h-full rounded-full bg-[#0D0D0D]"
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
-                                <span className="text-[11px] tabular-nums text-[#575657]">
-                                  {pct}%
+                              </Td>
+                              <Td align="right" className="w-[120px] whitespace-nowrap text-right">
+                                <span className="inline-flex items-center gap-1 text-[11px] text-[#575657]">
+                                  <Timer className="size-3" />
+                                  {timeAgo(p.updatedAt)}
                                 </span>
-                              </div>
-                            </Td>
-                            <Td align="right" className="whitespace-nowrap">
-                              <span className="text-[13px] font-medium text-[#0D0D0D]">{p.issueCount}</span>
-                              <span className="ml-1 text-[11px] text-[#575657]">
-                                ({p.openIssueCount} open)
+                              </Td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </TableWrap>
+                  </div>
+
+                  {/* Below 900px: Stacked cards */}
+                  <div className="block min-[900px]:hidden divide-y divide-border/60">
+                    {filtered.map((p) => {
+                      const risk = riskByProject.get(p._id);
+                      const pct = p.issueCount ? Math.round((p.doneIssueCount / p.issueCount) * 100) : 0;
+                      const ownerName = ownerById.get(p.createdBy) ?? "Unknown";
+                      return (
+                        <div key={p._id} className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <Link
+                              to={`/app/projects/${p._id}`}
+                              className="flex items-center gap-2.5 min-w-0"
+                            >
+                              <EmblemIllustration
+                                emblemKey={p.iconKey}
+                                name={p.name}
+                                id={p._id}
+                                size={24}
+                              />
+                              <span className="shrink-0 rounded-[4px] border border-border bg-[#F1F1F3] px-1.5 py-0.5 font-mono text-[10px] text-[#575657]">
+                                {p.key}
                               </span>
-                            </Td>
-                            <Td className="whitespace-nowrap">
+                              <span className="truncate font-medium text-[#0D0D0D]">{p.name}</span>
+                            </Link>
+                            <ProjectStatusBadge status={p.status} />
+                          </div>
+                          {p.description && (
+                            <p className="line-clamp-2 text-[12px] text-[#575657]">
+                              {p.description}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px]">
+                            <div className="flex items-center gap-2">
+                              <AvatarIllustration name={ownerName} id={p.createdBy} size={20} />
+                              <span className="text-[#0D0D0D]">{ownerName}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium text-[#0D0D0D]">
+                                {p.issueCount}{" "}
+                                <span className="text-[11px] font-normal text-[#575657]">
+                                  {p.openIssueCount} open
+                                </span>
+                              </span>
                               {risk ? (
                                 <RiskBadge level={risk.level} score={risk.score} />
                               ) : (
-                                <span className="text-[11px] text-[#575657]">Low</span>
+                                <span className="text-[11px] text-[#575657]">Low risk</span>
                               )}
-                            </Td>
-                            <Td align="right" className="whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 text-[11px] text-[#575657]">
-                                <Timer className="size-3" />
-                                {timeAgo(p.updatedAt)}
-                              </span>
-                            </Td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </TableWrap>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 pt-1">
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className="h-1.5 flex-1 max-w-[160px] overflow-hidden rounded-full bg-[#F1F1F3]">
+                                <div
+                                  className="h-full rounded-full bg-[#0D0D0D]"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] tabular-nums text-[#575657]">{pct}%</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[#575657]">
+                              <Timer className="size-3" />
+                              {timeAgo(p.updatedAt)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </Panel>

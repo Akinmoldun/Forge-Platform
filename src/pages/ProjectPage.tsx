@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreateIssueDialog } from "@/components/dialogs";
+import { DragScroll } from "@/components/DragScroll";
 import { cn } from "@/lib/utils";
 import {
   EmptyState,
@@ -115,7 +116,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   };
 
   const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
-  const [_colStatusId, setColStatusId] = useState<string>("");
+  const [colStatusId, setColStatusId] = useState<string>("");
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";
@@ -390,6 +391,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
             key: p.key,
           }))}
           defaultProjectId={project.project._id}
+          defaultStatusId={colStatusId || undefined}
           workspaceId={project.project.workspaceId}
           canCreate={canWrite}
         />
@@ -762,6 +764,7 @@ function BoardView({
             assigneeImage?: string;
             isBlocked: boolean;
             dueDate?: number;
+            labels?: Array<{ _id: string; name: string; color: string }>;
           }>;
         }>;
       }
@@ -781,12 +784,8 @@ function BoardView({
   const now = Date.now();
 
   return (
-    <div className="relative">
-      {/* Edge fade indicators */}
-      <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-[#FBFBFC] to-transparent z-10 opacity-70" />
-      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#FBFBFC] to-transparent z-10 opacity-70" />
-
-      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-6 pt-1 items-start">
+    <DragScroll fadeColor="from-[#FBFBFC]" className="pb-6 pt-1">
+      <div className="flex gap-3 items-start min-w-max">
         {board.columns.map((col) => {
           const isTarget = dragOverColId === col.status._id;
           const statusNameLower = col.status.name.toLowerCase();
@@ -916,6 +915,23 @@ function BoardView({
                         {i.title}
                       </p>
 
+                      {/* Label chips */}
+                      {i.labels && i.labels.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {i.labels.slice(0, 3).map((lbl) => (
+                            <span
+                              key={lbl._id}
+                              className="rounded-[4px] border border-[rgba(0,0,0,0.08)] bg-[#F1F1F3] px-1.5 py-0.5 text-[10px] font-medium text-[#575657]"
+                            >
+                              {lbl.name}
+                            </span>
+                          ))}
+                          {i.labels.length > 3 && (
+                            <span className="text-[10px] text-[#575657]">+{i.labels.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+
                       <div className="mt-2.5 flex items-center gap-2">
                         {i.isBlocked && (
                           <span title="Blocked by dependency" className="text-[#575657]">
@@ -970,7 +986,7 @@ function BoardView({
           );
         })}
       </div>
-    </div>
+    </DragScroll>
   );
 }
 

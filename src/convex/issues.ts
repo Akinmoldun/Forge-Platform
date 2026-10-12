@@ -11,6 +11,7 @@ import {
   roleAtLeast,
 } from "./lib/auth";
 import { isIssueDone, isIssueOpen } from "./lib/issueStatus";
+import { DEFAULT_STATUS_ROWS } from "./workspaces";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -145,27 +146,86 @@ export const getBoard = query({
     const projectCtx = await findProjectContext(ctx, args.projectId);
     if (!projectCtx) return { statuses: [], columns: [], dependencies: [] };
     const workspaceId = projectCtx.workspaceId;
-    const workflow = await ctx.db
+    let workflow = await ctx.db
       .query("workflows")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
       .first();
-    if (!workflow) return { statuses: [], columns: [], dependencies: [] };
+    if (!workflow) {
+      workflow = await ctx.db
+        .query("workflows")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .first();
+    }
 
-    const statuses = await ctx.db
-      .query("workflowStatuses")
-      .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
-      .collect();
+    let statuses = workflow
+      ? await ctx.db
+          .query("workflowStatuses")
+          .withIndex("by_workflow_position", (q) => q.eq("workflowId", workflow._id))
+          .collect()
+      : [];
 
-    const issues = (await ctx.db
-      .query("issues")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .collect()).filter((i) => !i.archivedAt);
+    if (statuses.length === 0) {
+      const wsStatuses = await ctx.db
+        .query("workflowStatuses")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .collect();
+      const seen = new Set<string>();
+      statuses = wsStatuses.filter((s) => {
+        if (seen.has(s.name)) return false;
+        seen.add(s.name);
+        return true;
+      });
+      statuses.sort((a, b) => a.position - b.position);
+    }
+
+    // If still empty, synthesize the 7 standard statuses
+    if (statuses.length === 0) {
+      statuses = DEFAULT_STATUS_ROWS.map((s, idx) => ({
+        _id: `status_${s.name.toLowerCase().replace(/\s+/g, "_")}` as Id<"workflowStatuses">,
+        _creationTime: 0,
+        workspaceId,
+        workflowId: (workflow?._id ?? ("" as Id<"workflows">)),
+        name: s.name,
+        category: s.category,
+        position: idx,
+        color: s.color,
+      }));
+    }
+
+    const issues = (
+      await ctx.db
+        .query("issues")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .collect()
+    ).filter((i) => !i.archivedAt);
 
     const deps = (await ctx.db.query("issueDependencies").collect()).filter(
       (d) => d.workspaceId === workspaceId && d.dependencyType === "blocks",
     );
 
-    const memberIds = [...new Set(issues.map((i) => i.assigneeId).filter((x): x is Id<"users"> => !!x))];
+    // Query labels for issues
+    const issueLabels = await ctx.db
+      .query("issueLabels")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    const allLabels = await ctx.db
+      .query("labels")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    const labelMap = new Map(allLabels.map((l) => [l._id, l]));
+    const labelsByIssueId = new Map<string, Array<{ _id: string; name: string; color: string }>>();
+    for (const il of issueLabels) {
+      const l = labelMap.get(il.labelId);
+      if (l) {
+        const arr = labelsByIssueId.get(il.issueId) || [];
+        arr.push({ _id: l._id, name: l.name, color: l.color });
+        labelsByIssueId.set(il.issueId, arr);
+      }
+    }
+
+    const memberIds = [
+      ...new Set(issues.map((i) => i.assigneeId).filter((x): x is Id<"users"> => !!x)),
+    ];
     const members = await Promise.all(memberIds.map((id) => ctx.db.get(id)));
     const memberById = new Map(
       members.filter((m): m is Doc<"users"> => m !== null).map((m) => [m._id, m]),
@@ -173,7 +233,9 @@ export const getBoard = query({
 
     // unresolved blockers: blocking issue not in a completed/cancelled status
     const completedStatusIds = new Set(
-      statuses.filter((s) => s.category === "completed" || s.category === "cancelled").map((s) => s._id),
+      statuses
+        .filter((s) => s.category === "completed" || s.category === "cancelled")
+        .map((s) => s._id),
     );
     const statusByIssueId = new Map(issues.map((i) => [i._id, i.statusId]));
     const unresolvedBlockers = new Set(
@@ -187,6 +249,9 @@ export const getBoard = query({
 
     const statusIdSet = new Set(statuses.map((s) => s._id));
 
+    // Also build a name-to-status map for issues whose statusId references another workflow's status
+    const statusByName = new Map(statuses.map((s) => [s.name.toLowerCase(), s]));
+
     const columns: Array<{
       status: Doc<"workflowStatuses">;
       issues: Array<{
@@ -196,48 +261,21 @@ export const getBoard = query({
         priority: string;
         assigneeId?: Id<"users">;
         assigneeName: string | null;
+        assigneeImage?: string;
         dueDate?: number;
         isBlocked: boolean;
+        labels: Array<{ _id: string; name: string; color: string }>;
       }>;
       isUnsorted?: boolean;
-    }> = statuses.map((status) => ({
-      status,
-      issues: issues
-        .filter((i) => i.statusId === status._id)
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .map((i) => ({
-          _id: i._id,
-          number: i.number,
-          title: i.title,
-          priority: i.priority,
-          assigneeId: i.assigneeId,
-          assigneeName: i.assigneeId
-            ? (memberById.get(i.assigneeId)?.name?.trim() ||
-                memberById.get(i.assigneeId)?.email?.trim() ||
-                `Guest ${i.assigneeId.slice(-4)}`)
-            : null,
-          assigneeImage: i.assigneeId ? memberById.get(i.assigneeId)?.image : undefined,
-          dueDate: i.dueDate,
-          isBlocked: unresolvedBlockers.has(i._id),
-        })),
-      isUnsorted: false,
-    }));
+    }> = statuses.map((status) => {
+      const matched = issues.filter((i) => {
+        if (i.statusId === status._id) return true;
+        return false;
+      });
 
-    // Find any active issues whose status is not in the project's workflow
-    const unsortedIssues = issues.filter((i) => !statusIdSet.has(i.statusId));
-    if (unsortedIssues.length > 0) {
-      columns.push({
-        status: {
-          _id: "unsorted" as Id<"workflowStatuses">,
-          _creationTime: 0,
-          workspaceId,
-          workflowId: workflow._id,
-          name: "Unsorted",
-          category: "unsorted" as never,
-          color: "#8b8b93",
-          position: 999,
-        },
-        issues: unsortedIssues
+      return {
+        status,
+        issues: matched
           .sort((a, b) => b.updatedAt - a.updatedAt)
           .map((i) => ({
             _id: i._id,
@@ -246,19 +284,104 @@ export const getBoard = query({
             priority: i.priority,
             assigneeId: i.assigneeId,
             assigneeName: i.assigneeId
-              ? (memberById.get(i.assigneeId)?.name?.trim() ||
-                  memberById.get(i.assigneeId)?.email?.trim() ||
-                  `Guest ${i.assigneeId.slice(-4)}`)
+              ? memberById.get(i.assigneeId)?.name?.trim() ||
+                memberById.get(i.assigneeId)?.email?.trim() ||
+                `Guest ${i.assigneeId.slice(-4)}`
               : null,
             assigneeImage: i.assigneeId ? memberById.get(i.assigneeId)?.image : undefined,
             dueDate: i.dueDate,
             isBlocked: unresolvedBlockers.has(i._id),
+            labels: labelsByIssueId.get(i._id) || [],
           })),
-        isUnsorted: true,
-      });
+        isUnsorted: false,
+      };
+    });
+
+    // Check for issues not in any column
+    const placedIssueIds = new Set(columns.flatMap((c) => c.issues.map((i) => i._id)));
+    const remainingIssues = issues.filter((i) => !placedIssueIds.has(i._id));
+
+    // Try placing remaining issues by looking up their status document name
+    if (remainingIssues.length > 0) {
+      const remainingStatusIds = [...new Set(remainingIssues.map((i) => i.statusId))];
+      const statusDocs = (
+        await Promise.all(remainingStatusIds.map((id) => ctx.db.get(id)))
+      ).filter((s): s is Doc<"workflowStatuses"> => s !== null);
+      const nameByRemainingStatusId = new Map(
+        statusDocs.map((s) => [s._id, s.name.toLowerCase()]),
+      );
+
+      const stillUnplaced: typeof remainingIssues = [];
+
+      for (const i of remainingIssues) {
+        const sName = nameByRemainingStatusId.get(i.statusId);
+        const targetCol = sName ? columns.find((c) => c.status.name.toLowerCase() === sName) : null;
+        if (targetCol) {
+          targetCol.issues.push({
+            _id: i._id,
+            number: i.number,
+            title: i.title,
+            priority: i.priority,
+            assigneeId: i.assigneeId,
+            assigneeName: i.assigneeId
+              ? memberById.get(i.assigneeId)?.name?.trim() ||
+                memberById.get(i.assigneeId)?.email?.trim() ||
+                `Guest ${i.assigneeId.slice(-4)}`
+              : null,
+            assigneeImage: i.assigneeId ? memberById.get(i.assigneeId)?.image : undefined,
+            dueDate: i.dueDate,
+            isBlocked: unresolvedBlockers.has(i._id),
+            labels: labelsByIssueId.get(i._id) || [],
+          });
+        } else {
+          stillUnplaced.push(i);
+        }
+      }
+
+      // Any still unplaced go to Unsorted column
+      if (stillUnplaced.length > 0) {
+        columns.push({
+          status: {
+            _id: "unsorted" as Id<"workflowStatuses">,
+            _creationTime: 0,
+            workspaceId,
+            workflowId: (workflow?._id ?? ("" as Id<"workflows">)),
+            name: "Unsorted",
+            category: "unsorted" as never,
+            color: "#8b8b93",
+            position: 999,
+          },
+          issues: stillUnplaced
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .map((i) => ({
+              _id: i._id,
+              number: i.number,
+              title: i.title,
+              priority: i.priority,
+              assigneeId: i.assigneeId,
+              assigneeName: i.assigneeId
+                ? memberById.get(i.assigneeId)?.name?.trim() ||
+                  memberById.get(i.assigneeId)?.email?.trim() ||
+                  `Guest ${i.assigneeId.slice(-4)}`
+                : null,
+              assigneeImage: i.assigneeId ? memberById.get(i.assigneeId)?.image : undefined,
+              dueDate: i.dueDate,
+              isBlocked: unresolvedBlockers.has(i._id),
+              labels: labelsByIssueId.get(i._id) || [],
+            })),
+          isUnsorted: true,
+        });
+      }
     }
 
-    return { statuses, columns, dependencies: deps.map((d) => ({ blocking: d.blockingIssueId, blocked: d.blockedIssueId })) };
+    return {
+      statuses,
+      columns,
+      dependencies: deps.map((d) => ({
+        blocking: d.blockingIssueId,
+        blocked: d.blockedIssueId,
+      })),
+    };
   },
 });
 

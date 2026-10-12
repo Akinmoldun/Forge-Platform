@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/use-auth";
@@ -124,6 +124,25 @@ export default function IssuePage() {
 
   const { issue, project, role, status, nextStatuses, canWrite } = detail;
   const identifier = `${project.key}-${issue.number}`;
+
+  const sortedStatuses = useMemo(() => {
+    const order = [
+      "backlog",
+      "todo",
+      "in progress",
+      "review",
+      "changes requested",
+      "done",
+      "cancelled",
+    ];
+    return [...detail.statuses].sort((a, b) => {
+      const ia = order.indexOf(a.name.toLowerCase());
+      const ib = order.indexOf(b.name.toLowerCase());
+      const posA = ia === -1 ? (a.position ?? 99) : ia;
+      const posB = ib === -1 ? (b.position ?? 99) : ib;
+      return posA - posB;
+    });
+  }, [detail.statuses]);
 
   const handleTransition = async (
     toStatusId: Id<"workflowStatuses">,
@@ -518,11 +537,13 @@ export default function IssuePage() {
                   <SelectTrigger className="h-9">
                     <div className="flex items-center gap-2">
                       <StatusDot color={status?.color} />
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder="Select status">
+                        {status?.name}
+                      </SelectValue>
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    {detail.statuses.map((s) => (
+                    {sortedStatuses.map((s) => (
                       <SelectItem key={s._id} value={s._id}>
                         <div className="flex items-center gap-2">
                           <StatusDot color={s.color} />

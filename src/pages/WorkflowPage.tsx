@@ -44,6 +44,7 @@ import {
 } from "@/components/workflow/TransitionRulesPanel";
 import {
   ArrowRight,
+  ChevronDown,
   GitBranch,
   Loader2,
   Lock,
@@ -53,6 +54,7 @@ import {
   SlidersHorizontal,
   Zap,
 } from "lucide-react";
+import { DragScroll } from "@/components/DragScroll";
 import { toast } from "sonner";
 
 type PendingMap = Record<string, Partial<Record<RuleKey, boolean>>>;
@@ -70,6 +72,8 @@ export default function WorkflowPage() {
   const [pending, setPending] = useState<PendingMap>({});
   const [saving, setSaving] = useState(false);
   const [statusDrawerOpen, setStatusDrawerOpen] = useState(false);
+  const [allowedMovesOpen, setAllowedMovesOpen] = useState(false);
+  const [automationsOpen, setAutomationsOpen] = useState(false);
 
   const projectList = useMemo(() => projects ?? [], [projects]);
   // The first project is the default scope, so the editor is never empty on load.
@@ -403,58 +407,62 @@ export default function WorkflowPage() {
             )}
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch sm:overflow-x-auto pb-1">
-            {statuses.map((status, idx) => {
-              const outgoing = transitions.filter((t) => t.fromStatusId === status._id);
-              const activeRules: string[] = [];
-              if (outgoing.some((t) => t.requiresAssignee)) activeRules.push("Requires assignee");
-              if (outgoing.some((t) => t.requiresComment)) activeRules.push("Requires comment");
-              if (outgoing.some((t) => t.requiresApproval)) activeRules.push("Requires approval");
+          <div className="mt-4">
+            <DragScroll>
+              <div className="flex items-center gap-3 py-1">
+                {statuses.map((status, idx) => {
+                  const outgoingRules = transitions.filter((t) => t.fromStatusId === status._id);
+                  const activeRules: string[] = [];
+                  if (outgoingRules.some((t) => t.requiresAssignee)) activeRules.push("Requires assignee");
+                  if (outgoingRules.some((t) => t.requiresComment)) activeRules.push("Requires comment");
+                  if (outgoingRules.some((t) => t.requiresApproval)) activeRules.push("Requires approval");
 
-              return (
-                <div key={status._id} className="flex flex-1 items-center gap-3 min-w-[160px]">
-                  <div
-                    onClick={() => setSelectedStatusId(selectedStatusId === status._id ? null : status._id)}
-                    className={`flex-1 cursor-pointer rounded-[14px] border p-3.5 transition-all hover:border-[rgba(13,13,13,0.3)] ${
-                      selectedStatusId === status._id
-                        ? "border-[#0D0D0D] bg-[#F6F6F7]"
-                        : "border-border bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="size-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: status.color || "#8b8b93" }}
-                          aria-hidden="true"
-                        />
-                        <span className="text-[13px] font-[500] text-[#0D0D0D]">{status.name}</span>
-                      </div>
-                      <span className="text-[11px] font-mono text-[#575657] tabular-nums">
-                        {counts.get(status._id) ?? 0}
-                      </span>
-                    </div>
-
-                    <div className="mt-2.5 space-y-1">
-                      {activeRules.length > 0 ? (
-                        activeRules.map((rule) => (
-                          <div key={rule} className="flex items-center gap-1.5 text-[11px] text-[#0D0D0D] font-medium">
-                            <span className="size-1 rounded-full bg-[#B3261E]" />
-                            <span>{rule}</span>
+                  return (
+                    <div key={status._id} className="flex items-center gap-3 shrink-0">
+                      <div
+                        onClick={() => setSelectedStatusId(selectedStatusId === status._id ? null : status._id)}
+                        className={`w-[180px] shrink-0 cursor-pointer rounded-[14px] border p-3.5 transition-all hover:border-[rgba(13,13,13,0.3)] ${
+                          selectedStatusId === status._id
+                            ? "border-[#0D0D0D] bg-[#F6F6F7]"
+                            : "border-border bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="size-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: status.color || "#8b8b93" }}
+                              aria-hidden="true"
+                            />
+                            <span className="text-[13px] font-[500] text-[#0D0D0D]">{status.name}</span>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-[11px] text-[#575657]">No restrictions</p>
+                          <span className="text-[11px] font-mono text-[#575657] tabular-nums">
+                            {counts.get(status._id) ?? 0}
+                          </span>
+                        </div>
+
+                        <div className="mt-2.5 space-y-1">
+                          {activeRules.length > 0 ? (
+                            activeRules.map((rule) => (
+                              <div key={rule} className="flex items-center gap-1.5 text-[11px] text-[#0D0D0D] font-medium">
+                                <span className="size-1 rounded-full bg-[#B3261E]" />
+                                <span>{rule}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-[11px] text-[#575657]">No restrictions</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {idx < statuses.length - 1 && (
+                        <ArrowRight className="size-4 shrink-0 text-[#9A9A9F]" />
                       )}
                     </div>
-                  </div>
-
-                  {idx < statuses.length - 1 && (
-                    <ArrowRight className="hidden size-4 shrink-0 text-[#9A9A9F] sm:block" />
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </DragScroll>
           </div>
         </div>
 
@@ -513,77 +521,119 @@ export default function WorkflowPage() {
         </Panel>
 
         {/* Rules + automations */}
-        <div className="grid gap-4 lg:grid-cols-5">
-          <Panel
-            className="lg:col-span-3"
-            title="Transition rules"
-            description={
-              activeStatus
-                ? `Rules for transitions out of ${activeStatus.name}.`
-                : "Rules for every transition in this workflow."
-            }
-            hint="Switch a rule to stage a change, then use Save workflow to write it. Blocked completion is always enforced."
-            actions={
-              activeStatus ? (
+        <div className="space-y-4">
+          {stagedCount > 0 && (
+            <div className="flex items-center justify-between gap-2 rounded-[14px] border border-border bg-[#FBFBFC] px-4 py-2.5">
+              <p className="text-[12px] text-[#575657]">
+                {stagedCount} unsaved rule change{stagedCount > 1 ? "s" : ""}
+              </p>
+              <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedStatusId(null)}
                   className="h-7 text-[11px]"
+                  onClick={() => setPending({})}
+                  disabled={saving}
                 >
-                  Show all
+                  <RotateCcw className="size-3 mr-1" /> Discard
                 </Button>
-              ) : null
-            }
-            flush
-          >
-            {stagedCount > 0 && (
-              <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary/40 px-3 py-2">
-                <p className="text-[11px] text-muted-foreground">
-                  {stagedCount} unsaved rule{stagedCount > 1 ? "s" : ""}
+                <Button size="sm" className="h-7 text-[11px]" onClick={saveWorkflow} disabled={saving}>
+                  {saving ? <Loader2 className="animate-spin size-3 mr-1" /> : <Save className="size-3 mr-1" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Allowed moves and rules */}
+          <div className="rounded-[16px] border border-border bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAllowedMovesOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-[#FBFBFC] transition-colors"
+            >
+              <div>
+                <h3 className="text-[14px] font-medium text-[#0D0D0D]">Allowed moves and rules</h3>
+                <p className="mt-0.5 text-[12px] text-[#575657]">
+                  {transitions.length} transitions configured · {ruleCount} guarded with special requirements
                 </p>
-                <div className="flex gap-1.5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-[11px]"
-                    onClick={() => setPending({})}
-                    disabled={saving}
-                  >
-                    <RotateCcw /> Discard
-                  </Button>
-                  <Button size="sm" className="h-7 text-[11px]" onClick={saveWorkflow} disabled={saving}>
-                    {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                    Save
-                  </Button>
-                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-[#575657]">
+                  {allowedMovesOpen ? "Hide" : "Show"}
+                </span>
+                <ChevronDown className={`size-4 text-[#575657] transition-transform ${allowedMovesOpen ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+
+            {allowedMovesOpen && (
+              <div className="border-t border-border divide-y divide-border/60 p-2">
+                {transitions.map((t) => {
+                  const fromName = statuses.find((s) => s._id === t.fromStatusId)?.name ?? "Unknown";
+                  const toName = statuses.find((s) => s._id === t.toStatusId)?.name ?? "Unknown";
+                  const parts: string[] = [];
+                  if (ruleValue(t._id, "requiresAssignee")) parts.push("needs an assignee");
+                  if (ruleValue(t._id, "requiresComment")) parts.push("requires a comment");
+                  if (ruleValue(t._id, "requiresApproval")) parts.push("needs approval");
+                  const summaryText = parts.length > 0 ? parts.join(", ") : "no extra rules";
+
+                  return (
+                    <div
+                      key={t._id}
+                      className="flex items-center justify-between gap-4 px-3 py-2 text-[12px] hover:bg-[#FBFBFC] rounded-[8px]"
+                    >
+                      <div className="min-w-0 flex-1 truncate">
+                        <span className="font-medium text-[#0D0D0D]">{fromName} to {toName}:</span>{" "}
+                        <span className="text-[#575657]">{summaryText}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 shrink-0 text-[11px] px-2.5 rounded-[6px] border-border bg-white hover:bg-[#F1F1F3]"
+                        onClick={() => setEditingTransitionId(t._id)}
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             )}
-            <TransitionRulesPanel
-              transitions={outgoing}
-              statuses={statuses}
-              canEdit={canEdit}
-              value={(id, key) => ruleValue(id, key)}
-              onToggle={toggleRule}
-              onEdit={(id) => setEditingTransitionId(id)}
-              scopeLabel={activeStatus?.name ?? "This status"}
-            />
-          </Panel>
+          </div>
 
-          <Panel
-            className="lg:col-span-2"
-            title="Automations"
-            description="Actions that run after a status change."
-            flush
-          >
-            <AutomationRulesPanel
-              projectId={effectiveProjectId ? (effectiveProjectId as Id<"projects">) : null}
-              statuses={statuses}
-              rules={automationList}
-              loading={automations === undefined}
-              canEdit={canEdit}
-            />
-          </Panel>
+          {/* Automations: collapsed by default */}
+          <div className="rounded-[16px] border border-border bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAutomationsOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-[#FBFBFC] transition-colors"
+            >
+              <div>
+                <h3 className="text-[14px] font-medium text-[#0D0D0D]">Automations</h3>
+                <p className="mt-0.5 text-[12px] text-[#575657]">
+                  Actions that run after a status change · {automationList.length} rules
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-[#575657]">
+                  {automationsOpen ? "Hide" : "Show"}
+                </span>
+                <ChevronDown className={`size-4 text-[#575657] transition-transform ${automationsOpen ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+
+            {automationsOpen && (
+              <div className="border-t border-border p-4">
+                <AutomationRulesPanel
+                  projectId={effectiveProjectId ? (effectiveProjectId as Id<"projects">) : null}
+                  statuses={statuses}
+                  rules={automationList}
+                  loading={automations === undefined}
+                  canEdit={canEdit}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </PageStack>
 

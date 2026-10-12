@@ -41,12 +41,16 @@ export function BarChart({
   data,
   height = 150,
   formatValue,
+  color = "#9FDA85",
+  gradientTo = "#D8F0CC",
   emptyLabel = "No data in this range",
   className,
 }: {
   data: SeriesPoint[];
   height?: number;
   formatValue?: (value: number) => string;
+  color?: string;
+  gradientTo?: string;
   emptyLabel?: string;
   className?: string;
 }) {
@@ -89,21 +93,24 @@ export function BarChart({
             >
               <span
                 className={cn(
-                  "text-center text-[10px] tabular-nums transition-colors",
-                  active ? "text-foreground" : "text-muted-foreground/70",
+                  "text-center text-[10px] tabular-nums font-medium transition-colors",
+                  active ? "text-[#0D0D0D]" : "text-[#575657]",
                 )}
               >
                 {formatValue ? formatValue(d.value) : d.value}
               </span>
               <motion.div
-                className="w-full rounded-t-[3px] bg-gradient-to-t from-foreground/25 to-foreground/70 transition-[filter]"
-                style={active ? { filter: "brightness(1.35)" } : undefined}
+                className="w-full rounded-t-[4px] transition-[filter]"
+                style={{
+                  background: `linear-gradient(180deg, ${color} 0%, ${gradientTo} 100%)`,
+                  ...(active ? { filter: "brightness(0.95)" } : {}),
+                }}
                 initial={{ height: reduce ? `${pct}%` : "0%" }}
                 whileInView={{ height: `${pct}%` }}
                 viewport={{ once: true }}
                 transition={{ duration: reduce ? 0 : 0.6, ease: EASE, delay: reduce ? 0 : i * 0.03 }}
               />
-              <div className="h-4 shrink-0 overflow-hidden text-center text-[10px] text-muted-foreground">
+              <div className="h-4 shrink-0 overflow-hidden text-center text-[10px] text-[#575657]">
                 <span className="block truncate">{d.label}</span>
               </div>
             </div>
@@ -115,8 +122,8 @@ export function BarChart({
           leftPct={((hover + 0.5) / data.length) * 100}
           top={0}
         >
-          <span className="block font-medium">{data[hover].label}</span>
-          <span className="block text-muted-foreground">
+          <span className="block font-medium text-[#0D0D0D]">{data[hover].label}</span>
+          <span className="block text-[#575657]">
             {formatValue ? formatValue(data[hover].value) : data[hover].value}
           </span>
         </HoverCard>
@@ -131,6 +138,8 @@ export function LineChart({
   height = 150,
   formatValue,
   yLabel,
+  color = "#6E94CB",
+  showGridlines = true,
   emptyLabel = "Not enough history yet",
   className,
 }: {
@@ -138,6 +147,8 @@ export function LineChart({
   height?: number;
   formatValue?: (value: number) => string;
   yLabel?: string;
+  color?: string;
+  showGridlines?: boolean;
   emptyLabel?: string;
   className?: string;
 }) {
@@ -185,17 +196,54 @@ export function LineChart({
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
+
+        {/* Thin light gridlines */}
+        {showGridlines && (
+          <>
+            <line
+              x1="0"
+              y1={innerHeight * 0.25}
+              x2={width}
+              y2={innerHeight * 0.25}
+              stroke="rgba(0,0,0,0.06)"
+              strokeWidth="0.5"
+              strokeDasharray="3 3"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="0"
+              y1={innerHeight * 0.5}
+              x2={width}
+              y2={innerHeight * 0.5}
+              stroke="rgba(0,0,0,0.06)"
+              strokeWidth="0.5"
+              strokeDasharray="3 3"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="0"
+              y1={innerHeight * 0.75}
+              x2={width}
+              y2={innerHeight * 0.75}
+              stroke="rgba(0,0,0,0.06)"
+              strokeWidth="0.5"
+              strokeDasharray="3 3"
+              vectorEffect="non-scaling-stroke"
+            />
+          </>
+        )}
+
         <line
           x1="0"
           y1={innerHeight}
           x2={width}
           y2={innerHeight}
-          className="stroke-border"
-          strokeWidth="0.5"
+          stroke="rgba(0,0,0,0.08)"
+          strokeWidth="0.75"
           vectorEffect="non-scaling-stroke"
         />
         <motion.path
@@ -209,8 +257,8 @@ export function LineChart({
         <motion.path
           d={line}
           fill="none"
-          className="stroke-foreground"
-          strokeWidth="1.5"
+          stroke={color}
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -219,24 +267,15 @@ export function LineChart({
           viewport={{ once: true }}
           transition={{ duration: reduce ? 0 : 0.8, ease: EASE }}
         />
-        {points.map((p, i) => (
-          <circle
-            key={data[i].label}
-            cx={p.x}
-            cy={p.y}
-            r={hover === i ? 2.2 : 1.4}
-            className="fill-background stroke-foreground"
-            strokeWidth="1.2"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
+        {/* No dots on points as requested */}
         {hover !== null && (
           <line
             x1={points[hover].x}
             y1="0"
             x2={points[hover].x}
             y2={innerHeight}
-            className="stroke-foreground/40"
+            stroke={color}
+            strokeOpacity="0.5"
             strokeWidth="0.75"
             strokeDasharray="2 2"
             vectorEffect="non-scaling-stroke"
@@ -262,14 +301,14 @@ export function LineChart({
           leftPct={points[hover].x}
           top={Math.max(0, (points[hover].y / innerHeight) * innerHeight)}
         >
-          <span className="block font-medium">{data[hover].label}</span>
-          <span className="block text-muted-foreground">
+          <span className="block font-medium text-[#0D0D0D]">{data[hover].label}</span>
+          <span className="block text-[#575657]">
             {yLabel ? `${yLabel}: ` : ""}
             {formatValue ? formatValue(data[hover].value) : data[hover].value}
           </span>
         </HoverCard>
       )}
-      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+      <div className="mt-1 flex justify-between text-[10px] text-[#575657]">
         <span>{data[0].label}</span>
         <span>{data[data.length - 1].label}</span>
       </div>
