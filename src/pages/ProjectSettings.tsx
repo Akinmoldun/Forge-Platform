@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import {
   EMBLEM_KEYS,
   EmblemIllustration,
+  resolveEmblemKey,
 } from "@/components/Illustrations";
 import { ArrowLeft, Archive, ArchiveRestore, Lock, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -82,7 +83,12 @@ export default function ProjectSettings() {
   const isAdmin = project.role === "admin" || project.role === "owner";
   const nameValue = name ?? project.project.name;
   const descValue = description ?? (project.project.description || "");
-  const iconKeyValue = iconKey ?? (project.project.iconKey || "mountain");
+  const defaultIcon = resolveEmblemKey(
+    project.project.iconKey,
+    project.project._id,
+    project.project.name,
+  );
+  const iconKeyValue = iconKey ?? defaultIcon;
   const colorValue = color ?? (project.project.color || "#6E94CB");
   const assigneeValue =
     defaultAssigneeId !== null
@@ -95,7 +101,7 @@ export default function ProjectSettings() {
   const hasChanges =
     nameValue.trim() !== project.project.name ||
     descValue.trim() !== (project.project.description || "") ||
-    iconKeyValue !== (project.project.iconKey || "mountain") ||
+    iconKeyValue !== defaultIcon ||
     colorValue !== (project.project.color || "#6E94CB") ||
     (defaultAssigneeId !== null &&
       defaultAssigneeId !== (project.project.defaultAssigneeId ?? "none"));
@@ -173,18 +179,19 @@ export default function ProjectSettings() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div
-            className="size-10 rounded-[12px] flex items-center justify-center text-white font-bold text-[18px] shrink-0"
-            style={{ backgroundColor: colorValue }}
-          >
-            {project.project.key.slice(0, 2)}
-          </div>
+          <EmblemIllustration
+            emblemKey={iconKeyValue}
+            name={nameValue}
+            id={pid}
+            size={40}
+            className="shrink-0"
+          />
           <div>
             <h1 className="text-[28px] font-[500] leading-tight tracking-[-0.02em] text-[#0D0D0D]">
               Project settings
             </h1>
             <p className="text-[13px] text-[#575657]">
-              Manage project name, accent color, default assignee, and lifecycle status.
+              Manage project name, emblem, default assignee, and lifecycle status.
             </p>
           </div>
         </div>
@@ -250,7 +257,9 @@ export default function ProjectSettings() {
                     onClick={() => setIconKey(k)}
                     className={cn(
                       "group relative flex size-10 items-center justify-center rounded-[10px] p-0.5 transition-transform hover:scale-105 active:scale-95 cursor-pointer",
-                      isSelected && "ring-2 ring-[#0D0D0D] ring-offset-2"
+                      isSelected
+                        ? "ring-2 ring-[#0D0D0D] ring-offset-2 bg-[#F1F1F3] shadow-xs"
+                        : "hover:bg-[#F6F6F7]",
                     )}
                     aria-label={`Select ${k} emblem`}
                   >

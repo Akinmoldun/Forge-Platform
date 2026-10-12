@@ -343,18 +343,18 @@ export default function ProjectsPage() {
                     </TableWrap>
                   </div>
 
-                  {/* Below 900px: Stacked cards */}
+                    {/* Below 900px: Stacked cards */}
                   <div className="block min-[900px]:hidden divide-y divide-border/60">
                     {filtered.map((p) => {
                       const risk = riskByProject.get(p._id);
                       const pct = p.issueCount ? Math.round((p.doneIssueCount / p.issueCount) * 100) : 0;
                       const ownerName = ownerById.get(p.createdBy) ?? "Unknown";
                       return (
-                        <div key={p._id} className="p-4 space-y-3">
+                        <div key={p._id} className="p-4 space-y-3 transition-colors hover:bg-[#FBFBFC]">
                           <div className="flex items-start justify-between gap-3">
                             <Link
                               to={`/app/projects/${p._id}`}
-                              className="flex items-center gap-2.5 min-w-0"
+                              className="flex items-center gap-2.5 min-w-0 group"
                             >
                               <EmblemIllustration
                                 emblemKey={p.iconKey}
@@ -365,31 +365,34 @@ export default function ProjectsPage() {
                               <span className="shrink-0 rounded-[4px] border border-border bg-[#F1F1F3] px-1.5 py-0.5 font-mono text-[10px] text-[#575657]">
                                 {p.key}
                               </span>
-                              <span className="truncate font-medium text-[#0D0D0D]">{p.name}</span>
+                              <span className="truncate font-medium text-[#0D0D0D] group-hover:underline">{p.name}</span>
                             </Link>
                             <ProjectStatusBadge status={p.status} />
                           </div>
                           {p.description && (
-                            <p className="line-clamp-2 text-[12px] text-[#575657]">
+                            <p className="line-clamp-2 text-[12px] text-[#575657] leading-relaxed">
                               {p.description}
                             </p>
                           )}
                           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px]">
                             <div className="flex items-center gap-2">
                               <AvatarIllustration name={ownerName} id={p.createdBy} size={20} />
-                              <span className="text-[#0D0D0D]">{ownerName}</span>
+                              <span className="text-[#0D0D0D] font-medium">{ownerName}</span>
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="font-medium text-[#0D0D0D]">
                                 {p.issueCount}{" "}
                                 <span className="text-[11px] font-normal text-[#575657]">
-                                  {p.openIssueCount} open
+                                  ({p.openIssueCount} open)
                                 </span>
                               </span>
                               {risk ? (
                                 <RiskBadge level={risk.level} score={risk.score} />
                               ) : (
-                                <span className="text-[11px] text-[#575657]">Low risk</span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-[#0D0D0D]">
+                                  <span className="size-1.5 rounded-full shrink-0 bg-[#9FDA85]" />
+                                  <span>Low risk</span>
+                                </span>
                               )}
                             </div>
                           </div>
@@ -401,7 +404,7 @@ export default function ProjectsPage() {
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
-                              <span className="text-[11px] tabular-nums text-[#575657]">{pct}%</span>
+                              <span className="text-[11px] tabular-nums text-[#575657] font-medium">{pct}%</span>
                             </div>
                             <span className="inline-flex items-center gap-1 text-[11px] text-[#575657]">
                               <Timer className="size-3" />
@@ -415,12 +418,6 @@ export default function ProjectsPage() {
                 </>
               )}
             </Panel>
-
-            {canWrite && (projects ?? []).length > 0 && (
-              <div className="flex justify-end">
-                <CreateProjectDialog workspaceId={id} canCreate={canWrite} />
-              </div>
-            )}
           </>
         )}
       </PageStack>

@@ -42,6 +42,24 @@ const EMBLEM_COLORS: Record<EmblemKey, { bg: string; fill: string }> = {
   tent: { bg: "#EFF8EE", fill: "#83DD79" },
 };
 
+export function resolveEmblemKey(
+  emblemKey?: string,
+  id: string = "",
+  name: string = "",
+): EmblemKey {
+  if (emblemKey && EMBLEM_KEYS.includes(emblemKey as EmblemKey)) {
+    return emblemKey as EmblemKey;
+  }
+  const seed = id || name || "default";
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % EMBLEM_KEYS.length;
+  return EMBLEM_KEYS[idx];
+}
+
 export function EmblemIllustration({
   emblemKey,
   name = "",
@@ -56,21 +74,7 @@ export function EmblemIllustration({
   size?: number;
   className?: string;
 } & SVGProps<SVGSVGElement>) {
-  // Determine emblem key from explicit key, or deterministic hash of id/name
-  let key: EmblemKey = "mountain";
-  if (emblemKey && EMBLEM_KEYS.includes(emblemKey as EmblemKey)) {
-    key = emblemKey as EmblemKey;
-  } else {
-    const seed = id || name || "default";
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = (hash << 5) - hash + seed.charCodeAt(i);
-      hash |= 0;
-    }
-    const idx = Math.abs(hash) % EMBLEM_KEYS.length;
-    key = EMBLEM_KEYS[idx];
-  }
-
+  const key = resolveEmblemKey(emblemKey, id, name);
   const { bg, fill } = EMBLEM_COLORS[key] || { bg: "#F1F1F3", fill: "#D6C6A1" };
 
   return (

@@ -23,7 +23,6 @@ import {
 import {
   FilterBar,
   FilterSelect,
-  InitialsAvatar,
   InfoHint,
   KeyValue,
   LoadingBlock,
@@ -41,7 +40,9 @@ import {
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { InviteMembersDialog, inviteLink } from "@/components/InviteMembersDialog";
 import { EmptyState, PriorityBadge, formatDate, timeAgo } from "@/components/forge";
-import { useProjectIssues, isOpen, isOverdue } from "@/hooks/use-workspace-data";
+import { AvatarIllustration } from "@/components/Illustrations";
+import { useProjectIssues } from "@/hooks/use-workspace-data";
+import { isIssueDone } from "@/lib/issueStatus";
 import { cn } from "@/lib/utils";
 import {
   Activity as ActivityIcon,
@@ -97,16 +98,24 @@ export default function TeamsPage() {
 
   const isAdmin = workspace?.role === "admin" || workspace?.role === "owner";
 
-  /** Per-member open / overdue / urgent counts from the real issue list. */
+  /** Per-member open / overdue / urgent counts computed accurately from live issue data. */
   const workloadByUser = useMemo(() => {
     const map = new Map<string, { open: number; overdue: number; urgent: number; done: number }>();
     for (const issue of issues) {
       if (!issue.assigneeId) continue;
       const entry = map.get(issue.assigneeId) ?? { open: 0, overdue: 0, urgent: 0, done: 0 };
-      if (isOpen(issue)) {
+      const statusCategory = issue.status?.category;
+      const isDone = isIssueDone(issue, statusCategory) || issue.status?.name?.toLowerCase() === "done";
+
+      if (!isDone) {
         entry.open += 1;
-        if (isOverdue(issue, now)) entry.overdue += 1;
-        if (issue.priority === "urgent" || issue.priority === "high") entry.urgent += 1;
+        if (issue.dueDate && issue.dueDate < now) {
+          entry.overdue += 1;
+        }
+        const pLower = (issue.priority || "").toLowerCase();
+        if (pLower === "urgent" || pLower === "high") {
+          entry.urgent += 1;
+        }
       } else {
         entry.done += 1;
       }
@@ -154,7 +163,7 @@ export default function TeamsPage() {
     () =>
       selectedId
         ? issues
-            .filter((i) => i.assigneeId === selectedId && isOpen(i))
+            .filter((i) => i.assigneeId === selectedId && !isIssueDone(i, i.status?.category) && i.status?.name?.toLowerCase() !== "done")
             .slice(0, 8)
         : [],
     [issues, selectedId],
@@ -234,18 +243,18 @@ export default function TeamsPage() {
         />
 
         {/* Team access explanation and role descriptions */}
-        <div className="rounded-[16px] border border-border bg-white p-4">
+        <div className="rounded-[16px] border border-border bg-white p-5 shadow-none">
           <p className="text-[13px] font-medium text-[#0D0D0D]">
             Everyone in this workspace can see its projects and issues. Roles decide who can change things.
           </p>
-          <div className="mt-3 grid grid-cols-1 gap-3 border-t border-border/70 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-3.5 grid grid-cols-1 gap-3.5 border-t border-border/70 pt-3.5 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-[#0D0D0D]" aria-hidden="true" />
                 <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Owner</span>
               </div>
               <p className="text-[12px] leading-relaxed text-[#575657]">
-                Full workspace control; can transfer ownership and delete workspace.
+                Full workspace authority; can manage workspace billing, transfer ownership, and delete workspace.
               </p>
             </div>
             <div className="space-y-1">
@@ -254,7 +263,7 @@ export default function TeamsPage() {
                 <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Admin</span>
               </div>
               <p className="text-[12px] leading-relaxed text-[#575657]">
-                Can create projects, invite & manage members, and configure workflows.
+                Can create and archive projects, invite and manage teammates, and configure custom workflows.
               </p>
             </div>
             <div className="space-y-1">
@@ -263,7 +272,7 @@ export default function TeamsPage() {
                 <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Member</span>
               </div>
               <p className="text-[12px] leading-relaxed text-[#575657]">
-                Can create, edit, move, and comment on issues across projects.
+                Can create, assign, edit, move, and comment on issues across all workspace projects.
               </p>
             </div>
             <div className="space-y-1">
@@ -272,7 +281,7 @@ export default function TeamsPage() {
                 <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0D0D0D]">Viewer</span>
               </div>
               <p className="text-[12px] leading-relaxed text-[#575657]">
-                Read-only access to projects, issues, workflow, and activity.
+                Read-only access to browse projects, issue boards, analytics, and audit logs.
               </p>
             </div>
           </div>
@@ -361,18 +370,18 @@ export default function TeamsPage() {
                           <Td>
                             <button
                               type="button"
-                              className="flex w-full items-center gap-2.5 text-left outline-none focus-visible:underline"
+                              className="flex w-full items-center gap-2.5 text-left outline-none focus-visible:underline cursor-pointer group"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedId(m.userId);
                               }}
                             >
-                              <InitialsAvatar name={m.name} image={m.image} size={28} />
+                              <AvatarIllustration name={m.name} id={m.userId} size={28} className="shrink-0" />
                               <span className="min-w-0">
-                                <span className="block truncate text-[13px] font-medium">
+                                <span className="block truncate text-[13px] font-medium text-[#0D0D0D] group-hover:underline">
                                   {m.name}
                                 </span>
-                                <span className="block truncate text-[11px] text-muted-foreground">
+                                <span className="block truncate text-[11px] text-[#575657]">
                                   {m.email}
                                 </span>
                               </span>
@@ -393,7 +402,7 @@ export default function TeamsPage() {
                                 }
                               >
                                 <SelectTrigger
-                                  className="h-7 w-24 text-[12px]"
+                                  className="h-7 w-24 text-[12px] rounded-[8px]"
                                   onClick={(e) => e.stopPropagation()}
                                   aria-label={`Role for ${m.name}`}
                                 >
@@ -415,33 +424,37 @@ export default function TeamsPage() {
                           </Td>
                           <Td>
                             <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary">
+                              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#F1F1F3]">
                                 <div
                                   className={cn(
-                                    "h-full rounded-full",
+                                    "h-full rounded-full transition-all",
                                     open === 0
-                                      ? "bg-zinc-600"
-                                      : pct > 75
-                                        ? "bg-red-500"
-                                        : pct > 40
-                                          ? "bg-amber-500"
-                                          : "bg-foreground/70",
+                                      ? "bg-transparent"
+                                      : (load?.overdue ?? 0) > 0
+                                        ? "bg-[#E5857F]"
+                                        : pct > 75
+                                          ? "bg-[#D78FC6]"
+                                          : pct > 40
+                                            ? "bg-[#6E94CB]"
+                                            : "bg-[#0D0D0D]",
                                   )}
                                   style={{ width: `${open === 0 ? 0 : Math.max(8, pct)}%` }}
                                 />
                               </div>
-                              <span className="text-[11px] tabular-nums text-muted-foreground">
+                              <span className="text-[11px] tabular-nums text-[#575657] font-medium">
                                 {open}
-                                {load && load.overdue > 0 && (
-                                  <span className="ml-1 text-red-400">{load.overdue} late</span>
-                                )}
                               </span>
+                              {load && load.overdue > 0 && (
+                                <span className="rounded-full bg-[#E5857F]/15 border border-[#E5857F]/30 px-1.5 py-0.5 text-[10px] font-semibold text-[#B3261E]">
+                                  {load.overdue} late
+                                </span>
+                              )}
                             </div>
                           </Td>
                           <Td align="right">
-                            <span className="text-[13px] tabular-nums">{open}</span>
+                            <span className="text-[13px] tabular-nums font-semibold text-[#0D0D0D]">{open}</span>
                             {load && load.urgent > 0 && (
-                              <span className="ml-1.5 text-[11px] text-amber-400">
+                              <span className="ml-1.5 rounded-full bg-[#D78FC6]/15 border border-[#D78FC6]/30 px-1.5 py-0.5 text-[10px] font-medium text-[#7957EC]">
                                 {load.urgent} high
                               </span>
                             )}
@@ -572,10 +585,10 @@ export default function TeamsPage() {
             <>
               <SheetHeader className="border-b border-border pb-4">
                 <div className="flex items-center gap-3">
-                  <InitialsAvatar name={selected.name} image={selected.image} size={40} />
+                  <AvatarIllustration name={selected.name} id={selected.userId} size={40} className="shrink-0" />
                   <div className="min-w-0">
-                    <SheetTitle className="truncate text-base">{selected.name}</SheetTitle>
-                    <SheetDescription className="truncate text-xs">
+                    <SheetTitle className="truncate text-base text-[#0D0D0D]">{selected.name}</SheetTitle>
+                    <SheetDescription className="truncate text-xs text-[#575657]">
                       {selected.email}
                     </SheetDescription>
                   </div>
@@ -592,6 +605,7 @@ export default function TeamsPage() {
                     value={selectedWorkload?.open ?? 0}
                     display={String(selectedWorkload?.open ?? 0)}
                     pct={((selectedWorkload?.open ?? 0) / maxOpen) * 100}
+                    tone="bg-[#0D0D0D]"
                   />
                   <MeterRow
                     label="Overdue"
@@ -602,7 +616,7 @@ export default function TeamsPage() {
                         ? (selectedWorkload.overdue / selectedWorkload.open) * 100
                         : 0
                     }
-                    tone="bg-red-500"
+                    tone="bg-[#E5857F]"
                   />
                   <MeterRow
                     label="High priority"
@@ -613,7 +627,7 @@ export default function TeamsPage() {
                         ? (selectedWorkload.urgent / selectedWorkload.open) * 100
                         : 0
                     }
-                    tone="bg-amber-500"
+                    tone="bg-[#D78FC6]"
                   />
                   <MeterRow
                     label="Completed"
@@ -626,7 +640,7 @@ export default function TeamsPage() {
                           100
                         : 0
                     }
-                    tone="bg-emerald-500"
+                    tone="bg-[#83DD79]"
                   />
                 </div>
 
@@ -655,20 +669,23 @@ export default function TeamsPage() {
                     </p>
                   ) : (
                     <ul className="space-y-1.5">
-                      {selectedIssues.map((issue) => (
-                        <li key={issue._id}>
-                          <Link
-                            to={`/app/issues/${issue._id}`}
-                            className="flex items-center gap-2 rounded-md border border-border px-2.5 py-2 text-[13px] transition-colors hover:bg-secondary/60"
-                          >
-                            <PriorityBadge priority={issue.priority} />
-                            <span className="min-w-0 flex-1 truncate">{issue.title}</span>
-                            {isOverdue(issue, now) && (
-                              <span className="shrink-0 text-[10px] text-red-400">late</span>
-                            )}
-                          </Link>
-                        </li>
-                      ))}
+                      {selectedIssues.map((issue) => {
+                        const isLate = Boolean(issue.dueDate && issue.dueDate < now);
+                        return (
+                          <li key={issue._id}>
+                            <Link
+                              to={`/app/issues/${issue._id}`}
+                              className="flex items-center gap-2 rounded-md border border-border px-2.5 py-2 text-[13px] transition-colors hover:bg-secondary/60"
+                            >
+                              <PriorityBadge priority={issue.priority} />
+                              <span className="min-w-0 flex-1 truncate">{issue.title}</span>
+                              {isLate && (
+                                <span className="shrink-0 rounded-full bg-[#E5857F]/15 border border-[#E5857F]/30 px-1.5 py-0.2 text-[10px] font-semibold text-[#B3261E]">late</span>
+                              )}
+                            </Link>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

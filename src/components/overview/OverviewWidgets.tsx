@@ -123,11 +123,14 @@ export function QuickActionsWidget({
   isSampleData?: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex flex-col justify-between h-full gap-3">
       <div className="flex items-center justify-between border-b border-border/80 pb-2">
-        <span className="text-[13px] font-[500] text-[#0D0D0D]">Quick actions</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[14px] font-semibold text-[#0D0D0D]">Quick actions</span>
+          <InfoHint text="Fast shortcuts to create work or onboard teammates" />
+        </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 py-1">
         {canWrite && (
           <CreateIssueDialog
             projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
@@ -136,7 +139,7 @@ export function QuickActionsWidget({
             trigger={
               <Button
                 variant="outline"
-                className="h-9 w-full justify-center rounded-[10px] text-[12px] font-medium border border-border bg-[#FBFBFC] hover:bg-[#F1F1F3] text-[#0D0D0D] px-2 shadow-none"
+                className="h-10 w-full justify-center rounded-[10px] text-[12.5px] font-medium border border-border/80 bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
               >
                 <Plus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
                 <span className="truncate">New issue</span>
@@ -151,7 +154,7 @@ export function QuickActionsWidget({
             trigger={
               <Button
                 variant="outline"
-                className="h-9 w-full justify-center rounded-[10px] text-[12px] font-medium border border-border bg-[#FBFBFC] hover:bg-[#F1F1F3] text-[#0D0D0D] px-2 shadow-none"
+                className="h-10 w-full justify-center rounded-[10px] text-[12.5px] font-medium border border-border/80 bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
               >
                 <FolderKanban className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
                 <span className="truncate">New project</span>
@@ -166,7 +169,7 @@ export function QuickActionsWidget({
           trigger={
             <Button
               variant="outline"
-              className="h-9 w-full justify-center rounded-[10px] text-[12px] font-medium border border-border bg-[#FBFBFC] hover:bg-[#F1F1F3] text-[#0D0D0D] px-2 shadow-none"
+              className="h-10 w-full justify-center rounded-[10px] text-[12.5px] font-medium border border-border/80 bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
             >
               <UserPlus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
               <span className="truncate">Invite member</span>
@@ -174,7 +177,7 @@ export function QuickActionsWidget({
           }
         />
       </div>
-      <p className="text-[11px] text-[#575657] truncate">
+      <p className="text-[12px] text-[#575657] leading-relaxed pt-0.5">
         Create work or onboard team members into {workspaceName || "this workspace"}.
       </p>
     </div>
@@ -559,7 +562,7 @@ export function PriorityBreakdownWidget({
         </div>
 
         {/* Scrollable issues section with plenty of room */}
-        <div className="flex-1 min-h-0 flex flex-col rounded-[14px] border border-border/80 bg-white p-3 overflow-hidden">
+        <div className="flex-1 min-h-[160px] max-h-[320px] flex flex-col rounded-[14px] border border-border/80 bg-white p-3 overflow-hidden">
           <div className="flex items-center justify-between pb-2 text-[12px] text-[#575657] shrink-0 border-b border-border/60">
             <span className="font-semibold text-[#0D0D0D]">
               {selectedPriority

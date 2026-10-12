@@ -152,11 +152,6 @@ export function CommandPaletteDialog({
 
   const handleApplyTab = (tabId: string) => {
     setActiveTab(tabId);
-    if (tabId === "all" || tabId === "projects" || tabId === "pages") {
-      setSearch("");
-    } else {
-      setSearch(tabId);
-    }
   };
 
   const handleApplyIdea = (query: string) => {
@@ -199,7 +194,7 @@ export function CommandPaletteDialog({
       list = list.filter((i) => (i.status?.name || "").toLowerCase().includes("progress") || i.status?.category === "active");
     }
 
-    if (!isQueryEmpty && activeTab === "all") {
+    if (!isQueryEmpty) {
       list = list.filter((iss) => {
         const fullKey = iss.projectKey ? `${iss.projectKey}-${iss.number}`.toLowerCase() : `#${iss.number}`;
         const titleMatch = iss.title.toLowerCase().includes(trimmedSearch);
@@ -253,7 +248,7 @@ export function CommandPaletteDialog({
       </DialogHeader>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[560px] w-full rounded-[16px] border border-border bg-white p-0 shadow-none overflow-hidden"
+        className="max-w-[560px] sm:max-w-[560px] w-full rounded-[16px] border border-border bg-white p-0 gap-0 shadow-none overflow-hidden block"
       >
         <CommandPrimitive
           shouldFilter={false}
@@ -264,12 +259,7 @@ export function CommandPaletteDialog({
             <Search className="size-4 shrink-0 text-[#575657]" />
             <CommandPrimitive.Input
               value={search}
-              onValueChange={(val) => {
-                setSearch(val);
-                if (activeTab !== "all" && val !== activeTab) {
-                  setActiveTab("all");
-                }
-              }}
+              onValueChange={setSearch}
               placeholder="Search issues, projects, pages, or pick a suggestion below..."
               className="flex-1 bg-transparent text-[14px] text-[#0D0D0D] placeholder:text-[#575657]/70 outline-none"
               autoFocus

@@ -382,7 +382,7 @@ export default function OverviewPage() {
 
 
 
-        {/* Phase 3: Today strip with 3 compact cards */}
+        {/* Today strip with 3 compact cards */}
         <div className="grid gap-3 sm:grid-cols-3">
           <Link
             to={issuesTargetLink}
