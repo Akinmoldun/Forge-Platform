@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingBlock, PageHeader, PageStack } from "@/components/app-ui";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +49,8 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 export default function OverviewPage() {
@@ -235,6 +238,8 @@ export default function OverviewPage() {
         return (
           <PriorityBreakdownWidget
             rollup={realRollup}
+            issues={realIssues}
+            workspaceId={id}
           />
         );
       case "project_health":
@@ -282,6 +287,28 @@ export default function OverviewPage() {
   const needsReviewIssues = (projectIssues ?? []).filter(
     (i) => (i.status?.name?.toLowerCase().includes("review") || i.status?.category === "in_progress") && !i.archivedAt
   );
+
+  const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
+  const [populatingAll, setPopulatingAll] = useState(false);
+  const emptyProjectCount = useMemo(
+    () => (projects ?? []).filter((p) => p.issueCount === 0).length,
+    [projects],
+  );
+
+  const handlePopulateAll = async () => {
+    if (populatingAll) return;
+    setPopulatingAll(true);
+    try {
+      const res = await populateAllMutation({ workspaceId: id });
+      toast.success(
+        `Populated ${res.populatedCount} projects with ${res.totalIssuesCreated} demo issues`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to populate projects");
+    } finally {
+      setPopulatingAll(false);
+    }
+  };
 
   // Filtered issue destination link
   const issuesTargetLink =
@@ -345,6 +372,38 @@ export default function OverviewPage() {
             </div>
           )}
         </PageHeader>
+
+        {/* Empty project quick populator banner */}
+        {canWrite && emptyProjectCount > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-dashed border-[#6E94CB]/40 bg-[#6E94CB]/5 p-3.5 px-4">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-full bg-[#6E94CB]/10 text-[#6E94CB]">
+                <Sparkles className="size-3.5" />
+              </div>
+              <div>
+                <span className="text-[13px] font-semibold text-[#0D0D0D]">
+                  {emptyProjectCount} empty project{emptyProjectCount > 1 ? "s" : ""}
+                </span>
+                <span className="text-[12px] text-[#575657] ml-2">
+                  Populate with realistic issues across all categories and states to explore boards and workflows.
+                </span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={handlePopulateAll}
+              disabled={populatingAll}
+              className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] text-[12px] font-medium h-8 px-3.5"
+            >
+              {populatingAll ? (
+                <Loader2 className="size-3 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="size-3 mr-1 text-[#83DD79]" />
+              )}
+              {populatingAll ? "Populating..." : "Populate all empty projects"}
+            </Button>
+          </div>
+        )}
 
         {/* Phase 3: Today strip with 3 compact cards */}
         <div className="grid gap-3 sm:grid-cols-3">

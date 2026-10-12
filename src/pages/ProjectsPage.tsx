@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery, useConvex } from "convex/react";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -32,7 +32,11 @@ import {
   CircleSlash,
   FolderKanban,
   Timer,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { populateDemoIssuesForProject } from "@/lib/demoIssuePopulator";
 
 type StatusFilter = "all" | "planning" | "active" | "paused" | "completed";
 
@@ -84,6 +88,45 @@ export default function ProjectsPage() {
 
   const canWrite = workspace ? workspace.role !== "viewer" : false;
   const loading = projects === undefined || members === undefined || risksLoading;
+
+  const convex = useConvex();
+  const [populatingProjectId, setPopulatingProjectId] = useState<string | null>(null);
+  const [populatingAll, setPopulatingAll] = useState(false);
+
+  const emptyProjects = useMemo(() => {
+    return (projects ?? []).filter((p) => p.issueCount === 0);
+  }, [projects]);
+
+  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
+  const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
+
+  const handlePopulateProject = async (projectId: Id<"projects">) => {
+    if (populatingProjectId || populatingAll) return;
+    setPopulatingProjectId(projectId);
+    try {
+      const res = await populateProjectMutation({ projectId });
+      toast.success(`Populated ${res.count} demo issues into project`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to populate issues");
+    } finally {
+      setPopulatingProjectId(null);
+    }
+  };
+
+  const handlePopulateAllEmptyProjects = async () => {
+    if (populatingAll || emptyProjects.length === 0) return;
+    setPopulatingAll(true);
+    try {
+      const res = await populateAllMutation({ workspaceId: id });
+      toast.success(
+        `Successfully populated ${res.populatedCount} projects with ${res.totalIssuesCreated} demo issues`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to populate projects");
+    } finally {
+      setPopulatingAll(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const list = projects ?? [];
@@ -156,6 +199,37 @@ export default function ProjectsPage() {
                 icon={<CircleSlash className="size-3.5" />}
               />
             </div>
+
+            {canWrite && emptyProjects.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-dashed border-[#6E94CB]/40 bg-[#6E94CB]/5 p-3.5 px-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-7 items-center justify-center rounded-full bg-[#6E94CB]/10 text-[#6E94CB]">
+                    <Sparkles className="size-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-[13px] font-semibold text-[#0D0D0D]">
+                      {emptyProjects.length} empty project{emptyProjects.length > 1 ? "s" : ""}
+                    </span>
+                    <span className="text-[12px] text-[#575657] ml-2">
+                      Populate with realistic issues across all categories and states to explore boards and workflows.
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handlePopulateAllEmptyProjects}
+                  disabled={populatingAll}
+                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] text-[12px] font-medium h-8 px-3.5"
+                >
+                  {populatingAll ? (
+                    <Loader2 className="size-3 mr-1 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-3 mr-1 text-[#83DD79]" />
+                  )}
+                  {populatingAll ? "Populating all..." : "Populate all empty projects"}
+                </Button>
+              </div>
+            )}
 
             <FilterBar>
               <SearchInput
@@ -297,10 +371,29 @@ export default function ProjectsPage() {
                                 </div>
                               </Td>
                               <Td align="right" className="w-[130px] whitespace-nowrap text-right">
-                                <span className="text-[13px] font-medium text-[#0D0D0D]">{p.issueCount}</span>
-                                <span className="ml-1.5 text-[11px] text-[#575657]">
-                                  {p.openIssueCount} open
-                                </span>
+                                {p.issueCount === 0 && canWrite ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePopulateProject(p._id)}
+                                    disabled={populatingProjectId === p._id || populatingAll}
+                                    className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2.5 py-1 text-[11px] font-medium text-[#2B548F] hover:bg-[#6E94CB]/20 transition-colors cursor-pointer"
+                                    title="Populate project with demo issues"
+                                  >
+                                    {populatingProjectId === p._id ? (
+                                      <Loader2 className="size-3 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="size-3 text-[#6E94CB]" />
+                                    )}
+                                    <span>Populate</span>
+                                  </button>
+                                ) : (
+                                  <>
+                                    <span className="text-[13px] font-medium text-[#0D0D0D]">{p.issueCount}</span>
+                                    <span className="ml-1.5 text-[11px] text-[#575657]">
+                                      {p.openIssueCount} open
+                                    </span>
+                                  </>
+                                )}
                               </Td>
                               <Td className="w-[110px] whitespace-nowrap">
                                 {risk ? (
@@ -362,12 +455,28 @@ export default function ProjectsPage() {
                               <span className="text-[#0D0D0D]">{ownerName}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="font-medium text-[#0D0D0D]">
-                                {p.issueCount}{" "}
-                                <span className="text-[11px] font-normal text-[#575657]">
-                                  {p.openIssueCount} open
+                              {p.issueCount === 0 && canWrite ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePopulateProject(p._id)}
+                                  disabled={populatingProjectId === p._id || populatingAll}
+                                  className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2.5 py-1 text-[11px] font-medium text-[#2B548F] hover:bg-[#6E94CB]/20 transition-colors"
+                                >
+                                  {populatingProjectId === p._id ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                  ) : (
+                                    <Sparkles className="size-3 text-[#6E94CB]" />
+                                  )}
+                                  <span>Populate issues</span>
+                                </button>
+                              ) : (
+                                <span className="font-medium text-[#0D0D0D]">
+                                  {p.issueCount}{" "}
+                                  <span className="text-[11px] font-normal text-[#575657]">
+                                    {p.openIssueCount} open
+                                  </span>
                                 </span>
-                              </span>
+                              )}
                               {risk ? (
                                 <RiskBadge level={risk.level} score={risk.score} />
                               ) : (

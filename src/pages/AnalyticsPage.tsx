@@ -360,8 +360,8 @@ export default function AnalyticsPage() {
 
               <Panel
                 title="Workload per member"
-                description="Open issues assigned, with overdue and high-priority counts."
-                hint="Bars are scaled to the busiest member so the shape of the load is visible at a glance."
+                description="Open issues assigned, with overdue and high-priority breakdown."
+                hint="Bars are scaled to the busiest member so the team distribution and bottleneck risks are clear at a glance."
                 aria-label={`Workload per member chart, showing ${workload.length} team members`}
               >
                 {workload.length === 0 ? (
@@ -370,47 +370,72 @@ export default function AnalyticsPage() {
                     description="Assign issues to members to see how the load is spread."
                   />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     {workload.slice(0, 8).map((w) => {
-                      const totalPct = Math.max(2, (w.open / maxWorkload) * 100);
+                      const totalPct = Math.max(3, (w.open / maxWorkload) * 100);
                       const overdueShare = w.open > 0 ? (w.overdue / w.open) * 100 : 0;
                       const normalShare = 100 - overdueShare;
+                      const isHighLoad = w.open >= 7;
+                      const isModerate = w.open >= 4 && w.open < 7;
+
                       return (
-                        <div key={w.userId} className="flex items-center gap-3">
-                          <InitialsAvatar
-                            name={w.name}
-                            image={(members ?? []).find((m) => m.userId === w.userId)?.image}
-                            size={24}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="truncate text-[13px] font-medium text-[#0D0D0D]">{w.name}</span>
-                              <span className="shrink-0 text-[11px] text-[#575657]">
-                                {w.open} open
-                                {w.overdue > 0 && (
-                                  <span className="ml-1.5 text-[#D78FC6] font-medium">{w.overdue} overdue</span>
-                                )}
-                                {w.urgent > 0 && (
-                                  <span className="ml-1.5 text-[#D6C6A1]">{w.urgent} high</span>
-                                )}
-                              </span>
-                            </div>
-                            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
-                              <div
-                                className="h-full rounded-full flex overflow-hidden transition-all duration-500"
-                                style={{ width: `${totalPct}%` }}
-                              >
-                                <div
-                                  className="h-full bg-[#6E94CB]"
-                                  style={{ width: `${normalShare}%` }}
-                                />
-                                {w.overdue > 0 && (
-                                  <div
-                                    className="h-full bg-[#D78FC6]"
-                                    style={{ width: `${overdueShare}%` }}
-                                  />
-                                )}
+                        <div key={w.userId} className="rounded-[12px] border border-border/60 bg-[#FBFBFC] p-2.5 transition-colors hover:bg-white hover:border-border">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <InitialsAvatar
+                                name={w.name}
+                                image={(members ?? []).find((m) => m.userId === w.userId)?.image}
+                                size={28}
+                              />
+                              <div className="min-w-0">
+                                <span className="truncate text-[13px] font-semibold text-[#0D0D0D] block leading-tight">{w.name}</span>
+                                <span className="text-[10px] text-[#575657]">
+                                  {isHighLoad ? (
+                                    <span className="font-medium text-[#B3261E]">High queue load</span>
+                                  ) : isModerate ? (
+                                    <span className="font-medium text-[#8C7646]">Active load</span>
+                                  ) : (
+                                    <span className="text-[#388E3C]">Balanced load</span>
+                                  )}
+                                </span>
                               </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[11px]">
+                              <span className="rounded-full bg-[#6E94CB]/15 px-2 py-0.5 font-medium text-[#2B548F]">
+                                {w.open} open
+                              </span>
+                              {w.overdue > 0 && (
+                                <span className="rounded-full bg-[#D78FC6]/25 px-2 py-0.5 font-semibold text-[#A63590]">
+                                  {w.overdue} overdue
+                                </span>
+                              )}
+                              {w.urgent > 0 && (
+                                <span className="rounded-full bg-[#D6C6A1]/30 px-2 py-0.5 font-medium text-[#8C7646]">
+                                  {w.urgent} high
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Multi-segment capacity bar */}
+                          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
+                            <div
+                              className="h-full rounded-full flex overflow-hidden transition-all duration-500"
+                              style={{ width: `${totalPct}%` }}
+                            >
+                              <div
+                                className="h-full bg-[#6E94CB]"
+                                style={{ width: `${normalShare}%` }}
+                                title={`${w.open - w.overdue} on track`}
+                              />
+                              {w.overdue > 0 && (
+                                <div
+                                  className="h-full bg-[#D78FC6]"
+                                  style={{ width: `${overdueShare}%` }}
+                                  title={`${w.overdue} overdue`}
+                                />
+                              )}
                             </div>
                           </div>
                         </div>

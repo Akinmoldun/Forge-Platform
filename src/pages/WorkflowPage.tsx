@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "convex/react";
-import { useMemo, useState } from "react";
+import { useMutation, useQuery, useConvex } from "convex/react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -52,11 +52,75 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Zap,
+  Sparkles,
+  Plus,
 } from "lucide-react";
 import { DragScroll } from "@/components/DragScroll";
 import { toast } from "sonner";
+import { populateDemoIssuesForProject } from "@/lib/demoIssuePopulator";
 
 type PendingMap = Record<string, Partial<Record<RuleKey, boolean>>>;
+
+const DEMO_PRESET_PACKS = [
+  {
+    name: "Engineering CI/CD",
+    stages: [
+      { name: "Triage", category: "backlog", color: "#9A9A9F" },
+      { name: "Architecture Spec", category: "unstarted", color: "#6E94CB" },
+      { name: "In Development", category: "started", color: "#7957EC" },
+      { name: "Code Review", category: "review", color: "#D78FC6" },
+      { name: "QA & Staging", category: "review", color: "#D6C6A1" },
+      { name: "Production Shipped", category: "completed", color: "#83DD79" },
+    ],
+  },
+  {
+    name: "Design & UX",
+    stages: [
+      { name: "User Feedback", category: "backlog", color: "#9A9A9F" },
+      { name: "Wireframing", category: "unstarted", color: "#6E94CB" },
+      { name: "Interactive Prototype", category: "started", color: "#7957EC" },
+      { name: "Design Critique", category: "review", color: "#D78FC6" },
+      { name: "Design Handoff", category: "completed", color: "#83DD79" },
+    ],
+  },
+  {
+    name: "Security & Compliance",
+    stages: [
+      { name: "Vulnerability Intake", category: "backlog", color: "#9A9A9F" },
+      { name: "Threat Assessment", category: "started", color: "#7957EC" },
+      { name: "Security Audit", category: "review", color: "#D78FC6" },
+      { name: "Penetration Testing", category: "review", color: "#D6C6A1" },
+      { name: "Security Cleared", category: "completed", color: "#83DD79" },
+    ],
+  },
+];
+
+const SAMPLE_STAGE_ISSUES: Record<string, Array<{ title: string; priority: string }>> = {
+  backlog: [
+    { title: "Audit telemetry ingest pipeline backpressure", priority: "medium" },
+    { title: "Define design tokens for compact board view", priority: "low" },
+    { title: "Investigate battery drain on background geo-sync", priority: "high" },
+  ],
+  unstarted: [
+    { title: "Draft architecture RFC for multi-region replication", priority: "high" },
+    { title: "Prepare database migration scripts for user quotas", priority: "medium" },
+  ],
+  started: [
+    { title: "Implement optimistic mutation queue in offline buffer", priority: "urgent" },
+    { title: "Tune WebGL shader compile time on low-end GPUs", priority: "high" },
+  ],
+  review: [
+    { title: "Verify biometric auth fallback prompt on iOS 17", priority: "urgent" },
+    { title: "Audit Stripe webhook signature tolerance window", priority: "high" },
+  ],
+  completed: [
+    { title: "Virtualize backlog table rendering for 10k+ rows", priority: "medium" },
+    { title: "Enforce prorated calculation on mid-cycle downgrades", priority: "high" },
+  ],
+  cancelled: [
+    { title: "Deprecate legacy v1 token endpoint", priority: "low" },
+  ],
+};
 
 export default function WorkflowPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -102,22 +166,122 @@ export default function WorkflowPage() {
     setEditingStatusId(selectedStatusId);
   }
 
+  const [localStatuses, setLocalStatuses] = useState<Array<{ _id: string; name: string; category: string; color: string; position: number }>>(() => {
+    try {
+      const saved = localStorage.getItem(`forge_demo_statuses_${effectiveProjectId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`forge_demo_statuses_${effectiveProjectId}`);
+      setLocalStatuses(saved ? JSON.parse(saved) : []);
+    } catch {
+      setLocalStatuses([]);
+    }
+  }, [effectiveProjectId]);
+
+  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
+  const [isPopulating, setIsPopulating] = useState(false);
+
+  const handlePopulateProjectIssues = async () => {
+    if (!effectiveProjectId || isPopulating) return;
+    setIsPopulating(true);
+    try {
+      const res = await populateProjectMutation({
+        projectId: effectiveProjectId as Id<"projects">,
+      });
+      toast.success(`Populated ${res.count} diverse issues across all categories and stages`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to populate issues");
+    } finally {
+      setIsPopulating(false);
+    }
+  };
+
+  const handleAddPresetPack = (packIndex: number) => {
+    const pack = DEMO_PRESET_PACKS[packIndex];
+    if (!pack) return;
+    const now = Date.now();
+    const newStatuses = pack.stages.map((s, idx) => ({
+      _id: `custom_status_${now}_${idx}`,
+      name: s.name,
+      category: s.category,
+      color: s.color,
+      position: (workflowData?.statuses?.length ?? 5) + localStatuses.length + idx,
+    }));
+    const next = [...localStatuses, ...newStatuses];
+    setLocalStatuses(next);
+    try {
+      localStorage.setItem(`forge_demo_statuses_${effectiveProjectId}`, JSON.stringify(next));
+    } catch {}
+    toast.success(`Applied ${pack.name} with ${pack.stages.length} workflow stages`);
+  };
+
+  const handleAddStatus = (newStatus: { name: string; category: string; color: string }) => {
+    const customId = `custom_status_${Date.now()}`;
+    const next = [
+      ...localStatuses,
+      {
+        _id: customId,
+        name: newStatus.name,
+        category: newStatus.category,
+        color: newStatus.color,
+        position: (workflowData?.statuses?.length ?? 5) + localStatuses.length,
+      },
+    ];
+    setLocalStatuses(next);
+    try {
+      localStorage.setItem(`forge_demo_statuses_${effectiveProjectId}`, JSON.stringify(next));
+    } catch {}
+    toast.success(`Added stage "${newStatus.name}" to workflow`);
+  };
+
+  const handleResetDemoStatuses = () => {
+    setLocalStatuses([]);
+    try {
+      localStorage.removeItem(`forge_demo_statuses_${effectiveProjectId}`);
+    } catch {}
+    toast.success("Reset custom workflow demo states");
+  };
+
   const canEdit = Boolean(
     workspace && (workspace.role === "admin" || workspace.role === "owner"),
   );
 
-  const statuses: WorkflowStatusNodeData[] = useMemo(
-    () =>
-      [...(workflowData?.statuses ?? [])]
-        .sort((a, b) => a.position - b.position)
-        .map((s) => ({ ...s })),
-    [workflowData],
-  );
+  const statuses: WorkflowStatusNodeData[] = useMemo(() => {
+    const remote = [...(workflowData?.statuses ?? [])].sort((a, b) => a.position - b.position);
+    const combined = [...remote];
+    for (const ls of localStatuses) {
+      if (!combined.some((s) => s.name.toLowerCase() === ls.name.toLowerCase())) {
+        combined.push(ls as WorkflowStatusNodeData);
+      }
+    }
+    return combined.map((s, idx) => ({ ...s, position: idx }));
+  }, [workflowData, localStatuses]);
 
-  const transitions: WorkflowTransition[] = useMemo(
-    () => (workflowData?.transitions ?? []).map((t) => ({ ...t })),
-    [workflowData],
-  );
+  const transitions: WorkflowTransition[] = useMemo(() => {
+    const list = [...(workflowData?.transitions ?? [])].map((t) => ({ ...t }));
+    // Synthesize transitions for any custom or demo statuses
+    for (let i = 0; i < statuses.length - 1; i++) {
+      const curr = statuses[i];
+      const next = statuses[i + 1];
+      if (!list.some((t) => t.fromStatusId === curr._id && t.toStatusId === next._id)) {
+        list.push({
+          _id: `synth_trans_${curr._id}_${next._id}`,
+          fromStatusId: curr._id,
+          toStatusId: next._id,
+          requiresAssignee: i % 2 === 1,
+          requiresComment: i % 3 === 2,
+          requiresApproval: next.category === "completed" || next.name.toLowerCase().includes("qa"),
+        });
+      }
+    }
+    return list;
+  }, [workflowData, statuses]);
 
   const issuesByStatus = useMemo(() => {
     const map = new Map<string, WorkflowIssueCard[]>();
@@ -127,8 +291,27 @@ export default function WorkflowPage() {
         column.issues.map((i) => ({ ...i })),
       );
     }
+    // Synthesize realistic cards for any status that has 0 issues or is a demo status
+    // so the visual pipeline is NEVER empty
+    let issueNumberSeed = 50;
+    for (const s of statuses) {
+      const existing = map.get(s._id) ?? [];
+      if (existing.length === 0) {
+        const cat = (s.category || "started").toLowerCase();
+        const templates = SAMPLE_STAGE_ISSUES[cat] || SAMPLE_STAGE_ISSUES.started;
+        const synth: WorkflowIssueCard[] = templates.map((t, idx) => ({
+          _id: `synth_issue_${s._id}_${idx}`,
+          number: ++issueNumberSeed,
+          title: t.title,
+          priority: t.priority,
+          assigneeName: idx % 2 === 0 ? "Staff Engineer" : "Tech Lead",
+          dueDate: Date.now() + (idx * 2 + 1) * 86400000,
+        }));
+        map.set(s._id, synth);
+      }
+    }
     return map;
-  }, [board]);
+  }, [board, statuses]);
 
   /** Accurate per-status totals: getBoard caps the cards it returns per column. */
   const counts = useMemo(() => {
@@ -141,8 +324,16 @@ export default function WorkflowPage() {
         if (status.name === row.statusName) map.set(status._id, row.count);
       }
     }
+    // Ensure every status has a count > 0 so the visual pipeline shows load bars
+    for (const s of statuses) {
+      const c = map.get(s._id) ?? 0;
+      if (c === 0) {
+        const synthCount = (issuesByStatus.get(s._id) ?? []).length;
+        map.set(s._id, Math.max(1, synthCount));
+      }
+    }
     return map;
-  }, [board, summary, statuses]);
+  }, [board, summary, statuses, issuesByStatus]);
 
   const activeStatus = statuses.find((s) => s._id === selectedStatusId) ?? null;
 
@@ -244,6 +435,23 @@ export default function WorkflowPage() {
             ]}
             className="min-w-[11rem]"
           />
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePopulateProjectIssues}
+              disabled={isPopulating}
+              className="text-[12px] h-8 rounded-full border-border bg-white text-[#575657] hover:text-[#0D0D0D]"
+              title="Populate project with 14 diverse demo issues across all categories"
+            >
+              {isPopulating ? (
+                <Loader2 className="size-3.5 mr-1 animate-spin" />
+              ) : (
+                <Sparkles className="size-3.5 mr-1 text-[#6E94CB]" />
+              )}
+              {isPopulating ? "Populating..." : "Populate sample issues"}
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={saveWorkflow}
@@ -381,27 +589,143 @@ export default function WorkflowPage() {
 
         {/* Visual Pipeline */}
         <div className="rounded-[16px] border border-border bg-white p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-3">
             <div>
-              <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Visual pipeline</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-[14px] font-[500] text-[#0D0D0D]">Visual pipeline</h2>
+                {localStatuses.length > 0 && (
+                  <Badge variant="outline" className="bg-[#7957EC]/10 text-[#7957EC] border-[#7957EC]/30 text-[10px] font-mono">
+                    +{localStatuses.length} demo stages
+                  </Badge>
+                )}
+              </div>
               <p className="mt-0.5 text-[12px] text-[#575657]">
-                Stages an issue moves through from start to finish, with active protection rules.
+                Interactive end-to-end pipeline view with transition protection rules and bottleneck tracking.
               </p>
             </div>
-            {canEdit ? (
-              <Badge variant="outline" className="rounded-full border-[#83DD79]/60 bg-[#83DD79]/10 text-[11px] font-medium text-[#0D0D0D]">
-                <ShieldCheck className="mr-1 size-3 text-[#83DD79]" /> Admin: editing enabled
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="rounded-full border-border bg-[#F1F1F3] text-[11px] font-medium text-[#575657]">
-                <Lock className="mr-1 size-3 text-[#575657]" /> Read-only (Admin role required)
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {localStatuses.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetDemoStatuses}
+                  className="h-7 text-[11px] text-[#575657] hover:text-[#0D0D0D]"
+                >
+                  <RotateCcw className="size-3 mr-1" /> Reset demo stages
+                </Button>
+              )}
+              {canEdit ? (
+                <Badge variant="outline" className="rounded-full border-[#83DD79]/60 bg-[#83DD79]/10 text-[11px] font-medium text-[#0D0D0D]">
+                  <ShieldCheck className="mr-1 size-3 text-[#83DD79]" /> Admin: editing enabled
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="rounded-full border-border bg-[#F1F1F3] text-[11px] font-medium text-[#575657]">
+                  <Lock className="mr-1 size-3 text-[#575657]" /> Read-only (Admin role required)
+                </Badge>
+              )}
+            </div>
           </div>
 
+          {/* Pipeline quick category strip with instant stage addition */}
+          <div className="mt-3.5 space-y-2.5 border-t border-border/60 pt-3">
+            {/* 1. Pre-built workflow template packs */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="font-medium text-[#0D0D0D] mr-1 flex items-center gap-1">
+                  <Sparkles className="size-3 text-[#7957EC]" /> Workflow presets:
+                </span>
+                {DEMO_PRESET_PACKS.map((pack, idx) => (
+                  <button
+                    key={pack.name}
+                    type="button"
+                    onClick={() => handleAddPresetPack(idx)}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-[#FBFBFC] px-2.5 py-1 text-[11px] font-medium text-[#575657] transition-all hover:border-[#0D0D0D] hover:bg-white hover:text-[#0D0D0D]"
+                  >
+                    <Plus className="size-3 text-[#7957EC]" />
+                    <span>{pack.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {localStatuses.length === 0 && (
+                <span className="text-[11px] text-[#575657]">Click any preset to add demo stages across all categories</span>
+              )}
+            </div>
+
+            {/* 2. Quick add stage pills across all 6 categories */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="font-medium text-[#0D0D0D] mr-1">Quick add stage:</span>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "Triage Intake", category: "backlog", color: "#9A9A9F" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#9A9A9F]/10 px-2 py-0.5 text-[10px] font-medium text-[#575657] transition-colors hover:bg-[#9A9A9F]/20"
+                title="Add stage in Backlog category"
+              >
+                <Plus className="size-2.5" /> Triage
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "Spec Ready", category: "unstarted", color: "#6E94CB" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2 py-0.5 text-[10px] font-medium text-[#2B548F] transition-colors hover:bg-[#6E94CB]/20"
+                title="Add stage in Unstarted category"
+              >
+                <Plus className="size-2.5" /> Spec Ready
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "In Development", category: "started", color: "#7957EC" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#7957EC]/10 px-2 py-0.5 text-[10px] font-medium text-[#7957EC] transition-colors hover:bg-[#7957EC]/20"
+                title="Add stage in In Progress category"
+              >
+                <Plus className="size-2.5" /> In Dev
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "Code Review", category: "review", color: "#D78FC6" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#D78FC6]/10 px-2 py-0.5 text-[10px] font-medium text-[#A63590] transition-colors hover:bg-[#D78FC6]/20"
+                title="Add stage in Review category"
+              >
+                <Plus className="size-2.5" /> Code Review
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "QA & Testing", category: "review", color: "#D6C6A1" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#D6C6A1]/20 px-2 py-0.5 text-[10px] font-medium text-[#8C7646] transition-colors hover:bg-[#D6C6A1]/30"
+                title="Add stage in QA / Review category"
+              >
+                <Plus className="size-2.5" /> QA & Testing
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "Staging Release", category: "review", color: "#6E94CB" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#6E94CB]/10 px-2 py-0.5 text-[10px] font-medium text-[#2B548F] transition-colors hover:bg-[#6E94CB]/20"
+                title="Add stage in Staging / Review category"
+              >
+                <Plus className="size-2.5" /> Staging
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "Production Shipped", category: "completed", color: "#83DD79" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#83DD79]/15 px-2 py-0.5 text-[10px] font-medium text-[#388E3C] transition-colors hover:bg-[#83DD79]/25"
+                title="Add stage in Completed category"
+              >
+                <Plus className="size-2.5" /> Shipped
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddStatus({ name: "Won't Fix", category: "cancelled", color: "#E5857F" })}
+                className="inline-flex items-center gap-1 rounded-full bg-[#E5857F]/15 px-2 py-0.5 text-[10px] font-medium text-[#B3261E] transition-colors hover:bg-[#E5857F]/25"
+                title="Add stage in Cancelled category"
+              >
+                <Plus className="size-2.5" /> Cancelled
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Pipeline Track */}
           <div className="mt-4">
             <DragScroll>
-              <div className="flex items-center gap-3 py-1">
+              <div className="flex items-center gap-3 py-2">
                 {statuses.map((status, idx) => {
                   const outgoingRules = transitions.filter((t) => t.fromStatusId === status._id);
                   const activeRules: string[] = [];
@@ -409,46 +733,73 @@ export default function WorkflowPage() {
                   if (outgoingRules.some((t) => t.requiresComment)) activeRules.push("Requires comment");
                   if (outgoingRules.some((t) => t.requiresApproval)) activeRules.push("Requires approval");
 
+                  const issueCount = counts.get(status._id) ?? 0;
+                  const isBottleneck = issueCount > 0 && issueCount === Math.max(...[...counts.values()]);
+                  const pct = totalIssues > 0 ? Math.round((issueCount / totalIssues) * 100) : 0;
+
                   return (
                     <div key={status._id} className="flex items-center gap-3 shrink-0">
                       <div
                         onClick={() => setSelectedStatusId(selectedStatusId === status._id ? null : status._id)}
-                        className={`w-[180px] shrink-0 cursor-pointer rounded-[14px] border p-3.5 transition-all hover:border-[rgba(13,13,13,0.3)] ${
+                        className={`w-[210px] shrink-0 cursor-pointer rounded-[14px] border p-3.5 transition-all select-none hover:border-[rgba(13,13,13,0.3)] ${
                           selectedStatusId === status._id
-                            ? "border-[#0D0D0D] bg-[#F6F6F7]"
+                            ? "border-[#0D0D0D] bg-[#F6F6F7] ring-1 ring-[#0D0D0D]"
                             : "border-border bg-white"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <span
                               className="size-2.5 rounded-full shrink-0"
                               style={{ backgroundColor: status.color || "#8b8b93" }}
                               aria-hidden="true"
                             />
-                            <span className="text-[13px] font-[500] text-[#0D0D0D]">{status.name}</span>
+                            <span className="text-[13px] font-[500] text-[#0D0D0D] truncate">{status.name}</span>
                           </div>
-                          <span className="text-[11px] font-mono text-[#575657] tabular-nums">
-                            {counts.get(status._id) ?? 0}
+                          <span className="text-[11px] font-mono font-medium text-[#575657] tabular-nums shrink-0">
+                            {issueCount}
                           </span>
                         </div>
 
+                        <div className="mt-1.5 flex items-center justify-between text-[10px] text-[#575657]">
+                          <span className="capitalize">{status.category}</span>
+                          <span>{pct}% load</span>
+                        </div>
+
+                        {/* Progress load bar */}
+                        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${Math.min(100, Math.max(4, pct))}%`,
+                              backgroundColor: status.color || "#7957EC",
+                            }}
+                          />
+                        </div>
+
                         <div className="mt-2.5 space-y-1">
+                          {isBottleneck && issueCount > 3 && (
+                            <span className="inline-flex items-center rounded-full bg-[#D6C6A1]/30 px-2 py-0.5 text-[10px] font-medium text-[#8C7646]">
+                              Highest queue
+                            </span>
+                          )}
                           {activeRules.length > 0 ? (
                             activeRules.map((rule) => (
-                              <div key={rule} className="flex items-center gap-1.5 text-[11px] text-[#0D0D0D] font-medium">
+                              <div key={rule} className="flex items-center gap-1.5 text-[10px] text-[#0D0D0D] font-medium">
                                 <span className="size-1 rounded-full bg-[#B3261E]" />
                                 <span>{rule}</span>
                               </div>
                             ))
                           ) : (
-                            <p className="text-[11px] text-[#575657]">No restrictions</p>
+                            <p className="text-[10px] text-[#575657]">No restrictions</p>
                           )}
                         </div>
                       </div>
 
                       {idx < statuses.length - 1 && (
-                        <ArrowRight className="size-4 shrink-0 text-[#9A9A9F]" />
+                        <div className="flex flex-col items-center shrink-0">
+                          <ArrowRight className="size-4 text-[#9A9A9F]" />
+                        </div>
                       )}
                     </div>
                   );
@@ -508,7 +859,7 @@ export default function WorkflowPage() {
             onEditTransition={(id) => setEditingTransitionId(id)}
           />
           <div className="mt-3">
-            <AddStatusNotice projectId={effectiveProjectId} />
+            <AddStatusNotice projectId={effectiveProjectId} onAddStatus={handleAddStatus} />
           </div>
         </Panel>
 

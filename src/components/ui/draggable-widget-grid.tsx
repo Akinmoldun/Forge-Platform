@@ -329,7 +329,7 @@ export function DraggableWidgetGrid({
   return (
     <div
       ref={containerRef}
-      className={cn("relative w-full select-none", className)}
+      className={cn("relative w-full", editable && "select-none", className)}
       style={{
         height: totalHeight > 0 ? totalHeight : "auto",
         minHeight: rowHeight * 2,
@@ -348,7 +348,7 @@ export function DraggableWidgetGrid({
             layout={!reduceMotion}
             tabIndex={editable ? 0 : -1}
             onKeyDown={(e) => handleKeyDown(e, item.id)}
-            onPointerDown={(e) => handlePointerDown(e, item)}
+            onPointerDown={editable ? (e) => handlePointerDown(e, item) : undefined}
             aria-grabbed={isDragging}
             className={cn(
               "absolute bg-white overflow-hidden transition-[border-color,box-shadow]",

@@ -69,6 +69,7 @@ export function CreateProjectDialog({
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
+  const [populateDemoIssues, setPopulateDemoIssues] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const nameError = name.length > 0 && name.trim().length < 2 ? "Use at least 2 characters" : null;
@@ -79,6 +80,7 @@ export function CreateProjectDialog({
     setName("");
     setKey("");
     setDescription("");
+    setPopulateDemoIssues(true);
   };
 
   const submit = async () => {
@@ -90,10 +92,15 @@ export function CreateProjectDialog({
         name: name.trim(),
         key: key.trim().toUpperCase(),
         description: description.trim() || undefined,
+        populateDemoIssues,
       });
       setOpen(false);
       reset();
-      toast.success(`Project ${key.trim().toUpperCase()} created`);
+      toast.success(
+        populateDemoIssues
+          ? `Project ${key.trim().toUpperCase()} created with sample issues`
+          : `Project ${key.trim().toUpperCase()} created`,
+      );
       onCreated?.(result.projectId);
       navigate(`/app/projects/${result.projectId}`);
     } catch (e) {
@@ -179,6 +186,21 @@ export function CreateProjectDialog({
               placeholder="What is this project about?"
               className="rounded-[12px] text-[13px]"
             />
+          </div>
+          <div className="flex items-start gap-2.5 rounded-[12px] border border-border/80 bg-[#FBFBFC] p-3">
+            <input
+              id="cp-populate"
+              type="checkbox"
+              checked={populateDemoIssues}
+              onChange={(e) => setPopulateDemoIssues(e.target.checked)}
+              className="mt-0.5 size-4 rounded accent-[#0D0D0D]"
+            />
+            <label htmlFor="cp-populate" className="text-[12px] text-[#0D0D0D] cursor-pointer select-none">
+              <span className="font-semibold block">Seed with sample workflow issues</span>
+              <span className="text-[#575657] block mt-0.5">
+                Populates 15 realistic issues across all statuses (Backlog, Todo, In Progress, Review, Done) to test boards and analytics immediately.
+              </span>
+            </label>
           </div>
         </div>
         <DialogFooter>

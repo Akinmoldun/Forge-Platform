@@ -1,14 +1,10 @@
-# Bug Fix Pass Progress
+# Forge Platform - Tasks & Progress
 
-| Item | Description | Status |
-|---|---|---|
-| 1 | Search / Command Palette (Ctrl+K, empty input, visible results, 560px, 20px radius, 1px border) | DONE |
-| 2 | Overview Widgets (draggable grid, quick actions, priority breakdown, project health single risk chip, fit content) | DONE |
-| 3 | Projects Table (remove duplicate "ACTIVE", fixed column widths, stacked cards below 900px) | DONE |
-| 4 | Raw Hex Codes Shown as Text (issue page status picker, grep whole src, Backlog..Cancelled names only) | DONE |
-| 5 | Workflow Page (DragScroll on pipeline & statuses, 272px cards, collapsed Allowed moves dialog, automations collapsed) | DONE |
-| 6 | Analytics (soft color charts, #6E94CB cycle time, #9FDA85 weekly throughput, #D78FC6 review wait, workload bar proportional, status & priority tints, aria-labels) | DONE |
-| 7 | Workspace & Project Icon/Emblem Instant Update in Sidebar (read iconKey first with hash fallback across switcher, dropdown, list, breadcrumb, header) | DONE |
-| 8 | Empty Project Board (restore 7 columns, DragScroll, collapsible Changes Requested/Cancelled, "+ New issue", Unsorted column) | DONE |
-| 9 | Sidebar Leftovers (remove black pill, small "+" next to search row, remove Recent, project list full height + scroll, no stuck tooltips) | DONE |
-| 10 | Demo Data Realism & Analytics (varied project counts/rates/risks, realistic titles, realistic timestamps, review wait data points, deploy & reset demo numbers) | DONE |
+| ID | Task Area | Focus & Details | Status |
+|---|---|---|---|
+| 1 | Workflow Page & Visual Pipeline | Populate visual pipeline with demo stages across multiple categories (Backlog, Unstarted, In Progress, Review/QA, Staging, Completed, Cancelled); provide 1-click workflow templates and stage addition chips; eliminate empty pipeline state | IN_PROGRESS |
+| 2 | Project Issue Population | Ensure all demo projects (Northstar, Pixel Forge, Quiet Harbor) and any user/new project can be richly populated with diverse issues across all categories, states, priorities, and assignees; provide 1-click project populator | IN_PROGRESS |
+| 3 | Analytics & Workload Styling Refresh | Overhaul black-and-white monochrome charts in project analytics and workspace analytics; add colorful multi-segment workload bars, member avatars, status gradients, and clear metric cards | IN_PROGRESS |
+| 4 | Overview Priority Breakdown & Scroll Fix | Make priority breakdown widget and overview containers fully scrollable with interactive priority issue inspection; fix pointer/touch event blocking in widget grid | IN_PROGRESS |
+| 5 | Command Palette & Search Idea Cards | Redesign search popup with Idea Cards, quick suggestions chips (Urgent, In Review, Overdue, Projects), avoiding manual 24-character typing, and rich issue previews | IN_PROGRESS |
+| 6 | Build & Verification | Run compile and lint checks to ensure all TypeScript and Vite builds succeed without errors | PENDING |

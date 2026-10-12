@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -50,8 +50,11 @@ import {
   Lock,
   X,
   ChevronDown,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { populateDemoIssuesForProject } from "@/lib/demoIssuePopulator";
 
 type ViewMode = "board" | "list";
 
@@ -117,6 +120,26 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
 
   const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
   const [colStatusId, setColStatusId] = useState<string>("");
+
+  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
+  const [isPopulating, setIsPopulating] = useState(false);
+
+  const handlePopulateDemoIssues = async () => {
+    if (!project || isPopulating) return;
+    setIsPopulating(true);
+    try {
+      const res = await populateProjectMutation({
+        projectId: project.project._id,
+      });
+      toast.success(`Populated ${res.count} demo issues across all stages, priorities, and assignees`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to populate issues");
+    } finally {
+      setIsPopulating(false);
+    }
+  };
+
+  const totalBoardIssues = board?.columns.reduce((acc, c) => acc + c.issues.length, 0) ?? 0;
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";
@@ -311,6 +334,20 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
               </SelectContent>
             </Select>
 
+            {canWrite && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePopulateDemoIssues}
+                disabled={isPopulating}
+                className="h-8 rounded-full border-border bg-white text-[12px] px-3 font-medium text-[#575657] hover:text-[#0D0D0D]"
+                title="Populate project with 14 diverse demo issues across all categories"
+              >
+                {isPopulating ? <Loader2 className="size-3 mr-1 animate-spin" /> : <Sparkles className="size-3 mr-1 text-[#6E94CB]" />}
+                <span>{isPopulating ? "Populating..." : "Populate demo issues"}</span>
+              </Button>
+            )}
+
             {project.role !== "viewer" && (
               <CreateIssueDialog
                 projects={(allProjects ?? [project.project]).map((p) => ({
@@ -338,6 +375,31 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           <ActivityTab activity={projectActivity} keyName={project.project.key} />
         ) : view === "board" ? (
           <div className="space-y-3">
+            {/* Empty board banner with 1-click sample issues population */}
+            {totalBoardIssues === 0 && canWrite && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-dashed border-[#6E94CB]/40 bg-[#6E94CB]/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-full bg-[#6E94CB]/10 text-[#6E94CB]">
+                    <Sparkles className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-[#0D0D0D]">Empty project board</h3>
+                    <p className="text-[12px] text-[#575657]">
+                      This project has no issues yet. Populate with 14 diverse issues across all categories, states, and priorities to explore workflows and analytics.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handlePopulateDemoIssues}
+                  disabled={isPopulating}
+                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] text-[12px] font-medium"
+                >
+                  {isPopulating ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Sparkles className="size-3.5 mr-1 text-[#83DD79]" />}
+                  {isPopulating ? "Populating..." : "Populate sample issues"}
+                </Button>
+              </div>
+            )}
             {showTip && (
               <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
                 <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
@@ -462,126 +524,186 @@ function AnalyticsTab({
 
   return (
     <FadeIn className="space-y-6">
-      {/* Metric cards: aligned hairline grid, animated counters, percentage bars */}
-      <Stagger className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+      {/* Metric cards: aligned hairline grid with distinctive pastel color accents */}
+      <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Open issues", count: summary.openCount, sub: `${summary.unassignedCount} unassigned`, pct: null },
-          { label: "Completed", count: summary.completedCount, sub: `${completionPct}% of all issues`, pct: completionPct },
-          { label: "Overdue", count: summary.overdueCount, sub: `${overduePct}% of open work`, pct: overduePct },
-          { label: "Avg cycle time", count: null, sub: `median ${formatDuration(summary.medianCycleDays)}`, pct: null, duration: formatDuration(summary.avgCycleDays) },
+          {
+            label: "Open issues",
+            count: summary.openCount,
+            sub: `${summary.unassignedCount} unassigned`,
+            pct: null,
+            borderColor: "border-l-[#6E94CB]",
+            barColor: "bg-[#6E94CB]",
+          },
+          {
+            label: "Completed",
+            count: summary.completedCount,
+            sub: `${completionPct}% of all issues`,
+            pct: completionPct,
+            borderColor: "border-l-[#83DD79]",
+            barColor: "bg-[#83DD79]",
+          },
+          {
+            label: "Overdue",
+            count: summary.overdueCount,
+            sub: `${overduePct}% of open work`,
+            pct: overduePct,
+            borderColor: "border-l-[#D78FC6]",
+            barColor: "bg-[#D78FC6]",
+          },
+          {
+            label: "Avg cycle time",
+            count: null,
+            sub: `median ${formatDuration(summary.medianCycleDays)}`,
+            pct: null,
+            duration: formatDuration(summary.avgCycleDays),
+            borderColor: "border-l-[#D6C6A1]",
+            barColor: "bg-[#D6C6A1]",
+          },
         ].map((m) => (
-          <StaggerItem key={m.label} className="bg-card p-4">
-            <p className="text-xs text-muted-foreground">{m.label}</p>
+          <StaggerItem
+            key={m.label}
+            className={`rounded-[14px] border border-border border-l-4 ${m.borderColor} bg-white p-4 shadow-none`}
+          >
+            <p className="text-xs font-medium text-[#575657]">{m.label}</p>
             {m.duration !== undefined ? (
-              <p className="mt-1 font-display text-2xl">{m.duration}</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#0D0D0D]">{m.duration}</p>
             ) : (
-              <p className="mt-1 font-display text-2xl">
+              <p className="mt-1 font-display text-2xl font-semibold text-[#0D0D0D]">
                 <AnimatedNumber value={m.count ?? 0} />
               </p>
             )}
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{m.sub}</p>
-            {m.pct !== null && <MotionBar pct={m.pct} className="mt-2.5 h-1" barClassName="bg-foreground/50" />}
+            <p className="mt-0.5 text-[11px] text-[#575657]">{m.sub}</p>
+            {m.pct !== null && <MotionBar pct={m.pct} className="mt-2.5 h-1.5 rounded-full" barClassName={m.barColor} />}
           </StaggerItem>
         ))}
       </Stagger>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Throughput: bars grow from the baseline, real count above each bar */}
-        <Card className="border-border shadow-none">
+        {/* Throughput: vibrant gradient bars with clear labels */}
+        <Card className="border-border shadow-none rounded-[16px] bg-white">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Throughput</CardTitle>
-            <CardDescription className="text-xs">
-              Issues completed per week, last 8 weeks. {summary.completedThisWeek} this week.
+            <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Throughput</CardTitle>
+            <CardDescription className="text-xs text-[#575657]">
+              Issues completed per week, last 8 weeks. {summary.completedThisWeek} completed this week.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex h-40 items-end gap-2">
+            <div className="flex h-40 items-end gap-2 pt-2">
               {summary.throughput.map((t, i) => (
                 <div key={t.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-                  <span className={`text-[10px] font-medium tabular-nums transition-opacity ${t.count > 0 ? "opacity-100" : "opacity-0"}`}>
+                  <span className={`text-[10px] font-semibold tabular-nums text-[#0D0D0D] transition-opacity ${t.count > 0 ? "opacity-100" : "opacity-0"}`}>
                     {t.count}
                   </span>
                   <motion.div
                     initial={{ height: 0 }}
-                    animate={{ height: `${Math.max(3, (t.count / maxThroughput) * 100)}%` }}
+                    animate={{ height: `${Math.max(4, (t.count / maxThroughput) * 100)}%` }}
                     transition={{ duration: 0.55, delay: i * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
-                    className={`w-full max-w-8 rounded-t ${t.count > 0 ? "bg-foreground/80" : "bg-foreground/20"}`}
+                    className={`w-full max-w-8 rounded-t-md transition-all ${
+                      t.count > 0
+                        ? "bg-gradient-to-t from-[#9FDA85] to-[#83DD79] hover:brightness-105"
+                        : "bg-[#F1F1F3]"
+                    }`}
                   />
-                  <span className="text-[9px] text-muted-foreground">{t.label}</span>
+                  <span className="text-[9px] font-mono text-[#575657]">{t.label}</span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Completion: ring animates to the real percentage */}
-        <Card className="border-border shadow-none">
+        {/* Completion: ring animates to real percentage + colored metric meters */}
+        <Card className="border-border shadow-none rounded-[16px] bg-white">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Completion</CardTitle>
-            <CardDescription className="text-xs">Share of all issues that are done</CardDescription>
+            <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Completion</CardTitle>
+            <CardDescription className="text-xs text-[#575657]">Share of all issues marked done</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6 sm:flex-row">
             <ProgressRing value={completionPct} size={92} stroke={7}>
               <div className="text-center">
-                <p className="font-display text-lg leading-none">{completionPct}%</p>
-                <p className="text-[9px] text-muted-foreground">done</p>
+                <p className="font-display text-lg font-semibold leading-none text-[#0D0D0D]">{completionPct}%</p>
+                <p className="text-[9px] text-[#575657] mt-0.5">done</p>
               </div>
             </ProgressRing>
             <div className="w-full min-w-0 flex-1 space-y-3">
               <div>
                 <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-muted-foreground">Avg cycle time</span>
-                  <span className="font-medium tabular-nums">{formatDuration(summary.avgCycleDays)}</span>
+                  <span className="text-[#575657]">Avg cycle time</span>
+                  <span className="font-medium text-[#0D0D0D] tabular-nums">{formatDuration(summary.avgCycleDays)}</span>
                 </div>
-                <MotionBar pct={Math.min(100, (summary.avgCycleDays ?? 0) * 10)} className="mt-1.5 h-1" barClassName="bg-foreground/50" />
+                <MotionBar pct={Math.min(100, (summary.avgCycleDays ?? 0) * 10)} className="mt-1.5 h-1.5 rounded-full" barClassName="bg-[#6E94CB]" />
               </div>
               <div>
                 <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-muted-foreground">Median cycle time</span>
-                  <span className="font-medium tabular-nums">{formatDuration(summary.medianCycleDays)}</span>
+                  <span className="text-[#575657]">Median cycle time</span>
+                  <span className="font-medium text-[#0D0D0D] tabular-nums">{formatDuration(summary.medianCycleDays)}</span>
                 </div>
-                <MotionBar pct={Math.min(100, (summary.medianCycleDays ?? 0) * 10)} className="mt-1.5 h-1" barClassName="bg-foreground/50" />
+                <MotionBar pct={Math.min(100, (summary.medianCycleDays ?? 0) * 10)} className="mt-1.5 h-1.5 rounded-full" barClassName="bg-[#7957EC]" />
               </div>
               <div>
                 <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-muted-foreground">Review wait</span>
-                  <span className="font-medium tabular-nums">{formatDuration(summary.avgReviewWaitDays)}</span>
+                  <span className="text-[#575657]">Review wait</span>
+                  <span className="font-medium text-[#0D0D0D] tabular-nums">{formatDuration(summary.avgReviewWaitDays)}</span>
                 </div>
-                <MotionBar pct={Math.min(100, (summary.avgReviewWaitDays ?? 0) * 10)} className="mt-1.5 h-1" barClassName="bg-foreground/50" />
+                <MotionBar pct={Math.min(100, (summary.avgReviewWaitDays ?? 0) * 10)} className="mt-1.5 h-1.5 rounded-full" barClassName="bg-[#D78FC6]" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Workload: bars relative to the busiest member */}
-        <Card className="border-border shadow-none">
+        {/* Workload: rich per-member breakdown with proportional split bars */}
+        <Card className="border-border shadow-none rounded-[16px] bg-white">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Workload by member</CardTitle>
-            <CardDescription className="text-xs">Open issues per assignee</CardDescription>
+            <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Workload by member</CardTitle>
+            <CardDescription className="text-xs text-[#575657]">
+              Open issues assigned with overdue breakdown per teammate
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {summary.workload.length === 0 ? (
-              <p className="py-6 text-center text-xs text-muted-foreground">
+              <p className="py-6 text-center text-xs text-[#575657]">
                 No assigned open issues.
               </p>
             ) : (
-              <div className="space-y-3">
-                {summary.workload.map((w, i) => (
-                  <div key={w.userId}>
-                    <div className="flex items-baseline justify-between text-xs">
-                      <span className="min-w-0 truncate font-medium">{w.name}</span>
-                      <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
-                        {w.openIssues} open{w.overdue > 0 ? ` · ${w.overdue} late` : ""}
-                      </span>
+              <div className="space-y-3.5">
+                {summary.workload.map((w, i) => {
+                  const maxLoad = Math.max(1, summary.workload[0].openIssues);
+                  const totalPct = Math.max(3, (w.openIssues / maxLoad) * 100);
+                  const overdueShare = w.openIssues > 0 ? (w.overdue / w.openIssues) * 100 : 0;
+                  const normalShare = 100 - overdueShare;
+
+                  return (
+                    <div key={w.userId} className="rounded-[10px] p-2 hover:bg-[#FBFBFC] transition-colors">
+                      <div className="flex items-center justify-between text-xs gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AvatarIllustration name={w.name} size={20} />
+                          <span className="min-w-0 truncate font-medium text-[#0D0D0D]">{w.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                          <span className="rounded-full bg-[#6E94CB]/10 px-2 py-0.5 font-medium text-[#2B548F]">
+                            {w.openIssues} open
+                          </span>
+                          {w.overdue > 0 && (
+                            <span className="rounded-full bg-[#D78FC6]/20 px-2 py-0.5 font-semibold text-[#A63590]">
+                              {w.overdue} late
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
+                        <div
+                          className="h-full rounded-full flex overflow-hidden transition-all duration-500"
+                          style={{ width: `${totalPct}%` }}
+                        >
+                          <div className="h-full bg-[#6E94CB]" style={{ width: `${normalShare}%` }} />
+                          {w.overdue > 0 && (
+                            <div className="h-full bg-[#D78FC6]" style={{ width: `${overdueShare}%` }} />
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <MotionBar
-                      pct={(w.openIssues / Math.max(1, summary.workload[0].openIssues)) * 100}
-                      className="mt-1.5 h-1"
-                      barClassName="bg-foreground/60"
-                      delay={i * 0.05}
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -589,38 +711,43 @@ function AnalyticsTab({
 
         {/* Risk breakdown with weighted bars */}
         {risk && (
-          <Card className="border-border shadow-none">
+          <Card className="border-border shadow-none rounded-[16px] bg-white">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Why {risk.level} risk?</CardTitle>
+                <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Why {risk.level} risk?</CardTitle>
                 <RiskBadge level={risk.level} score={risk.score} />
               </div>
-              <CardDescription className="text-xs">
-                Rule-based score. Each factor and its weight is shown.
+              <CardDescription className="text-xs text-[#575657]">
+                Explainable risk model tracking blockers, overdue items, and high-priority queues.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {risk.factors.length === 0 ? (
-                <p className={`py-4 text-center text-xs ${RISK_TONE[risk.level] ?? "text-muted-foreground"}`}>
+                <p className={`py-4 text-center text-xs ${RISK_TONE[risk.level] ?? "text-[#575657]"}`}>
                   No risk factors detected. The project is healthy.
                 </p>
               ) : (
                 <div className="space-y-3.5">
-                  {risk.factors.map((f, i) => (
-                    <div key={f.label}>
-                      <div className="flex items-baseline justify-between text-xs">
-                        <span className="font-medium">{f.label}</span>
-                        <span className="tabular-nums text-muted-foreground">+{f.points} pts</span>
+                  {risk.factors.map((f, i) => {
+                    const factorColor = f.points >= 15 ? "bg-[#D78FC6]" : f.points >= 8 ? "bg-[#D6C6A1]" : "bg-[#6E94CB]";
+                    return (
+                      <div key={f.label} className="rounded-[10px] p-2 hover:bg-[#FBFBFC] transition-colors">
+                        <div className="flex items-baseline justify-between text-xs">
+                          <span className="font-medium text-[#0D0D0D]">{f.label}</span>
+                          <span className="font-mono text-[11px] font-medium text-[#575657] tabular-nums">
+                            +{f.points} pts
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-[#575657]">{f.detail}</p>
+                        <MotionBar
+                          pct={(f.points / riskMax) * 100}
+                          className="mt-1.5 h-1.5 rounded-full"
+                          barClassName={factorColor}
+                          delay={i * 0.05}
+                        />
                       </div>
-                      <MotionBar
-                        pct={(f.points / riskMax) * 100}
-                        className="mt-1.5 h-1"
-                        barClassName={risk.level === "low" ? "bg-emerald-400/60" : "bg-foreground/60"}
-                        delay={i * 0.05}
-                      />
-                      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{f.detail}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -628,57 +755,58 @@ function AnalyticsTab({
         )}
 
         {/* Status + priority distribution: full-width, real percentages */}
-        <Card className="border-border shadow-none lg:col-span-2">
+        <Card className="border-border shadow-none rounded-[16px] bg-white lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Issues by status and priority</CardTitle>
-            <CardDescription className="text-xs">Distribution across the project workflow</CardDescription>
+            <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Issues by status and priority</CardTitle>
+            <CardDescription className="text-xs text-[#575657]">Distribution across the project workflow</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-8 lg:grid-cols-2">
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {summary.byStatus.map((s, i) => (
                 <div key={s.statusName}>
                   <div className="flex items-baseline justify-between text-xs">
                     <span className="flex min-w-0 items-center gap-2">
                       <StatusDot color={s.color} />
-                      <span className="truncate">{s.statusName}</span>
+                      <span className="truncate font-medium text-[#0D0D0D]">{s.statusName}</span>
                     </span>
-                    <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                    <span className="ml-2 shrink-0 tabular-nums text-[#575657] text-[11px]">
                       {s.count} · {summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0}%
                     </span>
                   </div>
                   <MotionBar
                     pct={summary.total > 0 ? (s.count / summary.total) * 100 : 0}
-                    className="mt-1.5 h-1"
+                    className="mt-1.5 h-1.5 rounded-full"
                     barStyle={{ backgroundColor: s.color }}
                     delay={i * 0.04}
                   />
                 </div>
               ))}
             </div>
-            <div className="space-y-2.5">
-              {summary.byPriority.map((p, i) => (
-                <div key={p.priority}>
-                  <div className="flex items-baseline justify-between text-xs">
-                    <span className="capitalize">{p.priority}</span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {p.count} · {summary.openCount > 0 ? Math.round((p.count / summary.openCount) * 100) : 0}%
-                    </span>
+            <div className="space-y-3">
+              {summary.byPriority.map((p, i) => {
+                const priorityColor =
+                  p.priority === "urgent" ? "#D78FC6"
+                  : p.priority === "high" ? "#D6C6A1"
+                  : p.priority === "medium" ? "#6E94CB"
+                  : "#9A9A9F";
+
+                return (
+                  <div key={p.priority}>
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="capitalize font-medium text-[#0D0D0D]">{p.priority}</span>
+                      <span className="tabular-nums text-[#575657] text-[11px]">
+                        {p.count} · {summary.openCount > 0 ? Math.round((p.count / summary.openCount) * 100) : 0}%
+                      </span>
+                    </div>
+                    <MotionBar
+                      pct={summary.openCount > 0 ? (p.count / summary.openCount) * 100 : 0}
+                      className="mt-1.5 h-1.5 rounded-full"
+                      barStyle={{ backgroundColor: priorityColor }}
+                      delay={i * 0.04}
+                    />
                   </div>
-                  <MotionBar
-                    pct={summary.openCount > 0 ? (p.count / summary.openCount) * 100 : 0}
-                    className="mt-1.5 h-1"
-                    barStyle={{
-                      backgroundColor:
-                        p.priority === "urgent" ? "#f06a6a"
-                        : p.priority === "high" ? "#e6a23c"
-                        : p.priority === "medium" ? "#4f8ff7"
-                        : p.priority === "low" ? "#8b8b93"
-                        : "#3a3a42",
-                    }}
-                    delay={i * 0.04}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

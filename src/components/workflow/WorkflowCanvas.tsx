@@ -349,41 +349,215 @@ export function WorkflowCanvas({
  * `workflows.updateTransitionRules`. Rather than ship a button that pretends to
  * work, this states the limit and offers the paths that do work today.
  */
-export function AddStatusNotice({ projectId }: { projectId?: string }) {
+export interface DemoStatusPreset {
+  name: string;
+  category: "backlog" | "unstarted" | "active" | "review" | "completed" | "cancelled";
+  color: string;
+  description: string;
+}
+
+export const DEMO_STATUS_PRESETS: DemoStatusPreset[] = [
+  // Backlog
+  { name: "Triage Queue", category: "backlog", color: "#9A9A9F", description: "Unsorted incoming bug reports and requests" },
+  { name: "Icebox", category: "backlog", color: "#8B8B93", description: "Ideas parked for future roadmap consideration" },
+  { name: "Needs Refinement", category: "backlog", color: "#7A7A85", description: "Awaiting technical specification or scoping" },
+  // Unstarted
+  { name: "Ready for Dev", category: "unstarted", color: "#6E94CB", description: "Fully refined and prioritized for implementation" },
+  { name: "Sprint Candidate", category: "unstarted", color: "#5B82BA", description: "Queued for commitment in next iteration" },
+  // Active / Started
+  { name: "In Development", category: "active", color: "#7957EC", description: "Currently being coded and tested locally" },
+  { name: "Blocked", category: "active", color: "#9878F5", description: "Waiting on external dependency or blocker" },
+  { name: "Spike / Research", category: "active", color: "#6C46E8", description: "Timeboxed architectural spike in progress" },
+  // Review / Quality
+  { name: "Design Review", category: "review", color: "#D78FC6", description: "Visual and UX review with design team" },
+  { name: "QA Testing", category: "review", color: "#C679B4", description: "End-to-end regression testing on preview build" },
+  { name: "Security Audit", category: "review", color: "#B98AF5", description: "Compliance and security assessment check" },
+  // Changes
+  { name: "Changes Requested", category: "review", color: "#D6C6A1", description: "Review feedback needs author revisions" },
+  // Completed
+  { name: "Shipped to Staging", category: "completed", color: "#83DD79", description: "Deployed to pre-production validation cluster" },
+  { name: "Released to Prod", category: "completed", color: "#56C663", description: "Live to all customer production tenants" },
+  // Cancelled
+  { name: "Won't Fix", category: "cancelled", color: "#E5857F", description: "Reviewed and intentionally not planned" },
+  { name: "Duplicate", category: "cancelled", color: "#D96963", description: "Superseded by existing work item" },
+];
+
+/**
+ * "Add status" modal allowing users to add demo states in different categories or create custom ones.
+ */
+export function AddStatusNotice({
+  projectId,
+  onAddStatus,
+}: {
+  projectId?: string;
+  onAddStatus?: (status: { name: string; category: string; color: string }) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [customName, setCustomName] = useState("");
+  const [customCat, setCustomCat] = useState("active");
+  const [customColor, setCustomColor] = useState("#7957EC");
+
+  const categories = [
+    { id: "all", label: "All Categories" },
+    { id: "backlog", label: "Backlog" },
+    { id: "unstarted", label: "Unstarted" },
+    { id: "active", label: "In Progress" },
+    { id: "review", label: "Review & QA" },
+    { id: "completed", label: "Completed" },
+    { id: "cancelled", label: "Cancelled" },
+  ];
+
+  const filteredPresets = selectedCategory === "all"
+    ? DEMO_STATUS_PRESETS
+    : DEMO_STATUS_PRESETS.filter((p) => p.category === selectedCategory);
+
+  const handleAddPreset = (preset: DemoStatusPreset) => {
+    if (onAddStatus) {
+      onAddStatus({ name: preset.name, category: preset.category, color: preset.color });
+      setOpen(false);
+    }
+  };
+
+  const handleAddCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customName.trim()) return;
+    if (onAddStatus) {
+      onAddStatus({ name: customName.trim(), category: customCat, color: customColor });
+      setCustomName("");
+      setOpen(false);
+    }
+  };
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5">
-        <Plus className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-        <p className="min-w-0 flex-1 text-[12px] leading-4 text-muted-foreground">
-          Need a different status set? Add status explains what Forge supports today.
-        </p>
-        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-          <Plus /> Add status
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-dashed border-border bg-[#FBFBFC] px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-7 items-center justify-center rounded-full bg-[#F1F1F3] text-[#0D0D0D]">
+            <Plus className="size-4" />
+          </div>
+          <div>
+            <p className="text-[13px] font-medium text-[#0D0D0D]">Add workflow states</p>
+            <p className="text-[11px] text-[#575657]">
+              Choose from pre-built demo states across all workflow categories or configure custom stages.
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+          className="rounded-full bg-white text-[12px] font-medium"
+        >
+          <Plus className="size-3.5 mr-1" /> Add demo states
         </Button>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 rounded-[20px] bg-white border border-border shadow-none">
           <DialogHeader>
-            <DialogTitle className="text-base">Add status</DialogTitle>
-            <DialogDescription>
-              Forge creates a project with the default workflow: Backlog, Todo, In Progress, Review,
-              and Done. The workflow API can change transition rules and automations, but it has no
-              endpoint for creating a new status, so nothing can be added here yet.
+            <DialogTitle className="text-base font-semibold text-[#0D0D0D]">Add workflow status</DialogTitle>
+            <DialogDescription className="text-xs text-[#575657]">
+              Select a stage from popular engineering workflow presets or create a custom status to see how it appears in the pipeline.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-md border border-border bg-secondary/50 px-3 py-2.5 text-[11px] leading-4 text-muted-foreground">
-            To change the status set today, create a new project with the workflow you want, or ask
-            an admin to add the status-creation endpoint to the API.
+
+          {/* Category filter tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-border/70 scrollbar-none">
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSelectedCategory(c.id)}
+                className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                  selectedCategory === c.id
+                    ? "bg-[#0D0D0D] text-white"
+                    : "bg-[#F1F1F3] text-[#575657] hover:text-[#0D0D0D]"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+
+          {/* Preset cards grid */}
+          <div className="flex-1 overflow-y-auto pr-1 space-y-2 max-h-[280px]">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#575657] pt-1">
+              Popular stage presets ({filteredPresets.length})
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {filteredPresets.map((preset) => (
+                <div
+                  key={preset.name}
+                  onClick={() => handleAddPreset(preset)}
+                  className="flex items-start justify-between gap-3 p-3 rounded-[12px] border border-border bg-white hover:border-[#0D0D0D]/40 hover:bg-[#FBFBFC] cursor-pointer transition-all group select-none"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: preset.color }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-[13px] font-medium text-[#0D0D0D] group-hover:text-black">
+                        {preset.name}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-[#575657] line-clamp-1">{preset.description}</p>
+                  </div>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] shrink-0 text-[#575657] group-hover:text-[#0D0D0D]">
+                    <Plus className="size-3" /> Add
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom status input */}
+          <form onSubmit={handleAddCustom} className="border-t border-border/80 pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#575657] mb-2">
+              Or create custom status
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="Status name (e.g., Performance Review)"
+                className="h-8 flex-1 min-w-[180px] rounded-[8px] border border-border bg-white px-3 text-[12px] text-[#0D0D0D] placeholder:text-[#575657]/60 outline-none focus:border-[#0D0D0D]"
+              />
+              <select
+                value={customCat}
+                onChange={(e) => setCustomCat(e.target.value)}
+                className="h-8 rounded-[8px] border border-border bg-white px-2.5 text-[12px] text-[#0D0D0D] outline-none"
+              >
+                <option value="backlog">Backlog</option>
+                <option value="unstarted">Unstarted</option>
+                <option value="active">In Progress</option>
+                <option value="review">Review</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <input
+                type="color"
+                value={customColor}
+                onChange={(e) => setCustomColor(e.target.value)}
+                className="size-8 rounded-[8px] border border-border p-0.5 cursor-pointer"
+                title="Select status color"
+              />
+              <Button type="submit" size="sm" className="h-8 rounded-[8px] bg-[#0D0D0D] text-white text-[12px]">
+                Add custom
+              </Button>
+            </div>
+          </form>
+
+          <DialogFooter className="mt-2 pt-2 border-t border-border/60">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
               Close
             </Button>
             {projectId && (
-              <Button size="sm" asChild>
-                <Link to={`/app/projects/${projectId}/board`}>Open the board</Link>
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/app/projects/${projectId}/board`}>View Project Board</Link>
               </Button>
             )}
           </DialogFooter>

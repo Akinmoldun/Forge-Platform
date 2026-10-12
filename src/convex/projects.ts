@@ -91,6 +91,7 @@ export const createProject = mutation({
     name: v.string(),
     key: v.string(),
     description: v.optional(v.string()),
+    populateDemoIssues: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { workspaceId, userId, role } = await loadWorkspaceContext(
@@ -174,6 +175,16 @@ export const createProject = mutation({
         requiresComment: false,
         requiresApproval: toName === "Done",
         createdAt: now,
+      });
+    }
+
+    // If requested, seed initial demo issues across all statuses
+    if (args.populateDemoIssues) {
+      await seedIssuesForProjectHelper(ctx, {
+        workspaceId,
+        projectId,
+        userId,
+        statusDocs,
       });
     }
 
@@ -454,6 +465,329 @@ export const deleteLabel = mutation({
 
     await ctx.db.delete(args.labelId);
     return { ok: true };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Demo issue seed helper & project populator mutations
+// ---------------------------------------------------------------------------
+
+const DEMO_ISSUE_SPECS = [
+  {
+    title: "Resolve intermittent WebSocket reconnection dropouts on mobile clients",
+    description: "Mobile clients experience dropped socket connections during network handoffs between Wi-Fi and 5G.\n\n### Acceptance Criteria\n- [x] Exponential backoff jitter on reconnect retry loop\n- [ ] Preserve pending mutations in offline buffer queue\n- [ ] Heartbeat ping interval tuned to 25s",
+    priority: "urgent" as const,
+    stageCategory: "started",
+    estimatePoints: 5,
+    daysAgo: 3,
+  },
+  {
+    title: "Implement optimistic mutation queue with idempotency keys",
+    description: "Ensure clients do not duplicate task creations during degraded network latency.\n\n### Technical Notes\n- Use client-generated UUID request tokens\n- Deduplicate on the server gateway layer",
+    priority: "high" as const,
+    stageCategory: "review",
+    estimatePoints: 8,
+    daysAgo: 5,
+  },
+  {
+    title: "Audit Stripe webhook signature verification against replay attacks",
+    description: "Verify that Stripe webhook signatures enforce 5-minute clock drift tolerance and replay prevention.\n\n- [x] Check timestamp header tolerance window\n- [x] Add Redis cache for recently processed event IDs",
+    priority: "urgent" as const,
+    stageCategory: "unstarted",
+    estimatePoints: 3,
+    daysAgo: 2,
+  },
+  {
+    title: "Optimize database index coverage on composite workspace member lookups",
+    description: "Slow queries detected on `by_workspace_user` index during concurrent dashboard loads.\n\n- Add composite index on `(workspaceId, role, joinedAt)`\n- Benchmark p99 query latency under 15ms",
+    priority: "high" as const,
+    stageCategory: "started",
+    estimatePoints: 5,
+    daysAgo: 7,
+  },
+  {
+    title: "Support markdown checklist persistence with keyboard shortcut toggles",
+    description: "Allow users to press Ctrl+Enter or click checkboxes directly inside issue description previews without entering full edit mode.",
+    priority: "medium" as const,
+    stageCategory: "unstarted",
+    estimatePoints: 3,
+    daysAgo: 1,
+  },
+  {
+    title: "Add dark mode dynamic color tokens and contrast ratio verification",
+    description: "Ensure WCAG AAA compliance across all high-density data tables and kanban status pills in both themes.",
+    priority: "low" as const,
+    stageCategory: "backlog",
+    estimatePoints: 2,
+    daysAgo: 12,
+  },
+  {
+    title: "Fix pull-to-refresh infinite spinner lockup on iOS WebKit",
+    description: "Touch gesture recognizer fails to reset scroll displacement when sheet dismisses mid-drag on Safari 17.4.",
+    priority: "urgent" as const,
+    stageCategory: "review",
+    estimatePoints: 5,
+    daysAgo: 4,
+  },
+  {
+    title: "Implement automated CSV export with field customization drawer",
+    description: "Users need to export filtered issues with selectable columns including estimate points, cycle time, and reporter.",
+    priority: "medium" as const,
+    stageCategory: "completed",
+    estimatePoints: 3,
+    daysAgo: 22,
+    cycleDays: 4,
+  },
+  {
+    title: "Generate PDF invoice downloads with tax breakdown and PO number",
+    description: "Enterprise billing accounts require downloadable invoices formatted with VAT numbers and corporate billing contacts.",
+    priority: "high" as const,
+    stageCategory: "completed",
+    estimatePoints: 5,
+    daysAgo: 35,
+    cycleDays: 6,
+  },
+  {
+    title: "Refactor command palette fuzzy search to index labels and custom properties",
+    description: "Enhance Cmd+K fuzzy matching with keyword weighting for labels, assignees, and project keys.",
+    priority: "medium" as const,
+    stageCategory: "started",
+    estimatePoints: 5,
+    daysAgo: 6,
+  },
+  {
+    title: "Configure dead letter queue and alert webhooks for failed telemetry events",
+    description: "Stream failed ingestion events into a secondary storage bucket and ping Slack operations channel when error rate exceeds 1%.",
+    priority: "high" as const,
+    stageCategory: "completed",
+    estimatePoints: 5,
+    daysAgo: 14,
+    cycleDays: 3,
+  },
+  {
+    title: "Enforce prorated calculation on mid-cycle subscription tier adjustments",
+    description: "When workspaces upgrade or downgrade seats midway through monthly billing period, compute exact day-level proration.",
+    priority: "medium" as const,
+    stageCategory: "completed",
+    estimatePoints: 3,
+    daysAgo: 42,
+    cycleDays: 5,
+  },
+  {
+    title: "Add subtle haptic feedback tick on issue status drag-and-drop transitions",
+    description: "Provide tactile response on supported trackpads and mobile devices when snapping cards into target status columns.",
+    priority: "low" as const,
+    stageCategory: "backlog",
+    estimatePoints: 1,
+    daysAgo: 15,
+  },
+  {
+    title: "Investigate memory leak during large file attachments upload",
+    description: "Heap snapshot reveals unreleased ArrayBuffer references when uploading attachments greater than 25MB.",
+    priority: "high" as const,
+    stageCategory: "unstarted",
+    estimatePoints: 5,
+    daysAgo: 2,
+  },
+  {
+    title: "Deprecate legacy v1 authentication tokens and notify active API consumers",
+    description: "Legacy API tokens without expiration are being phased out in favor of rotating OAuth scoped tokens.",
+    priority: "medium" as const,
+    stageCategory: "cancelled",
+    estimatePoints: 2,
+    daysAgo: 18,
+  },
+];
+
+async function seedIssuesForProjectHelper(
+  ctx: any,
+  params: {
+    workspaceId: any;
+    projectId: any;
+    userId: any;
+    statusDocs: any[];
+  },
+) {
+  const { workspaceId, projectId, userId, statusDocs } = params;
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+
+  // Find workspace members to distribute assignments
+  const memberships = await ctx.db
+    .query("memberships")
+    .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+    .collect();
+  const memberUserIds = memberships.map((m: any) => m.userId);
+  if (!memberUserIds.includes(userId)) memberUserIds.unshift(userId);
+
+  // Find existing issue number max
+  const existingIssues = await ctx.db
+    .query("issues")
+    .withIndex("by_project", (q: any) => q.eq("projectId", projectId))
+    .collect();
+  let nextNumber = existingIssues.reduce((max: number, i: any) => Math.max(max, i.number), 0) + 1;
+
+  // Map categories to status IDs
+  const findStatus = (cat: string) => {
+    const match = statusDocs.find((s: any) => {
+      const sCat = (s.category || "").toLowerCase();
+      const sName = (s.name || "").toLowerCase();
+      if (cat === "started") return sCat === "started" || sName.includes("progress") || sName.includes("active");
+      if (cat === "review") return sCat === "review" || sName.includes("review") || sName.includes("qa");
+      if (cat === "completed") return sCat === "completed" || sName.includes("done") || sName.includes("shipped");
+      if (cat === "cancelled") return sCat === "cancelled" || sName.includes("cancel");
+      if (cat === "unstarted") return sCat === "unstarted" || sName.includes("todo") || sName.includes("ready");
+      if (cat === "backlog") return sCat === "backlog" || sName.includes("backlog");
+      return false;
+    });
+    return match ? match._id : statusDocs[0]._id;
+  };
+
+  let count = 0;
+  for (let i = 0; i < DEMO_ISSUE_SPECS.length; i++) {
+    const spec = DEMO_ISSUE_SPECS[i];
+    const statusId = findStatus(spec.stageCategory);
+    const createdAt = now - spec.daysAgo * DAY;
+    const isCompleted = spec.stageCategory === "completed";
+    const isCancelled = spec.stageCategory === "cancelled";
+
+    let startedAt: number | undefined;
+    let completedAt: number | undefined;
+    if (isCompleted || isCancelled) {
+      const cycle = (spec.cycleDays ?? 4) * DAY;
+      completedAt = now - Math.max(1, spec.daysAgo - 4) * DAY;
+      startedAt = completedAt - cycle;
+    } else if (spec.stageCategory === "started" || spec.stageCategory === "review") {
+      startedAt = createdAt + 1 * DAY;
+    }
+
+    // Due dates: overdue on item 0 and 6, upcoming on 1, 2, 4
+    let dueDate: number | undefined;
+    if (i === 0 || i === 6) {
+      dueDate = now - 2 * DAY; // Overdue
+    } else if (i === 1 || i === 2 || i === 4) {
+      dueDate = now + (i * 2 + 3) * DAY; // Upcoming
+    }
+
+    const assigneeId = memberUserIds.length > 0 && i % 5 !== 0
+      ? memberUserIds[i % memberUserIds.length]
+      : undefined;
+
+    await ctx.db.insert("issues", {
+      workspaceId,
+      projectId,
+      number: nextNumber++,
+      title: spec.title,
+      description: spec.description,
+      statusId,
+      priority: spec.priority,
+      assigneeId,
+      reporterId: userId,
+      dueDate,
+      estimatePoints: spec.estimatePoints,
+      startedAt,
+      completedAt,
+      createdAt,
+      updatedAt: completedAt ?? (now - 1 * DAY),
+    });
+    count++;
+  }
+
+  await ctx.db.patch(projectId, { updatedAt: now });
+  return count;
+}
+
+export const populateProjectWithDemoIssues = mutation({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadProjectContext(ctx, args.projectId);
+    if (!roleAtLeast(role, "member")) {
+      throw new Error("Only members can populate demo issues");
+    }
+
+    const workflow = await ctx.db
+      .query("workflows")
+      .withIndex("by_project", (q: any) => q.eq("projectId", args.projectId))
+      .first();
+    if (!workflow) {
+      throw new Error("Workflow not found for project");
+    }
+
+    const statusDocs = await ctx.db
+      .query("workflowStatuses")
+      .withIndex("by_workflow", (q: any) => q.eq("workflowId", workflow._id))
+      .collect();
+
+    if (statusDocs.length === 0) {
+      throw new Error("No statuses configured for this project");
+    }
+
+    const count = await seedIssuesForProjectHelper(ctx, {
+      workspaceId,
+      projectId: args.projectId,
+      userId,
+      statusDocs,
+    });
+
+    return { count };
+  },
+});
+
+export const populateAllWorkspaceProjectsWithDemoIssues = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadWorkspaceContext(ctx, args.workspaceId);
+    if (!roleAtLeast(role, "member")) {
+      throw new Error("Only members can populate workspace projects");
+    }
+
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+      .collect();
+
+    let populatedCount = 0;
+    let totalIssuesCreated = 0;
+
+    for (const project of projects) {
+      if (project.status === "archived") continue;
+
+      const existingIssues = await ctx.db
+        .query("issues")
+        .withIndex("by_project", (q: any) => q.eq("projectId", project._id))
+        .collect();
+
+      // If empty or fewer than 2 issues, populate it
+      if (existingIssues.length <= 1) {
+        const workflow = await ctx.db
+          .query("workflows")
+          .withIndex("by_project", (q: any) => q.eq("projectId", project._id))
+          .first();
+        if (!workflow) continue;
+
+        const statusDocs = await ctx.db
+          .query("workflowStatuses")
+          .withIndex("by_workflow", (q: any) => q.eq("workflowId", workflow._id))
+          .collect();
+
+        if (statusDocs.length > 0) {
+          const count = await seedIssuesForProjectHelper(ctx, {
+            workspaceId,
+            projectId: project._id,
+            userId,
+            statusDocs,
+          });
+          populatedCount++;
+          totalIssuesCreated += count;
+        }
+      }
+    }
+
+    return { populatedCount, totalIssuesCreated };
   },
 });
 
