@@ -3,17 +3,133 @@ export const NORTHSTAR_WORKSPACE_NAME = "Demo: Northstar Labs";
 export const PIXEL_FORGE_WORKSPACE_NAME = "Demo: Pixel Forge";
 export const QUIET_HARBOR_WORKSPACE_NAME = "Demo: Quiet Harbor";
 
+export const AVATAR_OPTIONS = [
+  "fox",
+  "bear",
+  "owl",
+  "rabbit",
+  "deer",
+  "cat",
+  "dog",
+  "panda",
+  "koala",
+  "lion",
+  "tiger",
+  "wolf",
+] as const;
+
+export interface ProjectSpec {
+  key: string;
+  name: string;
+  description: string;
+  iconKey: string;
+  targetCount: number;
+}
+
+export const NORTHSTAR_PROJECT_SPECS: ProjectSpec[] = [
+  {
+    key: "MOB",
+    name: "Mobile Client",
+    description: "Cross-platform iOS and Android client architecture with offline sync",
+    iconKey: "compass",
+    targetCount: 14,
+  },
+  {
+    key: "BIL",
+    name: "Billing & Subscriptions",
+    description: "Stripe integration, usage metering, and invoice generation",
+    iconKey: "prism",
+    targetCount: 18,
+  },
+  {
+    key: "WEB",
+    name: "Web Application",
+    description: "React dashboard, real-time collaboration canvas, and issue editor",
+    iconKey: "orbit",
+    targetCount: 22,
+  },
+  {
+    key: "PLT",
+    name: "Platform & Infra",
+    description: "Kubernetes cluster, edge routing, observability, and auth gateway",
+    iconKey: "anchor",
+    targetCount: 19,
+  },
+  {
+    key: "DAT",
+    name: "Data Pipeline",
+    description: "Event streaming, ETL jobs, warehouse sync, and analytics aggregations",
+    iconKey: "flask",
+    targetCount: 12,
+  },
+];
+
+export const PIXEL_FORGE_PROJECT_SPECS: ProjectSpec[] = [
+  {
+    key: "GAM",
+    name: "Gameplay Mechanics",
+    description: "Combat responsiveness, hit detection, and camera choreography",
+    iconKey: "loom",
+    targetCount: 16,
+  },
+  {
+    key: "ART",
+    name: "Technical Art & Shaders",
+    description: "Volumetric fog, PBR materials, and particle performance",
+    iconKey: "quill",
+    targetCount: 12,
+  },
+  {
+    key: "NET",
+    name: "Multiplayer Netcode",
+    description: "Rollback netcode, matchmaking queues, and packet compaction",
+    iconKey: "orbit",
+    targetCount: 14,
+  },
+  {
+    key: "QAT",
+    name: "QA & Automation",
+    description: "Soak tests, collision sweeps, and regression suites",
+    iconKey: "tree",
+    targetCount: 10,
+  },
+];
+
+export const QUIET_HARBOR_PROJECT_SPECS: ProjectSpec[] = [
+  {
+    key: "CLI",
+    name: "Client Portal",
+    description: "Milestone sign-off, client feedback, and progress dashboards",
+    iconKey: "compass",
+    targetCount: 14,
+  },
+  {
+    key: "WEB",
+    name: "Marketing Websites",
+    description: "Next.js performance optimization, SEO, and CMS webhooks",
+    iconKey: "loom",
+    targetCount: 12,
+  },
+  {
+    key: "OPS",
+    name: "Cloud Operations",
+    description: "CI/CD deployment pipelines, automated backups, and SSL automation",
+    iconKey: "anchor",
+    targetCount: 9,
+  },
+];
+
 export const NORTHSTAR_MEMBERS_COUNT = 16; // 1 owner + 15 teammates
 export const NORTHSTAR_PROJECTS_COUNT = 5;
-export const NORTHSTAR_ISSUES_PER_PROJECT = 75;
+export const NORTHSTAR_ISSUES_PER_PROJECT = 20;
 
 export const PIXEL_FORGE_MEMBERS_COUNT = 12; // 1 owner + 11 teammates
 export const PIXEL_FORGE_PROJECTS_COUNT = 4;
-export const PIXEL_FORGE_ISSUES_PER_PROJECT = 55;
+export const PIXEL_FORGE_ISSUES_PER_PROJECT = 14;
 
 export const QUIET_HARBOR_MEMBERS_COUNT = 6; // 1 owner + 5 teammates
 export const QUIET_HARBOR_PROJECTS_COUNT = 3;
-export const QUIET_HARBOR_ISSUES_PER_PROJECT = 35;
+export const QUIET_HARBOR_ISSUES_PER_PROJECT = 12;
 
 export interface TeammateDef {
   name: string;

@@ -8,6 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListSkeleton } from "@/components/forge";
+import { cn } from "@/lib/utils";
+import {
+  AVATAR_KEYS,
+  AvatarIllustration,
+} from "@/components/Illustrations";
 import { toast } from "sonner";
 import {
   Bell,
@@ -26,6 +31,7 @@ export default function ProfileSettingsPage() {
   const emailConfig = useQuery(api.email.getEmailConfig);
 
   const updateProfile = useMutation(api.users.updateProfile);
+  const updateAvatarKey = useMutation(api.users.updateAvatarKey);
   const removeAvatar = useMutation(api.users.removeAvatar);
   const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
   const updatePrefs = useMutation(api.users.updateNotificationPreferences);
@@ -77,9 +83,6 @@ export default function ProfileSettingsPage() {
   }
 
   const isGuest = currentUser?.isAnonymous || !currentUser?.email;
-  const initial = (currentUser?.name || currentUser?.email || "U")
-    .charAt(0)
-    .toUpperCase();
 
   const handleSaveProfile = async () => {
     if (savingProfile) return;
@@ -212,7 +215,7 @@ export default function ProfileSettingsPage() {
           </div>
 
           {/* Avatar row */}
-          <div className="flex items-center gap-5 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 pt-2">
             <div className="relative">
               <Avatar className="size-20 border border-border">
                 {currentUser?.image ? (
@@ -222,8 +225,13 @@ export default function ProfileSettingsPage() {
                     className="object-cover"
                   />
                 ) : null}
-                <AvatarFallback className="bg-[#F1F1F3] text-[24px] font-semibold text-[#0D0D0D]">
-                  {initial}
+                <AvatarFallback className="bg-transparent border-0 p-0">
+                  <AvatarIllustration
+                    avatarKey={currentUser?.avatarKey}
+                    name={currentUser?.name}
+                    id={currentUser?._id}
+                    size={80}
+                  />
                 </AvatarFallback>
               </Avatar>
               {uploadingAvatar && (
@@ -270,6 +278,45 @@ export default function ProfileSettingsPage() {
               <p className="text-[11px] text-[#575657]">
                 PNG, JPG or WebP up to 2 MB. Square or portrait works best.
               </p>
+            </div>
+          </div>
+
+          {/* Choose an avatar (12 illustrations grid) */}
+          <div className="space-y-2 pt-2 border-t border-border/70">
+            <Label className="text-[13px] font-medium text-[#0D0D0D]">
+              Choose an avatar
+            </Label>
+            <p className="text-[12px] text-[#575657]">
+              Select from our 12 original illustrated avatars. Saves immediately.
+            </p>
+            <div className="grid grid-cols-6 sm:grid-cols-12 gap-2.5 pt-1">
+              {AVATAR_KEYS.map((key) => {
+                const isSelected =
+                  !currentUser?.image &&
+                  (currentUser?.avatarKey === key ||
+                    (!currentUser?.avatarKey && key === "fox"));
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateAvatarKey({ avatarKey: key });
+                        toast.success(`Selected ${key} avatar`);
+                      } catch {
+                        toast.error("Failed to update avatar");
+                      }
+                    }}
+                    className={cn(
+                      "group relative flex size-10 items-center justify-center rounded-full p-0.5 transition-transform hover:scale-105 active:scale-95 cursor-pointer",
+                      isSelected && "ring-2 ring-[#0D0D0D] ring-offset-2"
+                    )}
+                    aria-label={`Select ${key} avatar`}
+                  >
+                    <AvatarIllustration avatarKey={key} size={36} />
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -30,8 +30,8 @@ import {
   type AutomationRow,
 } from "@/components/workflow/AutomationRulesPanel";
 import {
-  AddStatusNotice,
   WorkflowCanvas,
+  AddStatusNotice,
   type WorkflowIssueCard,
   type WorkflowStatusNodeData,
   type WorkflowTransition,

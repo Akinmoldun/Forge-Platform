@@ -198,6 +198,7 @@ export const updateProject = mutation({
     description: v.optional(v.string()),
     color: v.optional(v.string()),
     icon: v.optional(v.string()),
+    iconKey: v.optional(v.string()),
     defaultAssigneeId: v.optional(v.union(v.id("users"), v.null())),
     status: v.optional(
       v.union(
@@ -225,6 +226,7 @@ export const updateProject = mutation({
     if (args.description !== undefined) patch.description = args.description.trim() || undefined;
     if (args.color !== undefined) patch.color = args.color.trim() || undefined;
     if (args.icon !== undefined) patch.icon = args.icon.trim() || undefined;
+    if (args.iconKey !== undefined) patch.iconKey = args.iconKey.trim() || undefined;
     if (args.defaultAssigneeId !== undefined) patch.defaultAssigneeId = args.defaultAssigneeId ?? undefined;
     if (args.status !== undefined) patch.status = args.status;
     if (args.targetDate !== undefined) {
@@ -244,6 +246,31 @@ export const updateProject = mutation({
         fields: Object.keys(patch).filter((k) => k !== "updatedAt"),
       },
     });
+  },
+});
+
+export const updateIconKey = mutation({
+  args: {
+    projectId: v.id("projects"),
+    iconKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadProjectContext(ctx, args.projectId);
+    if (!roleAtLeast(role, "admin")) {
+      throw new Error("Only admins can update projects");
+    }
+    const iconKey = args.iconKey.trim() || undefined;
+    await ctx.db.patch(args.projectId, { iconKey, updatedAt: Date.now() });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "project",
+      entityId: args.projectId,
+      eventType: "project.updated",
+      projectId: args.projectId,
+      payload: { fields: ["iconKey"] },
+    });
+    return { ok: true };
   },
 });
 

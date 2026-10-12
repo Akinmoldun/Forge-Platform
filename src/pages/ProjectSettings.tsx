@@ -25,20 +25,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EmptyState, ListSkeleton } from "@/components/forge";
-import { ArrowLeft, Archive, ArchiveRestore, Check, Lock, Trash2, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  EMBLEM_KEYS,
+  EmblemIllustration,
+} from "@/components/Illustrations";
+import { ArrowLeft, Archive, ArchiveRestore, Lock, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
-
-const PROJECT_COLORS = [
-  "#0D0D0D",
-  "#F36421",
-  "#6E94CB",
-  "#83DD79",
-  "#D78FC6",
-  "#D6C6A1",
-  "#7957EC",
-  "#B3261E",
-];
 
 export default function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -58,6 +52,7 @@ export default function ProjectSettings() {
 
   const [name, setName] = useState<string | null>(null);
   const [description, setDescription] = useState<string | null>(null);
+  const [iconKey, setIconKey] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(null);
 
@@ -87,6 +82,7 @@ export default function ProjectSettings() {
   const isAdmin = project.role === "admin" || project.role === "owner";
   const nameValue = name ?? project.project.name;
   const descValue = description ?? (project.project.description || "");
+  const iconKeyValue = iconKey ?? (project.project.iconKey || "mountain");
   const colorValue = color ?? (project.project.color || "#6E94CB");
   const assigneeValue =
     defaultAssigneeId !== null
@@ -99,6 +95,7 @@ export default function ProjectSettings() {
   const hasChanges =
     nameValue.trim() !== project.project.name ||
     descValue.trim() !== (project.project.description || "") ||
+    iconKeyValue !== (project.project.iconKey || "mountain") ||
     colorValue !== (project.project.color || "#6E94CB") ||
     (defaultAssigneeId !== null &&
       defaultAssigneeId !== (project.project.defaultAssigneeId ?? "none"));
@@ -112,12 +109,14 @@ export default function ProjectSettings() {
         name: nameValue.trim(),
         description: descValue.trim() || undefined,
         color: colorValue,
+        iconKey: iconKeyValue,
         defaultAssigneeId:
           assigneeValue === "none" ? null : (assigneeValue as Id<"users">),
       });
       toast.success("Project settings saved");
       setName(null);
       setDescription(null);
+      setIconKey(null);
       setColor(null);
       setDefaultAssigneeId(null);
     } catch (e) {
@@ -232,26 +231,33 @@ export default function ProjectSettings() {
             </p>
           </div>
 
-          {/* Color */}
+          {/* Emblem Picker */}
           <div className="space-y-2">
             <Label className="text-[13px] font-[500] text-[#0D0D0D]">
-              Project accent color
+              Choose an emblem
             </Label>
-            <div className="flex flex-wrap items-center gap-2.5">
-              {PROJECT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  disabled={!isAdmin}
-                  onClick={() => setColor(c)}
-                  className="size-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 relative"
-                  style={{ backgroundColor: c }}
-                >
-                  {colorValue.toLowerCase() === c.toLowerCase() && (
-                    <Check className="size-3.5 text-white stroke-[3]" />
-                  )}
-                </button>
-              ))}
+            <p className="text-[12px] text-[#575657]">
+              Select an illustrated emblem for this project.
+            </p>
+            <div className="grid grid-cols-6 sm:grid-cols-12 gap-2.5 pt-1">
+              {EMBLEM_KEYS.map((k) => {
+                const isSelected = iconKeyValue === k;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    disabled={!isAdmin}
+                    onClick={() => setIconKey(k)}
+                    className={cn(
+                      "group relative flex size-10 items-center justify-center rounded-[10px] p-0.5 transition-transform hover:scale-105 active:scale-95 cursor-pointer",
+                      isSelected && "ring-2 ring-[#0D0D0D] ring-offset-2"
+                    )}
+                    aria-label={`Select ${k} emblem`}
+                  >
+                    <EmblemIllustration emblemKey={k} size={32} />
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -55,6 +55,7 @@ export const updateProfile = mutation({
     jobTitle: v.optional(v.string()),
     timezone: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
+    avatarKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -78,6 +79,10 @@ export const updateProfile = mutation({
       patch.timezone = args.timezone.trim() || undefined;
     }
 
+    if (args.avatarKey !== undefined) {
+      patch.avatarKey = args.avatarKey.trim() || undefined;
+    }
+
     if (args.avatarStorageId !== undefined) {
       const imageUrl = await ctx.storage.getUrl(args.avatarStorageId);
       patch.avatarStorageId = args.avatarStorageId;
@@ -85,6 +90,21 @@ export const updateProfile = mutation({
     }
 
     await ctx.db.patch(userId, patch);
+    return { ok: true };
+  },
+});
+
+/**
+ * Updates the current user's chosen illustration avatar.
+ */
+export const updateAvatarKey = mutation({
+  args: {
+    avatarKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Not signed in");
+    await ctx.db.patch(userId, { avatarKey: args.avatarKey.trim() || undefined });
     return { ok: true };
   },
 });

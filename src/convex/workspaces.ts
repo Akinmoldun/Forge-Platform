@@ -215,6 +215,7 @@ export const updateWorkspace = mutation({
     description: v.optional(v.string()),
     iconColor: v.optional(v.string()),
     icon: v.optional(v.string()),
+    iconKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { workspaceId, userId, role } = await loadWorkspaceContext(
@@ -250,6 +251,10 @@ export const updateWorkspace = mutation({
       patch.icon = args.icon.trim() || undefined;
     }
 
+    if (args.iconKey !== undefined) {
+      patch.iconKey = args.iconKey.trim() || undefined;
+    }
+
     await ctx.db.patch(workspaceId, patch);
     await recordEvent(ctx, {
       workspaceId,
@@ -258,6 +263,34 @@ export const updateWorkspace = mutation({
       entityId: workspaceId,
       eventType: "workspace.updated",
       payload: { fields: Object.keys(patch).filter((k) => k !== "updatedAt") },
+    });
+
+    return { ok: true };
+  },
+});
+
+export const updateIconKey = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    iconKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { workspaceId, userId, role } = await loadWorkspaceContext(
+      ctx,
+      args.workspaceId,
+    );
+    if (!roleAtLeast(role, "admin")) {
+      throw new Error("Only admins or owners can update workspace settings");
+    }
+    const iconKey = args.iconKey.trim() || undefined;
+    await ctx.db.patch(workspaceId, { iconKey, updatedAt: Date.now() });
+    await recordEvent(ctx, {
+      workspaceId,
+      actorId: userId,
+      entityType: "workspace",
+      entityId: workspaceId,
+      eventType: "workspace.updated",
+      payload: { fields: ["iconKey"] },
     });
     return { ok: true };
   },
@@ -309,6 +342,7 @@ export const listMembers = query({
         name: displayName,
         email: user?.email ?? "",
         image: user?.image,
+        avatarKey: user?.avatarKey,
       };
     });
   },

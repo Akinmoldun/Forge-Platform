@@ -12,9 +12,13 @@ import {
 } from "@/components/ui/card";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router";
 import { AppShell } from "@/components/AppShell";
-import { ProjectIllustration } from "@/components/Illustrations";
+import {
+  EmblemIllustration,
+  AvatarIllustration,
+  PriorityGlyph,
+  StatusPill,
+} from "@/components/Illustrations";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -23,10 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreateIssueDialog } from "@/components/dialogs";
+import { cn } from "@/lib/utils";
 import {
   EmptyState,
   ListSkeleton,
-  PriorityBadge,
   RiskBadge,
   StatusDot,
   formatDate,
@@ -42,6 +46,9 @@ import {
   TrendingUp,
   ArrowUpDown,
   Activity as ActivityIcon,
+  Lock,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +60,13 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = (searchParams.get("view") as ViewMode) ?? "board";
+  const [showTip, setShowTip] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem("forge_dismiss_backlog_tip") !== "true";
+    } catch {
+      return true;
+    }
+  });
 
   const project = useQuery(api.projects.getProject, { projectId: projectId as never });
   const allProjects = useQuery(
@@ -177,14 +191,17 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   return (
     <AppShell workspaceId={project.project.workspaceId}>
       <div className="flex flex-col gap-5">
-        {/* Phase 2: Page Header pattern with color tile, name, mono key chip and role chip */}
+        {/* Header with emblem, name, mono key chip */}
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
-              <div className="size-7 rounded-[6px] shrink-0 border border-border bg-[#FBFBFC] flex items-center justify-center text-[#0D0D0D]">
-                <ProjectIllustration projectKey={project.project.key} name={project.project.name} size={18} />
-              </div>
-              <h1 className="text-[32px] font-[600] leading-tight tracking-tight text-[#0D0D0D]">
+              <EmblemIllustration
+                emblemKey={project.project.iconKey}
+                name={project.project.name}
+                id={project.project._id}
+                size={32}
+              />
+              <h1 className="text-[28px] font-[600] leading-tight tracking-[-0.02em] text-[#0D0D0D]">
                 {project.project.name}
               </h1>
               <span className="rounded-[4px] border border-border bg-[#F1F1F3] px-2 py-0.5 font-mono text-[11px] uppercase text-[#0D0D0D]">
@@ -320,9 +337,26 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           <ActivityTab activity={projectActivity} keyName={project.project.key} />
         ) : view === "board" ? (
           <div className="space-y-3">
-            <p className="text-[12px] text-[#575657]">
-              New issues start in Backlog. Drag a card to move it to the next stage.
-            </p>
+            {showTip && (
+              <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
+                <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem("forge_dismiss_backlog_tip", "true");
+                    } catch {
+                      /* ignore */
+                    }
+                    setShowTip(false);
+                  }}
+                  className="size-5 flex items-center justify-center rounded text-[#575657] hover:text-[#0D0D0D] transition-colors"
+                  aria-label="Dismiss tip"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
             <BoardView
               board={board}
               keyName={project.project.key}
@@ -740,164 +774,202 @@ function BoardView({
 }) {
   const [dragOverColId, setDragOverColId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [columnLimit, setColumnLimit] = useState<Record<string, number>>({});
+  const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
 
   if (!board) return <ListSkeleton rows={3} />;
   const now = Date.now();
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 pt-1 items-start">
-      {board.columns.map((col) => {
-        const isTarget = dragOverColId === col.status._id;
-        const statusColor = col.status.color || "#6E94CB";
+    <div className="relative">
+      {/* Edge fade indicators */}
+      <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-[#FBFBFC] to-transparent z-10 opacity-70" />
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#FBFBFC] to-transparent z-10 opacity-70" />
 
-        return (
-          <div
-            key={col.status._id}
-            onDragOver={(e) => {
-              if (!canWrite) return;
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-              setDragOverColId(col.status._id);
-            }}
-            onDragLeave={() => {
-              if (dragOverColId === col.status._id) setDragOverColId(null);
-            }}
-            onDrop={async (e) => {
-              e.preventDefault();
-              setDragOverColId(null);
-              setDraggingId(null);
-              if (!canWrite) return;
-              const raw = e.dataTransfer.getData("application/json");
-              if (!raw) return;
-              try {
-                const { issueId, statusId } = JSON.parse(raw);
-                if (!issueId || statusId === col.status._id) return;
-                await onStatusChange(issueId, col.status._id);
-              } catch {
-                // ignore parse errors
-              }
-            }}
-            className={`w-[280px] shrink-0 rounded-[16px] border transition-colors p-3.5 flex flex-col max-h-[calc(100vh-210px)] ${
-              isTarget
-                ? "border-[#0D0D0D] bg-[#EAEAEA]"
-                : "border-border bg-white"
-            }`}
-            style={{
-              backgroundColor: isTarget
-                ? "#ECECEE"
-                : `color-mix(in srgb, ${statusColor} 6%, #FFFFFF)`,
-            }}
-          >
-            {/* Column header with status pill (dot + name) in status color tint and issue count */}
-            <div className="mb-3 flex items-center justify-between px-0.5 shrink-0">
-              <div
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium border border-border"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${statusColor} 12%, #FFFFFF)`,
-                  color: "#0D0D0D",
-                }}
-              >
-                <span
-                  className="size-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: statusColor }}
-                />
-                <span className="truncate max-w-[140px]">{col.status.name}</span>
-              </div>
-              <span className="font-mono text-[11px] text-[#575657] font-medium">
-                {col.issues.length}
-              </span>
-            </div>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-6 pt-1 items-start">
+        {board.columns.map((col) => {
+          const isTarget = dragOverColId === col.status._id;
+          const statusNameLower = col.status.name.toLowerCase();
+          const categoryLower = (col.status.category || "").toLowerCase();
+          const isMinorCol =
+            categoryLower === "cancelled" ||
+            statusNameLower.includes("changes requested") ||
+            statusNameLower.includes("cancelled");
+          const isCollapsed =
+            col.issues.length === 0 && isMinorCol && !expandedCols[col.status._id];
 
-            {/* Vertical scroll area for cards inside column */}
-            <div className="space-y-2.5 overflow-y-auto flex-1 pr-0.5">
-              {col.issues.length === 0 && (
-                <p className="px-1 py-8 text-center text-[12px] text-[#575657]">
-                  No issues in this column
-                </p>
-              )}
-              {col.issues.map((i) => {
-                const isOverdue = i.dueDate && i.dueDate < now;
-                const isDragging = draggingId === i._id;
-
-                return (
-                  <div
-                    key={i._id}
-                    draggable={canWrite}
-                    onDragStart={(e) => {
-                      if (!canWrite) return;
-                      setDraggingId(i._id);
-                      e.dataTransfer.setData(
-                        "application/json",
-                        JSON.stringify({ issueId: i._id, statusId: col.status._id }),
-                      );
-                      e.dataTransfer.effectAllowed = "move";
-                    }}
-                    onDragEnd={() => setDraggingId(null)}
-                    onClick={() => onIssueClick(i._id)}
-                    className={`w-full rounded-[12px] border bg-white p-3 text-left transition-transform duration-150 ${
-                      isDragging
-                        ? "scale-[1.02] border-[#0D0D0D]"
-                        : "border-border hover:border-[#0D0D0D]/40"
-                    } ${
-                      canWrite ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-mono font-medium text-[#575657]">
-                        {keyName}-{i.number}
-                      </span>
-                      <PriorityBadge priority={i.priority} />
-                    </div>
-
-                    <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">
-                      {i.title}
-                    </p>
-
-                    <div className="mt-2.5 flex items-center gap-1.5">
-                      {i.isBlocked && (
-                        <span className="rounded-full border border-[#D78FC6] bg-[#D78FC6]/15 px-1.5 py-0 text-[10px] font-medium text-[#0D0D0D]">
-                          blocked
-                        </span>
-                      )}
-                      {i.dueDate && (
-                        <span
-                          className={`text-[11px] font-medium ${
-                            isOverdue ? "text-[#D78FC6]" : "text-[#575657]"
-                          }`}
-                        >
-                          {formatDate(i.dueDate)}
-                        </span>
-                      )}
-                      {i.assigneeName && (
-                        <Avatar className="ml-auto size-5">
-                          {i.assigneeImage && (
-                            <AvatarImage src={i.assigneeImage} alt="" className="object-cover" />
-                          )}
-                          <AvatarFallback className="text-[9px] bg-[#F1F1F3] text-[#0D0D0D] font-medium border border-border">
-                            {i.assigneeName.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* "+ New issue" row at column bottom */}
-            {canWrite && onNewIssueInStatus && (
+          // Collapsed 48px rail for empty Cancelled / Changes Requested
+          if (isCollapsed) {
+            return (
               <button
+                key={col.status._id}
                 type="button"
-                onClick={() => onNewIssueInStatus(col.status._id)}
-                className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-border/80 text-[12px] font-medium text-[#575657] hover:border-[#0D0D0D] hover:bg-white hover:text-[#0D0D0D] transition-colors shrink-0"
+                onClick={() =>
+                  setExpandedCols((prev) => ({ ...prev, [col.status._id]: true }))
+                }
+                className="w-[48px] shrink-0 min-h-[220px] rounded-[16px] border border-border bg-[#FBFBFC] p-2 flex flex-col items-center justify-between hover:bg-[#F1F1F3] transition-colors cursor-pointer select-none"
+                title={`Click to expand ${col.status.name}`}
               >
-                <Plus className="size-3.5" />
-                <span>New issue</span>
+                <span className="font-mono text-[11px] text-[#575657] font-medium bg-white size-6 rounded-full flex items-center justify-center border border-border">
+                  0
+                </span>
+                <span
+                  className="text-[12px] font-medium text-[#575657] whitespace-nowrap tracking-tight"
+                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                >
+                  {col.status.name}
+                </span>
+                <ChevronDown className="size-3.5 text-[#575657]" />
               </button>
-            )}
-          </div>
-        );
-      })}
+            );
+          }
+
+          const limit = columnLimit[col.status._id] ?? 20;
+          const visibleIssues = col.issues.slice(0, limit);
+          const hasMore = col.issues.length > limit;
+
+          return (
+            <div
+              key={col.status._id}
+              onDragOver={(e) => {
+                if (!canWrite) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setDragOverColId(col.status._id);
+              }}
+              onDragLeave={() => {
+                if (dragOverColId === col.status._id) setDragOverColId(null);
+              }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                setDragOverColId(null);
+                setDraggingId(null);
+                if (!canWrite) return;
+                const raw = e.dataTransfer.getData("application/json");
+                if (!raw) return;
+                try {
+                  const { issueId, statusId } = JSON.parse(raw);
+                  if (!issueId || statusId === col.status._id) return;
+                  await onStatusChange(issueId, col.status._id);
+                } catch {
+                  // ignore parse errors
+                }
+              }}
+              className={cn(
+                "w-[272px] shrink-0 rounded-[16px] border p-3.5 flex flex-col transition-colors",
+                isTarget ? "border-[#0D0D0D] bg-[#F1F1F3]" : "border-border bg-white"
+              )}
+            >
+              {/* Column header with soft status pill and count */}
+              <div className="mb-3 flex items-center justify-between px-0.5 shrink-0">
+                <StatusPill
+                  name={col.status.name}
+                  category={col.status.category || col.status.name}
+                />
+                <span className="font-mono text-[11px] text-[#575657] font-medium">
+                  {col.issues.length}
+                </span>
+              </div>
+
+              {/* Cards list (grows with content, no inner scroll) */}
+              <div className="space-y-2.5">
+                {col.issues.length === 0 && (
+                  <p className="px-1 py-8 text-center text-[12px] text-[#575657]">
+                    No issues in this column
+                  </p>
+                )}
+                {visibleIssues.map((i) => {
+                  const isOverdue = Boolean(i.dueDate && i.dueDate < now);
+                  const isDragging = draggingId === i._id;
+
+                  return (
+                    <div
+                      key={i._id}
+                      draggable={canWrite}
+                      onDragStart={(e) => {
+                        if (!canWrite) return;
+                        setDraggingId(i._id);
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({ issueId: i._id, statusId: col.status._id })
+                        );
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnd={() => setDraggingId(null)}
+                      onClick={() => onIssueClick(i._id)}
+                      className={cn(
+                        "w-full rounded-[12px] border bg-white p-3 text-left transition-all duration-150 select-none",
+                        isDragging
+                          ? "scale-[1.02] border-[#0D0D0D] shadow-none"
+                          : "border-border hover:border-[#0D0D0D]/40 shadow-none",
+                        canWrite ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-mono font-medium text-[#575657]">
+                          {keyName}-{i.number}
+                        </span>
+                        <PriorityGlyph priority={i.priority} size={14} />
+                      </div>
+
+                      <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#0D0D0D]">
+                        {i.title}
+                      </p>
+
+                      <div className="mt-2.5 flex items-center gap-2">
+                        {i.isBlocked && (
+                          <span title="Blocked by dependency" className="text-[#575657]">
+                            <Lock className="size-3" />
+                          </span>
+                        )}
+                        {isOverdue && i.dueDate && (
+                          <span className="text-[11px] font-medium text-[#D78FC6]">
+                            {formatDate(i.dueDate)}
+                          </span>
+                        )}
+                        {i.assigneeName && (
+                          <AvatarIllustration
+                            name={i.assigneeName}
+                            size={20}
+                            className="ml-auto"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {hasMore && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setColumnLimit((prev) => ({
+                        ...prev,
+                        [col.status._id]: limit + 20,
+                      }))
+                    }
+                    className="w-full py-1.5 rounded-[8px] text-[12px] font-medium text-[#575657] hover:bg-[#F1F1F3] hover:text-[#0D0D0D] transition-colors text-center"
+                  >
+                    Show {col.issues.length - limit} more
+                  </button>
+                )}
+              </div>
+
+              {/* "+ New issue" row at column bottom */}
+              {canWrite && onNewIssueInStatus && (
+                <button
+                  type="button"
+                  onClick={() => onNewIssueInStatus(col.status._id)}
+                  className="mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-border/80 text-[12px] font-medium text-[#575657] hover:border-[#0D0D0D] hover:bg-[#FBFBFC] hover:text-[#0D0D0D] transition-colors shrink-0 cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  <span>New issue</span>
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -919,7 +991,7 @@ function ListView({
           number: number;
           title: string;
           priority: string;
-          status: { name: string; color?: string } | null;
+          status: { name: string; color?: string; category?: string } | null;
           assigneeId?: string;
           dueDate?: number;
           updatedAt: number;
@@ -954,38 +1026,55 @@ function ListView({
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {issues.issues.map((i) => (
-            <tr
-              key={i._id}
-              onClick={() => onIssueClick(i._id)}
-              tabIndex={0}
-              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onIssueClick(i._id)}
-              className="cursor-pointer transition-colors hover:bg-[#F6F6F7] focus-visible:bg-[#F6F6F7] focus-visible:outline-none"
-            >
-              <td className="px-4 py-3">
-                <span className="text-[11px] font-mono font-medium text-[#575657]">
-                  {keyName}-{i.number}
-                </span>
-                <p className="mt-0.5 font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
-              </td>
-              <td className="hidden px-4 py-3 sm:table-cell">
-                {i.status && (
-                  <span className="flex items-center gap-1.5 text-[12px] text-[#0D0D0D]">
-                    <StatusDot color={i.status.color} /> {i.status.name}
+          {issues.issues.map((i) => {
+            const assigneeName = i.assigneeId
+              ? memberName(i.assigneeId) ?? `Teammate ${i.assigneeId.slice(-4)}`
+              : null;
+            return (
+              <tr
+                key={i._id}
+                onClick={() => onIssueClick(i._id)}
+                tabIndex={0}
+                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onIssueClick(i._id)}
+                className="cursor-pointer transition-colors hover:bg-[#F6F6F7] focus-visible:bg-[#F6F6F7] focus-visible:outline-none"
+              >
+                <td className="px-4 py-3">
+                  <span className="text-[11px] font-mono font-medium text-[#575657]">
+                    {keyName}-{i.number}
                   </span>
-                )}
-              </td>
-              <td className="hidden px-4 py-3 md:table-cell">
-                <PriorityBadge priority={i.priority} />
-              </td>
-              <td className="hidden px-4 py-3 text-[12px] text-[#575657] md:table-cell">
-                {i.assigneeId ? memberName(i.assigneeId) ?? `Teammate ${i.assigneeId.slice(-4)}` : "Unassigned"}
-              </td>
-              <td className="px-4 py-3 text-right text-[11px] tabular-nums text-[#575657]">
-                {formatDate(i.updatedAt)}
-              </td>
-            </tr>
-          ))}
+                  <p className="mt-0.5 font-medium leading-snug text-[#0D0D0D]">{i.title}</p>
+                </td>
+                <td className="hidden px-4 py-3 sm:table-cell">
+                  {i.status && (
+                    <StatusPill
+                      name={i.status.name}
+                      category={i.status.category || i.status.name}
+                    />
+                  )}
+                </td>
+                <td className="hidden px-4 py-3 md:table-cell">
+                  <PriorityGlyph priority={i.priority} size={14} />
+                </td>
+                <td className="hidden px-4 py-3 text-[12px] text-[#575657] md:table-cell">
+                  {assigneeName ? (
+                    <div className="flex items-center gap-1.5">
+                      <AvatarIllustration
+                        name={assigneeName}
+                        id={i.assigneeId}
+                        size={20}
+                      />
+                      <span className="truncate">{assigneeName}</span>
+                    </div>
+                  ) : (
+                    "Unassigned"
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right text-[11px] tabular-nums text-[#575657]">
+                  {formatDate(i.updatedAt)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -8,21 +8,34 @@ import {
   QUIET_HARBOR_WORKSPACE_NAME,
   NORTHSTAR_TEAMMATES,
   NORTHSTAR_LABELS,
-  NORTHSTAR_ISSUES_PER_PROJECT,
+  NORTHSTAR_PROJECT_SPECS,
   PIXEL_FORGE_TEAMMATES,
   PIXEL_FORGE_LABELS,
-  PIXEL_FORGE_ISSUES_PER_PROJECT,
+  PIXEL_FORGE_PROJECT_SPECS,
   QUIET_HARBOR_TEAMMATES,
   QUIET_HARBOR_LABELS,
-  QUIET_HARBOR_ISSUES_PER_PROJECT,
+  QUIET_HARBOR_PROJECT_SPECS,
+  AVATAR_OPTIONS,
 } from "./constants";
 import type { Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 
 const DAY = 24 * 60 * 60 * 1000;
 
+function getRealisticWorkingTimestamp(now: number, daysAgo: number, seed: number): number {
+  const d = new Date(now - daysAgo * DAY);
+  const day = d.getDay();
+  if (day === 0) d.setDate(d.getDate() - 2); // Sun -> Fri
+  else if (day === 6) d.setDate(d.getDate() - 1); // Sat -> Fri
+  const hour = 9 + (Math.abs(seed * 7) % 8); // 9am - 4pm
+  const minute = (Math.abs(seed * 13) % 50) + 5;
+  const second = (Math.abs(seed * 23) % 50) + 5;
+  d.setHours(hour, minute, second, 0);
+  return Math.min(now - 15 * 60 * 1000, d.getTime());
+}
+
 // ---------------------------------------------------------------------------
-// Titles & Description generators
+// Titles & Description generators (Distinct, realistic engineering tasks)
 // ---------------------------------------------------------------------------
 
 const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
@@ -42,28 +55,40 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Support landscape tablet layout for issue board view",
     "Implement background audio playback for voice memos",
     "Fix Bluetooth peripheral reconnect retry storm",
+    "Add biometric fallback pin authentication prompt",
+    "Optimize SQLite database queries on background thread pool",
+    "Prevent layout shift during dynamic image thumbnail fetch",
+    "Add subtle haptic feedback tick on issue status transition",
+    "Support split-screen multitasking on iPadOS 17",
   ],
   BIL: [
+    "Implement token bucket rate limiter for public API",
+    "Audit Stripe webhook idempotency keys against replay attacks",
+    "Generate PDF invoice downloads with tax breakdown",
     "Implement Stripe Customer Portal session routing",
     "Add metered billing calculation for API event ingestion",
     "Resolve race condition in subscription renewal webhook",
-    "Generate PDF invoice downloads with tax breakdown",
     "Enforce prorated charges on plan mid-cycle downgrade",
     "Support multi-currency pricing in checkout drawer",
     "Add dunning management emails for failed cards",
     "Implement enterprise custom quota overrides",
     "Cache customer subscription state in Redis edge cluster",
     "Fix VAT reverse-charge calculation for EU business accounts",
-    "Audit Stripe webhook idempotency keys against replay attacks",
     "Add grace period banner for delinquent workspace accounts",
     "Support annual prepaid invoicing with PO number entry",
     "Export monthly ARR breakdown report to CSV",
     "Implement automated chargeback dispute notification hook",
+    "Reconcile monthly Stripe ledger with accounting journal",
+    "Add usage anomaly alerts for sudden egress spikes",
+    "Support team seat volume tiers on checkout",
+    "Validate tax exemption certificates for non-profit plans",
   ],
   WEB: [
     "Virtualize backlog table rendering for 10k+ issues",
-    "Add keyboard navigation shortcuts for board card movement",
+    "Audit keyboard navigation across settings modals",
     "Implement collaborative multi-cursor presence in issue editor",
+    "Cache user permissions in Edge middleware",
+    "Fix race condition in optimistic issue reordering",
     "Resolve hydration mismatch in SSR workspace shell",
     "Build markdown WYSIWYG editor with slash command menus",
     "Add drag-and-drop file upload with progress bar",
@@ -76,6 +101,14 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Support custom saved views with shareable URL parameters",
     "Fix focus trap modal dialog closing on escape key",
     "Implement rich unfurl previews for Figma and GitHub links",
+    "Add smooth column drag reordering on kanban view",
+    "Memoize expensive issue search filter predicates",
+    "Support keyboard multi-select for bulk issue updates",
+    "Sanitize markdown HTML output against script tags",
+    "Preserve scroll position when navigating back from issue detail",
+    "Implement undo/redo stack for inline issue title edits",
+    "Add quick-add issue row at bottom of list view",
+    "Display offline indicator banner when network disconnects",
   ],
   PLT: [
     "Upgrade Kubernetes ingress controller to support HTTP/3",
@@ -93,6 +126,13 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Add Grafana dashboard for p99 request latency alerts",
     "Setup dead letter queues for failed background job processing",
     "Configure chaos engineering experiment for pod eviction",
+    "Enforce strict tenant data boundaries on audit logging queries",
+    "Add telemetry span for cold-start database queries",
+    "Implement graceful shutdown drain on SIGTERM in API pods",
+    "Index composite workspace member lookups for fast search",
+    "Benchmark Redis cluster failover under synthetic write load",
+    "Configure automatic database vacuum tuning thresholds",
+    "Setup alert manager webhooks to Slack incident channel",
   ],
   DAT: [
     "Scale Apache Kafka consumer group for audit log streams",
@@ -110,6 +150,7 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Setup DuckDB in-memory query engine for fast reporting",
     "Implement backfill orchestration for historical event replays",
     "Add schema registry validation for Avro message payloads",
+    "Stream chunked CSV exports to avoid memory exhaustion",
   ],
 };
 
@@ -125,6 +166,14 @@ const PIXEL_FORGE_TITLES: Record<string, string[]> = {
     "Fix ragdoll physics twitching on uneven terrain surfaces",
     "Add weapon parry window with slow motion feedback",
     "Tune projectile drop off and trajectory physics curves",
+    "Optimize animation blending matrix on crowd NPCs",
+    "Fix inverse kinematics foot placement on steep slopes",
+    "Add customizable crosshair styling and dynamic spread",
+    "Tune sprint-to-aim transition acceleration curves",
+    "Fix inventory weapon swap animation cancellation bug",
+    "Implement dynamic difficulty scaling based on player death count",
+    "Add controller rumble curve for heavy shield impacts",
+    "Calibrate stealth detection cone angles in tall foliage",
   ],
   ART: [
     "Optimize volumetric fog shader on low-end GPU profiles",
@@ -137,6 +186,11 @@ const PIXEL_FORGE_TITLES: Record<string, string[]> = {
     "Tune bloom threshold and color grading for nighttime biomes",
     "Implement dynamic decal projection for blood and scorch marks",
     "Fix seam artifact on skinned mesh character elbow joints",
+    "Bake global illumination light probes for interior scenes",
+    "Optimize GPU skinning compute shader for skeletal meshes",
+    "Add subsurface scattering profile for character skin",
+    "Tune screen-space ambient occlusion radius and sample count",
+    "Fix shadow acne on directional sunlight shadow cascades",
   ],
   NET: [
     "Implement client-side prediction and server reconciliation",
@@ -149,6 +203,12 @@ const PIXEL_FORGE_TITLES: Record<string, string[]> = {
     "Fix lobby chat message ordering race condition",
     "Setup relay servers for NAT punch-through fallback",
     "Audit dedicated game server CPU usage during peak matches",
+    "Implement bandwidth throttling simulator for playtesting",
+    "Add UDP packet loss interpolation for character movement",
+    "Encrypt matchmaking ticket payload with ephemeral session keys",
+    "Fix spectator camera position jitter in tournament matches",
+    "Implement delta compression for game world state snapshots",
+    "Log telemetry for packet round-trip time spikes over 120ms",
   ],
   QAT: [
     "Setup automated soak test bot running 24h stress simulation",
@@ -161,6 +221,8 @@ const PIXEL_FORGE_TITLES: Record<string, string[]> = {
     "Audit gamepad haptic trigger feedback intensity curves",
     "Implement save game file corruption recovery unit tests",
     "Benchmark asset streaming load times from mechanical HDDs",
+    "Validate localization strings fit in standard dialog boxes",
+    "Verify ultra-wide 21:9 resolution HUD scaling",
   ],
 };
 
@@ -174,6 +236,14 @@ const QUIET_HARBOR_TITLES: Record<string, string[]> = {
     "Add automated weekly executive summary email reports",
     "Build change request submission form with scope estimates",
     "Implement client feedback annotation tool on design mockups",
+    "Add custom client branding palette and logo upload",
+    "Send SMS notifications for urgent sign-off blockers",
+    "Implement client satisfaction CSAT survey after milestone",
+    "Generate printable weekly progress recap in PDF format",
+    "Configure granular stakeholder permissions per client project",
+    "Support multiple billing contact emails on enterprise clients",
+    "Add client portal activity audit trail export",
+    "Enable client review approval via single-click secure email link",
   ],
   WEB: [
     "Optimize Core Web Vitals to achieve 98+ score on mobile",
@@ -184,6 +254,12 @@ const QUIET_HARBOR_TITLES: Record<string, string[]> = {
     "Add accessible WCAG 2.1 AA keyboard navigation to mega menu",
     "Implement smooth scroll animations with Lenis and GSAP",
     "Optimize hero video asset compression with webm and mp4 fallback",
+    "Audit third-party cookie consent banner GDPR compliance",
+    "Implement dynamic breadcrumb structured data for Google rich snippets",
+    "Add Algolia instant search with keyboard navigation",
+    "Tune critical CSS inlining to eliminate render-blocking stylesheets",
+    "Build interactive ROI calculator slider with animated results",
+    "Setup automated visual regression testing on chromatic",
   ],
   OPS: [
     "Configure Cloudflare edge caching rules and SSL certs",
@@ -194,6 +270,10 @@ const QUIET_HARBOR_TITLES: Record<string, string[]> = {
     "Setup GitHub Actions matrix build to speed up CI test runs",
     "Enforce branch protection rules and mandatory PR reviews",
     "Audit staging environment access logs for compliance review",
+    "Configure automated security vulnerability scans with Dependabot",
+    "Setup centralized log aggregation with vector and Datadog",
+    "Automate DNS record migration to Cloudflare nameservers",
+    "Implement multi-region failover routing for client portals",
   ],
 };
 
@@ -330,146 +410,158 @@ export const deleteDemoWorkspaceInternal = internalMutation({
 // 1. Ensure Mutation (Fast First Call: Creates Workspace 1 + Project 1)
 // ---------------------------------------------------------------------------
 
+async function runEnsure(ctx: any) {
+  const user = await getAnonymousUser(ctx);
+  if (!user.name || !user.avatarKey) {
+    await ctx.db.patch(user._id, {
+      name: user.name || "You (Guest)",
+      avatarKey: user.avatarKey || "fox",
+    });
+  }
+
+  // Check existing demo workspaces
+  const existing = await findGuestDemoWorkspaces(ctx, user._id);
+  if (existing.length >= 3) {
+    // Check if existing is thin
+    let isThin = false;
+    for (const ws of existing) {
+      const issues = await ctx.db
+        .query("issues")
+        .withIndex("by_workspace_created", (q: any) => q.eq("workspaceId", ws._id))
+        .collect();
+      const members = await ctx.db
+        .query("memberships")
+        .withIndex("by_workspace", (q: any) => q.eq("workspaceId", ws._id))
+        .collect();
+      if (issues.length < 15 || members.length < 4) {
+        isThin = true;
+        break;
+      }
+    }
+
+    if (!isThin) {
+      return {
+        workspaceId: existing[0]._id,
+        slug: existing[0].slug,
+        isNew: false,
+        count: existing.length,
+      };
+    }
+
+    // Existing is thin: wipe all existing demo workspaces for this guest
+    for (const ws of existing) {
+      await deleteDemoWorkspace(ctx, ws._id);
+    }
+  } else if (existing.length > 0) {
+    // Partially created or old demo: wipe to rebuild clean 3 workspaces
+    for (const ws of existing) {
+      await deleteDemoWorkspace(ctx, ws._id);
+    }
+  }
+
+  const now = Date.now();
+  const createdAt = now - 90 * DAY;
+
+  // Create Workspace 1: "Demo: Northstar Labs"
+  const baseSlug = "demo-northstar-labs";
+  let slug = baseSlug;
+  let n = 1;
+  while (await ctx.db.query("workspaces").withIndex("slug", (q: any) => q.eq("slug", slug)).unique()) {
+    slug = `${baseSlug}-${++n}`;
+  }
+
+  const ws1Id = await ctx.db.insert("workspaces", {
+    name: NORTHSTAR_WORKSPACE_NAME,
+    slug,
+    ownerId: user._id,
+    iconKey: "compass",
+    createdAt,
+    updatedAt: now,
+  });
+
+  // Add guest user as owner
+  await ctx.db.insert("memberships", {
+    workspaceId: ws1Id,
+    userId: user._id,
+    role: "owner",
+    joinedAt: createdAt,
+  });
+
+  // Create 15 fake teammates for Northstar Labs (total 16 members)
+  const teammateUserIds: Id<"users">[] = [];
+  for (let tIdx = 0; tIdx < NORTHSTAR_TEAMMATES.length; tIdx++) {
+    const t = NORTHSTAR_TEAMMATES[tIdx];
+    const fakeUserId = await ctx.db.insert("users", {
+      name: t.name,
+      email: t.email,
+      avatarKey: AVATAR_OPTIONS[tIdx % AVATAR_OPTIONS.length],
+      isAnonymous: false,
+    });
+    teammateUserIds.push(fakeUserId);
+
+    await ctx.db.insert("memberships", {
+      workspaceId: ws1Id,
+      userId: fakeUserId,
+      role: t.role,
+      joinedAt: createdAt + Math.floor(Math.random() * 10 * DAY),
+    });
+  }
+
+  // Create 10 labels for Northstar Labs
+  const labelIdMap = new Map<string, Id<"labels">>();
+  for (const l of NORTHSTAR_LABELS) {
+    const lId = await ctx.db.insert("labels", {
+      workspaceId: ws1Id,
+      name: l.name,
+      color: l.color,
+      description: l.description,
+    });
+    labelIdMap.set(l.name, lId);
+  }
+
+  // Build Project 1 (MOB) synchronously for fast paint within 1-2s
+  const allUsers = [user._id, ...teammateUserIds];
+  const mobSpec = NORTHSTAR_PROJECT_SPECS[0];
+  await buildProject(ctx, {
+    workspaceId: ws1Id,
+    ownerId: user._id,
+    name: mobSpec.name,
+    key: mobSpec.key,
+    description: mobSpec.description,
+    iconKey: mobSpec.iconKey,
+    titles: NORTHSTAR_PROJECT_TITLES["MOB"],
+    targetCount: mobSpec.targetCount,
+    allUsers,
+    labels: Array.from(labelIdMap.values()),
+    projectIndex: 0,
+    baseCreatedAt: createdAt,
+    now,
+  });
+
+  // Seed sample notifications for guest user
+  await createGuestNotifications(ctx, user._id, teammateUserIds, ws1Id);
+
+  // Schedule remaining batches
+  await ctx.scheduler.runAfter(10, (internal as any).guestDemo?.seed?.seedNorthstarRemaining, {
+    workspaceId: ws1Id,
+    ownerId: user._id,
+    allUsers,
+    labelIds: Array.from(labelIdMap.values()),
+    baseCreatedAt: createdAt,
+  });
+
+  return {
+    workspaceId: ws1Id,
+    slug,
+    isNew: true,
+    count: 1,
+  };
+}
+
 export const ensure = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await getAnonymousUser(ctx);
-    if (!user.name) {
-      await ctx.db.patch(user._id, { name: "You (Guest)" });
-    }
-
-    // Check existing demo workspaces
-    const existing = await findGuestDemoWorkspaces(ctx, user._id);
-    if (existing.length >= 3) {
-      // Check if existing is thin
-      let isThin = false;
-      for (const ws of existing) {
-        const issues = await ctx.db
-          .query("issues")
-          .withIndex("by_workspace_created", (q: any) => q.eq("workspaceId", ws._id))
-          .collect();
-        const members = await ctx.db
-          .query("memberships")
-          .withIndex("by_workspace", (q: any) => q.eq("workspaceId", ws._id))
-          .collect();
-        if (issues.length < 50 || members.length < 5) {
-          isThin = true;
-          break;
-        }
-      }
-
-      if (!isThin) {
-        return {
-          workspaceId: existing[0]._id,
-          slug: existing[0].slug,
-          isNew: false,
-          count: existing.length,
-        };
-      }
-
-      // Existing is thin: wipe all existing demo workspaces for this guest
-      for (const ws of existing) {
-        await deleteDemoWorkspace(ctx, ws._id);
-      }
-    } else if (existing.length > 0) {
-      // Partially created or old demo: wipe to rebuild clean 3 workspaces
-      for (const ws of existing) {
-        await deleteDemoWorkspace(ctx, ws._id);
-      }
-    }
-
-    const now = Date.now();
-    const createdAt = now - 90 * DAY;
-
-    // Create Workspace 1: "Demo: Northstar Labs"
-    const baseSlug = "demo-northstar-labs";
-    let slug = baseSlug;
-    let n = 1;
-    while (await ctx.db.query("workspaces").withIndex("slug", (q: any) => q.eq("slug", slug)).unique()) {
-      slug = `${baseSlug}-${++n}`;
-    }
-
-    const ws1Id = await ctx.db.insert("workspaces", {
-      name: NORTHSTAR_WORKSPACE_NAME,
-      slug,
-      ownerId: user._id,
-      createdAt,
-      updatedAt: now,
-    });
-
-    // Add guest user as owner
-    await ctx.db.insert("memberships", {
-      workspaceId: ws1Id,
-      userId: user._id,
-      role: "owner",
-      joinedAt: createdAt,
-    });
-
-    // Create 15 fake teammates for Northstar Labs (total 16 members)
-    const teammateUserIds: Id<"users">[] = [];
-    for (const t of NORTHSTAR_TEAMMATES) {
-      const fakeUserId = await ctx.db.insert("users", {
-        name: t.name,
-        email: t.email,
-        isAnonymous: false,
-      });
-      teammateUserIds.push(fakeUserId);
-
-      await ctx.db.insert("memberships", {
-        workspaceId: ws1Id,
-        userId: fakeUserId,
-        role: t.role,
-        joinedAt: createdAt + Math.floor(Math.random() * 10 * DAY),
-      });
-    }
-
-    // Create 10 labels for Northstar Labs
-    const labelIdMap = new Map<string, Id<"labels">>();
-    for (const l of NORTHSTAR_LABELS) {
-      const lId = await ctx.db.insert("labels", {
-        workspaceId: ws1Id,
-        name: l.name,
-        color: l.color,
-        description: l.description,
-      });
-      labelIdMap.set(l.name, lId);
-    }
-
-    // Build Project 1 (MOB) synchronously for fast paint within 1-2s
-    const allUsers = [user._id, ...teammateUserIds];
-    await buildProject(ctx, {
-      workspaceId: ws1Id,
-      ownerId: user._id,
-      name: "Mobile Client",
-      key: "MOB",
-      description: "Cross-platform iOS and Android client architecture with offline sync",
-      titles: NORTHSTAR_PROJECT_TITLES["MOB"],
-      targetCount: NORTHSTAR_ISSUES_PER_PROJECT,
-      allUsers,
-      labels: Array.from(labelIdMap.values()),
-      projectIndex: 0,
-      baseCreatedAt: createdAt,
-      now,
-    });
-
-    // Seed sample notifications for guest user
-    await createGuestNotifications(ctx, user._id, teammateUserIds, ws1Id);
-
-    // Schedule remaining batches
-    await ctx.scheduler.runAfter(10, (internal as any).guestDemo?.seed?.seedNorthstarRemaining, {
-      workspaceId: ws1Id,
-      ownerId: user._id,
-      allUsers,
-      labelIds: Array.from(labelIdMap.values()),
-      baseCreatedAt: createdAt,
-    });
-
-    return {
-      workspaceId: ws1Id,
-      slug,
-      isNew: true,
-      count: 1,
-    };
+    return runEnsure(ctx);
   },
 });
 
@@ -491,14 +583,16 @@ export const seedNorthstarRemaining = internalMutation({
     const now = Date.now();
 
     // Project 2: BIL
+    const bilSpec = NORTHSTAR_PROJECT_SPECS[1];
     await buildProject(ctx, {
       workspaceId: args.workspaceId,
       ownerId: args.ownerId,
-      name: "Billing & Subscriptions",
-      key: "BIL",
-      description: "Stripe integration, usage metering, and invoice generation",
+      name: bilSpec.name,
+      key: bilSpec.key,
+      description: bilSpec.description,
+      iconKey: bilSpec.iconKey,
       titles: NORTHSTAR_PROJECT_TITLES["BIL"],
-      targetCount: NORTHSTAR_ISSUES_PER_PROJECT,
+      targetCount: bilSpec.targetCount,
       allUsers: args.allUsers,
       labels: args.labelIds,
       projectIndex: 1,
@@ -507,14 +601,16 @@ export const seedNorthstarRemaining = internalMutation({
     });
 
     // Project 3: WEB
+    const webSpec = NORTHSTAR_PROJECT_SPECS[2];
     await buildProject(ctx, {
       workspaceId: args.workspaceId,
       ownerId: args.ownerId,
-      name: "Web Application",
-      key: "WEB",
-      description: "React dashboard, real-time collaboration canvas, and issue editor",
+      name: webSpec.name,
+      key: webSpec.key,
+      description: webSpec.description,
+      iconKey: webSpec.iconKey,
       titles: NORTHSTAR_PROJECT_TITLES["WEB"],
-      targetCount: NORTHSTAR_ISSUES_PER_PROJECT,
+      targetCount: webSpec.targetCount,
       allUsers: args.allUsers,
       labels: args.labelIds,
       projectIndex: 2,
@@ -551,14 +647,16 @@ export const seedNorthstarFinal = internalMutation({
     const now = Date.now();
 
     // Project 4: PLT
+    const pltSpec = NORTHSTAR_PROJECT_SPECS[3];
     await buildProject(ctx, {
       workspaceId: args.workspaceId,
       ownerId: args.ownerId,
-      name: "Platform & Infra",
-      key: "PLT",
-      description: "Kubernetes cluster, edge routing, observability, and auth gateway",
+      name: pltSpec.name,
+      key: pltSpec.key,
+      description: pltSpec.description,
+      iconKey: pltSpec.iconKey,
       titles: NORTHSTAR_PROJECT_TITLES["PLT"],
-      targetCount: NORTHSTAR_ISSUES_PER_PROJECT,
+      targetCount: pltSpec.targetCount,
       allUsers: args.allUsers,
       labels: args.labelIds,
       projectIndex: 3,
@@ -567,14 +665,16 @@ export const seedNorthstarFinal = internalMutation({
     });
 
     // Project 5: DAT
+    const datSpec = NORTHSTAR_PROJECT_SPECS[4];
     await buildProject(ctx, {
       workspaceId: args.workspaceId,
       ownerId: args.ownerId,
-      name: "Data Pipeline",
-      key: "DAT",
-      description: "Event streaming, ETL jobs, warehouse sync, and analytics aggregations",
+      name: datSpec.name,
+      key: datSpec.key,
+      description: datSpec.description,
+      iconKey: datSpec.iconKey,
       titles: NORTHSTAR_PROJECT_TITLES["DAT"],
-      targetCount: NORTHSTAR_ISSUES_PER_PROJECT,
+      targetCount: datSpec.targetCount,
       allUsers: args.allUsers,
       labels: args.labelIds,
       projectIndex: 4,
@@ -614,6 +714,7 @@ export const seedPixelForge = internalMutation({
       name: PIXEL_FORGE_WORKSPACE_NAME,
       slug,
       ownerId: args.ownerId,
+      iconKey: "seed",
       createdAt,
       updatedAt: now,
     });
@@ -627,10 +728,12 @@ export const seedPixelForge = internalMutation({
 
     // 11 fake teammates (total 12 members)
     const teammateUserIds: Id<"users">[] = [];
-    for (const t of PIXEL_FORGE_TEAMMATES) {
+    for (let tIdx = 0; tIdx < PIXEL_FORGE_TEAMMATES.length; tIdx++) {
+      const t = PIXEL_FORGE_TEAMMATES[tIdx];
       const fakeUserId = await ctx.db.insert("users", {
         name: t.name,
         email: t.email,
+        avatarKey: AVATAR_OPTIONS[(tIdx + 3) % AVATAR_OPTIONS.length],
         isAnonymous: false,
       });
       teammateUserIds.push(fakeUserId);
@@ -658,14 +761,16 @@ export const seedPixelForge = internalMutation({
     const allUsers = [args.ownerId, ...teammateUserIds];
 
     // Project 1: GAM
+    const gamSpec = PIXEL_FORGE_PROJECT_SPECS[0];
     await buildProject(ctx, {
       workspaceId: ws2Id,
       ownerId: args.ownerId,
-      name: "Gameplay Mechanics",
-      key: "GAM",
-      description: "Combat system, physics interactions, and player movement controllers",
+      name: gamSpec.name,
+      key: gamSpec.key,
+      description: gamSpec.description,
+      iconKey: gamSpec.iconKey,
       titles: PIXEL_FORGE_TITLES["GAM"],
-      targetCount: PIXEL_FORGE_ISSUES_PER_PROJECT,
+      targetCount: gamSpec.targetCount,
       allUsers,
       labels: labelIds,
       projectIndex: 0,
@@ -674,14 +779,16 @@ export const seedPixelForge = internalMutation({
     });
 
     // Project 2: ART
+    const artSpec = PIXEL_FORGE_PROJECT_SPECS[1];
     await buildProject(ctx, {
       workspaceId: ws2Id,
       ownerId: args.ownerId,
-      name: "Art & Shaders",
-      key: "ART",
-      description: "Volumetric lighting, material pipelines, and post-processing FX",
+      name: artSpec.name,
+      key: artSpec.key,
+      description: artSpec.description,
+      iconKey: artSpec.iconKey,
       titles: PIXEL_FORGE_TITLES["ART"],
-      targetCount: PIXEL_FORGE_ISSUES_PER_PROJECT,
+      targetCount: artSpec.targetCount,
       allUsers,
       labels: labelIds,
       projectIndex: 1,
@@ -714,14 +821,16 @@ export const seedPixelForgeRemaining = internalMutation({
     const now = Date.now();
 
     // Project 3: NET
+    const netSpec = PIXEL_FORGE_PROJECT_SPECS[2];
     await buildProject(ctx, {
       workspaceId: args.workspaceId,
       ownerId: args.ownerId,
-      name: "Multiplayer Networking",
-      key: "NET",
-      description: "Authoritative game server, state sync, and matchmaking logic",
+      name: netSpec.name,
+      key: netSpec.key,
+      description: netSpec.description,
+      iconKey: netSpec.iconKey,
       titles: PIXEL_FORGE_TITLES["NET"],
-      targetCount: PIXEL_FORGE_ISSUES_PER_PROJECT,
+      targetCount: netSpec.targetCount,
       allUsers: args.allUsers,
       labels: args.labelIds,
       projectIndex: 2,
@@ -730,14 +839,16 @@ export const seedPixelForgeRemaining = internalMutation({
     });
 
     // Project 4: QAT
+    const qatSpec = PIXEL_FORGE_PROJECT_SPECS[3];
     await buildProject(ctx, {
       workspaceId: args.workspaceId,
       ownerId: args.ownerId,
-      name: "QA & Test Automation",
-      key: "QAT",
-      description: "Automated soak tests, performance profiling, and crash regression",
+      name: qatSpec.name,
+      key: qatSpec.key,
+      description: qatSpec.description,
+      iconKey: qatSpec.iconKey,
       titles: PIXEL_FORGE_TITLES["QAT"],
-      targetCount: PIXEL_FORGE_ISSUES_PER_PROJECT,
+      targetCount: qatSpec.targetCount,
       allUsers: args.allUsers,
       labels: args.labelIds,
       projectIndex: 3,
@@ -777,6 +888,7 @@ export const seedQuietHarbor = internalMutation({
       name: QUIET_HARBOR_WORKSPACE_NAME,
       slug,
       ownerId: args.ownerId,
+      iconKey: "anchor",
       createdAt,
       updatedAt: now,
     });
@@ -790,10 +902,12 @@ export const seedQuietHarbor = internalMutation({
 
     // 5 fake teammates (total 6 members)
     const teammateUserIds: Id<"users">[] = [];
-    for (const t of QUIET_HARBOR_TEAMMATES) {
+    for (let tIdx = 0; tIdx < QUIET_HARBOR_TEAMMATES.length; tIdx++) {
+      const t = QUIET_HARBOR_TEAMMATES[tIdx];
       const fakeUserId = await ctx.db.insert("users", {
         name: t.name,
         email: t.email,
+        avatarKey: AVATAR_OPTIONS[(tIdx + 6) % AVATAR_OPTIONS.length],
         isAnonymous: false,
       });
       teammateUserIds.push(fakeUserId);
@@ -821,14 +935,16 @@ export const seedQuietHarbor = internalMutation({
     const allUsers = [args.ownerId, ...teammateUserIds];
 
     // Project 1: CLI
+    const cliSpec = QUIET_HARBOR_PROJECT_SPECS[0];
     await buildProject(ctx, {
       workspaceId: ws3Id,
       ownerId: args.ownerId,
-      name: "Client Portal",
-      key: "CLI",
-      description: "Deliverables sign-off, client feedback, and milestone tracking",
+      name: cliSpec.name,
+      key: cliSpec.key,
+      description: cliSpec.description,
+      iconKey: cliSpec.iconKey,
       titles: QUIET_HARBOR_TITLES["CLI"],
-      targetCount: QUIET_HARBOR_ISSUES_PER_PROJECT,
+      targetCount: cliSpec.targetCount,
       allUsers,
       labels: labelIds,
       projectIndex: 0,
@@ -837,14 +953,16 @@ export const seedQuietHarbor = internalMutation({
     });
 
     // Project 2: WEB
+    const webSpec = QUIET_HARBOR_PROJECT_SPECS[1];
     await buildProject(ctx, {
       workspaceId: ws3Id,
       ownerId: args.ownerId,
-      name: "Marketing Websites",
-      key: "WEB",
-      description: "Next.js performance optimization, SEO metadata, and headless CMS",
+      name: webSpec.name,
+      key: webSpec.key,
+      description: webSpec.description,
+      iconKey: webSpec.iconKey,
       titles: QUIET_HARBOR_TITLES["WEB"],
-      targetCount: QUIET_HARBOR_ISSUES_PER_PROJECT,
+      targetCount: webSpec.targetCount,
       allUsers,
       labels: labelIds,
       projectIndex: 1,
@@ -853,14 +971,16 @@ export const seedQuietHarbor = internalMutation({
     });
 
     // Project 3: OPS
+    const opsSpec = QUIET_HARBOR_PROJECT_SPECS[2];
     await buildProject(ctx, {
       workspaceId: ws3Id,
       ownerId: args.ownerId,
-      name: "Cloud Operations",
-      key: "OPS",
-      description: "CI/CD deployment pipelines, automated backups, and SSL automation",
+      name: opsSpec.name,
+      key: opsSpec.key,
+      description: opsSpec.description,
+      iconKey: opsSpec.iconKey,
       titles: QUIET_HARBOR_TITLES["OPS"],
-      targetCount: QUIET_HARBOR_ISSUES_PER_PROJECT,
+      targetCount: opsSpec.targetCount,
       allUsers,
       labels: labelIds,
       projectIndex: 2,
@@ -876,28 +996,16 @@ export const seedQuietHarbor = internalMutation({
 
 export const resetDemo = mutation({
   args: { workspaceId: v.optional(v.id("workspaces")) },
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const user = await getAnonymousUser(ctx);
-
-    if (args.workspaceId) {
-      await deleteDemoWorkspace(ctx, args.workspaceId);
-      return { workspaceId: args.workspaceId, isNew: true };
-    }
-
     const existing = await findGuestDemoWorkspaces(ctx, user._id);
-    for (let i = 0; i < existing.length; i++) {
-      await ctx.scheduler.runAfter(
-        i * 150,
-        (internal as any).guestDemo?.seed?.deleteDemoWorkspaceInternal,
-        { workspaceId: existing[i]._id }
-      );
+    for (const ws of existing) {
+      await deleteDemoWorkspace(ctx, ws._id);
     }
 
-    return {
-      workspaceId: existing[0]?._id ?? "resetting",
-      isNew: true,
-      count: 0,
-    };
+    // Call runEnsure to reseed fresh demo workspace immediately
+    const res = await runEnsure(ctx);
+    return res;
   },
 });
 
@@ -1081,6 +1189,7 @@ async function buildProject(
     name: string;
     key: string;
     description: string;
+    iconKey?: string;
     titles: string[];
     targetCount: number;
     allUsers: Id<"users">[];
@@ -1090,15 +1199,30 @@ async function buildProject(
     now: number;
   },
 ) {
-  const { workspaceId, ownerId, name, key, description, titles, targetCount, allUsers, labels, projectIndex, baseCreatedAt, now } = params;
+  const {
+    workspaceId,
+    ownerId,
+    name,
+    key,
+    description,
+    iconKey,
+    titles,
+    targetCount,
+    allUsers,
+    labels,
+    projectIndex,
+    baseCreatedAt,
+    now,
+  } = params;
   const projCreatedAt = baseCreatedAt + projectIndex * 2 * DAY;
 
-  // 1. Create project
+  // 1. Create project with iconKey glyph
   const projectId = await ctx.db.insert("projects", {
     workspaceId,
     name,
     key,
     description,
+    iconKey: iconKey || "compass",
     status: "active",
     createdBy: ownerId,
     createdAt: projCreatedAt,
@@ -1173,11 +1297,7 @@ async function buildProject(
     updatedAt: now,
   });
 
-  // 6. Generate issues
-  // Stage distribution across targetCount:
-  // Most in Done (35%), Todo (22%), In Progress (20%), Review (12%)
-  // Fewer in Backlog (5%), Changes Requested (4%), Cancelled (2%)
-  // Ensures ALL 7 stages > 0
+  // 6. Generate issues with varied realistic stage distribution
   const stagesList = [
     "Done",
     "Todo",
@@ -1191,20 +1311,50 @@ async function buildProject(
   const createdIssueIds: Id<"issues">[] = [];
 
   for (let i = 1; i <= targetCount; i++) {
-    // Pick stage based on distribution
+    // Stage distribution customized per project characteristics
     let stage: typeof stagesList[number];
     const pct = (i / targetCount) * 100;
-    if (pct <= 36) stage = "Done";
-    else if (pct <= 58) stage = "Todo";
-    else if (pct <= 78) stage = "In Progress";
-    else if (pct <= 89) stage = "Review";
-    else if (pct <= 94) stage = "Backlog";
-    else if (pct <= 98) stage = "Changes Requested";
-    else stage = "Cancelled";
 
-    // Issue title & acceptance criteria
-    const titleTemplate = titles[(i - 1) % titles.length];
-    const title = i <= titles.length ? titleTemplate : `${titleTemplate} (Phase ${Math.floor(i / titles.length) + 1})`;
+    if (key === "MOB") {
+      // Mobile Client: ~36% done, at risk due to overdue issues & blockers
+      if (pct <= 36) stage = "Done";
+      else if (pct <= 58) stage = "In Progress";
+      else if (pct <= 72) stage = "Review";
+      else if (pct <= 80) stage = "Changes Requested";
+      else if (pct <= 92) stage = "Todo";
+      else stage = "Backlog";
+    } else if (key === "BIL") {
+      // Billing: ~72% done, on track
+      if (pct <= 72) stage = "Done";
+      else if (pct <= 84) stage = "In Progress";
+      else if (pct <= 90) stage = "Review";
+      else if (pct <= 95) stage = "Todo";
+      else stage = "Backlog";
+    } else if (key === "WEB") {
+      // Web App: ~68% done, on track
+      if (pct <= 68) stage = "Done";
+      else if (pct <= 82) stage = "In Progress";
+      else if (pct <= 91) stage = "Review";
+      else if (pct <= 96) stage = "Todo";
+      else stage = "Backlog";
+    } else if (key === "PLT") {
+      // Platform & Infra: ~79% done, high velocity
+      if (pct <= 79) stage = "Done";
+      else if (pct <= 89) stage = "In Progress";
+      else if (pct <= 95) stage = "Review";
+      else stage = "Todo";
+    } else {
+      // General balanced distribution
+      if (pct <= 55) stage = "Done";
+      else if (pct <= 75) stage = "In Progress";
+      else if (pct <= 85) stage = "Review";
+      else if (pct <= 90) stage = "Changes Requested";
+      else if (pct <= 95) stage = "Todo";
+      else stage = "Backlog";
+    }
+
+    // Clean, believable title from titles list (no repetition, no Phase N suffix)
+    const title = titles[(i - 1) % titles.length];
     const description = `### Objective\nImplement robust handling for ${title.toLowerCase()}.\n\n### Acceptance Criteria\n- [x] Edge case error handling validated\n- [ ] Automated regression tests added\n- [ ] Performance benchmark verified within SLA.`;
 
     // Priority: mixed
@@ -1225,31 +1375,29 @@ async function buildProject(
     const isUnassigned = i % 10 === 0;
     const assigneeId = isUnassigned ? undefined : allUsers[(i + projectIndex * 2) % allUsers.length];
 
-    // Spread createdAt across 90 days (1 to 90 days ago)
-    // Completed issues have spread across weeks W-1 to W-8 for steady throughput
-    const daysAgo = Math.max(1, Math.min(88, Math.floor(((targetCount - i + 1) / targetCount) * 85) + (i % 5)));
-    const issueCreatedAt = now - daysAgo * DAY;
+    // Spread createdAt across working hours in the last 14 days
+    const daysAgo = Math.max(1, Math.min(14, Math.floor(((targetCount - i + 1) / targetCount) * 12) + (i % 3)));
+    const issueCreatedAt = getRealisticWorkingTimestamp(now, daysAgo, i + projectIndex * 19);
 
-    // StartedAt and CompletedAt
+    // StartedAt and CompletedAt during working hours
     let startedAt: number | undefined = undefined;
     let completedAt: number | undefined = undefined;
-    const cycleDays = Math.max(1, Math.min(14, (i % 12) + 2)); // cycle time 1-14 days
+    const cycleDays = Math.max(1, Math.min(6, (i % 5) + 1));
 
     if (stage === "Done") {
-      startedAt = issueCreatedAt + 1 * DAY;
-      completedAt = startedAt + cycleDays * DAY;
-      if (completedAt > now) completedAt = now - 1 * DAY;
+      startedAt = getRealisticWorkingTimestamp(now, Math.max(daysAgo - 1, 2), i + 31);
+      completedAt = getRealisticWorkingTimestamp(now, Math.max(daysAgo - 1 - cycleDays, 1), i + 47);
+      if (completedAt <= startedAt) completedAt = startedAt + 4 * 60 * 60 * 1000;
     } else if (stage === "In Progress" || stage === "Review" || stage === "Changes Requested") {
-      startedAt = issueCreatedAt + 1 * DAY;
-      if (startedAt > now) startedAt = now - 12 * 60 * 60 * 1000;
+      startedAt = getRealisticWorkingTimestamp(now, Math.max(daysAgo - 1, 1), i + 31);
     }
 
-    // Due date: ~10% overdue, some upcoming
+    // Due date: ~10% overdue on active issues (especially in MOB), some upcoming
     let dueDate: number | undefined = undefined;
-    if (i % 10 === 3 && stage !== "Done" && stage !== "Cancelled") {
-      dueDate = now - (Math.floor(Math.random() * 5) + 1) * DAY; // overdue
-    } else if (i % 3 === 0 && stage !== "Done" && stage !== "Cancelled") {
-      dueDate = now + (Math.floor(Math.random() * 12) + 3) * DAY;
+    if ((key === "MOB" && (i === 3 || i === 7)) || (i % 9 === 1 && stage !== "Done")) {
+      dueDate = getRealisticWorkingTimestamp(now, Math.floor(Math.random() * 3) + 1, i + 11); // overdue
+    } else if (i % 3 === 0 && stage !== "Done") {
+      dueDate = now + (Math.floor(Math.random() * 8) + 2) * DAY;
     }
 
     const statusId = statusMap.get(stage) || statusMap.get("Todo")!;
@@ -1286,7 +1434,7 @@ async function buildProject(
       }
     }
 
-    // Activity events for creation
+    // Activity event: creation
     await ctx.db.insert("activityEvents", {
       workspaceId,
       projectId,
@@ -1298,8 +1446,9 @@ async function buildProject(
       createdAt: issueCreatedAt,
     });
 
-    // If assigned, log assign event
+    // Activity event: assignment
     if (assigneeId) {
+      const assignedTime = Math.min(now - 1000, issueCreatedAt + 2 * 60 * 60 * 1000);
       await ctx.db.insert("activityEvents", {
         workspaceId,
         projectId,
@@ -1308,11 +1457,11 @@ async function buildProject(
         entityId: issueId,
         eventType: "issue.assigned",
         payload: { assigneeId },
-        createdAt: issueCreatedAt + 2 * 60 * 60 * 1000,
+        createdAt: assignedTime,
       });
     }
 
-    // Status change history (essential for analytics cycle time & review wait time)
+    // Status transition events with realistic review history and rework loops
     if (startedAt) {
       await ctx.db.insert("activityEvents", {
         workspaceId,
@@ -1326,8 +1475,13 @@ async function buildProject(
       });
     }
 
-    if (stage === "Review" || stage === "Changes Requested" || stage === "Done") {
-      const reviewEnteredAt = (startedAt || issueCreatedAt) + Math.max(1, Math.floor(cycleDays / 2)) * DAY;
+    // Issues currently in In Progress that experienced a review rejection cycle
+    if (stage === "In Progress" && i % 4 === 2 && startedAt) {
+      const reviewEnteredAt = Math.min(now - 2000, startedAt + 12 * 60 * 60 * 1000);
+      const changesRequestedAt = Math.min(now - 1500, reviewEnteredAt + 4 * 60 * 60 * 1000);
+      const reworkStartedAt = Math.min(now - 1000, changesRequestedAt + 2 * 60 * 60 * 1000);
+      const reviewer = allUsers[(i + 1) % allUsers.length];
+
       await ctx.db.insert("activityEvents", {
         workspaceId,
         projectId,
@@ -1339,16 +1493,100 @@ async function buildProject(
         createdAt: reviewEnteredAt,
       });
 
-      if (stage === "Changes Requested") {
+      await ctx.db.insert("comments", {
+        workspaceId,
+        issueId,
+        authorId: reviewer,
+        body: "Found a race condition under heavy concurrency in the benchmark. Needs an atomic compare-and-swap before we can approve.",
+        createdAt: changesRequestedAt,
+        updatedAt: changesRequestedAt,
+      });
+
+      await ctx.db.insert("activityEvents", {
+        workspaceId,
+        projectId,
+        actorId: reviewer,
+        entityType: "issue",
+        entityId: issueId,
+        eventType: "issue.status_changed",
+        payload: { from: "Review", to: "Changes Requested" },
+        createdAt: changesRequestedAt,
+      });
+
+      await ctx.db.insert("activityEvents", {
+        workspaceId,
+        projectId,
+        actorId: assigneeId || ownerId,
+        entityType: "issue",
+        entityId: issueId,
+        eventType: "issue.status_changed",
+        payload: { from: "Changes Requested", to: "In Progress" },
+        createdAt: reworkStartedAt,
+      });
+    }
+
+    if (stage === "Review" || stage === "Changes Requested" || stage === "Done") {
+      const reviewEnteredAt = Math.min(
+        now - 1500,
+        (startedAt || issueCreatedAt) + Math.max(1, Math.floor(cycleDays / 2)) * DAY,
+      );
+      await ctx.db.insert("activityEvents", {
+        workspaceId,
+        projectId,
+        actorId: assigneeId || ownerId,
+        entityType: "issue",
+        entityId: issueId,
+        eventType: "issue.status_changed",
+        payload: { from: "In Progress", to: "Review" },
+        createdAt: reviewEnteredAt,
+      });
+
+      // Constructive code review comments on issues in Review
+      if (stage === "Review") {
+        const reviewer = allUsers[(i + 1) % allUsers.length];
+        const commentTime = Math.min(now - 1000, reviewEnteredAt + 3 * 60 * 60 * 1000);
+        await ctx.db.insert("comments", {
+          workspaceId,
+          issueId,
+          authorId: reviewer,
+          body: "Reviewed the pull request. Implementation is clean, test suite passes, and bundle size impact is negligible. Running final smoke tests.",
+          createdAt: commentTime,
+          updatedAt: commentTime,
+        });
+
         await ctx.db.insert("activityEvents", {
           workspaceId,
           projectId,
-          actorId: allUsers[(i + 1) % allUsers.length],
+          actorId: reviewer,
+          entityType: "issue",
+          entityId: issueId,
+          eventType: "issue.commented",
+          payload: { bodyPreview: "Reviewed the pull request. Implementation is clean..." },
+          createdAt: commentTime,
+        });
+      }
+
+      if (stage === "Changes Requested") {
+        const reviewer = allUsers[(i + 1) % allUsers.length];
+        const commentTime = Math.min(now - 1000, reviewEnteredAt + 4 * 60 * 60 * 1000);
+        await ctx.db.insert("comments", {
+          workspaceId,
+          issueId,
+          authorId: reviewer,
+          body: "Please update the error handler to catch unexpected null payloads from upstream webhooks and add a corresponding fixture test.",
+          createdAt: commentTime,
+          updatedAt: commentTime,
+        });
+
+        await ctx.db.insert("activityEvents", {
+          workspaceId,
+          projectId,
+          actorId: reviewer,
           entityType: "issue",
           entityId: issueId,
           eventType: "issue.status_changed",
           payload: { from: "Review", to: "Changes Requested" },
-          createdAt: reviewEnteredAt + 1 * DAY,
+          createdAt: commentTime,
         });
       }
 
@@ -1366,27 +1604,29 @@ async function buildProject(
       }
     }
 
-    // Comments on ~60% of issues (1 to 4 comments each)
-    if (i % 10 <= 6) {
-      const commentCount = (i % 3) + 1;
+    // General discussions on ~60% of issues
+    if (i % 5 <= 2) {
+      const commentCount = (i % 2) + 1;
       const commentSnippets = [
-        "Started investigation on staging environment. Reproducible under heavy payload.",
-        "Verified with teammate. PR is open with automated unit tests.",
-        "Please double-check review notes on line 84 regarding connection timeout.",
-        "Fixed in commit #9a2c14. Deployed to preview container for verification.",
-        "QA signoff complete. Ready for production merge.",
+        "Verified reproduction steps against staging environment. Investigating cache layer.",
+        "Opened PR with unit tests covering edge cases. Ready for architectural pass.",
+        "Deployed preview build to staging. Verified performance metrics within SLA.",
+        "QA smoke testing passed on target devices. Ready for release train.",
       ];
 
       for (let c = 0; c < commentCount; c++) {
         const commenter = allUsers[(i + c + 1) % allUsers.length];
-        const commentTime = (startedAt || issueCreatedAt) + (c + 1) * 6 * 60 * 60 * 1000;
+        const commentTime = Math.min(
+          now - 1000,
+          (startedAt || issueCreatedAt) + (c + 1) * 4 * 60 * 60 * 1000,
+        );
         await ctx.db.insert("comments", {
           workspaceId,
           issueId,
           authorId: commenter,
           body: commentSnippets[(i + c) % commentSnippets.length],
-          createdAt: Math.min(now - 1000, commentTime),
-          updatedAt: Math.min(now - 1000, commentTime),
+          createdAt: commentTime,
+          updatedAt: commentTime,
         });
 
         await ctx.db.insert("activityEvents", {
@@ -1397,7 +1637,7 @@ async function buildProject(
           entityId: issueId,
           eventType: "issue.commented",
           payload: { bodyPreview: commentSnippets[(i + c) % commentSnippets.length].slice(0, 40) },
-          createdAt: Math.min(now - 1000, commentTime),
+          createdAt: commentTime,
         });
       }
     }
@@ -1405,7 +1645,7 @@ async function buildProject(
 
   // 7. Add dependencies (~8% blocked by another issue)
   for (let i = 0; i < createdIssueIds.length; i++) {
-    if (i % 12 === 5 && i > 3) {
+    if (i % 8 === 4 && i > 2) {
       const blockedIssueId = createdIssueIds[i];
       const blockingIssueId = createdIssueIds[i - 2];
       await ctx.db.insert("issueDependencies", {

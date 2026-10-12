@@ -8,12 +8,10 @@ import { Button } from "@/components/ui/button";
 import {
   FilterBar,
   FilterSelect,
-  InitialsAvatar,
   LoadingBlock,
   PageHeader,
   PageStack,
   Panel,
-  PanelEmpty,
   ProjectStatusBadge,
   SearchInput,
   StatCard,
@@ -22,14 +20,17 @@ import {
   Th,
 } from "@/components/app-ui";
 import { CreateProjectDialog } from "@/components/dialogs";
-import { ProjectIllustration } from "@/components/Illustrations";
+import {
+  EmblemIllustration,
+  AvatarIllustration,
+  EmptyIllustration,
+} from "@/components/Illustrations";
 import { EmptyState, RiskBadge, timeAgo } from "@/components/forge";
 import { useProjectRisks } from "@/hooks/use-workspace-data";
 import {
   AlertTriangle,
   CircleSlash,
   FolderKanban,
-  Search,
   Timer,
 } from "lucide-react";
 
@@ -186,48 +187,53 @@ export default function ProjectsPage() {
 
             <Panel flush>
               {(projects ?? []).length === 0 ? (
-                <PanelEmpty
-                  title="No projects yet"
-                  description="Create your first project. It comes with a default workflow you can tune later."
-                  action={
-                    canWrite ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center">
+                  <EmptyIllustration type="no-projects" size={64} className="mb-3" />
+                  <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No projects yet</h3>
+                  <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
+                    Create your first project. It comes with a default workflow you can tune later.
+                  </p>
+                  {canWrite && (
+                    <div className="mt-4">
                       <CreateProjectDialog workspaceId={id} canCreate={canWrite} defaultOpen />
-                    ) : undefined
-                  }
-                />
+                    </div>
+                  )}
+                </div>
               ) : filtered.length === 0 ? (
-                <PanelEmpty
-                  title="No projects match these filters"
-                  description="Try a different search term, status, or owner."
-                  action={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSearch("");
-                        setStatus("all");
-                        setOwner("all");
-                      }}
-                    >
-                      <Search /> Clear filters
-                    </Button>
-                  }
-                />
+                <div className="flex flex-col items-center justify-center p-12 text-center">
+                  <EmptyIllustration type="no-results" size={64} className="mb-3" />
+                  <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No projects match these filters</h3>
+                  <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
+                    Try a different search term, status, or owner.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setStatus("all");
+                      setOwner("all");
+                    }}
+                    className="mt-4 rounded-full"
+                  >
+                    Clear filters
+                  </Button>
+                </div>
               ) : (
                 <>
                   <TableWrap>
                     <thead>
                       <tr>
-                        <Th>Project</Th>
-                        <Th>Status</Th>
-                        <Th>Owner</Th>
-                        <Th>Progress</Th>
+                        <Th className="text-left">Project</Th>
+                        <Th className="text-left">Status</Th>
+                        <Th className="text-left">Owner</Th>
+                        <Th className="text-left">Progress</Th>
                         <Th align="right">Issues</Th>
-                        <Th>Risk</Th>
+                        <Th className="text-left">Risk</Th>
                         <Th align="right">Last activity</Th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-border/60">
                       {filtered.map((p) => {
                         const risk = riskByProject.get(p._id);
                         const pct = p.issueCount ? Math.round((p.doneIssueCount / p.issueCount) * 100) : 0;
@@ -235,64 +241,73 @@ export default function ProjectsPage() {
                         return (
                           <tr
                             key={p._id}
-                            className="group transition-colors hover:bg-secondary/50"
+                            className="group h-16 min-h-[64px] transition-colors hover:bg-[#FBFBFC]"
                           >
-                            <Td>
+                            <Td className="whitespace-nowrap">
                               <Link
                                 to={`/app/projects/${p._id}`}
                                 className="block outline-none focus-visible:underline"
                               >
                                 <span className="flex items-center gap-2.5">
-                                  <ProjectIllustration projectKey={p.key} name={p.name} size={16} />
+                                  <EmblemIllustration
+                                    emblemKey={p.iconKey}
+                                    name={p.name}
+                                    id={p._id}
+                                    size={24}
+                                  />
                                   <span className="rounded-[4px] border border-border bg-[#F1F1F3] px-1.5 py-0.5 font-mono text-[10px] text-[#575657]">
                                     {p.key}
                                   </span>
                                   <span className="truncate font-medium text-[#0D0D0D]">{p.name}</span>
                                 </span>
                                 {p.description && (
-                                  <span className="mt-0.5 line-clamp-1 block max-w-sm text-[11px] text-muted-foreground">
+                                  <span className="mt-0.5 line-clamp-1 block max-w-sm text-[11px] text-[#575657]">
                                     {p.description}
                                   </span>
                                 )}
                               </Link>
                             </Td>
-                            <Td>
+                            <Td className="whitespace-nowrap">
                               <ProjectStatusBadge status={p.status} />
                             </Td>
-                            <Td>
+                            <Td className="whitespace-nowrap">
                               <span className="flex items-center gap-2">
-                                <InitialsAvatar name={ownerName} size={22} />
-                                <span className="truncate text-[13px]">{ownerName}</span>
+                                <AvatarIllustration
+                                  name={ownerName}
+                                  id={p.createdBy}
+                                  size={24}
+                                />
+                                <span className="truncate text-[13px] text-[#0D0D0D]">{ownerName}</span>
                               </span>
                             </Td>
-                            <Td>
+                            <Td className="whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                <div className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
+                                <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[#F1F1F3]">
                                   <div
-                                    className="h-full rounded-full bg-foreground/70"
+                                    className="h-full rounded-full bg-[#0D0D0D]"
                                     style={{ width: `${pct}%` }}
                                   />
                                 </div>
-                                <span className="text-[11px] tabular-nums text-muted-foreground">
+                                <span className="text-[11px] tabular-nums text-[#575657]">
                                   {pct}%
                                 </span>
                               </div>
                             </Td>
-                            <Td align="right">
-                              <span className="text-[13px]">{p.issueCount}</span>
-                              <span className="ml-1 text-[11px] text-muted-foreground">
+                            <Td align="right" className="whitespace-nowrap">
+                              <span className="text-[13px] font-medium text-[#0D0D0D]">{p.issueCount}</span>
+                              <span className="ml-1 text-[11px] text-[#575657]">
                                 ({p.openIssueCount} open)
                               </span>
                             </Td>
-                            <Td>
+                            <Td className="whitespace-nowrap">
                               {risk ? (
                                 <RiskBadge level={risk.level} score={risk.score} />
                               ) : (
-                                <span className="text-[11px] text-muted-foreground">No data</span>
+                                <span className="text-[11px] text-[#575657]">Low</span>
                               )}
                             </Td>
-                            <Td align="right">
-                              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Td align="right" className="whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 text-[11px] text-[#575657]">
                                 <Timer className="size-3" />
                                 {timeAgo(p.updatedAt)}
                               </span>
