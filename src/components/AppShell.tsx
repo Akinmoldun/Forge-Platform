@@ -30,7 +30,6 @@ import {
   PanelLeftOpen,
   Keyboard,
   Star,
-  Clock,
   KanbanSquare,
   List,
   SlidersHorizontal,
@@ -438,7 +437,15 @@ export function AppShell({
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
-    (issueDetail ? { _id: issueDetail.project._id, name: issueDetail.project.name, key: issueDetail.project.key, color: issueDetail.project.color } : undefined);
+    (issueDetail
+      ? {
+          _id: issueDetail.project._id,
+          name: issueDetail.project.name,
+          key: issueDetail.project.key,
+          color: issueDetail.project.color,
+          iconKey: issueDetail.project.iconKey,
+        }
+      : undefined);
 
   const activeIssue = issueDetail
     ? {
@@ -519,58 +526,9 @@ export function AppShell({
     });
   };
 
-  // Recent items in localStorage
-  const storageRecentKey = `forge_recent_${workspaceId || "global"}`;
-  const [recentItems, setRecentItems] = useState<Array<{ id: string; name: string; type: "project" | "issue"; path: string }>>(() => {
-    try {
-      const saved = localStorage.getItem(storageRecentKey);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Track recent visits (projects and issues)
-  useEffect(() => {
-    const matchProj = pathname.match(/^\/app\/projects\/([^/]+)/);
-    if (matchProj && projects && projects.length > 0) {
-      const pId = matchProj[1];
-      const p = projects.find((x) => x._id === pId);
-      if (p) {
-        setRecentItems((prev) => {
-          const filtered = prev.filter((item) => item.id !== pId);
-          const next = [{ id: pId, name: p.name, type: "project" as const, path: `/app/projects/${pId}` }, ...filtered].slice(0, 5);
-          try {
-            localStorage.setItem(storageRecentKey, JSON.stringify(next));
-          } catch {
-            /* ignore */
-          }
-          return next;
-        });
-      }
-    }
-
-    const matchIssue = pathname.match(/^\/app\/issues\/([^/]+)/);
-    if (matchIssue && issueDetail) {
-      const iId = matchIssue[1];
-      const title = `${issueDetail.project.key}-${issueDetail.issue.number}: ${issueDetail.issue.title}`;
-      setRecentItems((prev) => {
-        const filtered = prev.filter((item) => item.id !== iId);
-        const next = [{ id: iId, name: title, type: "issue" as const, path: `/app/issues/${iId}` }, ...filtered].slice(0, 5);
-        try {
-          localStorage.setItem(storageRecentKey, JSON.stringify(next));
-        } catch {
-          /* ignore */
-        }
-        return next;
-      });
-    }
-  }, [pathname, projects, issueDetail, storageRecentKey]);
-
   // Section collapse states
   const [workspaceSectionCollapsed, setWorkspaceSectionCollapsed] = useState(false);
   const [projectsSectionCollapsed, setProjectsSectionCollapsed] = useState(false);
-  const [recentSectionCollapsed, setRecentSectionCollapsed] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
   const toggleProjectExpanded = (pId: string, e?: React.MouseEvent) => {
@@ -692,7 +650,13 @@ export function AppShell({
   const activeWs =
     currentWorkspace?.workspace ||
     myWorkspaces?.find((w) => w._id === workspaceId) ||
-    (workspaceId ? { _id: workspaceId as Id<"workspaces">, name: "Workspace" } : undefined);
+    (workspaceId
+      ? {
+          _id: workspaceId as Id<"workspaces">,
+          name: "Workspace",
+          iconKey: undefined as string | undefined,
+        }
+      : undefined);
 
   // Projects list: at most 6 projects shown directly
   const visibleProjects = projects?.slice(0, 6) ?? [];
@@ -713,7 +677,12 @@ export function AppShell({
           )}
         >
           <div className="flex size-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-[#FBFBFC] text-[#0D0D0D]">
-            <WorkspaceIllustration name={activeWs?.name} size={18} />
+            <WorkspaceIllustration
+              name={activeWs?.name}
+              iconKey={activeWs?.iconKey}
+              id={activeWs?._id}
+              size={18}
+            />
           </div>
           {!collapsed && (
             <>
@@ -738,7 +707,13 @@ export function AppShell({
             onClick={() => navigate(workspacePath(w._id, ""))}
             className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
           >
-            <WorkspaceIllustration name={w.name} size={16} className="mr-2.5" />
+            <WorkspaceIllustration
+              name={w.name}
+              iconKey={w.iconKey}
+              id={w._id}
+              size={16}
+              className="mr-2.5"
+            />
             <span className="min-w-0 flex-1 truncate">{w.name}</span>
             <span className="text-[11px] text-[#575657]">{w.projectCount} proj</span>
             {activeWs?._id === w._id && <Check className="size-3.5 ml-2 text-[#0D0D0D]" />}
@@ -826,31 +801,49 @@ export function AppShell({
 
         {/* Quick Rows: Search & Inbox */}
         <div className="p-2 space-y-0.5 border-b border-border/40 shrink-0">
-          {/* Search row */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => setCommandOpen(true)}
-                className={cn(
-                  "flex h-8 w-full items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
-                  collapsed ? "justify-center" : "justify-between"
-                )}
-                aria-label="Search (Ctrl+K)"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Search className="size-4 shrink-0" />
-                  {!collapsed && <span className="font-medium">Search</span>}
-                </div>
-                {!collapsed && (
-                  <kbd className="rounded-[4px] border border-border/70 bg-white px-1.5 py-0.2 text-[10px] font-mono text-[#575657]">
-                    ⌘K
-                  </kbd>
-                )}
-              </button>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">Search (⌘K)</TooltipContent>}
-          </Tooltip>
+          {/* Search row with '+' new issue button */}
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setCommandOpen(true)}
+                  className={cn(
+                    "flex h-8 items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
+                    collapsed ? "w-full justify-center" : "flex-1 justify-between"
+                  )}
+                  aria-label="Search (Ctrl+K)"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Search className="size-4 shrink-0" />
+                    {!collapsed && <span className="font-medium">Search</span>}
+                  </div>
+                  {!collapsed && (
+                    <kbd className="rounded-[4px] border border-border/70 bg-white px-1.5 py-0.2 text-[10px] font-mono text-[#575657]">
+                      ⌘K
+                    </kbd>
+                  )}
+                </button>
+              </TooltipTrigger>
+              {collapsed && <TooltipContent side="right">Search (⌘K)</TooltipContent>}
+            </Tooltip>
+
+            {!collapsed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setNewIssueOpen(true)}
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none"
+                    aria-label="New issue (C)"
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">New issue (C)</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
 
           {/* Inbox row (Notifications) */}
           <Tooltip>
@@ -892,9 +885,8 @@ export function AppShell({
           </Tooltip>
         </div>
 
-        {/* Scrollable Middle Navigation */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-          {/* Section: Workspace */}
+        {/* Workspace Links - Never scroll */}
+        <div className="p-2 border-b border-border/40 shrink-0">
           <div>
             {!collapsed && (
               <div className="flex items-center justify-between px-2 pb-1">
@@ -948,7 +940,10 @@ export function AppShell({
               </nav>
             )}
           </div>
+        </div>
 
+        {/* Scrollable Projects Section (takes remaining height, hidden scrollbar) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-2 py-3 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {/* Section: Pinned Projects (if any) */}
           {!collapsed && pinnedIds.length > 0 && projects && (
             <div>
@@ -975,7 +970,13 @@ export function AppShell({
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <ProjectIllustration projectKey={proj.key} name={proj.name} size={15} />
+                        <ProjectIllustration
+                          projectKey={proj.key}
+                          name={proj.name}
+                          iconKey={proj.iconKey}
+                          id={proj._id}
+                          size={15}
+                        />
                         <span className="truncate">{proj.name}</span>
                       </div>
                       <button
@@ -1086,7 +1087,13 @@ export function AppShell({
                                   />
                                 </button>
                               )}
-                              <ProjectIllustration projectKey={proj.key} name={proj.name} size={15} />
+                              <ProjectIllustration
+                                projectKey={proj.key}
+                                name={proj.name}
+                                iconKey={proj.iconKey}
+                                id={proj._id}
+                                size={15}
+                              />
                               {!collapsed && (
                                 <span className="truncate font-medium">{proj.name}</span>
                               )}
@@ -1171,75 +1178,16 @@ export function AppShell({
                     to={workspaceId ? `/app/workspaces/${workspaceId}/projects` : "/app"}
                     className="flex h-7 items-center px-2 text-[12px] font-medium text-[#575657] hover:text-[#0D0D0D]"
                   >
-                    More projects ({(projects?.length ?? 0) - 8} more)...
+                    More projects ({(projects?.length ?? 0) - 6} more)...
                   </Link>
                 )}
               </div>
             )}
           </div>
-
-          {/* Section: Recent */}
-          {!collapsed && recentItems.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between px-2 pb-1">
-                <span className="text-[12px] font-medium text-[#575657] flex items-center gap-1">
-                  <Clock className="size-3" /> Recent
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setRecentSectionCollapsed((p) => !p)}
-                  className="text-[#575657] hover:text-[#0D0D0D]"
-                  aria-label="Toggle recent section"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "size-3.5 transition-transform",
-                      recentSectionCollapsed && "-rotate-90"
-                    )}
-                  />
-                </button>
-              </div>
-
-              {!recentSectionCollapsed && (
-                <div className="space-y-0.5">
-                  {recentItems.map((item) => (
-                    <Link
-                      key={item.id}
-                      to={item.path}
-                      className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                    >
-                      <FolderKanban className="size-3.5 shrink-0 text-[#575657]" />
-                      <span className="truncate">{item.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Pinned Bottom: "New issue" button & user row */}
-        <div className="p-2 border-t border-border/40 shrink-0 space-y-2">
-          {/* New issue black pill */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => setNewIssueOpen(true)}
-                className={cn(
-                  "flex h-8 w-full items-center justify-center rounded-full bg-[#0D0D0D] text-[12px] font-medium text-white hover:bg-[#262626] transition-colors outline-none",
-                  collapsed ? "size-8 p-0 mx-auto" : "gap-1.5 px-3"
-                )}
-                aria-label="New issue (C)"
-              >
-                <Plus className="size-3.5" />
-                {!collapsed && <span>New issue</span>}
-              </button>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">New issue (C)</TooltipContent>}
-          </Tooltip>
-
-          {/* User row / AccountMenu */}
+        {/* Pinned Bottom: user row only */}
+        <div className="p-2 border-t border-border/40 shrink-0">
           <AccountMenu
             onOpenShortcuts={() => setShortcutsOpen(true)}
             collapsed={collapsed}
@@ -1294,10 +1242,23 @@ export function AppShell({
             <AppBreadcrumbs
               workspace={
                 activeWs
-                  ? { _id: activeWs._id as Id<"workspaces">, name: activeWs.name }
+                  ? {
+                      _id: activeWs._id as Id<"workspaces">,
+                      name: activeWs.name,
+                      iconKey: activeWs.iconKey,
+                    }
                   : null
               }
-              project={activeProject ? { _id: activeProject._id, name: activeProject.name, key: activeProject.key } : null}
+              project={
+                activeProject
+                  ? {
+                      _id: activeProject._id,
+                      name: activeProject.name,
+                      key: activeProject.key,
+                      iconKey: activeProject.iconKey,
+                    }
+                  : null
+              }
               issue={activeIssue}
             />
           </div>

@@ -56,8 +56,6 @@ const PRIORITY_TONE: Record<string, string> = {
   none: "bg-[#9A9A9F]",
 };
 
-const STATUS_COLORS = ["#9A9A9F", "#6E94CB", "#7957EC", "#D78FC6", "#D6C6A1", "#83DD79"];
-
 export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const wid = workspaceId as Id<"workspaces">;

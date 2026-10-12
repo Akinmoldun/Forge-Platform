@@ -44,6 +44,7 @@ function describe(eventType: string, payload: Record<string, unknown> | undefine
   const name =
     (payload?.name as string | undefined) ??
     (payload?.identifier as string | undefined) ??
+    (payload?.issueKey as string | undefined) ??
     (payload?.issue as string | undefined) ??
     (payload?.field as string | undefined) ??
     (payload?.title as string | undefined);

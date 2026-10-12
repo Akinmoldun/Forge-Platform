@@ -1,14 +1,15 @@
 import { Link, useLocation } from "react-router";
 import { ChevronRight } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
+import { EmblemIllustration } from "@/components/Illustrations";
 
 export function AppBreadcrumbs({
   workspace,
   project,
   issue,
 }: {
-  workspace?: { _id: Id<"workspaces">; name: string } | null;
-  project?: { _id: Id<"projects">; name: string; key: string } | null;
+  workspace?: { _id: Id<"workspaces">; name: string; iconKey?: string } | null;
+  project?: { _id: Id<"projects">; name: string; key: string; iconKey?: string } | null;
   issue?: { _id: Id<"issues">; title: string; number: number; key?: string } | null;
 }) {
   const { pathname } = useLocation();
@@ -31,9 +32,15 @@ export function AppBreadcrumbs({
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[13px] min-w-0">
       <Link
         to={`/app/workspaces/${workspace._id}`}
-        className="font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[140px] sm:max-w-[200px]"
+        className="flex items-center gap-1.5 font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[140px] sm:max-w-[200px]"
       >
-        {workspace.name}
+        <EmblemIllustration
+          emblemKey={workspace.iconKey}
+          name={workspace.name}
+          id={workspace._id}
+          size={16}
+        />
+        <span className="truncate">{workspace.name}</span>
       </Link>
 
       {project && (
@@ -41,9 +48,15 @@ export function AppBreadcrumbs({
           <ChevronRight className="size-3.5 shrink-0 text-[#575657]/50" aria-hidden="true" />
           <Link
             to={`/app/projects/${project._id}`}
-            className="font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[140px] sm:max-w-[200px]"
+            className="flex items-center gap-1.5 font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[140px] sm:max-w-[200px]"
           >
-            {project.name}
+            <EmblemIllustration
+              emblemKey={project.iconKey}
+              name={project.name}
+              id={project._id}
+              size={16}
+            />
+            <span className="truncate">{project.name}</span>
           </Link>
         </>
       )}

@@ -281,9 +281,19 @@ function formatActivitySentence(e: {
 }): string {
   const actor = e.actorName || "Someone";
   const p = e.payload || {};
-  const key = (p.issueKey as string) || (p.key as string) || (p.number ? `#${p.number}` : "");
-  const from = (p.fromStatus as string) || (p.fromStatusName as string);
-  const to = (p.toStatus as string) || (p.toStatusName as string);
+  const key =
+    (p.issueKey as string) ||
+    (p.identifier as string) ||
+    (p.key as string) ||
+    (p.number ? `#${p.number}` : "");
+  const from =
+    (p.fromStatus as string) ||
+    (p.fromStatusName as string) ||
+    (p.from as string);
+  const to =
+    (p.toStatus as string) ||
+    (p.toStatusName as string) ||
+    (p.to as string);
 
   if (e.eventType === "issue.status_changed" || e.eventType === "issue.transitioned") {
     if (key && from && to) {

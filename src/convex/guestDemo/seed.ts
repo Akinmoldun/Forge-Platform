@@ -60,6 +60,18 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Prevent layout shift during dynamic image thumbnail fetch",
     "Add subtle haptic feedback tick on issue status transition",
     "Support split-screen multitasking on iPadOS 17",
+    "Enable certificate pinning for secure WebSocket gateway",
+    "Fix keychain token loss on app reinstall backup restore",
+    "Implement background task scheduler for delta sync",
+    "Add dynamic font scaling accessibility support for dynamic type",
+    "Fix crash in gesture recognizer during rapid sheet dismissal",
+    "Optimize CoreData cache invalidation on memory warning",
+    "Support image cropping and thumbnail compression in avatar picker",
+    "Resolve frame drops when scrolling dense filter list",
+    "Implement biometric session auto-lock after 15 minutes",
+    "Fix push notification badge count synchronization mismatch",
+    "Add animated micro-interactions for issue checklist completion",
+    "Optimize battery drain in background location geofence listener",
   ],
   BIL: [
     "Implement token bucket rate limiter for public API",
@@ -82,6 +94,18 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Add usage anomaly alerts for sudden egress spikes",
     "Support team seat volume tiers on checkout",
     "Validate tax exemption certificates for non-profit plans",
+    "Implement billing contact role delegation with restricted permissions",
+    "Add automatic currency conversion for international bank wire transfers",
+    "Enforce credit balance deduction before charging primary payment method",
+    "Automate sales tax calculation using TaxJar webhook integration",
+    "Add custom invoice memo field for enterprise accounts payable",
+    "Implement subscription pause and resume lifecycle transitions",
+    "Build cohort analysis query for subscription churn forecasting",
+    "Validate webhook signature headers against rotating secret keys",
+    "Add tiered volume discount calculation for enterprise seats",
+    "Optimize Stripe customer lookup with indexed database caching",
+    "Automate refund authorization workflow for disputed transactions",
+    "Send warning email 7 days before annual subscription renewal",
   ],
   WEB: [
     "Virtualize backlog table rendering for 10k+ issues",
@@ -109,6 +133,16 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Implement undo/redo stack for inline issue title edits",
     "Add quick-add issue row at bottom of list view",
     "Display offline indicator banner when network disconnects",
+    "Optimize re-renders in issue activity timeline component",
+    "Add keyboard navigation shortcuts for board column navigation",
+    "Implement full-text search indexing on local issue cache",
+    "Fix tooltip flicker on rapidly hovered table rows",
+    "Support dark and light theme transition without layout flashing",
+    "Build export to CSV and JSON utility for issue tables",
+    "Add copy issue link to clipboard with toast notification",
+    "Implement collapsible issue description preview in card view",
+    "Sanitize user input before rendering markdown tables",
+    "Optimize SVG asset rendering for crisp high-DPI displays",
   ],
   PLT: [
     "Upgrade Kubernetes ingress controller to support HTTP/3",
@@ -133,6 +167,19 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Benchmark Redis cluster failover under synthetic write load",
     "Configure automatic database vacuum tuning thresholds",
     "Setup alert manager webhooks to Slack incident channel",
+    "Provision dedicated worker node pools for compute-heavy background tasks",
+    "Enforce IP allowlisting for production database administrative access",
+    "Implement automated container vulnerability scanning on push",
+    "Setup distributed log ingestion pipeline using Vector and ClickHouse",
+    "Configure cross-region database replication for disaster recovery",
+    "Optimize Dockerfile layer caching for microservice builds",
+    "Implement automated cluster certificate rotation playbook",
+    "Audit IAM service account permissions to enforce least privilege",
+    "Configure Prometheus alerting rules for container restart loops",
+    "Tune TCP keepalive settings to prevent idle socket dropouts",
+    "Setup automated staging environment teardown on weekends",
+    "Benchmark network throughput across VPC peering connections",
+    "Implement automated database index health check and defragmentation",
   ],
   DAT: [
     "Scale Apache Kafka consumer group for audit log streams",
@@ -151,6 +198,25 @@ const NORTHSTAR_PROJECT_TITLES: Record<string, string[]> = {
     "Implement backfill orchestration for historical event replays",
     "Add schema registry validation for Avro message payloads",
     "Stream chunked CSV exports to avoid memory exhaustion",
+    "Build real-time pipeline monitoring dashboard in Grafana",
+    "Optimize partition pruning for high-cardinality event tables",
+    "Automate daily data warehouse integrity verification suite",
+    "Implement dead letter queue for invalid analytics payloads",
+    "Tune Spark memory allocation for large batch aggregation jobs",
+    "Enforce column-level access control for PII in data warehouse",
+    "Add automated schema evolution tests for Avro message producers",
+    "Build real-time data sync pipeline between PostgreSQL and ClickHouse",
+    "Implement automated deduplication for streaming telemetry events",
+    "Setup automated data catalog documentation with dbt docs",
+    "Optimize table compaction frequency for Apache Iceberg format",
+    "Build customer feature store pipeline for recommendation model",
+    "Audit data retention policies for telemetry compliance regulations",
+    "Stream database audit logs to immutable cold storage bucket",
+    "Implement circuit breaker on external analytics API connector",
+    "Optimize indexing on event timestamp partitions for sub-second queries",
+    "Setup automated alert for unexpected data ingestion volume drop",
+    "Implement data freshness check and SLA breach notifications",
+    "Benchmark query performance across Parquet and ORC file formats",
   ],
 };
 
@@ -1309,42 +1375,51 @@ async function buildProject(
   ] as const;
 
   const createdIssueIds: Id<"issues">[] = [];
+  const openIssueIds: Id<"issues">[] = [];
 
   for (let i = 1; i <= targetCount; i++) {
     // Stage distribution customized per project characteristics
-    let stage: typeof stagesList[number];
+    let stage: (typeof stagesList)[number];
     const pct = (i / targetCount) * 100;
 
     if (key === "MOB") {
-      // Mobile Client: ~36% done, at risk due to overdue issues & blockers
-      if (pct <= 36) stage = "Done";
-      else if (pct <= 58) stage = "In Progress";
-      else if (pct <= 72) stage = "Review";
-      else if (pct <= 80) stage = "Changes Requested";
-      else if (pct <= 92) stage = "Todo";
+      // Mobile Client: exactly 29 done, 46 open (matches "46 open · 29 done")
+      if (i <= 29) stage = "Done";
+      else if (i <= 46) stage = "In Progress";
+      else if (i <= 56) stage = "Review";
+      else if (i <= 62) stage = "Changes Requested";
+      else if (i <= 70) stage = "Todo";
       else stage = "Backlog";
     } else if (key === "BIL") {
-      // Billing: ~72% done, on track
-      if (pct <= 72) stage = "Done";
-      else if (pct <= 84) stage = "In Progress";
-      else if (pct <= 90) stage = "Review";
-      else if (pct <= 95) stage = "Todo";
+      // Billing: 44 done, 18 open (~71% done, on track, low risk)
+      if (i <= 44) stage = "Done";
+      else if (i <= 51) stage = "In Progress";
+      else if (i <= 55) stage = "Review";
+      else if (i <= 59) stage = "Todo";
       else stage = "Backlog";
     } else if (key === "WEB") {
-      // Web App: ~68% done, on track
-      if (pct <= 68) stage = "Done";
-      else if (pct <= 82) stage = "In Progress";
-      else if (pct <= 91) stage = "Review";
-      else if (pct <= 96) stage = "Todo";
+      // Web App: 58 done, 30 open (~66% done, medium risk)
+      if (i <= 58) stage = "Done";
+      else if (i <= 70) stage = "In Progress";
+      else if (i <= 78) stage = "Review";
+      else if (i <= 84) stage = "Todo";
       else stage = "Backlog";
     } else if (key === "PLT") {
-      // Platform & Infra: ~79% done, high velocity
-      if (pct <= 79) stage = "Done";
-      else if (pct <= 89) stage = "In Progress";
-      else if (pct <= 95) stage = "Review";
+      // Platform & Infra: 82 done, 22 open (~79% done, high velocity, low risk)
+      if (i <= 82) stage = "Done";
+      else if (i <= 92) stage = "In Progress";
+      else if (i <= 98) stage = "Review";
       else stage = "Todo";
+    } else if (key === "DAT") {
+      // Data Pipeline: 22 done, 34 open (high risk due to pipeline bottlenecks)
+      if (i <= 22) stage = "Done";
+      else if (i <= 36) stage = "In Progress";
+      else if (i <= 44) stage = "Review";
+      else if (i <= 48) stage = "Changes Requested";
+      else if (i <= 53) stage = "Todo";
+      else stage = "Backlog";
     } else {
-      // General balanced distribution
+      // General balanced distribution for secondary demo workspaces
       if (pct <= 55) stage = "Done";
       else if (pct <= 75) stage = "In Progress";
       else if (pct <= 85) stage = "Review";
@@ -1375,29 +1450,47 @@ async function buildProject(
     const isUnassigned = i % 10 === 0;
     const assigneeId = isUnassigned ? undefined : allUsers[(i + projectIndex * 2) % allUsers.length];
 
-    // Spread createdAt across working hours in the last 14 days
-    const daysAgo = Math.max(1, Math.min(14, Math.floor(((targetCount - i + 1) / targetCount) * 12) + (i % 3)));
-    const issueCreatedAt = getRealisticWorkingTimestamp(now, daysAgo, i + projectIndex * 19);
+    // Spread createdAt across working hours
+    let daysAgo: number;
+    if (stage === "Done") {
+      // Spread completed work across the last 55 days (8 weeks)
+      daysAgo = Math.max(2, Math.min(55, Math.floor(((targetCount - i + 1) / targetCount) * 52) + (i % 4)));
+    } else {
+      // Open issues active in the last 1-28 days
+      daysAgo = Math.max(1, Math.min(28, Math.floor(((targetCount - i + 1) / Math.max(1, targetCount - 25)) * 25) + (i % 3)));
+    }
+    const issueCreatedAt = getRealisticWorkingTimestamp(now, daysAgo + 5, i + projectIndex * 19);
 
     // StartedAt and CompletedAt during working hours
     let startedAt: number | undefined = undefined;
     let completedAt: number | undefined = undefined;
-    const cycleDays = Math.max(1, Math.min(6, (i % 5) + 1));
+    const cycleDays = Math.max(1, Math.min(7, (i % 5) + 2));
 
     if (stage === "Done") {
-      startedAt = getRealisticWorkingTimestamp(now, Math.max(daysAgo - 1, 2), i + 31);
-      completedAt = getRealisticWorkingTimestamp(now, Math.max(daysAgo - 1 - cycleDays, 1), i + 47);
-      if (completedAt <= startedAt) completedAt = startedAt + 4 * 60 * 60 * 1000;
+      startedAt = getRealisticWorkingTimestamp(now, daysAgo + cycleDays, i + 31);
+      completedAt = getRealisticWorkingTimestamp(now, daysAgo, i + 47);
+      if (completedAt <= startedAt) completedAt = startedAt + cycleDays * DAY;
     } else if (stage === "In Progress" || stage === "Review" || stage === "Changes Requested") {
       startedAt = getRealisticWorkingTimestamp(now, Math.max(daysAgo - 1, 1), i + 31);
     }
 
-    // Due date: ~10% overdue on active issues (especially in MOB), some upcoming
+    // Due date:
+    // Overdue open issues create risk
     let dueDate: number | undefined = undefined;
-    if ((key === "MOB" && (i === 3 || i === 7)) || (i % 9 === 1 && stage !== "Done")) {
-      dueDate = getRealisticWorkingTimestamp(now, Math.floor(Math.random() * 3) + 1, i + 11); // overdue
-    } else if (i % 3 === 0 && stage !== "Done") {
-      dueDate = now + (Math.floor(Math.random() * 8) + 2) * DAY;
+    if (stage !== "Done") {
+      if (key === "MOB" && (i === 30 || i === 31 || i === 34 || i === 42)) {
+        // Overdue issues in MOB -> triggers High/Critical risk (open issue i=30 is also an overdue blocker)
+        dueDate = getRealisticWorkingTimestamp(now, 2 + (i % 4), i + 11);
+      } else if (key === "DAT" && (i === 23 || i === 25)) {
+        // Overdue issues in DAT -> triggers High risk
+        dueDate = getRealisticWorkingTimestamp(now, 3, i + 11);
+      } else if (key === "WEB" && i === 59) {
+        // 1 overdue issue in WEB -> Medium risk
+        dueDate = getRealisticWorkingTimestamp(now, 2, i + 11);
+      } else if (i % 4 === 0) {
+        // Upcoming due dates in the next 3-14 days
+        dueDate = now + (3 + (i % 10)) * DAY;
+      }
     }
 
     const statusId = statusMap.get(stage) || statusMap.get("Todo")!;
@@ -1420,6 +1513,9 @@ async function buildProject(
     });
 
     createdIssueIds.push(issueId);
+    if (stage !== "Done") {
+      openIssueIds.push(issueId);
+    }
 
     // Apply 1 to 3 labels to most issues (~80%)
     if (labels.length > 0 && i % 5 !== 0) {
@@ -1442,13 +1538,18 @@ async function buildProject(
       entityType: "issue",
       entityId: issueId,
       eventType: "issue.created",
-      payload: { title, identifier: `${key}-${i}` },
+      payload: {
+        title,
+        issueKey: `${key}-${i}`,
+        identifier: `${key}-${i}`,
+      },
       createdAt: issueCreatedAt,
     });
 
     // Activity event: assignment
     if (assigneeId) {
       const assignedTime = Math.min(now - 1000, issueCreatedAt + 2 * 60 * 60 * 1000);
+      const assigneeUser = await ctx.db.get(assigneeId);
       await ctx.db.insert("activityEvents", {
         workspaceId,
         projectId,
@@ -1456,7 +1557,12 @@ async function buildProject(
         entityType: "issue",
         entityId: issueId,
         eventType: "issue.assigned",
-        payload: { assigneeId },
+        payload: {
+          issueKey: `${key}-${i}`,
+          identifier: `${key}-${i}`,
+          assigneeId,
+          assigneeName: assigneeUser?.name || "a teammate",
+        },
         createdAt: assignedTime,
       });
     }
@@ -1470,7 +1576,14 @@ async function buildProject(
         entityType: "issue",
         entityId: issueId,
         eventType: "issue.status_changed",
-        payload: { from: "Todo", to: "In Progress" },
+        payload: {
+          issueKey: `${key}-${i}`,
+          identifier: `${key}-${i}`,
+          from: "Todo",
+          to: "In Progress",
+          fromStatus: "Todo",
+          toStatus: "In Progress",
+        },
         createdAt: startedAt,
       });
     }
@@ -1489,7 +1602,14 @@ async function buildProject(
         entityType: "issue",
         entityId: issueId,
         eventType: "issue.status_changed",
-        payload: { from: "In Progress", to: "Review" },
+        payload: {
+          issueKey: `${key}-${i}`,
+          identifier: `${key}-${i}`,
+          from: "In Progress",
+          to: "Review",
+          fromStatus: "In Progress",
+          toStatus: "Review",
+        },
         createdAt: reviewEnteredAt,
       });
 
@@ -1509,7 +1629,14 @@ async function buildProject(
         entityType: "issue",
         entityId: issueId,
         eventType: "issue.status_changed",
-        payload: { from: "Review", to: "Changes Requested" },
+        payload: {
+          issueKey: `${key}-${i}`,
+          identifier: `${key}-${i}`,
+          from: "Review",
+          to: "Changes Requested",
+          fromStatus: "Review",
+          toStatus: "Changes Requested",
+        },
         createdAt: changesRequestedAt,
       });
 
@@ -1520,16 +1647,30 @@ async function buildProject(
         entityType: "issue",
         entityId: issueId,
         eventType: "issue.status_changed",
-        payload: { from: "Changes Requested", to: "In Progress" },
+        payload: {
+          issueKey: `${key}-${i}`,
+          identifier: `${key}-${i}`,
+          from: "Changes Requested",
+          to: "In Progress",
+          fromStatus: "Changes Requested",
+          toStatus: "In Progress",
+        },
         createdAt: reworkStartedAt,
       });
     }
 
     if (stage === "Review" || stage === "Changes Requested" || stage === "Done") {
-      const reviewEnteredAt = Math.min(
-        now - 1500,
-        (startedAt || issueCreatedAt) + Math.max(1, Math.floor(cycleDays / 2)) * DAY,
-      );
+      // Ensure reviewEnteredAt is strictly before completedAt for Done issues
+      let reviewEnteredAt: number;
+      if (stage === "Done" && completedAt && startedAt) {
+        reviewEnteredAt = Math.round(startedAt + (completedAt - startedAt) * 0.65);
+      } else {
+        reviewEnteredAt = Math.min(
+          now - 1500,
+          (startedAt || issueCreatedAt) + Math.max(1, Math.floor(cycleDays / 2)) * DAY,
+        );
+      }
+
       await ctx.db.insert("activityEvents", {
         workspaceId,
         projectId,
@@ -1537,7 +1678,14 @@ async function buildProject(
         entityType: "issue",
         entityId: issueId,
         eventType: "issue.status_changed",
-        payload: { from: "In Progress", to: "Review" },
+        payload: {
+          issueKey: `${key}-${i}`,
+          identifier: `${key}-${i}`,
+          from: "In Progress",
+          to: "Review",
+          fromStatus: "In Progress",
+          toStatus: "Review",
+        },
         createdAt: reviewEnteredAt,
       });
 
@@ -1561,7 +1709,11 @@ async function buildProject(
           entityType: "issue",
           entityId: issueId,
           eventType: "issue.commented",
-          payload: { bodyPreview: "Reviewed the pull request. Implementation is clean..." },
+          payload: {
+            issueKey: `${key}-${i}`,
+            identifier: `${key}-${i}`,
+            bodyPreview: "Reviewed the pull request. Implementation is clean...",
+          },
           createdAt: commentTime,
         });
       }
@@ -1585,7 +1737,14 @@ async function buildProject(
           entityType: "issue",
           entityId: issueId,
           eventType: "issue.status_changed",
-          payload: { from: "Review", to: "Changes Requested" },
+          payload: {
+            issueKey: `${key}-${i}`,
+            identifier: `${key}-${i}`,
+            from: "Review",
+            to: "Changes Requested",
+            fromStatus: "Review",
+            toStatus: "Changes Requested",
+          },
           createdAt: commentTime,
         });
       }
@@ -1598,7 +1757,14 @@ async function buildProject(
           entityType: "issue",
           entityId: issueId,
           eventType: "issue.status_changed",
-          payload: { from: "Review", to: "Done" },
+          payload: {
+            issueKey: `${key}-${i}`,
+            identifier: `${key}-${i}`,
+            from: "Review",
+            to: "Done",
+            fromStatus: "Review",
+            toStatus: "Done",
+          },
           createdAt: completedAt,
         });
       }
@@ -1636,18 +1802,23 @@ async function buildProject(
           entityType: "issue",
           entityId: issueId,
           eventType: "issue.commented",
-          payload: { bodyPreview: commentSnippets[(i + c) % commentSnippets.length].slice(0, 40) },
+          payload: {
+            issueKey: `${key}-${i}`,
+            identifier: `${key}-${i}`,
+            bodyPreview: commentSnippets[(i + c) % commentSnippets.length].slice(0, 40),
+          },
           createdAt: commentTime,
         });
       }
     }
   }
 
-  // 7. Add dependencies (~8% blocked by another issue)
-  for (let i = 0; i < createdIssueIds.length; i++) {
-    if (i % 8 === 4 && i > 2) {
-      const blockedIssueId = createdIssueIds[i];
-      const blockingIssueId = createdIssueIds[i - 2];
+  // 7. Add dependencies with realistic risk profiles
+  if (key === "MOB") {
+    // Mobile Client (Critical/High Risk): 3 unresolved blockers among open issues
+    for (let dIdx = 0; dIdx < Math.min(3, Math.floor(openIssueIds.length / 2)); dIdx++) {
+      const blockedIssueId = openIssueIds[dIdx * 2 + 1];
+      const blockingIssueId = openIssueIds[dIdx * 2];
       await ctx.db.insert("issueDependencies", {
         workspaceId,
         blockedIssueId,
@@ -1656,6 +1827,46 @@ async function buildProject(
         createdBy: ownerId,
         createdAt: projCreatedAt + 3 * DAY,
       });
+    }
+  } else if (key === "DAT") {
+    // Data Pipeline (High Risk): 2 unresolved blockers among open issues
+    for (let dIdx = 0; dIdx < Math.min(2, Math.floor(openIssueIds.length / 2)); dIdx++) {
+      const blockedIssueId = openIssueIds[dIdx * 2 + 1];
+      const blockingIssueId = openIssueIds[dIdx * 2];
+      await ctx.db.insert("issueDependencies", {
+        workspaceId,
+        blockedIssueId,
+        blockingIssueId,
+        dependencyType: "blocks",
+        createdBy: ownerId,
+        createdAt: projCreatedAt + 3 * DAY,
+      });
+    }
+  } else if (key === "WEB") {
+    // Web App (Medium Risk): 1 unresolved blocker among open issues
+    if (openIssueIds.length >= 2) {
+      await ctx.db.insert("issueDependencies", {
+        workspaceId,
+        blockedIssueId: openIssueIds[1],
+        blockingIssueId: openIssueIds[0],
+        dependencyType: "blocks",
+        createdBy: ownerId,
+        createdAt: projCreatedAt + 3 * DAY,
+      });
+    }
+  } else if (key !== "BIL" && key !== "PLT") {
+    // Generic projects in secondary demo workspaces: occasional blocker
+    for (let i = 0; i < createdIssueIds.length; i++) {
+      if (i % 8 === 4 && i > 2) {
+        await ctx.db.insert("issueDependencies", {
+          workspaceId,
+          blockedIssueId: createdIssueIds[i],
+          blockingIssueId: createdIssueIds[i - 2],
+          dependencyType: "blocks",
+          createdBy: ownerId,
+          createdAt: projCreatedAt + 3 * DAY,
+        });
+      }
     }
   }
 }

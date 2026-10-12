@@ -708,30 +708,60 @@ export function StatusPill({
 // ---------------------------------------------------------------------------
 export function WorkspaceIllustration({
   name = "",
+  iconKey,
+  emblemKey,
+  id = "",
   size = 24,
   className,
   ...props
 }: {
   name?: string;
+  iconKey?: string;
+  emblemKey?: string;
+  id?: string;
   size?: number;
   className?: string;
 } & SVGProps<SVGSVGElement>) {
-  return <EmblemIllustration name={name} size={size} className={className} {...props} />;
+  return (
+    <EmblemIllustration
+      emblemKey={iconKey || emblemKey}
+      name={name}
+      id={id}
+      size={size}
+      className={className}
+      {...props}
+    />
+  );
 }
 
 export function ProjectIllustration({
   projectKey = "",
   name = "",
+  iconKey,
+  emblemKey,
+  id = "",
   size = 18,
   className,
   ...props
 }: {
   projectKey?: string;
   name?: string;
+  iconKey?: string;
+  emblemKey?: string;
+  id?: string;
   size?: number;
   className?: string;
 } & SVGProps<SVGSVGElement>) {
-  return <EmblemIllustration name={name} id={projectKey} size={size} className={className} {...props} />;
+  return (
+    <EmblemIllustration
+      emblemKey={iconKey || emblemKey}
+      name={name}
+      id={id || projectKey}
+      size={size}
+      className={className}
+      {...props}
+    />
+  );
 }
 
 export function NotionAvatarIllustration({

@@ -96,6 +96,26 @@ export default function IssuePage() {
     depOpen && detail ? { projectId: detail.project._id, pageSize: 100 } : "skip",
   );
 
+  const sortedStatuses = useMemo(() => {
+    if (!detail) return [];
+    const order = [
+      "backlog",
+      "todo",
+      "in progress",
+      "review",
+      "changes requested",
+      "done",
+      "cancelled",
+    ];
+    return [...detail.statuses].sort((a, b) => {
+      const ia = order.indexOf(a.name.toLowerCase());
+      const ib = order.indexOf(b.name.toLowerCase());
+      const posA = ia === -1 ? (a.position ?? 99) : ia;
+      const posB = ib === -1 ? (b.position ?? 99) : ib;
+      return posA - posB;
+    });
+  }, [detail]);
+
   if (detail === null) {
     return (
       <AppShell>
@@ -124,25 +144,6 @@ export default function IssuePage() {
 
   const { issue, project, role, status, nextStatuses, canWrite } = detail;
   const identifier = `${project.key}-${issue.number}`;
-
-  const sortedStatuses = useMemo(() => {
-    const order = [
-      "backlog",
-      "todo",
-      "in progress",
-      "review",
-      "changes requested",
-      "done",
-      "cancelled",
-    ];
-    return [...detail.statuses].sort((a, b) => {
-      const ia = order.indexOf(a.name.toLowerCase());
-      const ib = order.indexOf(b.name.toLowerCase());
-      const posA = ia === -1 ? (a.position ?? 99) : ia;
-      const posB = ib === -1 ? (b.position ?? 99) : ib;
-      return posA - posB;
-    });
-  }, [detail.statuses]);
 
   const handleTransition = async (
     toStatusId: Id<"workflowStatuses">,

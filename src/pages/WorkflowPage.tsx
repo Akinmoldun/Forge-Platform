@@ -39,7 +39,6 @@ import {
 import {
   RULES,
   TransitionRulesDialog,
-  TransitionRulesPanel,
   type RuleKey,
 } from "@/components/workflow/TransitionRulesPanel";
 import {
@@ -146,13 +145,6 @@ export default function WorkflowPage() {
   }, [board, summary, statuses]);
 
   const activeStatus = statuses.find((s) => s._id === selectedStatusId) ?? null;
-  const outgoing = useMemo(
-    () =>
-      selectedStatusId
-        ? transitions.filter((t) => t.fromStatusId === selectedStatusId)
-        : transitions,
-    [transitions, selectedStatusId],
-  );
 
   const stagedCount = Object.values(pending).reduce(
     (sum, entry) => sum + Object.keys(entry).length,

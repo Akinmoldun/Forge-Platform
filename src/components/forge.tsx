@@ -24,7 +24,7 @@ export const STATUS_PALETTE: Record<string, string> = {
   cancelled: "#E5857F",
 };
 
-import { PriorityIllustration, StatusIllustration } from "@/components/Illustrations";
+import { PriorityIllustration } from "@/components/Illustrations";
 
 export function PriorityBadge({ priority }: { priority: string }) {
   return (

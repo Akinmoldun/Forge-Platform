@@ -340,7 +340,12 @@ export default function AppHome() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex size-11 items-center justify-center rounded-[12px] border border-border bg-[#FBFBFC] text-[#0D0D0D]">
-                          <WorkspaceIllustration name={w.name} size={26} />
+                          <WorkspaceIllustration
+                            name={w.name}
+                            iconKey={w.iconKey}
+                            id={w._id}
+                            size={26}
+                          />
                         </div>
                         <RoleBadge role={w.role} />
                       </div>

@@ -12,7 +12,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowRight, ChevronDown, CornerDownRight, Lock, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -54,14 +53,6 @@ export type WorkflowTransition = {
   requiresAssignee: boolean;
   requiresComment: boolean;
   requiresApproval: boolean;
-};
-
-const CATEGORY_TONE: Record<string, string> = {
-  backlog: "border-white/15 bg-white/5 text-zinc-300",
-  active: "border-sky-500/25 bg-sky-500/10 text-sky-400",
-  review: "border-amber-500/25 bg-amber-500/10 text-amber-400",
-  completed: "border-emerald-500/25 bg-emerald-500/10 text-emerald-400",
-  cancelled: "border-border bg-secondary text-muted-foreground",
 };
 
 function dueTone(dueDate: number, done: boolean): { label: string; className: string } | null {
@@ -261,7 +252,7 @@ export function WorkflowStatusColumn({
           </p>
         ) : (
           <ul className="space-y-1.5">
-            {issues.slice(0, 3).map((issue) => (
+            {issues.slice(0, max).map((issue) => (
               <WorkflowStatusNode
                 key={issue._id}
                 issue={issue}
@@ -271,9 +262,9 @@ export function WorkflowStatusColumn({
             ))}
           </ul>
         )}
-        {count > 3 && (
+        {count > max && (
           <p className="pt-1 px-1 text-[11px] text-[#575657]">
-            +{count - 3} more
+            +{count - max} more
           </p>
         )}
       </div>
