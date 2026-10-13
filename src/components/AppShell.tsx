@@ -647,10 +647,11 @@ export function AppShell({
   }
 
   // Active workspace object
+  const isWsLoading = workspaceId ? currentWorkspace === undefined && myWorkspaces === undefined : false;
   const activeWs =
     currentWorkspace?.workspace ||
     myWorkspaces?.find((w) => w._id === workspaceId) ||
-    (workspaceId
+    (workspaceId && !isWsLoading
       ? {
           _id: workspaceId as Id<"workspaces">,
           name: "Workspace",
@@ -686,9 +687,13 @@ export function AppShell({
           </div>
           {!collapsed && (
             <>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#0D0D0D]">
-                {activeWs ? activeWs.name : "Loading..."}
-              </span>
+              {isWsLoading ? (
+                <div className="h-4 w-28 rounded bg-[#EEEEF0] animate-pulse" />
+              ) : (
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#0D0D0D]">
+                  {activeWs ? activeWs.name : "Workspace"}
+                </span>
+              )}
               <ChevronDown className="size-3.5 shrink-0 text-[#575657]" aria-hidden="true" />
             </>
           )}

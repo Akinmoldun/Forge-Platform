@@ -9,7 +9,6 @@ import {
   ActivityItem,
   FilterBar,
   FilterSelect,
-  LoadingBlock,
   PageHeader,
   PageStack,
   Panel,

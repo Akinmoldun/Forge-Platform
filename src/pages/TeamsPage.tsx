@@ -25,7 +25,6 @@ import {
   FilterSelect,
   InfoHint,
   KeyValue,
-  LoadingBlock,
   MeterRow,
   PageHeader,
   PageStack,
@@ -201,10 +200,18 @@ export default function TeamsPage() {
     );
   }
 
-  if (workspace === undefined) {
+  const loading =
+    workspace === undefined ||
+    members === undefined ||
+    projects === undefined ||
+    issuesLoading;
+
+  if (loading) {
     return (
       <AppShell workspaceId={workspaceId}>
-        <LoadingBlock />
+        <PageStack>
+          <TeamsSkeleton />
+        </PageStack>
       </AppShell>
     );
   }

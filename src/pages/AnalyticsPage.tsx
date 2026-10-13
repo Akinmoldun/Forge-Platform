@@ -10,7 +10,6 @@ import {
   FilterSelect,
   InitialsAvatar,
   KeyValue,
-  LoadingBlock,
   MeterRow,
   PageHeader,
   PageStack,
@@ -188,7 +187,8 @@ export default function AnalyticsPage() {
     workspace === undefined ||
     projects === undefined ||
     members === undefined ||
-    issuesLoading;
+    issuesLoading ||
+    eventsLoading;
 
   if (workspace === null) {
     return (

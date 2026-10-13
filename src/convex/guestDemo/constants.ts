@@ -70,28 +70,28 @@ export const PIXEL_FORGE_PROJECT_SPECS: ProjectSpec[] = [
     name: "Gameplay Mechanics",
     description: "Combat responsiveness, hit detection, and camera choreography",
     iconKey: "loom",
-    targetCount: 16,
+    targetCount: 55,
   },
   {
     key: "ART",
     name: "Technical Art & Shaders",
     description: "Volumetric fog, PBR materials, and particle performance",
     iconKey: "quill",
-    targetCount: 12,
+    targetCount: 48,
   },
   {
     key: "NET",
     name: "Multiplayer Netcode",
     description: "Rollback netcode, matchmaking queues, and packet compaction",
     iconKey: "orbit",
-    targetCount: 14,
+    targetCount: 52,
   },
   {
     key: "QAT",
     name: "QA & Automation",
     description: "Soak tests, collision sweeps, and regression suites",
     iconKey: "tree",
-    targetCount: 10,
+    targetCount: 45,
   },
 ];
 
@@ -101,14 +101,14 @@ export const QUIET_HARBOR_PROJECT_SPECS: ProjectSpec[] = [
     name: "Client Portal",
     description: "Milestone sign-off, client feedback, and progress dashboards",
     iconKey: "compass",
-    targetCount: 14,
+    targetCount: 34,
   },
   {
     key: "WEB",
     name: "Marketing Websites",
     description: "Next.js performance optimization, SEO, and CMS webhooks",
     iconKey: "loom",
-    targetCount: 12,
+    targetCount: 35,
   },
   {
     key: "OPS",
@@ -125,11 +125,11 @@ export const NORTHSTAR_ISSUES_PER_PROJECT = 20;
 
 export const PIXEL_FORGE_MEMBERS_COUNT = 12; // 1 owner + 11 teammates
 export const PIXEL_FORGE_PROJECTS_COUNT = 4;
-export const PIXEL_FORGE_ISSUES_PER_PROJECT = 14;
+export const PIXEL_FORGE_ISSUES_PER_PROJECT = 50;
 
 export const QUIET_HARBOR_MEMBERS_COUNT = 6; // 1 owner + 5 teammates
 export const QUIET_HARBOR_PROJECTS_COUNT = 3;
-export const QUIET_HARBOR_ISSUES_PER_PROJECT = 12;
+export const QUIET_HARBOR_ISSUES_PER_PROJECT = 35;
 
 export interface TeammateDef {
   name: string;

@@ -16,14 +16,14 @@ import {
 import {
   FilterSelect,
   InfoHint,
-  LoadingBlock,
   PageHeader,
   PageStack,
   Panel,
   PanelEmpty,
   StatCard,
 } from "@/components/app-ui";
-import { EmptyState, ListSkeleton } from "@/components/forge";
+import { EmptyState } from "@/components/forge";
+import { WorkflowSkeleton } from "@/components/Skeletons";
 import { StatusPill } from "@/components/Illustrations";
 import { ProgressRing } from "@/components/motion";
 import {
@@ -303,10 +303,12 @@ export default function WorkflowPage() {
     );
   }
 
-  if (workspace === undefined) {
+  if (workspace === undefined || projects === undefined) {
     return (
       <AppShell workspaceId={workspaceId}>
-        <LoadingBlock />
+        <PageStack>
+          <WorkflowSkeleton />
+        </PageStack>
       </AppShell>
     );
   }
@@ -392,7 +394,7 @@ export default function WorkflowPage() {
       <AppShell workspaceId={workspaceId}>
         <PageStack>
           {header}
-          <ListSkeleton rows={4} />
+          <WorkflowSkeleton />
         </PageStack>
       </AppShell>
     );
@@ -403,7 +405,7 @@ export default function WorkflowPage() {
       <AppShell workspaceId={workspaceId}>
         <PageStack>
           {header}
-          <ListSkeleton rows={4} />
+          <WorkflowSkeleton />
         </PageStack>
       </AppShell>
     );

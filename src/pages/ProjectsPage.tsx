@@ -83,7 +83,8 @@ export default function ProjectsPage() {
   }, [riskEntries]);
 
   const canWrite = workspace ? workspace.role !== "viewer" : false;
-  const loading = projects === undefined || members === undefined || risksLoading;
+  const loading =
+    workspace === undefined || projects === undefined || members === undefined || risksLoading;
 
 
   const [populatingAll, setPopulatingAll] = useState(false);

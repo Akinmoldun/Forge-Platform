@@ -30,7 +30,6 @@ import { DragScroll } from "@/components/DragScroll";
 import { cn } from "@/lib/utils";
 import {
   EmptyState,
-  ListSkeleton,
   formatDate,
   formatDuration,
   timeAgo,
@@ -199,7 +198,24 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   if (project === undefined) {
     return (
       <AppShell>
-        <ListSkeleton rows={4} />
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-3">
+            <div className="size-8 rounded-[8px] bg-[#EEEEF0] animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="h-6 w-48 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+              <div className="h-3.5 w-32 rounded-[4px] bg-[#EEEEF0] animate-pulse" />
+            </div>
+          </div>
+          <div className="pt-6">
+            {tab === "analytics" ? (
+              <ProjectAnalyticsSkeleton />
+            ) : view === "board" ? (
+              <BoardSkeleton />
+            ) : (
+              <ListTableSkeleton />
+            )}
+          </div>
+        </div>
       </AppShell>
     );
   }
@@ -475,7 +491,7 @@ function AnalyticsTab({
   const [range, setRange] = useState<"30" | "90" | "180" | "all">("90");
   const [showAllMembers, setShowAllMembers] = useState(false);
 
-  if (summary === undefined) return <ProjectAnalyticsSkeleton />;
+  if (summary === undefined || risk === undefined) return <ProjectAnalyticsSkeleton />;
   if (summary === null) {
     return <EmptyState title="Project not found" description="It may have been deleted, or you may not have access." />;
   }
@@ -679,19 +695,28 @@ function AnalyticsTab({
 
             <div className="divide-y divide-[rgba(0,0,0,0.06)] pt-1">
               <div className="flex items-center justify-between py-2 text-xs">
-                <span className="text-[#575657]">Avg cycle time</span>
+                <span className="text-[#575657] flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[#6E94CB] shrink-0" aria-hidden="true" />
+                  <span>Avg cycle time</span>
+                </span>
                 <span className="font-medium text-[#0D0D0D] tabular-nums">
                   {formatDuration(summary.avgCycleDays)}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 text-xs">
-                <span className="text-[#575657]">Median cycle time</span>
+                <span className="text-[#575657] flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[#6E94CB]/60 shrink-0" aria-hidden="true" />
+                  <span>Median cycle time</span>
+                </span>
                 <span className="font-medium text-[#0D0D0D] tabular-nums">
                   {formatDuration(summary.medianCycleDays)}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 text-xs">
-                <span className="text-[#575657]">Review wait</span>
+                <span className="text-[#575657] flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[#D78FC6] shrink-0" aria-hidden="true" />
+                  <span>Review wait</span>
+                </span>
                 <span className="font-medium text-[#0D0D0D] tabular-nums">
                   {formatDuration(summary.avgReviewWaitDays)}
                 </span>
@@ -732,12 +757,31 @@ function AnalyticsTab({
                           )}
                         </div>
                       </div>
-                      <div className="h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-[#0D0D0D]/80"
-                          style={{ width: `${barPct}%` }}
-                        />
-                      </div>
+                      {(() => {
+                        const overdueShare = w.openIssues > 0 ? (w.overdue / w.openIssues) * 100 : 0;
+                        const normalShare = 100 - overdueShare;
+                        return (
+                          <div className="h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
+                            <div
+                              className="h-full flex overflow-hidden rounded-full"
+                              style={{ width: `${barPct}%` }}
+                            >
+                              <div
+                                className="h-full bg-[#0D0D0D]/80"
+                                style={{ width: `${normalShare}%` }}
+                                title={`${w.openIssues - w.overdue} on track`}
+                              />
+                              {w.overdue > 0 && (
+                                <div
+                                  className="h-full bg-[#D78FC6]"
+                                  style={{ width: `${overdueShare}%` }}
+                                  title={`${w.overdue} overdue`}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -824,7 +868,24 @@ function AnalyticsTab({
             <div className="space-y-3">
               <p className="text-xs font-medium text-[#575657] pb-0.5">Status</p>
               {summary.byStatus.map((s) => {
-                const tint = s.color && s.color !== "#8b8b93" ? s.color : "#6E94CB";
+                const norm = s.statusName.toLowerCase();
+                const tint =
+                  (s.color && s.color !== "#8b8b93" ? s.color : undefined) ||
+                  (norm === "backlog"
+                    ? "#9A9A9F"
+                    : norm === "todo" || norm === "unstarted"
+                    ? "#6E94CB"
+                    : norm === "in progress" || norm === "active"
+                    ? "#7957EC"
+                    : norm === "review"
+                    ? "#D78FC6"
+                    : norm === "changes requested"
+                    ? "#D6C6A1"
+                    : norm === "done" || norm === "completed"
+                    ? "#83DD79"
+                    : norm === "cancelled"
+                    ? "#E5857F"
+                    : "#6E94CB");
                 const pct = summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0;
                 return (
                   <div key={s.statusName} className="space-y-1">

@@ -71,7 +71,7 @@ export default function OverviewPage() {
   );
   const { entries: summaryEntries, loading: summariesLoading } = useProjectSummaries(projectIds);
   const { entries: riskEntries, loading: risksLoading } = useProjectRisks(projectIds);
-  const { issues: projectIssues } = useProjectIssues(projectIds);
+  const { issues: projectIssues, loading: issuesLoading } = useProjectIssues(projectIds);
 
   const realRollup = useMemo(
     () =>
@@ -210,7 +210,12 @@ export default function OverviewPage() {
   };
 
   const loading =
-    workspace === undefined || projects === undefined || summariesLoading || risksLoading;
+    workspace === undefined ||
+    projects === undefined ||
+    summariesLoading ||
+    risksLoading ||
+    activity === undefined ||
+    (projectIds.length > 0 && issuesLoading);
 
   if (workspace === null) {
     return (
