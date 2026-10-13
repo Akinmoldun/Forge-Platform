@@ -29,6 +29,18 @@ const rawAuth = convexAuth({
   signIn: {
     maxFailedAttempsPerHour: 5,
   },
+  callbacks: {
+    async redirect({ redirectTo }) {
+      if (redirectTo.startsWith("http://") || redirectTo.startsWith("https://")) {
+        return redirectTo;
+      }
+      const baseUrl = (process.env.SITE_URL || "https://ideal-corgi-476.convex.site").replace(/\/$/, "");
+      if (redirectTo.startsWith("/")) {
+        return `${baseUrl}${redirectTo}`;
+      }
+      return `${baseUrl}/${redirectTo}`;
+    },
+  },
 });
 
 export const { auth, signOut, store, isAuthenticated } = rawAuth;

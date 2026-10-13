@@ -252,7 +252,10 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     setIsGitHubLoading(true);
 
     try {
-      await signIn('github', { redirectTo: safeRedirect });
+      const destination = typeof window !== 'undefined' && window.location.origin
+        ? `${window.location.origin}${safeRedirect.startsWith('/') ? safeRedirect : '/' + safeRedirect}`
+        : safeRedirect;
+      await signIn('github', { redirectTo: destination });
     } catch (err: unknown) {
       console.error('GitHub sign-in error:', err);
       const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
