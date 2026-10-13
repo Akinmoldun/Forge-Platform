@@ -31,14 +31,13 @@ const rawAuth = convexAuth({
   },
   callbacks: {
     async redirect({ redirectTo }) {
-      if (redirectTo.startsWith("http://") || redirectTo.startsWith("https://")) {
-        return redirectTo;
+      const target = (typeof redirectTo === "string" ? redirectTo : "/app").trim() || "/app";
+      if (target.startsWith("http://") || target.startsWith("https://")) {
+        return target;
       }
-      const baseUrl = (process.env.SITE_URL || "https://ideal-corgi-476.convex.site").replace(/\/$/, "");
-      if (redirectTo.startsWith("/")) {
-        return `${baseUrl}${redirectTo}`;
-      }
-      return `${baseUrl}/${redirectTo}`;
+      const baseUrl = (process.env.SITE_URL || "https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app").replace(/\/+$/, "");
+      const cleanPath = target.startsWith("/") ? target : `/${target}`;
+      return `${baseUrl}${cleanPath}`;
     },
   },
 });

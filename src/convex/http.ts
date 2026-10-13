@@ -13,6 +13,8 @@ function renderPortalHtml(path: string, url: URL): string {
   const errorDescription = url.searchParams.get("error_description");
   const deploymentName = process.env.CONVEX_DEPLOYMENT || "ideal-corgi-476";
 
+  const siteUrl = (process.env.SITE_URL || "https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app").replace(/\/+$/, "");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -288,7 +290,7 @@ function renderPortalHtml(path: string, url: URL): string {
         <strong>The Web Application Client</strong> (your interactive canvas, workspaces, and UI) runs in your Google AI Studio preview window or hosted web domain.
       </p>
       <div style="margin-top: 16px;">
-        <a href="http://localhost:3000" class="btn btn-primary">Open Local Applet (Port 3000)</a>
+        <a id="btn-local-app" href="${siteUrl}" class="btn btn-primary">Open Forge App</a>
         <a href="/health" class="btn btn-secondary">Check /health API</a>
       </div>
     </div>
@@ -301,7 +303,7 @@ function renderPortalHtml(path: string, url: URL): string {
           <span style="color: #4ade80;">Mapped (Portal)</span>
         </li>
         <li>
-          <span><span class="route-method">GET</span> /app, /login</span>
+          <span><span class="route-method">GET</span> /app, /login, /signup, /auth</span>
           <span style="color: #4ade80;">Mapped (Portal)</span>
         </li>
         <li>
@@ -313,8 +315,8 @@ function renderPortalHtml(path: string, url: URL): string {
           <span style="color: #4ade80;">Convex Auth OAuth Engine</span>
         </li>
         <li>
-          <span><span class="route-method">GET</span> /.well-known/openid-configuration</span>
-          <span style="color: #4ade80;">OpenID Connect Discovery</span>
+          <span><span class="route-method">GET</span> /* (Prefix)</span>
+          <span style="color: #4ade80;">Catch-all Portal</span>
         </li>
       </ul>
     </div>
@@ -325,20 +327,52 @@ function renderPortalHtml(path: string, url: URL): string {
   </div>
 
   <script>
-    // If opened via popup or redirect from an active frontend, communicate status
-    try {
-      if (window.opener && window.opener !== window) {
-        window.opener.postMessage({ type: 'CONVEX_AUTH_CALLBACK', url: window.location.href }, '*');
+    (function() {
+      // If opened via popup or redirect from an active frontend, communicate status
+      try {
+        if (window.opener && window.opener !== window) {
+          window.opener.postMessage({ type: 'CONVEX_AUTH_CALLBACK', url: window.location.href }, '*');
+        }
+      } catch (e) {
+        // Ignore cross-origin frame access
       }
-    } catch (e) {
-      // Ignore cross-origin frame access
-    }
+
+      // Detect return url
+      var params = new URLSearchParams(window.location.search);
+      var candidate = params.get('returnTo') || params.get('redirect') || params.get('origin');
+      var target = '';
+      if (candidate && (candidate.indexOf('http://') === 0 || candidate.indexOf('https://') === 0)) {
+        target = candidate;
+      } else if (document.referrer && document.referrer.indexOf(window.location.host) === -1) {
+        target = document.referrer;
+      }
+
+      var returnBtn = document.getElementById('btn-return');
+      if (returnBtn && target) {
+        returnBtn.onclick = function() {
+          window.location.href = target;
+        };
+        try {
+          var u = new URL(target);
+          returnBtn.textContent = '← Return to App (' + u.host + ')';
+        } catch (e) {}
+      }
+
+      var localBtn = document.getElementById('btn-local-app');
+      if (localBtn && target) {
+        localBtn.href = target;
+        try {
+          var u2 = new URL(target);
+          localBtn.textContent = 'Open App (' + u2.host + ')';
+        } catch (e) {}
+      }
+    })();
   </script>
 </body>
 </html>`;
 }
 
-// 1. Health check JSON endpoint
+// 1. Health check JSON endpoint (GET & OPTIONS)
 http.route({
   path: "/health",
   method: "GET",
@@ -350,7 +384,7 @@ http.route({
           deployment: process.env.CONVEX_DEPLOYMENT || "ideal-corgi-476",
           timestamp: new Date().toISOString(),
           backend: "Convex Cloud",
-          routes: ["/", "/app", "/login", "/health", "/api/auth/*"],
+          routes: ["/", "/app", "/login", "/signup", "/auth", "/health", "/api/auth/*"],
         },
         null,
         2
@@ -363,6 +397,21 @@ http.route({
         },
       }
     );
+  }),
+});
+
+http.route({
+  path: "/health",
+  method: "OPTIONS",
+  handler: httpAction(async () => {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    });
   }),
 });
 
@@ -414,7 +463,39 @@ http.route({
   }),
 });
 
-// 5. Catch-all GET route for any other subpath so it NEVER returns 404 "No matching routes found"
+// 5. Signup route "/signup"
+http.route({
+  path: "/signup",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const html = renderPortalHtml("/signup", url);
+    return new Response(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+      },
+    });
+  }),
+});
+
+// 6. Auth alias route "/auth"
+http.route({
+  path: "/auth",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const url = new URL(request.url);
+    const html = renderPortalHtml("/auth", url);
+    return new Response(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+      },
+    });
+  }),
+});
+
+// 7. Catch-all GET route for any other subpath so it NEVER returns 404 "No matching routes found"
 http.route({
   pathPrefix: "/",
   method: "GET",
