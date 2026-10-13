@@ -3,14 +3,67 @@
 
 import { convexAuth } from "@convex-dev/auth/server";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
+import GitHub from "@auth/core/providers/github";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { emailOtp } from "./auth/emailOtp";
 import { normalizeEmail } from "./authCheck";
 
+const gitHubProvider = GitHub({
+  clientId: process.env.AUTH_GITHUB_ID,
+  clientSecret: process.env.AUTH_GITHUB_SECRET,
+  allowDangerousEmailAccountLinking: false,
+  userinfo: {
+    url: "https://api.github.com/user",
+    async request({ tokens, provider }) {
+      const profile = await fetch(provider.userinfo?.url, {
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+          "User-Agent": "authjs",
+        },
+      }).then(async (res) => await res.json());
+
+      if (tokens.access_token) {
+        try {
+          const res = await fetch("https://api.github.com/user/emails", {
+            headers: {
+              Authorization: `Bearer ${tokens.access_token}`,
+              "User-Agent": "authjs",
+            },
+          });
+          if (res.ok) {
+            const emails = (await res.json()) as Array<{
+              email: string;
+              primary: boolean;
+              verified: boolean;
+            }>;
+            const primary = emails.find((e) => e.primary) ?? emails[0];
+            if (primary) {
+              profile.email = primary.email;
+              profile.email_verified = Boolean(primary.verified);
+            }
+          }
+        } catch {
+          // Gracefully fallback to public profile email
+        }
+      }
+      return profile;
+    },
+  },
+  profile(profile: any) {
+    return {
+      id: profile.id.toString(),
+      name: profile.name ?? profile.login,
+      email: profile.email,
+      image: profile.avatar_url,
+      emailVerified: profile.email_verified === true,
+    };
+  },
+});
+
 const rawAuth = convexAuth({
-  providers: [emailOtp, Anonymous],
+  providers: [gitHubProvider, emailOtp, Anonymous],
   signIn: {
     maxFailedAttempsPerHour: 5,
   },
@@ -32,8 +85,11 @@ export const signIn = action({
     calledBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Guest (anonymous) and token refreshes pass through directly
-    if (args.provider === "anonymous" || args.refreshToken !== undefined) {
+    // Guest (anonymous), GitHub OAuth, and token refreshes pass through directly
+    if (args.provider === "anonymous" || args.provider === "github" || args.refreshToken !== undefined) {
+      if (args.provider === "github" && (!process.env.AUTH_GITHUB_ID || !process.env.AUTH_GITHUB_SECRET)) {
+        throw new Error("GitHub sign-in is not configured. Missing AUTH_GITHUB_ID or AUTH_GITHUB_SECRET.");
+      }
       return await (rawAuth.signIn as any)._handler(ctx, args);
     }
 

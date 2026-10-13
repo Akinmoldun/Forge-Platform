@@ -35,8 +35,10 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
+  const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestError, setGuestError] = useState<string | null>(null);
+  const [githubError, setGithubError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +95,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isSubmitting || isGuestLoading) return;
+    if (isSubmitting || isGuestLoading || isGitHubLoading) return;
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return;
@@ -105,6 +107,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
     setIsSubmitting(true);
     setError(null);
+    setGithubError(null);
 
     try {
       const formData = new FormData();
@@ -224,9 +227,27 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     }
   };
 
-  const handleGuestSignIn = async () => {
-    if (isGuestLoading || isSubmitting) return;
+  const handleGitHubSignIn = async () => {
+    if (isGitHubLoading || isSubmitting || isGuestLoading) return;
+    setGithubError(null);
+    setError(null);
     setGuestError(null);
+    setIsGitHubLoading(true);
+
+    try {
+      await signIn('github', { redirectTo: safeRedirect });
+    } catch (err: unknown) {
+      console.error('GitHub sign-in error:', err);
+      setGithubError("Couldn't sign in with GitHub, try again");
+      setIsGitHubLoading(false);
+    }
+  };
+
+  const handleGuestSignIn = async () => {
+    if (isGuestLoading || isSubmitting || isGitHubLoading) return;
+    setGuestError(null);
+    setError(null);
+    setGithubError(null);
 
     if (isAuthenticated) {
       navigate(safeRedirect, { replace: true });
@@ -275,8 +296,61 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               : "No password. We'll email you a one-time code."}
           </p>
 
+          {/* Continue with GitHub Button */}
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={handleGitHubSignIn}
+              disabled={isGitHubLoading || isSubmitting || isGuestLoading}
+              className="w-full h-[48px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[15px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 cursor-pointer select-none"
+              style={{ boxShadow: 'none' }}
+            >
+              {isGitHubLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
+                  <span>Connecting to GitHub...</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4 shrink-0 fill-current text-[#0D0D0D]"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                    />
+                  </svg>
+                  <span>Continue with GitHub</span>
+                </>
+              )}
+            </button>
+
+            {githubError && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
+              >
+                {githubError}
+              </p>
+            )}
+          </div>
+
+          {/* Divider "or" */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-black/[0.08]" />
+            </div>
+            <div className="relative flex justify-center text-[13px]">
+              <span className="bg-white px-3 text-[#575657]">or</span>
+            </div>
+          </div>
+
           {/* Email form */}
-          <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
             <div>
               <label
                 htmlFor="auth-email"
@@ -295,7 +369,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                   setEmail(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={isSubmitting || isGuestLoading}
+                disabled={isSubmitting || isGuestLoading || isGitHubLoading}
                 placeholder="name@example.com"
                 required
                 className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
@@ -315,7 +389,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             {/* Primary button */}
             <button
               type="submit"
-              disabled={isSubmitting || isGuestLoading || !email.trim()}
+              disabled={isSubmitting || isGuestLoading || isGitHubLoading || !email.trim()}
               className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
               style={{ boxShadow: 'none' }}
             >
@@ -347,7 +421,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             <button
               type="button"
               onClick={handleGuestSignIn}
-              disabled={isGuestLoading || isSubmitting}
+              disabled={isGuestLoading || isSubmitting || isGitHubLoading}
               className="w-full h-[48px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[15px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
               style={{ boxShadow: 'none' }}
             >

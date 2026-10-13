@@ -134,7 +134,7 @@ function AccountMenu({
     }
   }, [user, ensureWelcomeEmail]);
 
-  const isGuest = user?.isAnonymous || !user || !user.email;
+  const isGuest = Boolean(user?.isAnonymous);
   const displayName = user?.name?.trim() || user?.email?.trim() || (isGuest ? "Guest" : "User");
 
   const handleSaveName = async () => {
