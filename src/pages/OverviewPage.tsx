@@ -59,12 +59,23 @@ export default function OverviewPage() {
   const { user } = useAuth();
   const userId = user?._id || user?.email || "anonymous";
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: id });
-  const projects = useQuery(api.projects.listProjects, { workspaceId: id });
-  const activity = useQuery(api.analytics.listWorkspaceActivity, {
-    workspaceId: id,
-    limit: 12,
-  });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: id } : "skip"
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    workspaceId ? { workspaceId: id } : "skip"
+  );
+  const activity = useQuery(
+    api.analytics.listWorkspaceActivity,
+    workspaceId
+      ? {
+          workspaceId: id,
+          limit: 12,
+        }
+      : "skip"
+  );
 
   const projectIds = useMemo(
     () => (projects ?? []).map((p) => p._id) as Id<"projects">[],

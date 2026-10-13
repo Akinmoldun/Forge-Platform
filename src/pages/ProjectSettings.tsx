@@ -40,10 +40,13 @@ export default function ProjectSettings() {
   const pid = projectId as Id<"projects">;
   const navigate = useNavigate();
 
-  const project = useQuery(api.projects.getProject, { projectId: pid });
+  const project = useQuery(
+    api.projects.getProject,
+    projectId ? { projectId: pid } : "skip"
+  );
   const members = useQuery(
     api.workspaces.listMembers,
-    project?.project.workspaceId ? { workspaceId: project.project.workspaceId } : "skip",
+    project?.project?.workspaceId ? { workspaceId: project.project.workspaceId } : "skip",
   );
 
   const updateProject = useMutation(api.projects.updateProject);

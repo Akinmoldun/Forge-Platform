@@ -8,9 +8,10 @@ interface SignupPageProps {
 }
 
 export default function SignupPage({ redirectAfterAuth = '/app' }: SignupPageProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
-  if (isAuthenticated) {
+  // If already signed in with a real account (non-anonymous), redirect to app
+  if (isAuthenticated && !user?.isAnonymous) {
     return <Navigate to={redirectAfterAuth} replace />;
   }
 

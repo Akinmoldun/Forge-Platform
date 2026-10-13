@@ -71,14 +71,31 @@ export default function TeamsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: wid });
-  const members = useQuery(api.workspaces.listMembers, { workspaceId: wid });
-  const projects = useQuery(api.projects.listProjects, { workspaceId: wid });
-  const invitations = useQuery(api.workspaces.listInvitations, { workspaceId: wid });
-  const activity = useQuery(api.analytics.listWorkspaceActivity, {
-    workspaceId: wid,
-    limit: 200,
-  });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const members = useQuery(
+    api.workspaces.listMembers,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const invitations = useQuery(
+    api.workspaces.listInvitations,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const activity = useQuery(
+    api.analytics.listWorkspaceActivity,
+    workspaceId
+      ? {
+          workspaceId: wid,
+          limit: 200,
+        }
+      : "skip"
+  );
 
   const updateRole = useMutation(api.workspaces.updateMemberRole);
   const removeMember = useMutation(api.workspaces.removeMember);

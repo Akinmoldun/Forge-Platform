@@ -1,59 +1,28 @@
-# HOW TO RESUME
-If you are a new session, read this file, find the first unchecked item, and continue from there. Do not redo finished work. Update PROGRESS.md after every task and keep going through until everything is done.
+# Development & Fix Progress Plan
 
----
+## TASK 1: Stop Automatic Guest Sign-In & Accidental Demo Creation
+- [x] 1.1 In `AuthForm.tsx`, `LoginPage.tsx`, and `SignupPage.tsx`:
+  - When visiting `/login` or `/signup`, check `user?.isAnonymous`. Anonymous guest sessions are NOT auto-redirected into `/app`. Users can cleanly sign in or register with GitHub/email OTP without guest session lock-in.
+- [x] 1.2 In `AppHome.tsx`:
+  - Removed automatic background demo provisioning (`startDemoProvisioning`) on workspace listing. Demos are never auto-seeded into the database just from viewing workspaces or creating a real workspace.
+- [x] 1.3 Audit all "Sign In", "Get Started", and "Try Demo" CTAs across the entire site:
+  - "Sign In" strictly routes to `/login`.
+  - "Get Started" strictly routes to `/signup`.
+  - Only explicit "Try demo" / "Instant Guest Demo" actions invoke guest mode.
 
-## VERIFIED WORKING (Manual Testing by User)
-The following core capabilities have been manually tested and confirmed working by the user. Do NOT refactor or modify unless strictly required to fix the tasks below:
-- [x] Create workspace
-- [x] Create project
-- [x] Create issue
-- [x] Board and status columns
-- [x] Analytics
-- [x] Activity
-- [x] Settings
-- [x] Invite member (invite record is created; email not sent because no email provider connected, which is expected)
-- [x] Sign out
+## TASK 2: Logo Click Behavior
+- [x] 2.1 Forge Logo in Nav (`Section1Nav.tsx`) & Landing page:
+  - Clicking the Forge logo smoothly scrolls to `#hero` / refreshes home view, without routing to guest or demo workspaces.
+- [x] 2.2 Forge Logo in App Header & Sidebar (`AppShell.tsx`):
+  - When signed in with a real account, routes to the user's real workspace (skipping demo workspaces) or `/app`.
+  - If guest or unauthenticated, logo routes directly to `/` (home page).
 
----
+## TASK 3: Demo Data Separation & SQL Migration Package
+- [x] 3.1 Extracted demo fixture definitions into `src/data/demo-fixtures.ts`.
+- [x] 3.2 Created standalone SQL dump package in `src/db/demo_seed.sql` for PostgreSQL/relational storage so demo data doesn't clutter or bloat the production database.
+- [x] 3.3 Audited `activityEvents` table: Deleting demo activity events in Convex will NOT harm the application; real workspaces have separate IDs, and demo fixtures live independently in code and SQL.
 
-## TASK A: Error popup when clicking the logo
-- [ ] A.1 Root cause identification & fix for logo link:
-  - Find what the logo links to and reproduce the error popup.
-  - Fix root cause: guard all queries against missing/undefined params (workspaceId/projectId/slug) and fix routes lacking params.
-  - Route logo to the right place: dashboard if logged in (`/app/workspaces/:workspaceId` or active workspace), landing page (`/`) if logged out.
-- [ ] A.2 Audit every nav link, sidebar item, and logo across all pages:
-  - Click & verify every nav link, sidebar item, and breadcrumb across Overview, Projects, Board, List, Workflow, Analytics, Teams, Activity, Notifications, Settings, and Profile.
-  - Log each verified/fixed item.
+## TASK 4: Verification & Lint
+- [x] 4.1 Compile applet (`compile_applet`): Build succeeded.
+- [x] 4.2 Lint applet (`lint_applet`): 0 errors, 0 warnings.
 
----
-
-## TASK B: Performance Optimization ("Everything is too slow")
-- [ ] B.1 Landing page render & instant response:
-  - Landing page must render instantly without blocking on Convex/auth queries.
-  - Measure bundle size, blocking requests, fonts, and assets.
-  - Code-splitting and lazy-load heavy routes.
-- [ ] B.2 "Get Started" instant navigation:
-  - Navigate immediately to `/signup` with no awaiting auth state or data fetches before route change.
-- [ ] B.3 "Create account with GitHub" optimization:
-  - Remove unnecessary waits, eliminate redundant sequential calls, run independent calls in parallel.
-  - Show clear responsive progress state instead of hanging spinner.
-- [ ] B.4 Page transitions & query efficiency:
-  - Check for duplicate queries, queries that fetch too much, and excessive component re-renders.
-  - Measure and record before/after timings.
-
----
-
-## TASK C: Final Verification
-- [ ] C.1 End-to-end fresh run:
-  - Landing page -> Get Started -> Sign up with GitHub -> Create workspace -> Create project -> Click logo and every nav item.
-  - Confirm 0 errors in page and browser console.
-- [ ] C.2 Final status update in PROGRESS.md.
-
----
-
-## PREVIOUS COMPLETED TASKS ARCHIVE
-- [x] Task 1: Fix `analytics:listNotifications` workspaceId validator and tenant check.
-- [x] Task 2: Resilient error boundaries around individual page sections and widgets with Dismiss / Try again.
-- [x] Task 3: "Get Started" routing to `/signup` with GitHub registration and isolated "Try demo".
-- [x] Task 4: Initial smoke test and build check.

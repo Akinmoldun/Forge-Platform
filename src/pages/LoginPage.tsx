@@ -8,9 +8,10 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ redirectAfterAuth = '/app' }: LoginPageProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
-  if (isAuthenticated) {
+  // If already signed in with a real account (non-anonymous), redirect to app
+  if (isAuthenticated && !user?.isAnonymous) {
     return <Navigate to={redirectAfterAuth} replace />;
   }
 

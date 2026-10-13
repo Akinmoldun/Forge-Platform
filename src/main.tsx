@@ -15,7 +15,7 @@ import "@fontsource/hanken-grotesk/500.css";
 import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/hanken-grotesk/700.css";
 import "./index.css";
-import HomePage from "./pages/HomePage";
+const HomePage = safeLazy(() => import("./pages/HomePage"));
 
 /** Safe lazy loader that auto-retries failed dynamic imports (e.g. dev server restarts) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

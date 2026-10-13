@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -446,13 +446,19 @@ export function AppShell({
 
   const unreadCount = notifications?.unreadCount ?? 0;
 
-  // Logo destination: dashboard if logged in, landing page if logged out
+  // Logo destination: real workspace dashboard if logged in with real account; home page ('/') if guest or logged out
   const dashboardHref = useMemo(() => {
-    if (!user) return "/";
-    if (effectiveWorkspaceId) return `/app/workspaces/${effectiveWorkspaceId}`;
+    if (!user || user.isAnonymous) return "/";
+    // If inside a workspace that is not a demo workspace
+    if (effectiveWorkspaceId && currentWorkspace && !currentWorkspace.workspace.name.startsWith("Demo: ")) {
+      return `/app/workspaces/${effectiveWorkspaceId}`;
+    }
+    // Prefer non-demo workspace first
+    const realWs = myWorkspaces?.find((w) => !w.name.startsWith("Demo: "));
+    if (realWs) return `/app/workspaces/${realWs._id}`;
     if (myWorkspaces && myWorkspaces.length > 0) return `/app/workspaces/${myWorkspaces[0]._id}`;
     return "/app";
-  }, [user, effectiveWorkspaceId, myWorkspaces]);
+  }, [user, effectiveWorkspaceId, currentWorkspace, myWorkspaces]);
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
@@ -638,7 +644,7 @@ export function AppShell({
         <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
           <div className="mx-auto flex h-14 w-full max-w-[1100px] items-center justify-between px-4 sm:px-6">
             <Link
-              to="/app"
+              to={dashboardHref}
               className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
               aria-label="Forge home"
             >
@@ -779,7 +785,7 @@ export function AppShell({
           {!collapsed ? (
             <>
               <Link
-                to="/app"
+                to={dashboardHref}
                 className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
                 aria-label="Forge home"
               >

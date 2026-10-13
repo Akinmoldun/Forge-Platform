@@ -61,9 +61,18 @@ export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: wid });
-  const projects = useQuery(api.projects.listProjects, { workspaceId: wid });
-  const members = useQuery(api.workspaces.listMembers, { workspaceId: wid });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const members = useQuery(
+    api.workspaces.listMembers,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
 
   const [range, setRange] = useState<string>("90");
   const [projectFilter, setProjectFilter] = useState("all");

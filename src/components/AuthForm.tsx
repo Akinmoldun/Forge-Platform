@@ -9,7 +9,7 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, user, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -44,12 +44,12 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const codeInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // If already signed in, redirect immediately to app home
+  // If already signed in with a real account (non-anonymous), redirect to app home
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated && !user?.isAnonymous) {
       navigate(safeRedirect, { replace: true });
     }
-  }, [authLoading, isAuthenticated, navigate, safeRedirect]);
+  }, [authLoading, isAuthenticated, user, navigate, safeRedirect]);
 
   // Escape key returns to step 1 from step 2, focus moves to code input on step 2
   useEffect(() => {

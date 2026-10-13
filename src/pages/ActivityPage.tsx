@@ -124,8 +124,14 @@ export default function ActivityPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: wid });
-  const activity = useQuery(api.analytics.listWorkspaceActivity, { workspaceId: wid, limit: 200 });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const activity = useQuery(
+    api.analytics.listWorkspaceActivity,
+    workspaceId ? { workspaceId: wid, limit: 200 } : "skip"
+  );
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");

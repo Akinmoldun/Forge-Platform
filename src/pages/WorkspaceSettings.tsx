@@ -79,10 +79,22 @@ export default function WorkspaceSettings() {
   const navigate = useNavigate();
   const convex = useConvex();
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: wid });
-  const members = useQuery(api.workspaces.listMembers, { workspaceId: wid });
-  const invitations = useQuery(api.workspaces.listInvitations, { workspaceId: wid });
-  const labels = useQuery(api.projects.listLabels, { workspaceId: wid });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const members = useQuery(
+    api.workspaces.listMembers,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const invitations = useQuery(
+    api.workspaces.listInvitations,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const labels = useQuery(
+    api.projects.listLabels,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
 
   const updateWorkspace = useMutation(api.workspaces.updateWorkspace);
   const updateMemberRole = useMutation(api.workspaces.updateMemberRole);

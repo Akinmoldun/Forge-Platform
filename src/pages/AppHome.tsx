@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { ensureGuestWorkspace, resetGuestDemo } from "@/lib/guestDemo";
@@ -79,14 +79,8 @@ export default function AppHome() {
 
   const isAnonymousGuest = Boolean(user?.isAnonymous);
 
-  useEffect(() => {
-    if (isAnonymousGuest && workspaces !== undefined && !autoSeeding && !seedError && !resettingDemo) {
-      const demoCount = workspaces.filter((w) => w.name.startsWith("Demo: ")).length;
-      if (demoCount === 0) {
-        startDemoProvisioning();
-      }
-    }
-  }, [isAnonymousGuest, workspaces, autoSeeding, seedError, resettingDemo, startDemoProvisioning]);
+  // Note: Demo workspaces are never auto-seeded into the database on viewing AppHome.
+  // They only populate if the user explicitly triggers "Try demo" or demo actions.
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2

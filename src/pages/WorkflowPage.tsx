@@ -64,8 +64,14 @@ export default function WorkflowPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: wid });
-  const projects = useQuery(api.projects.listProjects, { workspaceId: wid });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    workspaceId ? { workspaceId: wid } : "skip"
+  );
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedStatusId, setSelectedStatusId] = useState<string | null>(null);
