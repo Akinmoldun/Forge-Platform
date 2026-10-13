@@ -82,12 +82,11 @@ export function Section12FinalCTA() {
                 automated risk enforcement, and append-only auditability.
               </p>
 
-              {/* Action buttons: black pill "Try demo", white pill "View on GitHub" */}
+              {/* Action buttons: black pill "Get Started", white pill "Try demo", white pill "View on GitHub" */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-[12px] mb-2">
                 <button
                   type="button"
-                  onClick={handleDemo}
-                  disabled={isLoading}
+                  onClick={() => navigate('/signup')}
                   style={{
                     backgroundColor: '#0D0D0D',
                     color: '#FFFFFF',
@@ -97,10 +96,27 @@ export function Section12FinalCTA() {
                   }}
                   className="w-full sm:w-auto px-7 text-[15px] font-medium inline-flex items-center justify-center transition-all cursor-pointer select-none hover:bg-black border border-[#0D0D0D]"
                 >
+                  Get Started
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDemo}
+                  disabled={isLoading}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    color: '#0D0D0D',
+                    borderRadius: '9999px',
+                    height: '48px',
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    boxShadow: 'none',
+                  }}
+                  className="w-full sm:w-auto px-7 text-[15px] font-medium inline-flex items-center justify-center transition-all cursor-pointer select-none hover:bg-[#F6F6F7] disabled:opacity-60"
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin shrink-0 mr-2" />
-                      <span>Starting...</span>
+                      <span>Starting demo...</span>
                     </>
                   ) : (
                     <span>Try demo</span>

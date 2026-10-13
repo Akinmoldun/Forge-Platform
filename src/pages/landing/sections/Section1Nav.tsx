@@ -200,11 +200,19 @@ export function Section1Nav() {
           })}
         </nav>
 
-        {/* Right: Black pill "Get Started" (40px tall, padding 0 20px, white text 14px weight 500) + mobile hamburger */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <MagneticButton
+        {/* Right: "Sign in" link + Black pill "Get Started" + mobile hamburger */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
             type="button"
             onClick={() => navigate('/login')}
+            className="hidden sm:inline-flex items-center text-[14px] font-medium text-[#575657] hover:text-[#0D0D0D] px-2.5 py-1.5 transition-colors cursor-pointer select-none"
+          >
+            Sign in
+          </button>
+
+          <MagneticButton
+            type="button"
+            onClick={() => navigate('/signup')}
             className="h-[40px] px-[20px] rounded-[999px] bg-[#0D0D0D] text-white text-[14px] font-medium border border-[#0D0D0D] transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] inline-flex items-center justify-center select-none shadow-none cursor-pointer"
           >
             <span className="hidden sm:inline">Get Started</span>
@@ -252,6 +260,29 @@ export function Section1Nav() {
               </a>
             );
           })}
+
+          <div className="pt-2 mt-1 border-t border-black/[0.06] flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate('/login');
+              }}
+              className="min-h-[44px] px-4 rounded-xl text-[15px] font-medium text-[#575657] hover:text-[#0D0D0D] hover:bg-black/5 flex items-center justify-between text-left transition-colors cursor-pointer"
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate('/signup');
+              }}
+              className="min-h-[44px] px-4 rounded-xl text-[15px] font-medium bg-[#0D0D0D] text-white flex items-center justify-center transition-opacity hover:opacity-90 cursor-pointer"
+            >
+              Get Started
+            </button>
+          </div>
         </div>
       )}
     </div>

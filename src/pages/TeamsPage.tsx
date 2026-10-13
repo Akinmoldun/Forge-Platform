@@ -39,6 +39,7 @@ import {
 import { ConfirmAction } from "@/components/ConfirmAction";
 import { InviteMembersDialog, inviteLink } from "@/components/InviteMembersDialog";
 import { EmptyState, PriorityBadge, formatDate, timeAgo } from "@/components/forge";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { AvatarIllustration } from "@/components/Illustrations";
 import { TeamsSkeleton } from "@/components/Skeletons";
 import { useProjectIssues } from "@/hooks/use-workspace-data";
@@ -299,18 +300,20 @@ export default function TeamsPage() {
           <TeamsSkeleton />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="Members" value={totals.members} icon={<Users className="size-3.5" />} />
-              <StatCard label="Can edit" value={totals.active} detail="admins, owners, and members" />
-              <StatCard label="Open issues" value={totals.open} detail="assigned across the team" />
-              <StatCard
-                label="Overdue"
-                value={totals.overdue}
-                tone={totals.overdue > 0 ? "danger" : "positive"}
-                icon={<CircleSlash className="size-3.5" />}
-                detail={`${totals.idle} people with nothing open`}
-              />
-            </div>
+            <SectionErrorBoundary name="Team stats">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard label="Members" value={totals.members} icon={<Users className="size-3.5" />} />
+                <StatCard label="Can edit" value={totals.active} detail="admins, owners, and members" />
+                <StatCard label="Open issues" value={totals.open} detail="assigned across the team" />
+                <StatCard
+                  label="Overdue"
+                  value={totals.overdue}
+                  tone={totals.overdue > 0 ? "danger" : "positive"}
+                  icon={<CircleSlash className="size-3.5" />}
+                  detail={`${totals.idle} people with nothing open`}
+                />
+              </div>
+            </SectionErrorBoundary>
 
             <FilterBar>
               <SearchInput
@@ -343,7 +346,8 @@ export default function TeamsPage() {
               </span>
             </FilterBar>
 
-            <Panel flush>
+            <SectionErrorBoundary name="Members list">
+              <Panel flush>
               {memberList.length === 0 ? (
                 <PanelEmpty title="No members yet" description="Invite the first teammate." />
               ) : filtered.length === 0 ? (
@@ -512,76 +516,79 @@ export default function TeamsPage() {
                   </tbody>
                 </TableWrap>
               )}
-            </Panel>
+              </Panel>
+            </SectionErrorBoundary>
 
             {isAdmin && (
-              <Panel
-                title="Pending invitations"
-                description="One-time links that have not been accepted yet."
-                flush
-              >
-                {invitations === undefined ? (
-                  <p className="px-4 py-6 text-xs text-muted-foreground">Loading invitations...</p>
-                ) : invitations.length === 0 ? (
-                  <PanelEmpty
-                    title="No invitations"
-                    description="Invited teammates appear here until they accept."
-                  />
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {invitations.map((inv) => (
-                      <li key={inv._id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                        <Mail className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0 flex-1 truncate text-[13px]">{inv.email}</span>
-                        <RoleBadge role={inv.role} />
-                        {inv.status === "pending" && inv.emailError && (
-                          <span
-                            className="flex items-center gap-1 text-[11px] text-amber-400"
-                            title={inv.emailError}
-                          >
-                            <MailWarning className="size-3" /> email failed
-                          </span>
-                        )}
-                        {inv.status === "pending" && !inv.emailError && inv.emailSentAt && (
-                          <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                            <MailCheck className="size-3" /> emailed
-                          </span>
-                        )}
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] uppercase tracking-wider",
-                            inv.status === "accepted"
-                              ? "border-emerald-500/30 text-emerald-400"
-                              : inv.status === "expired"
-                                ? "border-border text-muted-foreground"
-                                : "border-amber-500/30 text-amber-400",
+              <SectionErrorBoundary name="Pending invitations">
+                <Panel
+                  title="Pending invitations"
+                  description="One-time links that have not been accepted yet."
+                  flush
+                >
+                  {invitations === undefined ? (
+                    <p className="px-4 py-6 text-xs text-muted-foreground">Loading invitations...</p>
+                  ) : invitations.length === 0 ? (
+                    <PanelEmpty
+                      title="No invitations"
+                      description="Invited teammates appear here until they accept."
+                    />
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {invitations.map((inv) => (
+                        <li key={inv._id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                          <Mail className="size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1 truncate text-[13px]">{inv.email}</span>
+                          <RoleBadge role={inv.role} />
+                          {inv.status === "pending" && inv.emailError && (
+                            <span
+                              className="flex items-center gap-1 text-[11px] text-amber-400"
+                              title={inv.emailError}
+                            >
+                              <MailWarning className="size-3" /> email failed
+                            </span>
                           )}
-                        >
-                          {inv.status}
-                        </Badge>
-                        <span className="text-[11px] text-muted-foreground">
-                          {formatDate(inv.createdAt)}
-                        </span>
-                        {inv.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[11px]"
-                            disabled={resendingId === inv._id}
-                            onClick={() => handleResend(inv._id, inv.email)}
+                          {inv.status === "pending" && !inv.emailError && inv.emailSentAt && (
+                            <span className="flex items-center gap-1 text-[11px] text-emerald-400">
+                              <MailCheck className="size-3" /> emailed
+                            </span>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] uppercase tracking-wider",
+                              inv.status === "accepted"
+                                ? "border-emerald-500/30 text-emerald-400"
+                                : inv.status === "expired"
+                                  ? "border-border text-muted-foreground"
+                                  : "border-amber-500/30 text-amber-400",
+                            )}
                           >
-                            <RefreshCw
-                              className={cn("size-3", resendingId === inv._id && "animate-spin")}
-                            />
-                            Resend
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Panel>
+                            {inv.status}
+                          </Badge>
+                          <span className="text-[11px] text-muted-foreground">
+                            {formatDate(inv.createdAt)}
+                          </span>
+                          {inv.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[11px]"
+                              disabled={resendingId === inv._id}
+                              onClick={() => handleResend(inv._id, inv.email)}
+                            >
+                              <RefreshCw
+                                className={cn("size-3", resendingId === inv._id && "animate-spin")}
+                              />
+                              Resend
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
+              </SectionErrorBoundary>
             )}
           </>
         )}

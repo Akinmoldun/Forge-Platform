@@ -18,6 +18,7 @@ import {
   StatCard,
 } from "@/components/app-ui";
 import { EmptyState } from "@/components/forge";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { ActivitySkeleton } from "@/components/Skeletons";
 import { Activity as ActivityIcon } from "lucide-react";
 const RANGE_OPTIONS = [
@@ -213,24 +214,26 @@ export default function ActivityPage() {
           <ActivitySkeleton />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                label="Events in range"
-                value={filtered.length}
-                icon={<ActivityIcon className="size-3.5" />}
-              />
-              <StatCard label="Today" value={todayCount} detail="events recorded" />
-              <StatCard label="Active people" value={activeActors} detail="acted in range" />
-              <StatCard
-                label="Most common"
-                value={
-                  <span className="text-[15px] capitalize">
-                    {topType === "none" ? "Nothing yet" : topType}
-                  </span>
-                }
-                detail="entity type in range"
-              />
-            </div>
+            <SectionErrorBoundary name="Activity stats">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                  label="Events in range"
+                  value={filtered.length}
+                  icon={<ActivityIcon className="size-3.5" />}
+                />
+                <StatCard label="Today" value={todayCount} detail="events recorded" />
+                <StatCard label="Active people" value={activeActors} detail="acted in range" />
+                <StatCard
+                  label="Most common"
+                  value={
+                    <span className="text-[15px] capitalize">
+                      {topType === "none" ? "Nothing yet" : topType}
+                    </span>
+                  }
+                  detail="entity type in range"
+                />
+              </div>
+            </SectionErrorBoundary>
 
             <FilterBar>
               <SearchInput
@@ -271,87 +274,89 @@ export default function ActivityPage() {
               />
             </FilterBar>
 
-            {filtered.length === 0 ? (
-              <Panel>
-                <PanelEmpty
-                  title={events.length === 0 ? "No activity yet" : "No activity matches these filters"}
-                  description={
-                    events.length === 0
-                      ? "Creating projects, issues, and comments all show up here."
-                      : "Widen the date range, or clear the type and person filters."
-                  }
-                  action={
-                    events.length > 0 ? (
+            <SectionErrorBoundary name="Activity feed">
+              {filtered.length === 0 ? (
+                <Panel>
+                  <PanelEmpty
+                    title={events.length === 0 ? "No activity yet" : "No activity matches these filters"}
+                    description={
+                      events.length === 0
+                        ? "Creating projects, issues, and comments all show up here."
+                        : "Widen the date range, or clear the type and person filters."
+                    }
+                    action={
+                      events.length > 0 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSearch("");
+                            setType("all");
+                            setActor("all");
+                            setRange("0");
+                          }}
+                        >
+                          Clear filters
+                        </Button>
+                      ) : undefined
+                    }
+                  />
+                </Panel>
+              ) : (
+                <div className="space-y-4">
+                  {grouped.map((group) => (
+                    <section key={group.key}>
+                      <div className="sticky top-0 z-10 bg-[#FBFBFC]/95 backdrop-blur-sm py-2 mb-2 flex items-center gap-3">
+                        <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#0D0D0D]">
+                          {group.label}
+                        </h2>
+                        <div className="h-px flex-1 bg-border" aria-hidden />
+                        <span className="text-[11px] tabular-nums text-muted-foreground">
+                          {group.items.length}
+                        </span>
+                      </div>
+                      <ul className="overflow-hidden rounded-lg border border-border bg-card">
+                        {group.items.map((event, index) => {
+                          const kind = typeOf(event.eventType);
+                          const style = TYPE_STYLE[kind] ?? {
+                            tone: "border-border bg-secondary text-muted-foreground",
+                            label: kind,
+                          };
+                          return (
+                            <ActivityItem
+                              key={event._id}
+                              className={index > 0 ? "border-t border-border" : undefined}
+                              actorName={event.actorName}
+                              actorImage={event.actorImage}
+                              action={describe(event.eventType, event.payload ?? undefined)}
+                              type={style}
+                              timestamp={new Date(event.createdAt).toLocaleTimeString(undefined, {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                              href={relatedHref(event)}
+                            />
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ))}
+
+                  {filtered.length > displayCount && (
+                    <div className="pt-3 pb-6 text-center">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSearch("");
-                          setType("all");
-                          setActor("all");
-                          setRange("0");
-                        }}
+                        onClick={() => setDisplayCount((prev) => prev + 30)}
+                        className="text-[12px] font-medium cursor-pointer"
                       >
-                        Clear filters
+                        Load more activity ({filtered.length - displayCount} remaining)
                       </Button>
-                    ) : undefined
-                  }
-                />
-              </Panel>
-            ) : (
-              <div className="space-y-4">
-                {grouped.map((group) => (
-                  <section key={group.key}>
-                    <div className="sticky top-0 z-10 bg-[#FBFBFC]/95 backdrop-blur-sm py-2 mb-2 flex items-center gap-3">
-                      <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#0D0D0D]">
-                        {group.label}
-                      </h2>
-                      <div className="h-px flex-1 bg-border" aria-hidden />
-                      <span className="text-[11px] tabular-nums text-muted-foreground">
-                        {group.items.length}
-                      </span>
                     </div>
-                    <ul className="overflow-hidden rounded-lg border border-border bg-card">
-                      {group.items.map((event, index) => {
-                        const kind = typeOf(event.eventType);
-                        const style = TYPE_STYLE[kind] ?? {
-                          tone: "border-border bg-secondary text-muted-foreground",
-                          label: kind,
-                        };
-                        return (
-                          <ActivityItem
-                            key={event._id}
-                            className={index > 0 ? "border-t border-border" : undefined}
-                            actorName={event.actorName}
-                            actorImage={event.actorImage}
-                            action={describe(event.eventType, event.payload ?? undefined)}
-                            type={style}
-                            timestamp={new Date(event.createdAt).toLocaleTimeString(undefined, {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                            href={relatedHref(event)}
-                          />
-                        );
-                      })}
-                    </ul>
-                  </section>
-                ))}
-
-                {filtered.length > displayCount && (
-                  <div className="pt-3 pb-6 text-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDisplayCount((prev) => prev + 30)}
-                      className="text-[12px] font-medium cursor-pointer"
-                    >
-                      Load more activity ({filtered.length - displayCount} remaining)
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </SectionErrorBoundary>
           </>
         )}
       </PageStack>

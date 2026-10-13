@@ -23,6 +23,7 @@ import {
   StatCard,
 } from "@/components/app-ui";
 import { EmptyState } from "@/components/forge";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { WorkflowSkeleton } from "@/components/Skeletons";
 import { StatusPill, EmptyIllustration } from "@/components/Illustrations";
 import { ProgressRing } from "@/components/motion";
@@ -594,64 +595,68 @@ export default function WorkflowPage() {
         </div>
 
         {/* Editor summary */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Statuses" value={statuses.length} icon={<GitBranch className="size-3.5" />} />
-          <StatCard label="Transitions" value={transitions.length} />
-          <StatCard
-            label="Guarded transitions"
-            value={ruleCount}
-            tone="info"
-            detail={`${transitions.length - ruleCount} unguarded`}
-            hint="Transitions with at least one of the assignee, comment, or approval rules switched on."
-          />
-          <StatCard
-            label="Completion"
-            value={`${completionPct}%`}
-            detail={`${doneIssues} of ${totalIssues} issues done`}
-            icon={<Zap className="size-3.5" />}
-          />
-        </div>
+        <SectionErrorBoundary name="Workflow metrics">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Statuses" value={statuses.length} icon={<GitBranch className="size-3.5" />} />
+            <StatCard label="Transitions" value={transitions.length} />
+            <StatCard
+              label="Guarded transitions"
+              value={ruleCount}
+              tone="info"
+              detail={`${transitions.length - ruleCount} unguarded`}
+              hint="Transitions with at least one of the assignee, comment, or approval rules switched on."
+            />
+            <StatCard
+              label="Completion"
+              value={`${completionPct}%`}
+              detail={`${doneIssues} of ${totalIssues} issues done`}
+              icon={<Zap className="size-3.5" />}
+            />
+          </div>
+        </SectionErrorBoundary>
 
         {/* Statuses and their issues */}
-        <Panel
-          title="Statuses"
-          description="Every issue sits in exactly one status. Select a status to inspect its outgoing rules."
-          hint="Columns follow the workflow position. Arrows between columns are the configured transitions. Board data caps at 6 cards per status; the header count is the true total."
-          actions={
-            activeStatus ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setStatusDrawerOpen(true)}
-                className="lg:hidden"
-              >
-                <SlidersHorizontal /> Details
-              </Button>
-            ) : null
-          }
-        >
-          <WorkflowCanvas
-            statuses={statuses}
-            issuesByStatus={issuesByStatus}
-            counts={counts}
-            transitions={transitions}
-            projectKey={project.project.key}
-            selectedId={selectedStatusId}
-            onSelect={(id) =>
-              setSelectedStatusId((prev) => (prev === id ? null : id))
+        <SectionErrorBoundary name="Workflow status canvas">
+          <Panel
+            title="Statuses"
+            description="Every issue sits in exactly one status. Select a status to inspect its outgoing rules."
+            hint="Columns follow the workflow position. Arrows between columns are the configured transitions. Board data caps at 6 cards per status; the header count is the true total."
+            actions={
+              activeStatus ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStatusDrawerOpen(true)}
+                  className="lg:hidden"
+                >
+                  <SlidersHorizontal /> Details
+                </Button>
+              ) : null
             }
-            onEditTransition={(id) => setEditingTransitionId(id)}
-            onAddStatus={handleAddStatus}
-          />
-          {statuses.length === 0 && (
-            <div className="mt-4 pt-3 border-t border-border/60">
-              <AddStatusNotice
-                projectId={effectiveProjectId}
-                onAddStatus={handleAddStatus}
-              />
-            </div>
-          )}
-        </Panel>
+          >
+            <WorkflowCanvas
+              statuses={statuses}
+              issuesByStatus={issuesByStatus}
+              counts={counts}
+              transitions={transitions}
+              projectKey={project.project.key}
+              selectedId={selectedStatusId}
+              onSelect={(id) =>
+                setSelectedStatusId((prev) => (prev === id ? null : id))
+              }
+              onEditTransition={(id) => setEditingTransitionId(id)}
+              onAddStatus={handleAddStatus}
+            />
+            {statuses.length === 0 && (
+              <div className="mt-4 pt-3 border-t border-border/60">
+                <AddStatusNotice
+                  projectId={effectiveProjectId}
+                  onAddStatus={handleAddStatus}
+                />
+              </div>
+            )}
+          </Panel>
+        </SectionErrorBoundary>
 
         {/* Rules + automations */}
         <div className="space-y-4">

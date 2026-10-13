@@ -58,6 +58,7 @@ import { CommandPaletteDialog } from "./CommandPaletteDialog";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { InviteMembersDialog } from "./InviteMembersDialog";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
+import { SectionErrorBoundary } from "./SectionErrorBoundary";
 
 /** Primary workspace navigation rows. */
 const WORKSPACE_NAV = [
@@ -637,7 +638,9 @@ export function AppShell({
 
         <main className="flex-1">
           <FadeIn key={pathname} className="mx-auto w-full max-w-[1100px] px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8">
-            {children}
+            <SectionErrorBoundary name="page content" variant="page">
+              {children}
+            </SectionErrorBoundary>
           </FadeIn>
         </main>
 
@@ -1278,7 +1281,9 @@ export function AppShell({
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8 sm:py-8">
             <FadeIn key={pathname}>
-              {children}
+              <SectionErrorBoundary name="page content" variant="page">
+                {children}
+              </SectionErrorBoundary>
             </FadeIn>
           </div>
         </main>

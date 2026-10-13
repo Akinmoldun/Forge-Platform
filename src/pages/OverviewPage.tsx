@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/forge";
 import { StatusIllustration } from "@/components/Illustrations";
+import { SectionErrorBoundary, WidgetErrorBoundary } from "@/components/SectionErrorBoundary";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useProjectRisks,
@@ -229,9 +230,10 @@ export default function OverviewPage() {
   const projectList = projects ?? [];
 
   const renderWidgetItem = (item: WidgetItem) => {
+    let content: React.ReactNode;
     switch (item.id) {
       case "quick_actions":
-        return (
+        content = (
           <QuickActionsWidget
             workspaceId={id}
             workspaceName={workspace.workspace.name}
@@ -239,8 +241,9 @@ export default function OverviewPage() {
             projectList={projectList}
           />
         );
+        break;
       case "my_open_issues":
-        return (
+        content = (
           <MyOpenIssuesWidget
             workspaceId={id}
             issues={realIssues}
@@ -248,21 +251,24 @@ export default function OverviewPage() {
             projectList={projectList}
           />
         );
+        break;
       case "recent_activity":
-        return (
+        content = (
           <RecentActivityWidget
             workspaceId={id}
             activity={activity ?? []}
           />
         );
+        break;
       case "status_distribution":
-        return (
+        content = (
           <StatusDistributionWidget
             rollup={realRollup}
           />
         );
+        break;
       case "priority_breakdown":
-        return (
+        content = (
           <PriorityBreakdownWidget
             rollup={realRollup}
             issues={allWorkspaceIssues}
@@ -270,8 +276,9 @@ export default function OverviewPage() {
             projectList={projectList}
           />
         );
+        break;
       case "project_health":
-        return (
+        content = (
           <ProjectHealthWidget
             workspaceId={id}
             projectList={projectList}
@@ -279,9 +286,16 @@ export default function OverviewPage() {
             canWrite={canWrite}
           />
         );
+        break;
       default:
-        return <div>{item.title}</div>;
+        content = <div>{item.title}</div>;
     }
+
+    return (
+      <WidgetErrorBoundary name={item.title}>
+        {content}
+      </WidgetErrorBoundary>
+    );
   };
 
   // Checklist state for new workspaces
@@ -382,65 +396,68 @@ export default function OverviewPage() {
 
 
         {/* Today strip with 3 compact cards */}
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Link
-            to={issuesTargetLink}
-            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium text-[#575657]">Assigned to you</span>
-              <StatusIllustration category="active" size={14} />
-            </div>
-            <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
-                {assignedToUserIssues.length}
-              </span>
-              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
-                View work →
-              </span>
-            </div>
-          </Link>
+        <SectionErrorBoundary name="Today's highlights">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Link
+              to={issuesTargetLink}
+              className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium text-[#575657]">Assigned to you</span>
+                <StatusIllustration category="active" size={14} />
+              </div>
+              <div className="mt-3 flex items-baseline justify-between">
+                <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                  {assignedToUserIssues.length}
+                </span>
+                <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                  View work →
+                </span>
+              </div>
+            </Link>
 
-          <Link
-            to={issuesTargetLink}
-            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium text-[#575657]">Due this week</span>
-              <Clock className="size-3.5 text-[#575657]" />
-            </div>
-            <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
-                {dueThisWeekIssues.length}
-              </span>
-              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
-                Check dates →
-              </span>
-            </div>
-          </Link>
+            <Link
+              to={issuesTargetLink}
+              className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium text-[#575657]">Due this week</span>
+                <Clock className="size-3.5 text-[#575657]" />
+              </div>
+              <div className="mt-3 flex items-baseline justify-between">
+                <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                  {dueThisWeekIssues.length}
+                </span>
+                <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                  Check dates →
+                </span>
+              </div>
+            </Link>
 
-          <Link
-            to={issuesTargetLink}
-            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium text-[#575657]">Needs your review</span>
-              <StatusIllustration category="review" size={14} />
-            </div>
-            <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
-                {needsReviewIssues.length}
-              </span>
-              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
-                Review queue →
-              </span>
-            </div>
-          </Link>
-        </div>
+            <Link
+              to={issuesTargetLink}
+              className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium text-[#575657]">Needs your review</span>
+                <StatusIllustration category="review" size={14} />
+              </div>
+              <div className="mt-3 flex items-baseline justify-between">
+                <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                  {needsReviewIssues.length}
+                </span>
+                <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                  Review queue →
+                </span>
+              </div>
+            </Link>
+          </div>
+        </SectionErrorBoundary>
 
         {/* 1. Get started checklist card (visible when workspace is new / steps incomplete) */}
         {showChecklist && (
-          <div className="rounded-[16px] border border-border bg-white p-5">
+          <SectionErrorBoundary name="Getting started checklist">
+            <div className="rounded-[16px] border border-border bg-white p-5">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-[15px] font-[500] text-[#0D0D0D]">Get started with your workspace</h2>
@@ -565,9 +582,11 @@ export default function OverviewPage() {
               </div>
             </div>
           </div>
-        )}
+        </SectionErrorBoundary>
+      )}
 
-        {/* 2. Overview clickable summary metrics */}
+      {/* 2. Overview clickable summary metrics */}
+      <SectionErrorBoundary name="Summary metrics">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Link
             to={issuesTargetLink}
@@ -631,6 +650,7 @@ export default function OverviewPage() {
             <p className="mt-0.5 text-[11px] text-[#575657]">Finished work items</p>
           </Link>
         </div>
+      </SectionErrorBoundary>
 
         <div className="w-full">
           <DraggableWidgetGrid

@@ -43,6 +43,7 @@ import {
   formatDate,
   PRIORITIES,
 } from "@/components/forge";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
@@ -329,7 +330,8 @@ export default function IssuePage() {
             </div>
 
             {/* Dependencies */}
-            <section className="mt-8">
+            <SectionErrorBoundary name="Issue dependencies">
+              <section className="mt-8">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <GitBranch className="size-4" /> Dependencies
@@ -433,8 +435,10 @@ export default function IssuePage() {
                 </div>
               )}
             </section>
+          </SectionErrorBoundary>
 
-            {/* Comments */}
+          {/* Comments */}
+          <SectionErrorBoundary name="Issue comments">
             <section className="mt-8">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                 <MessageSquare className="size-4" /> Comments ({comments?.length ?? 0})
@@ -486,8 +490,10 @@ export default function IssuePage() {
                 )}
               </div>
             </section>
+          </SectionErrorBoundary>
 
-            {/* Activity */}
+          {/* Activity */}
+          <SectionErrorBoundary name="Issue activity history">
             <section className="mt-8">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                 <History className="size-4" /> Activity
@@ -516,10 +522,12 @@ export default function IssuePage() {
                 </div>
               )}
             </section>
-          </div>
+          </SectionErrorBoundary>
+        </div>
 
           {/* Sidebar */}
-          <aside className="space-y-5">
+          <SectionErrorBoundary name="Issue sidebar">
+            <aside className="space-y-5">
             {/* Status */}
             <div>
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
@@ -766,7 +774,8 @@ export default function IssuePage() {
               </p>
             )}
           </aside>
-        </div>
+        </SectionErrorBoundary>
+      </div>
       </div>
 
       {/* Required-comment transition dialog */}

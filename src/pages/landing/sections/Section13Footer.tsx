@@ -95,6 +95,24 @@ export function Section13Footer() {
               <li>
                 <button
                   type="button"
+                  onClick={() => navigate('/signup')}
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors text-left cursor-pointer"
+                >
+                  Create Account
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors text-left cursor-pointer"
+                >
+                  Sign In
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
                   onClick={handleDemo}
                   className="text-[14px] text-[#A1A1A6] hover:text-[#FFFFFF] transition-colors text-left cursor-pointer"
                 >

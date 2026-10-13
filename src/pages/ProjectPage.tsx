@@ -42,6 +42,7 @@ import {
   ListTableSkeleton,
   ProjectAnalyticsSkeleton,
 } from "@/components/Skeletons";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { AnimatedNumber } from "@/components/motion";
 import {
   Plus,
@@ -354,55 +355,62 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         {/* Content container with exact 24px space from tab row */}
         <div className="pt-6">
           {tab === "analytics" ? (
-            <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
+            <SectionErrorBoundary name="Project analytics">
+              <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
+            </SectionErrorBoundary>
           ) : tab === "activity" ? (
-            <ActivityTab activity={projectActivity} keyName={project.project.key} />
+            <SectionErrorBoundary name="Project activity">
+              <ActivityTab activity={projectActivity} keyName={project.project.key} />
+            </SectionErrorBoundary>
           ) : view === "board" ? (
-            <div className="space-y-3">
-
-            {showTip && (
-              <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
-                <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    try {
-                      sessionStorage.setItem("forge_dismiss_backlog_tip", "true");
-                    } catch {
-                      /* ignore */
-                    }
-                    setShowTip(false);
+            <SectionErrorBoundary name="Project board">
+              <div className="space-y-3">
+                {showTip && (
+                  <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
+                    <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          sessionStorage.setItem("forge_dismiss_backlog_tip", "true");
+                        } catch {
+                          /* ignore */
+                        }
+                        setShowTip(false);
+                      }}
+                      className="size-5 flex items-center justify-center rounded text-[#575657] hover:text-[#0D0D0D] transition-colors"
+                      aria-label="Dismiss tip"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                )}
+                <BoardView
+                  board={board}
+                  keyName={project.project.key}
+                  canWrite={canWrite}
+                  searchQuery={debouncedSearch}
+                  priorityFilter={priorityFilter}
+                  assigneeFilter={assigneeFilter}
+                  onStatusChange={handleStatusChange}
+                  onIssueClick={(id) => navigate(`/app/issues/${id}`)}
+                  onNewIssueInStatus={(statusId) => {
+                    setColStatusId(statusId);
+                    setColIssueDialogOpen(true);
                   }}
-                  className="size-5 flex items-center justify-center rounded text-[#575657] hover:text-[#0D0D0D] transition-colors"
-                  aria-label="Dismiss tip"
-                >
-                  <X className="size-3.5" />
-                </button>
+                />
               </div>
-            )}
-            <BoardView
-              board={board}
-              keyName={project.project.key}
-              canWrite={canWrite}
-              searchQuery={debouncedSearch}
-              priorityFilter={priorityFilter}
-              assigneeFilter={assigneeFilter}
-              onStatusChange={handleStatusChange}
-              onIssueClick={(id) => navigate(`/app/issues/${id}`)}
-              onNewIssueInStatus={(statusId) => {
-                setColStatusId(statusId);
-                setColIssueDialogOpen(true);
-              }}
-            />
-          </div>
-        ) : (
-          <ListView
-            issues={issues}
-            keyName={project.project.key}
-            memberName={memberName}
-            onIssueClick={(id) => navigate(`/app/issues/${id}`)}
-          />
-        )}
+            </SectionErrorBoundary>
+          ) : (
+            <SectionErrorBoundary name="Project list">
+              <ListView
+                issues={issues}
+                keyName={project.project.key}
+                memberName={memberName}
+                onIssueClick={(id) => navigate(`/app/issues/${id}`)}
+              />
+            </SectionErrorBoundary>
+          )}
         </div>
       </div>
 

@@ -25,6 +25,7 @@ import {
   EmptyIllustration,
 } from "@/components/Illustrations";
 import { EmptyState, RiskBadge, timeAgo } from "@/components/forge";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { ProjectsSkeleton } from "@/components/Skeletons";
 import { useProjectRisks } from "@/hooks/use-workspace-data";
 import {
@@ -144,22 +145,24 @@ export default function ProjectsPage() {
           <ProjectsSkeleton />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="Projects" value={totals.count} icon={<FolderKanban className="size-3.5" />} />
-              <StatCard label="Open issues" value={totals.open} />
-              <StatCard
-                label="Overdue"
-                value={totals.overdue}
-                tone={totals.overdue > 0 ? "danger" : "positive"}
-                icon={<AlertTriangle className="size-3.5" />}
-              />
-              <StatCard
-                label="Blocked"
-                value={totals.blocked}
-                tone={totals.blocked > 0 ? "warning" : "positive"}
-                icon={<CircleSlash className="size-3.5" />}
-              />
-            </div>
+            <SectionErrorBoundary name="Project metrics">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard label="Projects" value={totals.count} icon={<FolderKanban className="size-3.5" />} />
+                <StatCard label="Open issues" value={totals.open} />
+                <StatCard
+                  label="Overdue"
+                  value={totals.overdue}
+                  tone={totals.overdue > 0 ? "danger" : "positive"}
+                  icon={<AlertTriangle className="size-3.5" />}
+                />
+                <StatCard
+                  label="Blocked"
+                  value={totals.blocked}
+                  tone={totals.blocked > 0 ? "warning" : "positive"}
+                  icon={<CircleSlash className="size-3.5" />}
+                />
+              </div>
+            </SectionErrorBoundary>
 
             <FilterBar>
               <SearchInput
@@ -189,7 +192,8 @@ export default function ProjectsPage() {
               </span>
             </FilterBar>
 
-            <Panel flush>
+            <SectionErrorBoundary name="Projects list">
+              <Panel flush>
               {(projects ?? []).length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center">
                   <EmptyIllustration type="no-projects" size={64} className="mb-3" />
@@ -404,7 +408,8 @@ export default function ProjectsPage() {
                 </>
               )}
             </Panel>
-          </>
+          </SectionErrorBoundary>
+        </>
         )}
       </PageStack>
     </AppShell>

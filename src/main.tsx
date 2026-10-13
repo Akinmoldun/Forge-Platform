@@ -39,6 +39,7 @@ const RequireAuth = safeLazy(() =>
 );
 const LoginPage = safeLazy(() => import("./pages/LoginPage"));
 const SignupPage = safeLazy(() => import("./pages/SignupPage"));
+const AuthPage = safeLazy(() => import("./pages/Auth"));
 const AppHome = safeLazy(() => import("./pages/AppHome"));
 const OverviewPage = safeLazy(() => import("./pages/OverviewPage"));
 const ProjectsPage = safeLazy(() => import("./pages/ProjectsPage"));
@@ -330,7 +331,7 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/auth"
                 element={withConvexAuth(
-                  <LoginPage redirectAfterAuth="/app" />,
+                  <AuthPage redirectAfterAuth="/app" />,
                 )}
               />
               <Route

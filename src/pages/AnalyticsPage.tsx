@@ -20,6 +20,7 @@ import {
 } from "@/components/app-ui";
 import { BarChart, LineChart, StackedBar } from "@/components/charts";
 import { EmptyState, PriorityBadge, formatDuration } from "@/components/forge";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { ProjectAnalyticsSkeleton } from "@/components/Skeletons";
 import {
   useProjectIssues,
@@ -265,41 +266,43 @@ export default function AnalyticsPage() {
           </Panel>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                label="Avg cycle time"
-                value={formatDuration(avgCycle)}
-                icon={<Timer className="size-3.5" />}
-                detail={
-                  medianCycle !== null
-                    ? `median ${formatDuration(medianCycle)}`
-                    : "no completed issues yet"
-                }
-                hint="Average time between an issue entering an active status and being completed, measured across the issues completed inside the selected range."
-              />
-              <StatCard
-                label="Throughput"
-                value={throughputTotal}
-                icon={<Activity className="size-3.5" />}
-                detail="issues completed in range"
-                hint="Count of issues whose completion time falls inside the selected range."
-              />
-              <StatCard
-                label="Review wait"
-                value={formatDuration(avgReview)}
-                tone={avgReview !== null && avgReview > 3 ? "warning" : "neutral"}
-                detail="average time in review"
-                hint="Time between an issue entering a status named 'Review' and reaching a completed status, rebuilt from the recorded status changes."
-              />
-              <StatCard
-                label="Overdue open"
-                value={overdueCount}
-                tone={overdueCount > 0 ? "danger" : "positive"}
-                icon={<Inbox className="size-3.5" />}
-                detail={`${openIssues.length} open in scope`}
-                hint="Open issues whose due date has already passed."
-              />
-            </div>
+            <SectionErrorBoundary name="Analytics metrics">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                  label="Avg cycle time"
+                  value={formatDuration(avgCycle)}
+                  icon={<Timer className="size-3.5" />}
+                  detail={
+                    medianCycle !== null
+                      ? `median ${formatDuration(medianCycle)}`
+                      : "no completed issues yet"
+                  }
+                  hint="Average time between an issue entering an active status and being completed, measured across the issues completed inside the selected range."
+                />
+                <StatCard
+                  label="Throughput"
+                  value={throughputTotal}
+                  icon={<Activity className="size-3.5" />}
+                  detail="issues completed in range"
+                  hint="Count of issues whose completion time falls inside the selected range."
+                />
+                <StatCard
+                  label="Review wait"
+                  value={formatDuration(avgReview)}
+                  tone={avgReview !== null && avgReview > 3 ? "warning" : "neutral"}
+                  detail="average time in review"
+                  hint="Time between an issue entering a status named 'Review' and reaching a completed status, rebuilt from the recorded status changes."
+                />
+                <StatCard
+                  label="Overdue open"
+                  value={overdueCount}
+                  tone={overdueCount > 0 ? "danger" : "positive"}
+                  icon={<Inbox className="size-3.5" />}
+                  detail={`${openIssues.length} open in scope`}
+                  hint="Open issues whose due date has already passed."
+                />
+              </div>
+            </SectionErrorBoundary>
 
             {truncated.length > 0 && (
               <p className="rounded-lg border border-border bg-secondary/50 px-3.5 py-2.5 text-[11px] leading-5 text-muted-foreground">
@@ -310,219 +313,231 @@ export default function AnalyticsPage() {
             )}
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <Panel
-                title="Cycle time"
-                description="Average days from start to completion, by week."
-                hint="A downward trend means work is moving through the workflow faster."
-                aria-label={`Cycle time trend chart, average ${formatDuration(avgCycle)} across weeks`}
-              >
-                <LineChart
-                  data={cycleSeries}
-                  yLabel="Avg days"
-                  color="#6E94CB"
-                  formatValue={(v) => `${v.toFixed(1)}d`}
-                  height={160}
-                />
-              </Panel>
-
-              <Panel
-                title="Weekly throughput"
-                description="Issues completed each week."
-                hint="Throughput counts completions, not started work. A flat line with a long queue means work is stalling before it finishes."
-                aria-label={`Weekly throughput chart, ${throughputTotal} issues completed in selected range`}
-              >
-                <BarChart
-                  data={throughputSeries}
-                  color="#9FDA85"
-                  gradientTo="#D8F0CC"
-                  height={160}
-                />
-              </Panel>
-
-              <Panel
-                title="Review wait time"
-                description="Average days an issue sat in review before completing."
-                hint="Derived from status-change history. Only issues that entered a status named 'Review' and then completed are included."
-                aria-label={`Review wait time chart, average ${formatDuration(avgReview)} across weeks`}
-              >
-                {eventsLoading ? (
-                  <p className="text-xs text-muted-foreground">Loading status history...</p>
-                ) : (
+              <SectionErrorBoundary name="Cycle time chart">
+                <Panel
+                  title="Cycle time"
+                  description="Average days from start to completion, by week."
+                  hint="A downward trend means work is moving through the workflow faster."
+                  aria-label={`Cycle time trend chart, average ${formatDuration(avgCycle)} across weeks`}
+                >
                   <LineChart
-                    data={reviewSeries}
+                    data={cycleSeries}
                     yLabel="Avg days"
-                    color="#D78FC6"
+                    color="#6E94CB"
                     formatValue={(v) => `${v.toFixed(1)}d`}
                     height={160}
-                    emptyLabel="No review transitions recorded yet"
                   />
-                )}
-              </Panel>
+                </Panel>
+              </SectionErrorBoundary>
 
-              <Panel
-                title="Workload per member"
-                description="Open issues assigned, with overdue and high-priority breakdown."
-                hint="Bars are scaled to the busiest member so the team distribution and bottleneck risks are clear at a glance."
-                aria-label={`Workload per member chart, showing ${workload.length} team members`}
-              >
-                {workload.length === 0 ? (
-                  <PanelEmpty
-                    title="No assigned work"
-                    description="Assign issues to members to see how the load is spread."
+              <SectionErrorBoundary name="Throughput chart">
+                <Panel
+                  title="Weekly throughput"
+                  description="Issues completed each week."
+                  hint="Throughput counts completions, not started work. A flat line with a long queue means work is stalling before it finishes."
+                  aria-label={`Weekly throughput chart, ${throughputTotal} issues completed in selected range`}
+                >
+                  <BarChart
+                    data={throughputSeries}
+                    color="#9FDA85"
+                    gradientTo="#D8F0CC"
+                    height={160}
                   />
-                ) : (
-                  <div className="space-y-3.5">
-                    {workload.slice(0, 8).map((w) => {
-                      const totalPct = Math.max(3, (w.open / maxWorkload) * 100);
-                      const overdueShare = w.open > 0 ? (w.overdue / w.open) * 100 : 0;
-                      const normalShare = 100 - overdueShare;
-                      const isHighLoad = w.open >= 7;
-                      const isModerate = w.open >= 4 && w.open < 7;
+                </Panel>
+              </SectionErrorBoundary>
 
-                      return (
-                        <div key={w.userId} className="rounded-[12px] border border-border/60 bg-[#FBFBFC] p-2.5 transition-colors hover:bg-white hover:border-border">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <InitialsAvatar
-                                name={w.name}
-                                image={(members ?? []).find((m) => m.userId === w.userId)?.image}
-                                size={28}
-                              />
-                              <div className="min-w-0">
-                                <span className="truncate text-[13px] font-semibold text-[#0D0D0D] block leading-tight">{w.name}</span>
-                                <span className="text-[10px] text-[#575657]">
-                                  {isHighLoad ? (
-                                    <span className="font-medium text-[#B3261E]">High queue load</span>
-                                  ) : isModerate ? (
-                                    <span className="font-medium text-[#8C7646]">Active load</span>
-                                  ) : (
-                                    <span className="text-[#388E3C]">Balanced load</span>
-                                  )}
+              <SectionErrorBoundary name="Review wait time chart">
+                <Panel
+                  title="Review wait time"
+                  description="Average days an issue sat in review before completing."
+                  hint="Derived from status-change history. Only issues that entered a status named 'Review' and then completed are included."
+                  aria-label={`Review wait time chart, average ${formatDuration(avgReview)} across weeks`}
+                >
+                  {eventsLoading ? (
+                    <p className="text-xs text-muted-foreground">Loading status history...</p>
+                  ) : (
+                    <LineChart
+                      data={reviewSeries}
+                      yLabel="Avg days"
+                      color="#D78FC6"
+                      formatValue={(v) => `${v.toFixed(1)}d`}
+                      height={160}
+                      emptyLabel="No review transitions recorded yet"
+                    />
+                  )}
+                </Panel>
+              </SectionErrorBoundary>
+
+              <SectionErrorBoundary name="Workload per member chart">
+                <Panel
+                  title="Workload per member"
+                  description="Open issues assigned, with overdue and high-priority breakdown."
+                  hint="Bars are scaled to the busiest member so the team distribution and bottleneck risks are clear at a glance."
+                  aria-label={`Workload per member chart, showing ${workload.length} team members`}
+                >
+                  {workload.length === 0 ? (
+                    <PanelEmpty
+                      title="No assigned work"
+                      description="Assign issues to members to see how the load is spread."
+                    />
+                  ) : (
+                    <div className="space-y-3.5">
+                      {workload.slice(0, 8).map((w) => {
+                        const totalPct = Math.max(3, (w.open / maxWorkload) * 100);
+                        const overdueShare = w.open > 0 ? (w.overdue / w.open) * 100 : 0;
+                        const normalShare = 100 - overdueShare;
+                        const isHighLoad = w.open >= 7;
+                        const isModerate = w.open >= 4 && w.open < 7;
+
+                        return (
+                          <div key={w.userId} className="rounded-[12px] border border-border/60 bg-[#FBFBFC] p-2.5 transition-colors hover:bg-white hover:border-border">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <InitialsAvatar
+                                  name={w.name}
+                                  image={(members ?? []).find((m) => m.userId === w.userId)?.image}
+                                  size={28}
+                                />
+                                <div className="min-w-0">
+                                  <span className="truncate text-[13px] font-semibold text-[#0D0D0D] block leading-tight">{w.name}</span>
+                                  <span className="text-[10px] text-[#575657]">
+                                    {isHighLoad ? (
+                                      <span className="font-medium text-[#B3261E]">High queue load</span>
+                                    ) : isModerate ? (
+                                      <span className="font-medium text-[#8C7646]">Active load</span>
+                                    ) : (
+                                      <span className="text-[#388E3C]">Balanced load</span>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[11px]">
+                                <span className="rounded-full bg-[#6E94CB]/15 px-2 py-0.5 font-medium text-[#2B548F]">
+                                  {w.open} open
                                 </span>
+                                {w.overdue > 0 && (
+                                  <span className="rounded-full bg-[#D78FC6]/25 px-2 py-0.5 font-semibold text-[#A63590]">
+                                    {w.overdue} overdue
+                                  </span>
+                                )}
+                                {w.urgent > 0 && (
+                                  <span className="rounded-full bg-[#D6C6A1]/30 px-2 py-0.5 font-medium text-[#8C7646]">
+                                    {w.urgent} high
+                                  </span>
+                                )}
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[11px]">
-                              <span className="rounded-full bg-[#6E94CB]/15 px-2 py-0.5 font-medium text-[#2B548F]">
-                                {w.open} open
-                              </span>
-                              {w.overdue > 0 && (
-                                <span className="rounded-full bg-[#D78FC6]/25 px-2 py-0.5 font-semibold text-[#A63590]">
-                                  {w.overdue} overdue
-                                </span>
-                              )}
-                              {w.urgent > 0 && (
-                                <span className="rounded-full bg-[#D6C6A1]/30 px-2 py-0.5 font-medium text-[#8C7646]">
-                                  {w.urgent} high
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Multi-segment capacity bar */}
-                          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
-                            <div
-                              className="h-full rounded-full flex overflow-hidden transition-all duration-500"
-                              style={{ width: `${totalPct}%` }}
-                            >
+                            {/* Multi-segment capacity bar */}
+                            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
                               <div
-                                className="h-full bg-[#6E94CB]"
-                                style={{ width: `${normalShare}%` }}
-                                title={`${w.open - w.overdue} on track`}
-                              />
-                              {w.overdue > 0 && (
+                                className="h-full rounded-full flex overflow-hidden transition-all duration-500"
+                                style={{ width: `${totalPct}%` }}
+                              >
                                 <div
-                                  className="h-full bg-[#D78FC6]"
-                                  style={{ width: `${overdueShare}%` }}
-                                  title={`${w.overdue} overdue`}
+                                  className="h-full bg-[#6E94CB]"
+                                  style={{ width: `${normalShare}%` }}
+                                  title={`${w.open - w.overdue} on track`}
                                 />
-                              )}
+                                {w.overdue > 0 && (
+                                  <div
+                                    className="h-full bg-[#D78FC6]"
+                                    style={{ width: `${overdueShare}%` }}
+                                    title={`${w.overdue} overdue`}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Panel>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Panel>
+              </SectionErrorBoundary>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <Panel
-                title="Issues by status"
-                description={
-                  statusScope === "open"
-                    ? "Showing open issues only across all 7 statuses."
-                    : "Showing all issues including completed and cancelled across all 7 statuses."
-                }
-                hint="Distribution of issues across workflow statuses."
-                aria-label={`Issues by status chart, showing ${statusScope === "open" ? "open" : "all"} issues`}
-                actions={
-                  <div className="flex items-center rounded-full border border-border bg-[#F1F1F3] p-0.5 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => setStatusScope("open")}
-                      className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-                        statusScope === "open"
-                          ? "bg-white text-[#0D0D0D]"
-                          : "text-[#575657] hover:text-[#0D0D0D]"
-                      }`}
-                    >
-                      Open only
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStatusScope("all")}
-                      className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-                        statusScope === "all"
-                          ? "bg-white text-[#0D0D0D]"
-                          : "text-[#575657] hover:text-[#0D0D0D]"
-                      }`}
-                    >
-                      All
-                    </button>
-                  </div>
-                }
-              >
-                {statusTotal === 0 ? (
-                  <PanelEmpty title="No issues in scope" />
-                ) : (
-                  <StackedBar
-                    segments={byStatus.map((s) => ({
-                      label: s.label,
-                      value: s.count,
-                      color: s.color,
-                    }))}
-                  />
-                )}
-              </Panel>
+              <SectionErrorBoundary name="Issues by status chart">
+                <Panel
+                  title="Issues by status"
+                  description={
+                    statusScope === "open"
+                      ? "Showing open issues only across all 7 statuses."
+                      : "Showing all issues including completed and cancelled across all 7 statuses."
+                  }
+                  hint="Distribution of issues across workflow statuses."
+                  aria-label={`Issues by status chart, showing ${statusScope === "open" ? "open" : "all"} issues`}
+                  actions={
+                    <div className="flex items-center rounded-full border border-border bg-[#F1F1F3] p-0.5 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setStatusScope("open")}
+                        className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+                          statusScope === "open"
+                            ? "bg-white text-[#0D0D0D]"
+                            : "text-[#575657] hover:text-[#0D0D0D]"
+                        }`}
+                      >
+                        Open only
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStatusScope("all")}
+                        className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
+                          statusScope === "all"
+                            ? "bg-white text-[#0D0D0D]"
+                            : "text-[#575657] hover:text-[#0D0D0D]"
+                        }`}
+                      >
+                        All
+                      </button>
+                    </div>
+                  }
+                >
+                  {statusTotal === 0 ? (
+                    <PanelEmpty title="No issues in scope" />
+                  ) : (
+                    <StackedBar
+                      segments={byStatus.map((s) => ({
+                        label: s.label,
+                        value: s.count,
+                        color: s.color,
+                      }))}
+                    />
+                  )}
+                </Panel>
+              </SectionErrorBoundary>
 
-              <Panel
-                title="Issues by priority"
-                description="Open issues grouped by priority."
-                aria-label={`Issues by priority chart, showing ${priorityTotal} issues`}
-              >
-                {priorityTotal === 0 ? (
-                  <PanelEmpty title="No open issues in scope" />
-                ) : (
-                  <div className="space-y-1">
-                    {byPriority.map((p) => (
-                      <MeterRow
-                        key={p.priority}
-                        label={
-                          <span className="inline-flex items-center gap-2">
-                            <PriorityBadge priority={p.priority} />
-                          </span>
-                        }
-                        value={p.count}
-                        display={`${p.count} · ${priorityTotal ? Math.round((p.count / priorityTotal) * 100) : 0}%`}
-                        pct={priorityTotal ? (p.count / priorityTotal) * 100 : 0}
-                        tone={PRIORITY_TONE[p.priority] ?? "bg-foreground/70"}
-                      />
-                    ))}
-                  </div>
-                )}
-              </Panel>
+              <SectionErrorBoundary name="Issues by priority chart">
+                <Panel
+                  title="Issues by priority"
+                  description="Open issues grouped by priority."
+                  aria-label={`Issues by priority chart, showing ${priorityTotal} issues`}
+                >
+                  {priorityTotal === 0 ? (
+                    <PanelEmpty title="No open issues in scope" />
+                  ) : (
+                    <div className="space-y-1">
+                      {byPriority.map((p) => (
+                        <MeterRow
+                          key={p.priority}
+                          label={
+                            <span className="inline-flex items-center gap-2">
+                              <PriorityBadge priority={p.priority} />
+                            </span>
+                          }
+                          value={p.count}
+                          display={`${p.count} · ${priorityTotal ? Math.round((p.count / priorityTotal) * 100) : 0}%`}
+                          pct={priorityTotal ? (p.count / priorityTotal) * 100 : 0}
+                          tone={PRIORITY_TONE[p.priority] ?? "bg-foreground/70"}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+              </SectionErrorBoundary>
             </div>
 
             <Panel title="Metric definitions" description="How each number on this page is calculated.">
