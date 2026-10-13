@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -139,24 +139,7 @@ export default function OverviewPage() {
 
   // Edit mode state (sample data permanently disabled)
   const [isEditing, setIsEditing] = useState(false);
-
-  const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
-  const [populatingAll, setPopulatingAll] = useState(false);
-  const emptyProjectCount = useMemo(
-    () => (projects ?? []).filter((p) => p.issueCount === 0).length,
-    [projects],
-  );
-
   const canWrite = Boolean(workspace && workspace.role !== "viewer");
-
-  useEffect(() => {
-    if (emptyProjectCount > 0 && canWrite && !populatingAll) {
-      setPopulatingAll(true);
-      populateAllMutation({ workspaceId: id })
-        .catch(() => {})
-        .finally(() => setPopulatingAll(false));
-    }
-  }, [emptyProjectCount, canWrite, populatingAll, id, populateAllMutation]);
 
   // Persistence in localStorage per user and workspace
   const storageKey = `forge_overview_layout_${workspaceId}_${userId}`;

@@ -374,9 +374,12 @@ export const getBlockedIssues = query({
       .query("issues")
       .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
       .collect()).filter((i) => !i.archivedAt);
-    const deps = (await ctx.db.query("issueDependencies").collect()).filter(
-      (d) => d.workspaceId === workspaceId && d.dependencyType === "blocks",
-    );
+    const deps = (
+      await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .collect()
+    ).filter((d) => d.dependencyType === "blocks");
 
     const statusById = new Map<string, Doc<"workflowStatuses">>();
     const statusIds = [...new Set(issues.map((i) => i.statusId))];

@@ -93,18 +93,21 @@ async function hydrateEvents(
 // ---------------------------------------------------------------------------
 
 export const listNotifications = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { workspaceId: v.optional(v.id("workspaces")) },
+  handler: async (ctx, args) => {
     // Session-safe: this query is mounted in the app sidebar, which can render
     // before the auth token finishes loading. Return empty instead of throwing
     // so it never 500s during the unauthenticated window.
     const user = await optionalUser(ctx);
     if (!user) return { notifications: [], unreadCount: 0 };
-    const rows = await ctx.db
+    let rows = await ctx.db
       .query("notifications")
       .withIndex("by_recipient_created", (q) => q.eq("recipientId", user._id))
       .order("desc")
-      .take(60);
+      .take(100);
+    if (args.workspaceId) {
+      rows = rows.filter((n) => n.workspaceId === args.workspaceId);
+    }
     return {
       notifications: rows,
       unreadCount: rows.filter((n) => !n.readAt).length,
@@ -328,9 +331,12 @@ export const getProjectRisk = query({
     );
     const isDone = (i: Doc<"issues">) => doneIds.has(i.statusId);
 
-    const deps = (await ctx.db.query("issueDependencies").collect()).filter(
-      (d) => d.workspaceId === project.workspaceId && d.dependencyType === "blocks",
-    );
+    const deps = (
+      await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", project.workspaceId))
+        .collect()
+    ).filter((d) => d.dependencyType === "blocks");
 
     const issueById = new Map(issues.map((i) => [i._id, i]));
     const now = Date.now();

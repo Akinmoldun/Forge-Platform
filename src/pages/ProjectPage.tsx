@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
@@ -119,35 +119,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
   const [colStatusId, setColStatusId] = useState<string>("");
 
-  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
-  const [isPopulating, setIsPopulating] = useState(false);
 
-  const handlePopulateDemoIssues = useCallback(async (silent = false) => {
-    if (!project || isPopulating) return;
-    setIsPopulating(true);
-    try {
-      const res = await populateProjectMutation({
-        projectId: project.project._id,
-      });
-      if (!silent) {
-        toast.success(`Populated ${res.count} demo issues across all stages, priorities, and assignees`);
-      }
-    } catch (e) {
-      if (!silent) {
-        toast.error(e instanceof Error ? e.message : "Failed to populate issues");
-      }
-    } finally {
-      setIsPopulating(false);
-    }
-  }, [project, isPopulating, populateProjectMutation]);
-
-  const totalBoardIssues = board?.columns.reduce((acc, c) => acc + c.issues.length, 0) ?? 0;
-
-  useEffect(() => {
-    if (project && board && totalBoardIssues === 0 && !isPopulating) {
-      handlePopulateDemoIssues(true);
-    }
-  }, [project, board, totalBoardIssues, isPopulating, handlePopulateDemoIssues]);
 
   // filters synced to URL
   const search = searchParams.get("q") ?? "";

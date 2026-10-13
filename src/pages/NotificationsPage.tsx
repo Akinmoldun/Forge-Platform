@@ -20,7 +20,7 @@ export default function NotificationsPage() {
     api.workspaces.getWorkspace,
     id ? { workspaceId: id } : "skip",
   );
-  const notifications = useQuery(api.analytics.listNotifications);
+  const notifications = useQuery(api.analytics.listNotifications, id ? { workspaceId: id } : {});
   const markRead = useMutation(api.analytics.markNotificationRead);
   const markAllRead = useMutation(api.analytics.markAllNotificationsRead);
   const navigate = useNavigate();

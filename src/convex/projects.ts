@@ -197,8 +197,8 @@ export const createProject = mutation({
       });
     }
 
-    // Seed initial demo issues across all statuses by default
-    if (args.populateDemoIssues !== false) {
+    // Real projects start empty by default
+    if (args.populateDemoIssues === true) {
       await seedIssuesForProjectHelper(ctx, {
         workspaceId,
         projectId,
@@ -471,10 +471,10 @@ export const deleteLabel = mutation({
       throw new Error("Label not found");
     }
 
-    // Remove all associations on issues
+    // Remove all associations on issues within this workspace
     const issueLabels = await ctx.db
       .query("issueLabels")
-      .withIndex("by_issue_label")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
       .collect();
     for (const il of issueLabels) {
       if (il.labelId === args.labelId) {

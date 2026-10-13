@@ -121,21 +121,7 @@ export default function WorkflowPage() {
     }
   }, [effectiveProjectId]);
 
-  const populateProjectMutation = useMutation(api.projects.populateProjectWithDemoIssues);
-  const [isPopulating, setIsPopulating] = useState(false);
 
-  // Automatically ensure the selected project has issues populated silently if empty
-  useEffect(() => {
-    const totalIssues = board?.columns.reduce((acc, col) => acc + col.issues.length, 0) ?? 0;
-    if (effectiveProjectId && workflowData && board && totalIssues === 0 && !isPopulating) {
-      setIsPopulating(true);
-      populateProjectMutation({
-        projectId: effectiveProjectId as Id<"projects">,
-      })
-        .catch(() => {})
-        .finally(() => setIsPopulating(false));
-    }
-  }, [effectiveProjectId, workflowData, board, isPopulating, populateProjectMutation]);
 
   const handleAddStatus = (newStatus: { name: string; category: string; color: string }) => {
     const customId = `custom_status_${Date.now()}`;

@@ -256,7 +256,7 @@ export default function AnalyticsPage() {
 
         {loading ? (
           <ProjectAnalyticsSkeleton />
-        ) : projectList.length === 0 ? (
+        ) : projectList.length === 0 || issues.length === 0 ? (
           <Panel>
             <PanelEmpty
               title="No data to report yet"

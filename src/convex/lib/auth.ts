@@ -143,6 +143,9 @@ export async function loadIssueContext(
   const issue = await ctx.db.get(issueId);
   if (!issue) throw new Error("Issue not found");
   const project = await loadProjectContext(ctx, issue.projectId);
+  if (issue.workspaceId !== project.workspaceId) {
+    throw new Error("Issue does not belong to this workspace");
+  }
   return { ...project, issue };
 }
 

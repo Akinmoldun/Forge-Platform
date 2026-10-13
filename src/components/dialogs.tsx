@@ -69,7 +69,6 @@ export function CreateProjectDialog({
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
-  const [populateDemoIssues, setPopulateDemoIssues] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const nameError = name.length > 0 && name.trim().length < 2 ? "Use at least 2 characters" : null;
@@ -80,7 +79,6 @@ export function CreateProjectDialog({
     setName("");
     setKey("");
     setDescription("");
-    setPopulateDemoIssues(true);
   };
 
   const submit = async () => {
@@ -92,7 +90,7 @@ export function CreateProjectDialog({
         name: name.trim(),
         key: key.trim().toUpperCase(),
         description: description.trim() || undefined,
-        populateDemoIssues,
+        populateDemoIssues: false,
       });
       setOpen(false);
       reset();
@@ -242,11 +240,13 @@ export function CreateIssueDialog({
     onOpenChange?.(next);
   };
 
+  const projectStorageKey = workspaceId ? `forge_last_project_id_${workspaceId}` : "forge_last_project_id";
+
   // Preselect: project page > last project used in localStorage > only project > first project
   const [projectId, setProjectId] = useState<string>(() => {
     if (defaultProjectId) return defaultProjectId;
     try {
-      const last = localStorage.getItem("forge_last_project_id");
+      const last = localStorage.getItem(projectStorageKey);
       if (last && projects.some((p) => p._id === last)) return last;
     } catch {
       // ignore storage errors
@@ -273,7 +273,7 @@ export function CreateIssueDialog({
       setProjectId(defaultProjectId);
     } else if (!projectId && projects.length > 0) {
       try {
-        const last = localStorage.getItem("forge_last_project_id");
+        const last = localStorage.getItem(projectStorageKey);
         if (last && projects.some((p) => p._id === last)) {
           setProjectId(last);
           return;
@@ -283,7 +283,7 @@ export function CreateIssueDialog({
       }
       setProjectId(projects[0]._id);
     }
-  }, [defaultProjectId, projects, projectId]);
+  }, [defaultProjectId, projects, projectId, projectStorageKey]);
 
   const effectiveProject = projectId || defaultProjectId || projects[0]?._id || "";
 
@@ -314,7 +314,7 @@ export function CreateIssueDialog({
     setProjectId(id);
     setStatusId(""); // Reset status to default when project switches
     try {
-      localStorage.setItem("forge_last_project_id", id);
+      localStorage.setItem(projectStorageKey, id);
     } catch {
       // ignore
     }

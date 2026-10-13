@@ -1,5 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "convex/react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -87,22 +87,7 @@ export default function ProjectsPage() {
     workspace === undefined || projects === undefined || members === undefined || risksLoading;
 
 
-  const [populatingAll, setPopulatingAll] = useState(false);
 
-  const emptyProjects = useMemo(() => {
-    return (projects ?? []).filter((p) => p.issueCount === 0);
-  }, [projects]);
-
-  const populateAllMutation = useMutation(api.projects.populateAllWorkspaceProjectsWithDemoIssues);
-
-  useEffect(() => {
-    if (projects && emptyProjects.length > 0 && canWrite && !populatingAll) {
-      setPopulatingAll(true);
-      populateAllMutation({ workspaceId: id })
-        .catch(() => {})
-        .finally(() => setPopulatingAll(false));
-    }
-  }, [projects, emptyProjects.length, canWrite, populatingAll, id, populateAllMutation]);
 
   const filtered = useMemo(() => {
     const list = projects ?? [];
@@ -214,7 +199,7 @@ export default function ProjectsPage() {
                   </p>
                   {canWrite && (
                     <div className="mt-4">
-                      <CreateProjectDialog workspaceId={id} canCreate={canWrite} defaultOpen />
+                      <CreateProjectDialog workspaceId={id} canCreate={canWrite} />
                     </div>
                   )}
                 </div>

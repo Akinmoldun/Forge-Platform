@@ -157,8 +157,8 @@ export const addWorkflowStatus = mutation({
       }
     }
 
-    // Seed realistic issues for this stage if requested
-    if (args.seedIssues !== false) {
+    // Only seed issues if explicitly requested (default is empty)
+    if (args.seedIssues === true) {
       const sampleTitles = [
         `Implement core logic and unit tests for ${name}`,
         `Verify edge cases and audit telemetry in ${name}`,

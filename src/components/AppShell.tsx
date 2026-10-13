@@ -422,7 +422,7 @@ export function AppShell({
   );
   const notifications = useQuery(
     api.analytics.listNotifications,
-    isInsideWorkspace ? {} : "skip"
+    isInsideWorkspace && workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
 
   const unreadCount = notifications?.unreadCount ?? 0;

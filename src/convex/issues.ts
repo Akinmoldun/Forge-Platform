@@ -79,9 +79,10 @@ export const listIssues = query({
     if (args.labelId) {
       const labelRows = await ctx.db
         .query("issueLabels")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
         .collect();
       const matching = new Set(
-        labelRows.filter((r) => r.workspaceId === workspaceId && r.labelId === args.labelId).map((r) => r.issueId),
+        labelRows.filter((r) => r.labelId === args.labelId).map((r) => r.issueId),
       );
       issues = issues.filter((i) => matching.has(i._id));
     }
@@ -220,9 +221,12 @@ export const getBoard = query({
         .collect()
     ).filter((i) => !i.archivedAt);
 
-    const deps = (await ctx.db.query("issueDependencies").collect()).filter(
-      (d) => d.workspaceId === workspaceId && d.dependencyType === "blocks",
-    );
+    const deps = (
+      await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .collect()
+    ).filter((d) => d.dependencyType === "blocks");
 
     // Query labels for issues
     const issueLabels = await ctx.db
@@ -1182,9 +1186,12 @@ export const listWorkspaceIssues = query({
     ).filter((s): s is Doc<"workflowStatuses"> => s !== null);
     const statusById = new Map(statusDocs.map((s) => [s._id, s]));
 
-    const deps = (await ctx.db.query("issueDependencies").collect()).filter(
-      (d) => d.workspaceId === args.workspaceId && d.dependencyType === "blocks",
-    );
+    const deps = (
+      await ctx.db
+        .query("issueDependencies")
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+        .collect()
+    ).filter((d) => d.dependencyType === "blocks");
     const statusByIssueId = new Map(issues.map((i) => [i._id, i.statusId]));
     const completedStatusIds = new Set(
       statusDocs
