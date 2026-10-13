@@ -14,50 +14,12 @@ const gitHubProvider = GitHub({
   clientId: process.env.AUTH_GITHUB_ID,
   clientSecret: process.env.AUTH_GITHUB_SECRET,
   allowDangerousEmailAccountLinking: false,
-  userinfo: {
-    url: "https://api.github.com/user",
-    async request({ tokens, provider }) {
-      const profile = await fetch(provider.userinfo?.url, {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          "User-Agent": "authjs",
-        },
-      }).then(async (res) => await res.json());
-
-      if (tokens.access_token) {
-        try {
-          const res = await fetch("https://api.github.com/user/emails", {
-            headers: {
-              Authorization: `Bearer ${tokens.access_token}`,
-              "User-Agent": "authjs",
-            },
-          });
-          if (res.ok) {
-            const emails = (await res.json()) as Array<{
-              email: string;
-              primary: boolean;
-              verified: boolean;
-            }>;
-            const primary = emails.find((e) => e.primary) ?? emails[0];
-            if (primary) {
-              profile.email = primary.email;
-              profile.email_verified = Boolean(primary.verified);
-            }
-          }
-        } catch {
-          // Gracefully fallback to public profile email
-        }
-      }
-      return profile;
-    },
-  },
-  profile(profile: any) {
+  profile(profile) {
     return {
       id: profile.id.toString(),
       name: profile.name ?? profile.login,
-      email: profile.email,
+      email: profile.email ?? undefined,
       image: profile.avatar_url,
-      emailVerified: profile.email_verified === true,
     };
   },
 });

@@ -126,8 +126,15 @@ export async function sendEmailDirect({
       });
 
       if (!response.ok) {
-        console.warn(`[email:resend] Delivery failed with HTTP ${response.status}`);
-        return { ok: false, provider: "resend", reason: `Resend rejected request (HTTP ${response.status})` };
+        let errDetail = `Resend rejected request (HTTP ${response.status})`;
+        try {
+          const errData = (await response.json()) as { message?: string };
+          if (errData?.message) errDetail = errData.message;
+        } catch {
+          // Ignore JSON parse error
+        }
+        console.warn(`[email:resend] Delivery failed: ${errDetail}`);
+        return { ok: false, provider: "resend", reason: errDetail };
       }
       return { ok: true, provider: "resend" };
     } catch (err) {

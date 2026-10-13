@@ -77,14 +77,16 @@ export default function AppHome() {
     }
   };
 
+  const isAnonymousGuest = Boolean(user?.isAnonymous);
+
   useEffect(() => {
-    if (user?.isAnonymous && workspaces !== undefined && !autoSeeding && !seedError && !resettingDemo) {
+    if (isAnonymousGuest && workspaces !== undefined && !autoSeeding && !seedError && !resettingDemo) {
       const demoCount = workspaces.filter((w) => w.name.startsWith("Demo: ")).length;
       if (demoCount === 0) {
         startDemoProvisioning();
       }
     }
-  }, [user?.isAnonymous, workspaces, autoSeeding, seedError, resettingDemo, startDemoProvisioning]);
+  }, [isAnonymousGuest, workspaces, autoSeeding, seedError, resettingDemo, startDemoProvisioning]);
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2
@@ -125,7 +127,7 @@ export default function AppHome() {
   };
 
   // If initial seed completely failed and user has no workspaces, show error state with retry
-  if (seedError && user?.isAnonymous && (!workspaces || workspaces.length === 0)) {
+  if (seedError && isAnonymousGuest && (!workspaces || workspaces.length === 0)) {
     return (
       <AppShell>
         <div className="mx-auto max-w-[600px] flex flex-col items-center justify-center py-24 text-center">
@@ -156,7 +158,7 @@ export default function AppHome() {
     );
   }
 
-  const isPreparingDemos = user?.isAnonymous && (autoSeeding || resettingDemo || (workspaces && workspaces.filter((w) => w.name.startsWith("Demo: ")).length < 3));
+  const isPreparingDemos = isAnonymousGuest && (autoSeeding || resettingDemo || (workspaces && workspaces.filter((w) => w.name.startsWith("Demo: ")).length < 3));
 
   return (
     <AppShell>
@@ -283,7 +285,7 @@ export default function AppHome() {
 
         {/* Workspaces Grid */}
         <div className="mt-6">
-          {workspaces === undefined || (user?.isAnonymous && workspaces.length === 0) ? (
+          {workspaces === undefined || (isAnonymousGuest && workspaces.length === 0) ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="h-44 rounded-[16px] border border-border bg-white p-5 animate-pulse flex flex-col justify-between">
                 <div className="size-10 rounded-xl bg-[#F1F1F3]" />
@@ -368,7 +370,7 @@ export default function AppHome() {
               })}
 
               {/* Show placeholder skeleton if guest demo is still provisioning remaining workspaces */}
-              {user?.isAnonymous && isPreparingDemos && workspaces.length < 3 && (
+              {isAnonymousGuest && isPreparingDemos && workspaces.length < 3 && (
                 Array.from({ length: 3 - workspaces.length }).map((_, i) => (
                   <div
                     key={`prep-skel-${i}`}

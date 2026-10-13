@@ -112,6 +112,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     try {
       const formData = new FormData();
       formData.set('email', trimmedEmail);
+      formData.set('mode', mode === 'login' ? 'signin' : 'signup');
       await withTimeout(signIn('email-otp', formData), 10000);
       setStep('code');
       setCountdown(30);
@@ -122,7 +123,19 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
         : '';
       const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
       const combined = `${dataStr.toLowerCase()} ${msg}`;
+
       if (
+        combined.includes("couldn't find an account") ||
+        combined.includes("not find an account") ||
+        combined.includes("not_found")
+      ) {
+        setError("We couldn't find an account with this email. Please sign up first.");
+      } else if (
+        combined.includes("already exists") ||
+        combined.includes("already_exists")
+      ) {
+        setError("An account with this email already exists. Please sign in.");
+      } else if (
         combined.includes("email isn't set up yet") ||
         combined.includes("email isnt set up yet") ||
         combined.includes('email_provider') ||
@@ -130,7 +143,9 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
         combined.includes('not configured') ||
         combined.includes('is not configured')
       ) {
-        setError("Email isn't set up yet");
+        setError("Email delivery isn't configured on Convex Cloud. Set EMAIL_PROVIDER in your Convex dashboard.");
+      } else if (combined.includes('only send testing emails') || combined.includes('resend rejected')) {
+        setError("Resend test mode: Can only deliver to the account owner (baserobbie02@gmail.com) until a domain is verified.");
       } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
       } else {
@@ -158,11 +173,13 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       const formData = new FormData();
       formData.set('email', email.trim());
       formData.set('code', trimmedCode);
+      formData.set('mode', mode === 'login' ? 'signin' : 'signup');
       await withTimeout(signIn('email-otp', formData), 10000);
       navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
       console.error('Verify OTP error:', err);
       const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+
       if (msg.includes('expired')) {
         setError('That code has expired');
       } else if (msg.includes('rate') || msg.includes('too many')) {
@@ -238,7 +255,12 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       await signIn('github', { redirectTo: safeRedirect });
     } catch (err: unknown) {
       console.error('GitHub sign-in error:', err);
-      setGithubError("Couldn't sign in with GitHub, try again");
+      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      if (msg.includes('not configured') || msg.includes('missing auth_github')) {
+        setGithubError("GitHub sign-in is not yet configured on Convex Cloud. Set AUTH_GITHUB_ID & AUTH_GITHUB_SECRET and deploy.");
+      } else {
+        setGithubError("Couldn't sign in with GitHub, try again");
+      }
       setIsGitHubLoading(false);
     }
   };
