@@ -408,33 +408,51 @@ export function AppShell({
   // If outside workspace
   const isInsideWorkspace = isWorkspaceRoute(pathname);
 
-  // Queries
-  const myWorkspaces = useQuery(
-    api.workspaces.listMyWorkspaces,
-    isInsideWorkspace ? {} : "skip"
-  );
-  const currentWorkspace = useQuery(
-    api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
-  );
-  const projects = useQuery(
-    api.projects.listProjects,
-    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
-  );
-  const notifications = useQuery(
-    api.analytics.listNotifications,
-    isInsideWorkspace && workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
-  );
-
-  const unreadCount = notifications?.unreadCount ?? 0;
-
   // Current active project or issue if on project/issue page
   const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
   const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
+
+  const activeProjectQuery = useQuery(
+    api.projects.getProject,
+    !workspaceId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
+  );
   const issueDetail = useQuery(
     api.issues.getIssue,
     activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
   );
+
+  const effectiveWorkspaceId =
+    workspaceId ||
+    activeProjectQuery?.project?.workspaceId ||
+    issueDetail?.workspaceId;
+
+  // Queries
+  const myWorkspaces = useQuery(
+    api.workspaces.listMyWorkspaces,
+    user ? {} : "skip"
+  );
+  const currentWorkspace = useQuery(
+    api.workspaces.getWorkspace,
+    effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+  );
+  const notifications = useQuery(
+    api.analytics.listNotifications,
+    effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+  );
+
+  const unreadCount = notifications?.unreadCount ?? 0;
+
+  // Logo destination: dashboard if logged in, landing page if logged out
+  const dashboardHref = useMemo(() => {
+    if (!user) return "/";
+    if (effectiveWorkspaceId) return `/app/workspaces/${effectiveWorkspaceId}`;
+    if (myWorkspaces && myWorkspaces.length > 0) return `/app/workspaces/${myWorkspaces[0]._id}`;
+    return "/app";
+  }, [user, effectiveWorkspaceId, myWorkspaces]);
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
