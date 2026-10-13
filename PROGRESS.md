@@ -12,6 +12,13 @@
 - [x] T9. PROJECT SETTINGS EMBLEM: Unified icon resolution (iconKey ?? hash), preselected picker, subtitle wording
 - [x] T10. TEAMS PAGE: Calm role description, accurate overdue counts, member workload styling, illustrated avatars
 - [x] T11. FINAL CHECK AND REPORT: Build, 0 lint/TS errors, remove stray hex/Phase strings, final summary
+- [x] T12. SEARCH / COMMAND PALETTE: Rebuilt 600px Notion-like dialog, localStorage Recents, 16px icons, bold search match, open issues prioritized
+- [x] T13. OVERVIEW: Notion-like 60/40 grid, unified isOpenIssue everywhere, priority breakdown 5 plain rows, full-width open issues, relative activity
+- [x] T14. PROJECT ANALYTICS TAB: 24px tab spacing, neutral palette, 4 plain stat cards, expandable top-6 workload, auto-height risk card, range selector
+- [x] T15. DEMO DATA AND NUMBERS CHECK: Verified numbers match across Overview, Projects, Priority breakdown, and Workflow; confirmed 35 issues in OPS (22 open, 13 done), zero negative/NaN values, zero title duplicates
+- [~] T16. LOADING STATES: NO EMPTY FLASH (Overview, Projects, Board, List, Analytics, Teams, Activity, Workflow, Sidebar)
+- [ ] T17. PROJECT ANALYTICS COLORS (Throughput, cycle time, review wait, workload, workspace analytics)
+- [ ] T18. RESTORE DEMO SIZES (Pixel Forge 180-240, Quiet Harbor 90-120, npx convex dev --once)
 
 ## ROOT CAUSES FOUND
 - T1: `src/convex/issues.ts:180` `getBoard` did not enforce the full set of 7 standard statuses in canonical order and failed to fall back when statuses were incomplete or mismatched; fixed board columns and DragScroll panning.
@@ -25,9 +32,15 @@
 - T9: `src/pages/ProjectSettings.tsx:85` defaulted unset `iconKey` to `'mountain'` instead of using the deterministic hash (`resolveEmblemKey`) used throughout the rest of the application, causing picker selection mismatch and displaying raw letters in the header; added `resolveEmblemKey` unified resolver, preselected picker styling, emblem illustration in header, and updated subtitle copy.
 - T10: `src/pages/TeamsPage.tsx:103` overdue calculations did not account for issues in done/completed status without completedAt timestamps; used `isIssueDone` logic, replaced generic letter initials with Forge's deterministic `AvatarIllustration` across the table and drawer sheet, styled member workloads with calm Forge tokens, and refined role descriptions.
 - T11: Verified complete app build with 0 TypeScript/compilation errors, 0 ESLint warnings or errors, audited and removed stray Phase strings, and confirmed all 11 tasks in PROGRESS.md pass.
+- T12: `src/components/CommandPaletteDialog.tsx` contained chip filters, hardcoded suggestions, and unordered issues; rebuilt into a 600px Notion-like dialog with light dim overlay (0.25, no blur), localStorage Recents, 16px line icons, live search with bold highlights, open issues prioritized over completed/cancelled, and no marketing copy.
+- T13: `src/pages/OverviewPage.tsx` passed all workspace issues (including done/cancelled) to `PriorityBreakdownWidget` instead of open issues, resulting in 375 vs 230 count mismatch; `MyOpenIssuesWidget` and Today strip included completed items; card containers had forced min-heights and redundant footers. Rebuilt Priority Breakdown into 5 plain rows with 4px bars, unified `isOpenIssue` across all widgets/cards/project health, streamlined My open issues and relative activity, and established a clean 60/40 auto-height grid.
+- T14: `src/pages/ProjectPage.tsx` negative margin tab borders overlapped the first row of cards, cards had heavy colored left borders and inner progress bars, workload card listed 16 members without pagination, and risk card was stretched vertically. Added 24px tab spacing, neutral ink 80% throughput, completion with big number and 3 lines, expandable top-6 workload, auto-height risk card with title level, side-by-side status/priority lists, 4-way range selector, and aria-labels on every chart card.
+- T15: `src/pages/WorkflowPage.tsx` synthesized cards and inflated status counts using `Math.max(1, synthCount)` when a stage had 0 issues, causing column count mismatch with Overview and Projects; `src/convex/issues.ts` capped `PAGE_SIZE_MAX` at 100 which truncated the 104 issues of project PLT; `src/convex/projects.ts` lacked workspace-level fallback for status categories. Fixed `PAGE_SIZE_MAX` to 500, `ISSUE_PAGE_SIZE` to 250, added workspace fallback category mapping, and removed fake status synthesis.
 
 ## NEXT ACTION
-None. All 11 Forge fix pass tasks are complete and verified.
+T16. LOADING STATES: NO EMPTY FLASH (Overview, Projects, Board, List, Analytics, Teams, Activity, Workflow, Sidebar)
 
 ## BLOCKERS
 None.
+
+

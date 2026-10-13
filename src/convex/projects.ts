@@ -27,6 +27,12 @@ export const listProjects = query({
       .filter((p) => p.status !== "archived")
       .sort((a, b) => b.createdAt - a.createdAt);
 
+    const workspaceStatuses = await ctx.db
+      .query("workflowStatuses")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .collect();
+    const fallbackCategoryMap = new Map(workspaceStatuses.map((s) => [s._id, s.category]));
+
     return Promise.all(
       sorted.map(async (p) => {
         const issues = await ctx.db
@@ -45,8 +51,12 @@ export const listProjects = query({
           : [];
         const statusCategoryMap = new Map(statuses.map((s) => [s._id, s.category]));
         const active = issues.filter((i) => !i.archivedAt);
-        const open = active.filter((i) => isIssueOpen(i, statusCategoryMap.get(i.statusId))).length;
-        const done = active.filter((i) => isIssueDone(i, statusCategoryMap.get(i.statusId))).length;
+        const open = active.filter((i) =>
+          isIssueOpen(i, statusCategoryMap.get(i.statusId) ?? fallbackCategoryMap.get(i.statusId)),
+        ).length;
+        const done = active.filter((i) =>
+          isIssueDone(i, statusCategoryMap.get(i.statusId) ?? fallbackCategoryMap.get(i.statusId)),
+        ).length;
         return { ...p, openIssueCount: open, doneIssueCount: done, issueCount: active.length };
       }),
     );
@@ -73,13 +83,22 @@ export const getProject = query({
           .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
           .collect()
       : [];
+    const workspaceStatuses = await ctx.db
+      .query("workflowStatuses")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+      .collect();
+    const fallbackCategoryMap = new Map(workspaceStatuses.map((s) => [s._id, s.category]));
     const statusCategoryMap = new Map(statuses.map((s) => [s._id, s.category]));
     const active = issues.filter((i) => !i.archivedAt);
     return {
       project,
       role,
-      openIssueCount: active.filter((i) => isIssueOpen(i, statusCategoryMap.get(i.statusId))).length,
-      doneIssueCount: active.filter((i) => isIssueDone(i, statusCategoryMap.get(i.statusId))).length,
+      openIssueCount: active.filter((i) =>
+        isIssueOpen(i, statusCategoryMap.get(i.statusId) ?? fallbackCategoryMap.get(i.statusId)),
+      ).length,
+      doneIssueCount: active.filter((i) =>
+        isIssueDone(i, statusCategoryMap.get(i.statusId) ?? fallbackCategoryMap.get(i.statusId)),
+      ).length,
       issueCount: active.length,
     };
   },

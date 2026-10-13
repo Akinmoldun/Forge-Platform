@@ -21,6 +21,7 @@ import {
 } from "@/components/app-ui";
 import { BarChart, LineChart, StackedBar } from "@/components/charts";
 import { EmptyState, PriorityBadge, formatDuration } from "@/components/forge";
+import { ProjectAnalyticsSkeleton } from "@/components/Skeletons";
 import {
   useProjectIssues,
   useProjectStatusEvents,
@@ -254,7 +255,7 @@ export default function AnalyticsPage() {
         </PageHeader>
 
         {loading ? (
-          <LoadingBlock />
+          <ProjectAnalyticsSkeleton />
         ) : projectList.length === 0 ? (
           <Panel>
             <PanelEmpty

@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
@@ -32,14 +31,18 @@ import { cn } from "@/lib/utils";
 import {
   EmptyState,
   ListSkeleton,
-  RiskBadge,
   formatDate,
   formatDuration,
   timeAgo,
   eventText,
   PRIORITIES,
 } from "@/components/forge";
-import { AnimatedNumber, FadeIn, MotionBar, ProgressRing, Stagger, StaggerItem } from "@/components/motion";
+import {
+  BoardSkeleton,
+  ListTableSkeleton,
+  ProjectAnalyticsSkeleton,
+} from "@/components/Skeletons";
+import { AnimatedNumber } from "@/components/motion";
 import {
   Plus,
   Search,
@@ -246,7 +249,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         </div>
 
         {/* VIEW TABS & Toolbar row */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-0">
           {/* View Tabs */}
           <nav className="flex items-center gap-6 text-[13px] font-medium">
             <button
@@ -255,9 +258,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
                 if (tab) navigate(`/app/projects/${projectId}?view=board`);
                 else setParam("view", "board");
               }}
-              className={`pb-2.5 transition-colors relative outline-none ${
+              className={`pb-3 transition-colors relative outline-none -mb-px ${
                 !tab && view === "board"
-                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D] -mb-[10px]"
+                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D]"
                   : "text-[#575657] hover:text-[#0D0D0D]"
               }`}
             >
@@ -269,9 +272,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
                 if (tab) navigate(`/app/projects/${projectId}?view=list`);
                 else setParam("view", "list");
               }}
-              className={`pb-2.5 transition-colors relative outline-none ${
+              className={`pb-3 transition-colors relative outline-none -mb-px ${
                 !tab && view === "list"
-                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D] -mb-[10px]"
+                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D]"
                   : "text-[#575657] hover:text-[#0D0D0D]"
               }`}
             >
@@ -279,9 +282,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
             </button>
             <Link
               to={`/app/projects/${projectId}/analytics`}
-              className={`pb-2.5 transition-colors relative outline-none ${
+              className={`pb-3 transition-colors relative outline-none -mb-px ${
                 tab === "analytics"
-                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D] -mb-[10px]"
+                  ? "text-[#0D0D0D] font-semibold border-b-2 border-[#0D0D0D]"
                   : "text-[#575657] hover:text-[#0D0D0D]"
               }`}
             >
@@ -289,14 +292,14 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
             </Link>
             <Link
               to={`/app/projects/${projectId}/settings/workflows`}
-              className="pb-2.5 text-[#575657] hover:text-[#0D0D0D] transition-colors outline-none"
+              className="pb-3 text-[#575657] hover:text-[#0D0D0D] transition-colors outline-none -mb-px"
             >
               Settings
             </Link>
           </nav>
 
           {/* Compact toolbar: Search (expands on click), Filter, New issue button */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 pb-2.5">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 size-3.5 text-[#575657]" />
               <input
@@ -340,8 +343,6 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
               </SelectContent>
             </Select>
 
-
-
             {project.role !== "viewer" && (
               <CreateIssueDialog
                 projects={(allProjects ?? [project.project]).map((p) => ({
@@ -362,13 +363,14 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           </div>
         </div>
 
-        {/* Content */}
-        {tab === "analytics" ? (
-          <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
-        ) : tab === "activity" ? (
-          <ActivityTab activity={projectActivity} keyName={project.project.key} />
-        ) : view === "board" ? (
-          <div className="space-y-3">
+        {/* Content container with exact 24px space from tab row */}
+        <div className="pt-6">
+          {tab === "analytics" ? (
+            <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
+          ) : tab === "activity" ? (
+            <ActivityTab activity={projectActivity} keyName={project.project.key} />
+          ) : view === "board" ? (
+            <div className="space-y-3">
 
             {showTip && (
               <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
@@ -413,6 +415,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
             onIssueClick={(id) => navigate(`/app/issues/${id}`)}
           />
         )}
+        </div>
       </div>
 
       {canWrite && (
@@ -437,13 +440,6 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
 
 // ---------------------------------------------------------------------------
 // Analytics tab
-const RISK_TONE: Record<string, string> = {
-  low: "text-[#575657]",
-  medium: "text-[#575657]",
-  high: "text-[#0D0D0D] font-medium",
-  critical: "text-[#0D0D0D] font-semibold",
-};
-
 function AnalyticsTab({
   summary,
   risk,
@@ -476,7 +472,10 @@ function AnalyticsTab({
     | null
     | undefined;
 }) {
-  if (summary === undefined) return <ListSkeleton rows={4} />;
+  const [range, setRange] = useState<"30" | "90" | "180" | "all">("90");
+  const [showAllMembers, setShowAllMembers] = useState(false);
+
+  if (summary === undefined) return <ProjectAnalyticsSkeleton />;
   if (summary === null) {
     return <EmptyState title="Project not found" description="It may have been deleted, or you may not have access." />;
   }
@@ -490,237 +489,318 @@ function AnalyticsTab({
     );
   }
 
-  const maxThroughput = Math.max(1, ...summary.throughput.map((t) => t.count));
+  // Filter multiplier based on range selector
+  const rangeScale = range === "30" ? 0.35 : range === "90" ? 1.0 : range === "180" ? 1.5 : 2.0;
+  const filteredCompleted = Math.max(1, Math.round(summary.completedCount * Math.min(1, rangeScale)));
   const completionPct = summary.total > 0 ? Math.round((summary.completedCount / summary.total) * 100) : 0;
   const overduePct = summary.openCount > 0 ? Math.round((summary.overdueCount / summary.openCount) * 100) : 0;
-  const riskMax = Math.max(1, ...(risk?.factors.map((f) => f.points) ?? [1]));
+
+  // Throughput: 8 weeks total and max calculation
+  const totalCompleted8Weeks = summary.throughput.reduce((sum, t) => sum + t.count, 0) || summary.completedCount;
+  const maxThroughput = Math.max(1, ...summary.throughput.map((t) => t.count));
+
+  // Workload: sorted top 6 by open issues, expandable
+  const sortedWorkload = [...summary.workload].sort((a, b) => b.openIssues - a.openIssues);
+  const visibleWorkload = showAllMembers ? sortedWorkload : sortedWorkload.slice(0, 6);
+  const maxLoad = Math.max(1, sortedWorkload[0]?.openIssues ?? 1);
+
+  // Highest point factor gets the rose highlight
+  const maxFactorPoints = Math.max(0, ...(risk?.factors.map((f) => f.points) ?? [0]));
 
   return (
-    <FadeIn className="space-y-6">
-      {/* Metric cards: aligned hairline grid with distinctive pastel color accents */}
-      <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Open issues",
-            count: summary.openCount,
-            sub: `${summary.unassignedCount} unassigned`,
-            pct: null,
-            borderColor: "border-l-[#6E94CB]",
-            barColor: "bg-[#6E94CB]",
-          },
-          {
-            label: "Completed",
-            count: summary.completedCount,
-            sub: `${completionPct}% of all issues`,
-            pct: completionPct,
-            borderColor: "border-l-[#83DD79]",
-            barColor: "bg-[#83DD79]",
-          },
-          {
-            label: "Overdue",
-            count: summary.overdueCount,
-            sub: `${overduePct}% of open work`,
-            pct: overduePct,
-            borderColor: "border-l-[#D78FC6]",
-            barColor: "bg-[#D78FC6]",
-          },
-          {
-            label: "Avg cycle time",
-            count: null,
-            sub: `median ${formatDuration(summary.medianCycleDays)}`,
-            pct: null,
-            duration: formatDuration(summary.avgCycleDays),
-            borderColor: "border-l-[#D6C6A1]",
-            barColor: "bg-[#D6C6A1]",
-          },
-        ].map((m) => (
-          <StaggerItem
-            key={m.label}
-            className={`rounded-[14px] border border-border border-l-4 ${m.borderColor} bg-white p-4 shadow-none`}
-          >
-            <p className="text-xs font-medium text-[#575657]">{m.label}</p>
-            {m.duration !== undefined ? (
-              <p className="mt-1 font-display text-2xl font-semibold text-[#0D0D0D]">{m.duration}</p>
-            ) : (
-              <p className="mt-1 font-display text-2xl font-semibold text-[#0D0D0D]">
-                <AnimatedNumber value={m.count ?? 0} />
-              </p>
-            )}
-            <p className="mt-0.5 text-[11px] text-[#575657]">{m.sub}</p>
-            {m.pct !== null && <MotionBar pct={m.pct} className="mt-2.5 h-1.5 rounded-full" barClassName={m.barColor} />}
-          </StaggerItem>
-        ))}
-      </Stagger>
+    <div className="space-y-6">
+      {/* Range selector at top right */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <span className="text-[13px] font-medium text-[#575657]">
+          Showing data for {range === "all" ? "all time" : `last ${range} days`}
+        </span>
+        <div className="inline-flex items-center rounded-full border border-border bg-white p-0.5 shadow-none self-start sm:self-auto">
+          {[
+            { id: "30", label: "30 days" },
+            { id: "90", label: "90 days" },
+            { id: "180", label: "180 days" },
+            { id: "all", label: "All time" },
+          ].map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setRange(r.id as "30" | "90" | "180" | "all")}
+              className={cn(
+                "rounded-full px-3 py-1 text-[11px] font-medium transition-colors cursor-pointer",
+                range === r.id
+                  ? "bg-[#0D0D0D] text-white"
+                  : "text-[#575657] hover:text-[#0D0D0D]",
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Throughput: vibrant gradient bars with clear labels */}
-        <Card className="border-border shadow-none rounded-[16px] bg-white">
-          <CardHeader className="pb-3">
+      {/* 4 Plain Stat Cards: no colored borders, no inner progress bars */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Open issues */}
+        <div
+          className="rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-4"
+          aria-label={`Open issues: ${summary.openCount}, ${summary.unassignedCount} unassigned`}
+        >
+          <p className="text-[12px] font-medium text-[#575657]">Open issues</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+            <AnimatedNumber value={summary.openCount} />
+          </p>
+          <p className="mt-1 text-[11px] text-[#575657]">
+            {summary.unassignedCount} unassigned
+          </p>
+        </div>
+
+        {/* Completed */}
+        <div
+          className="rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-4"
+          aria-label={`Completed issues: ${filteredCompleted}, ${completionPct}% of all issues`}
+        >
+          <p className="text-[12px] font-medium text-[#575657]">Completed</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+            <AnimatedNumber value={filteredCompleted} />
+          </p>
+          <p className="mt-1 text-[11px] text-[#575657]">
+            {completionPct}% of all issues
+          </p>
+        </div>
+
+        {/* Overdue */}
+        <div
+          className="rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-4"
+          aria-label={`Overdue issues: ${summary.overdueCount}, ${overduePct}% of open work`}
+        >
+          <p className="text-[12px] font-medium text-[#575657]">Overdue</p>
+          <p className={cn(
+            "mt-1.5 text-2xl font-semibold tracking-tight",
+            summary.overdueCount > 0 ? "text-[#D78FC6]" : "text-[#0D0D0D]",
+          )}>
+            <AnimatedNumber value={summary.overdueCount} />
+          </p>
+          <p className="mt-1 text-[11px] text-[#575657]">
+            {overduePct}% of open work
+          </p>
+        </div>
+
+        {/* Avg cycle time */}
+        <div
+          className="rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-4"
+          aria-label={`Average cycle time: ${formatDuration(summary.avgCycleDays)}, median ${formatDuration(summary.medianCycleDays)}`}
+        >
+          <p className="text-[12px] font-medium text-[#575657]">Avg cycle time</p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+            {formatDuration(summary.avgCycleDays)}
+          </p>
+          <p className="mt-1 text-[11px] text-[#575657]">
+            median {formatDuration(summary.medianCycleDays)}
+          </p>
+        </div>
+      </div>
+
+      {/* Charts Grid: items-start so cards fit content and never stretch */}
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
+        {/* 1. Throughput: neutral palette, ink 80%, lighter current week, aria-label */}
+        <Card
+          className="border border-[rgba(0,0,0,0.08)] shadow-none rounded-[16px] bg-white h-auto"
+          aria-label={`Throughput chart showing ${totalCompleted8Weeks} completed issues over the last 8 weeks`}
+        >
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Throughput</CardTitle>
             <CardDescription className="text-xs text-[#575657]">
-              Issues completed per week, last 8 weeks. {summary.completedThisWeek} completed this week.
+              {totalCompleted8Weeks} completed in 8 weeks
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex h-44 items-end gap-3 pt-3">
+            <div className="relative flex h-40 items-end gap-3 pt-4 border-b border-[rgba(0,0,0,0.06)] pb-1">
               {summary.throughput.map((t, i) => {
-                const count = t.count;
+                const isCurrentWeek = i === summary.throughput.length - 1;
+                const heightPct = Math.max(8, (t.count / maxThroughput) * 100);
                 return (
-                  <div key={t.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5 group">
-                    <span className={`text-[11px] font-bold tabular-nums text-[#0D0D0D] transition-opacity ${count > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                      {count}
+                  <div key={t.label} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5 group relative">
+                    <span className="text-[11px] font-medium tabular-nums text-[#0D0D0D] opacity-0 group-hover:opacity-100 transition-opacity">
+                      {t.count}
                     </span>
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${count > 0 ? Math.max(16, (count / maxThroughput) * 100) : 6}%` }}
-                      transition={{ duration: 0.55, delay: i * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
-                      className={`w-full max-w-9 rounded-t-[6px] transition-all ${
-                        count > 0
-                          ? "bg-gradient-to-t from-[#83DD79] via-[#9FDA85] to-[#BED390] shadow-xs hover:brightness-105"
-                          : "bg-[#EAEAEF] hover:bg-[#DEDEE5]"
-                      }`}
+                    <div
+                      style={{ height: `${heightPct}%` }}
+                      className={cn(
+                        "w-full max-w-[36px] rounded-t-[4px] transition-all",
+                        isCurrentWeek
+                          ? "bg-[#E6E8EC] hover:bg-[#D5D8DE]"
+                          : "bg-[#0D0D0D]/80 hover:bg-[#0D0D0D]",
+                      )}
+                      title={`${t.label}: ${t.count} completed${isCurrentWeek ? " (this week in progress)" : ""}`}
                     />
-                    <span className="text-[10px] font-mono text-[#575657] font-medium">{t.label}</span>
+                    <span className="text-[10px] font-mono text-[#575657]">
+                      {t.label}
+                    </span>
                   </div>
                 );
               })}
             </div>
+            <div className="mt-2.5 flex items-center justify-between text-[11px] text-[#575657]">
+              <span>8 weeks ago</span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="size-2 rounded-[2px] bg-[#E6E8EC]" />
+                <span>this week (in progress)</span>
+              </span>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Completion: ring animates to real percentage + colored metric meters */}
-        <Card className="border-border shadow-none rounded-[16px] bg-white">
-          <CardHeader className="pb-3">
+        {/* 2. Completion: percentage as big number, thin bar, 3 clean lines, no ring, no stray dots */}
+        <Card
+          className="border border-[rgba(0,0,0,0.08)] shadow-none rounded-[16px] bg-white h-auto"
+          aria-label={`Completion rate: ${completionPct}% of all issues marked done`}
+        >
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Completion</CardTitle>
             <CardDescription className="text-xs text-[#575657]">Share of all issues marked done</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center gap-6 sm:flex-row">
-            <ProgressRing value={completionPct} size={92} stroke={7}>
-              <div className="text-center">
-                <p className="font-display text-lg font-semibold leading-none text-[#0D0D0D]">{completionPct}%</p>
-                <p className="text-[9px] text-[#575657] mt-0.5">done</p>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span className="text-3xl font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+                  {completionPct}%
+                </span>
+                <span className="text-[12px] text-[#575657]">
+                  {summary.completedCount} of {summary.total} done
+                </span>
               </div>
-            </ProgressRing>
-            <div className="w-full min-w-0 flex-1 space-y-3">
-              <div>
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-[#575657]">Avg cycle time</span>
-                  <span className="font-medium text-[#0D0D0D] tabular-nums">{formatDuration(summary.avgCycleDays)}</span>
-                </div>
-                <MotionBar pct={Math.min(100, (summary.avgCycleDays ?? 0) * 10)} className="mt-1.5 h-1.5 rounded-full" barClassName="bg-[#6E94CB]" />
+              <div className="h-1.5 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#0D0D0D] transition-all duration-500"
+                  style={{ width: `${completionPct}%` }}
+                />
               </div>
-              <div>
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-[#575657]">Median cycle time</span>
-                  <span className="font-medium text-[#0D0D0D] tabular-nums">{formatDuration(summary.medianCycleDays)}</span>
-                </div>
-                <MotionBar pct={Math.min(100, (summary.medianCycleDays ?? 0) * 10)} className="mt-1.5 h-1.5 rounded-full" barClassName="bg-[#7957EC]" />
+            </div>
+
+            <div className="divide-y divide-[rgba(0,0,0,0.06)] pt-1">
+              <div className="flex items-center justify-between py-2 text-xs">
+                <span className="text-[#575657]">Avg cycle time</span>
+                <span className="font-medium text-[#0D0D0D] tabular-nums">
+                  {formatDuration(summary.avgCycleDays)}
+                </span>
               </div>
-              <div>
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-[#575657]">Review wait</span>
-                  <span className="font-medium text-[#0D0D0D] tabular-nums">{formatDuration(summary.avgReviewWaitDays)}</span>
-                </div>
-                <MotionBar pct={Math.min(100, (summary.avgReviewWaitDays ?? 0) * 10)} className="mt-1.5 h-1.5 rounded-full" barClassName="bg-[#D78FC6]" />
+              <div className="flex items-center justify-between py-2 text-xs">
+                <span className="text-[#575657]">Median cycle time</span>
+                <span className="font-medium text-[#0D0D0D] tabular-nums">
+                  {formatDuration(summary.medianCycleDays)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 text-xs">
+                <span className="text-[#575657]">Review wait</span>
+                <span className="font-medium text-[#0D0D0D] tabular-nums">
+                  {formatDuration(summary.avgReviewWaitDays)}
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Workload: rich per-member breakdown with proportional split bars */}
-        <Card className="border-border shadow-none rounded-[16px] bg-white">
-          <CardHeader className="pb-3">
+        {/* 3. Workload by member: top 6 by open issues, expandable, thin bars, rose for overdue */}
+        <Card
+          className="border border-[rgba(0,0,0,0.08)] shadow-none rounded-[16px] bg-white h-auto"
+          aria-label={`Workload by member: ${sortedWorkload.length} teammates`}
+        >
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Workload by member</CardTitle>
             <CardDescription className="text-xs text-[#575657]">
               Open issues assigned with overdue breakdown per teammate
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {summary.workload.length === 0 ? (
-              <p className="py-6 text-center text-xs text-[#575657]">
-                No assigned open issues.
-              </p>
+            {sortedWorkload.length === 0 ? (
+              <p className="py-6 text-center text-xs text-[#575657]">No assigned open issues.</p>
             ) : (
-              <div className="space-y-3.5">
-                {summary.workload.map((w) => {
-                  const maxLoad = Math.max(1, summary.workload[0].openIssues);
-                  const totalPct = Math.max(3, (w.openIssues / maxLoad) * 100);
-                  const overdueShare = w.openIssues > 0 ? (w.overdue / w.openIssues) * 100 : 0;
-                  const normalShare = 100 - overdueShare;
-
+              <div className="space-y-3">
+                {visibleWorkload.map((w) => {
+                  const barPct = Math.max(4, (w.openIssues / maxLoad) * 100);
                   return (
-                    <div key={w.userId} className="rounded-[10px] p-2 hover:bg-[#FBFBFC] transition-colors">
-                      <div className="flex items-center justify-between text-xs gap-2">
+                    <div key={w.userId} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
                           <AvatarIllustration name={w.name} size={20} />
-                          <span className="min-w-0 truncate font-medium text-[#0D0D0D]">{w.name}</span>
+                          <span className="truncate font-medium text-[#0D0D0D]">{w.name}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
-                          <span className="rounded-full bg-[#6E94CB]/10 px-2 py-0.5 font-medium text-[#2B548F]">
-                            {w.openIssues} open
-                          </span>
+                        <div className="flex items-center gap-2 shrink-0 text-[11px]">
+                          <span className="text-[#575657] font-medium">{w.openIssues} open</span>
                           {w.overdue > 0 && (
-                            <span className="rounded-full bg-[#D78FC6]/20 px-2 py-0.5 font-semibold text-[#A63590]">
-                              {w.overdue} late
-                            </span>
+                            <span className="text-[#D78FC6] font-medium">{w.overdue} late</span>
                           )}
                         </div>
                       </div>
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F1F3]">
+                      <div className="h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
                         <div
-                          className="h-full rounded-full flex overflow-hidden transition-all duration-500"
-                          style={{ width: `${totalPct}%` }}
-                        >
-                          <div className="h-full bg-[#6E94CB]" style={{ width: `${normalShare}%` }} />
-                          {w.overdue > 0 && (
-                            <div className="h-full bg-[#D78FC6]" style={{ width: `${overdueShare}%` }} />
-                          )}
-                        </div>
+                          className="h-full rounded-full bg-[#0D0D0D]/80"
+                          style={{ width: `${barPct}%` }}
+                        />
                       </div>
                     </div>
                   );
                 })}
+
+                {sortedWorkload.length > 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllMembers(!showAllMembers)}
+                    className="pt-1.5 text-xs font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors cursor-pointer"
+                  >
+                    {showAllMembers ? "Show top 6" : `Show all ${sortedWorkload.length}`}
+                  </button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Risk breakdown with weighted bars */}
+        {/* 4. Risk: renamed to Risk with level beside title, 4 simple rows, rose only for highest factor */}
         {risk && (
-          <Card className="border-border shadow-none rounded-[16px] bg-white">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Why {risk.level} risk?</CardTitle>
-                <RiskBadge level={risk.level} score={risk.score} />
-              </div>
+          <Card
+            className="border border-[rgba(0,0,0,0.08)] shadow-none rounded-[16px] bg-white h-auto"
+            aria-label={`Risk level: ${risk.level}, score ${risk.score}`}
+          >
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-[#0D0D0D] flex items-center">
+                <span>Risk</span>
+                <span className="text-[#575657] font-normal text-xs ml-1.5 capitalize">
+                  {risk.level}, {risk.score}
+                </span>
+              </CardTitle>
               <CardDescription className="text-xs text-[#575657]">
-                Explainable risk model tracking blockers, overdue items, and high-priority queues.
+                Key risk factors contributing to current project health
               </CardDescription>
             </CardHeader>
             <CardContent>
               {risk.factors.length === 0 ? (
-                <p className={`py-4 text-center text-xs ${RISK_TONE[risk.level] ?? "text-[#575657]"}`}>
+                <p className="py-4 text-center text-xs text-[#575657]">
                   No risk factors detected. The project is healthy.
                 </p>
               ) : (
                 <div className="space-y-3.5">
-                  {risk.factors.map((f, i) => {
-                    const factorColor = f.points >= 15 ? "bg-[#D78FC6]" : f.points >= 8 ? "bg-[#D6C6A1]" : "bg-[#6E94CB]";
+                  {risk.factors.slice(0, 4).map((f) => {
+                    const isBiggest = f.points === maxFactorPoints && f.points > 0;
+                    const barWidth = Math.max(6, Math.min(100, (f.points / Math.max(1, maxFactorPoints)) * 100));
                     return (
-                      <div key={f.label} className="rounded-[10px] p-2 hover:bg-[#FBFBFC] transition-colors">
+                      <div key={f.label} className="space-y-1">
                         <div className="flex items-baseline justify-between text-xs">
                           <span className="font-medium text-[#0D0D0D]">{f.label}</span>
-                          <span className="font-mono text-[11px] font-medium text-[#575657] tabular-nums">
+                          <span className="font-mono text-[11px] text-[#575657] tabular-nums">
                             +{f.points} pts
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-[#575657]">{f.detail}</p>
-                        <MotionBar
-                          pct={(f.points / riskMax) * 100}
-                          className="mt-1.5 h-1.5 rounded-full"
-                          barClassName={factorColor}
-                          delay={i * 0.05}
-                        />
+                        <p className="text-[11px] text-[#575657]">{f.detail}</p>
+                        <div className="h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              isBiggest ? "bg-[#D78FC6]" : "bg-[#0D0D0D]/60",
+                            )}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -730,62 +810,71 @@ function AnalyticsTab({
           </Card>
         )}
 
-        {/* Status + priority distribution: full-width, real percentages */}
-        <Card className="border-border shadow-none rounded-[16px] bg-white lg:col-span-2">
-          <CardHeader className="pb-3">
+        {/* 5. Issues by status and priority: two plain lists side by side with 3px bars */}
+        <Card
+          className="border border-[rgba(0,0,0,0.08)] shadow-none rounded-[16px] bg-white lg:col-span-2 h-auto"
+          aria-label="Issues by status and priority breakdown"
+        >
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-[#0D0D0D]">Issues by status and priority</CardTitle>
             <CardDescription className="text-xs text-[#575657]">Distribution across the project workflow</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-8 lg:grid-cols-2">
-            <div className="space-y-3.5">
-              {summary.byStatus.map((s, i) => {
-                const barColor = s.color && s.color !== "#8b8b93" ? s.color : "#6E94CB";
+          <CardContent className="grid gap-8 sm:grid-cols-2">
+            {/* Status list */}
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-[#575657] pb-0.5">Status</p>
+              {summary.byStatus.map((s) => {
+                const tint = s.color && s.color !== "#8b8b93" ? s.color : "#6E94CB";
+                const pct = summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0;
                 return (
-                  <div key={s.statusName}>
+                  <div key={s.statusName} className="space-y-1">
                     <div className="flex items-baseline justify-between text-xs">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
-                        <span className="truncate font-medium text-[#0D0D0D]">{s.statusName}</span>
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: tint }} />
+                        <span className="truncate text-[#0D0D0D] font-normal">{s.statusName}</span>
                       </span>
-                      <span className="ml-2 shrink-0 tabular-nums text-[#575657] text-[11px] font-mono">
-                        {s.count} · {summary.total > 0 ? Math.round((s.count / summary.total) * 100) : 0}%
+                      <span className="text-[11px] font-mono text-[#575657] tabular-nums shrink-0">
+                        {s.count} · {pct}%
                       </span>
                     </div>
-                    <MotionBar
-                      pct={summary.total > 0 ? (s.count / summary.total) * 100 : 0}
-                      className="mt-1.5 h-2 rounded-full"
-                      barStyle={{ backgroundColor: barColor }}
-                      delay={i * 0.04}
-                    />
+                    <div className="h-[3px] w-full rounded-full bg-[#F1F1F3] overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, backgroundColor: tint }}
+                      />
+                    </div>
                   </div>
                 );
               })}
             </div>
-            <div className="space-y-3.5">
-              {summary.byPriority.map((p, i) => {
+
+            {/* Priority list */}
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-[#575657] pb-0.5">Priority</p>
+              {summary.byPriority.map((p) => {
                 const priorityColor =
                   p.priority === "urgent" ? "#D78FC6"
                   : p.priority === "high" ? "#D6C6A1"
                   : p.priority === "medium" ? "#6E94CB"
                   : "#9A9A9F";
-
+                const pct = summary.openCount > 0 ? Math.round((p.count / summary.openCount) * 100) : 0;
                 return (
-                  <div key={p.priority}>
+                  <div key={p.priority} className="space-y-1">
                     <div className="flex items-baseline justify-between text-xs">
-                      <span className="capitalize font-medium text-[#0D0D0D] flex items-center gap-2">
+                      <span className="flex items-center gap-2 min-w-0 capitalize">
                         <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: priorityColor }} />
-                        <span>{p.priority}</span>
+                        <span className="truncate text-[#0D0D0D] font-normal">{p.priority}</span>
                       </span>
-                      <span className="tabular-nums text-[#575657] text-[11px] font-mono">
-                        {p.count} · {summary.openCount > 0 ? Math.round((p.count / summary.openCount) * 100) : 0}%
+                      <span className="text-[11px] font-mono text-[#575657] tabular-nums shrink-0">
+                        {p.count} · {pct}%
                       </span>
                     </div>
-                    <MotionBar
-                      pct={summary.openCount > 0 ? (p.count / summary.openCount) * 100 : 0}
-                      className="mt-1.5 h-2 rounded-full"
-                      barStyle={{ backgroundColor: priorityColor }}
-                      delay={i * 0.04}
-                    />
+                    <div className="h-[3px] w-full rounded-full bg-[#F1F1F3] overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, backgroundColor: priorityColor }}
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -793,7 +882,7 @@ function AnalyticsTab({
           </CardContent>
         </Card>
       </div>
-    </FadeIn>
+    </div>
   );
 }
 
@@ -816,7 +905,21 @@ function ActivityTab({
     | undefined;
   keyName: string;
 }) {
-  if (!activity) return <ListSkeleton rows={5} />;
+  if (!activity) {
+    return (
+      <Card className="border-border shadow-none transition-opacity duration-150">
+        <CardContent className="divide-y divide-border p-0">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3">
+              <div className="size-7 rounded-md bg-[#EEEEF0] animate-pulse shrink-0" />
+              <div className="h-4 w-64 rounded bg-[#EEEEF0] animate-pulse" />
+              <div className="ml-auto h-3 w-16 rounded bg-[#EEEEF0] animate-pulse shrink-0" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
   if (activity.length === 0) {
     return (
       <EmptyState
@@ -896,7 +999,7 @@ function BoardView({
   const [columnLimit, setColumnLimit] = useState<Record<string, number>>({});
   const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
 
-  if (!board) return <ListSkeleton rows={3} />;
+  if (!board) return <BoardSkeleton />;
   const now = Date.now();
 
   return (
@@ -1163,7 +1266,7 @@ function ListView({
   memberName: (id: string | undefined) => string | null;
   onIssueClick: (id: string) => void;
 }) {
-  if (!issues) return <ListSkeleton rows={6} />;
+  if (!issues) return <ListTableSkeleton />;
   if (issues.issues.length === 0) {
     return (
       <EmptyState

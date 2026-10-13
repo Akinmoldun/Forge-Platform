@@ -116,7 +116,7 @@ export type StatusChangeEvent = {
   actorImage?: string;
 };
 
-const ISSUE_PAGE_SIZE = 100;
+const ISSUE_PAGE_SIZE = 250;
 
 function isError(value: unknown): value is Error {
   return value instanceof Error;

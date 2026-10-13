@@ -107,7 +107,7 @@ export function DraggableWidgetGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full auto-rows-auto",
+        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 w-full items-start",
         className,
       )}
     >
@@ -115,12 +115,13 @@ export function DraggableWidgetGrid({
         const isDragging = draggedId === item.id;
         const isDragOver = dragOverId === item.id && draggedId !== item.id;
 
-        // Notion-style card column spans:
-        // wide and lg widgets span 2 columns on desktop, 2 on tablet, 1 on mobile
+        // 60/40 calm 2-column layout on desktop:
+        // wide widgets span 3 cols (60%), tall/sm span 2 cols (40%)
+        // on tablet (md), span 1 col each (50/50); on mobile, span 1 col (100%)
         const colSpanClass =
           item.size === "wide" || item.size === "lg"
-            ? "col-span-1 md:col-span-2 lg:col-span-2"
-            : "col-span-1 md:col-span-1 lg:col-span-1";
+            ? "col-span-1 md:col-span-1 lg:col-span-3"
+            : "col-span-1 md:col-span-1 lg:col-span-2";
 
         return (
           <motion.div
@@ -130,7 +131,7 @@ export function DraggableWidgetGrid({
             onKeyDown={(e) => handleKeyDown(e, item.id)}
             className={cn(
               colSpanClass,
-              "h-auto min-h-[200px] outline-none",
+              "h-auto outline-none",
             )}
             transition={{
               type: "spring",
@@ -145,10 +146,10 @@ export function DraggableWidgetGrid({
               onDrop={(e) => handleDrop(e, item.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                "relative rounded-[16px] border bg-white p-5 transition-all flex flex-col justify-between min-h-[200px] h-full overflow-hidden",
+                "relative rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 transition-all flex flex-col justify-start h-auto overflow-hidden",
                 editable
                   ? "cursor-grab active:cursor-grabbing hover:border-[rgba(13,13,13,0.3)] focus-visible:outline-2 focus-visible:outline-[#0D0D0D]"
-                  : "border-border hover:border-[rgba(13,13,13,0.18)]",
+                  : "hover:border-[rgba(13,13,13,0.18)]",
                 isDragging && "opacity-40 border-dashed border-[#0D0D0D] scale-[0.98]",
                 isDragOver && "ring-2 ring-[#0D0D0D] border-[#0D0D0D] bg-[#FBFBFC]",
               )}

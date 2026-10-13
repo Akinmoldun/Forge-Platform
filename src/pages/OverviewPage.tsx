@@ -5,7 +5,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { LoadingBlock, PageHeader, PageStack } from "@/components/app-ui";
+import { PageHeader, PageStack } from "@/components/app-ui";
+import { OverviewSkeleton } from "@/components/Skeletons";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import {
@@ -23,6 +24,7 @@ import {
   useProjectIssues,
   rollupWorkspace,
 } from "@/hooks/use-workspace-data";
+import { isOpenIssue } from "@/lib/issueStatus";
 import {
   DraggableWidgetGrid,
   type WidgetItem,
@@ -97,9 +99,11 @@ export default function OverviewPage() {
   const realIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
     const currentUserId = user?._id;
-    // Show issues assigned to the user or unassigned
+    // Show only open issues assigned to the user or unassigned
     const relevant = (projectIssues ?? []).filter(
-      (i) => (currentUserId && i.assigneeId === currentUserId) || !i.assigneeId,
+      (i) =>
+        isOpenIssue(i, i.status?.category) &&
+        ((currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
     );
     return relevant.map((i) => ({
       _id: i._id,
@@ -108,9 +112,11 @@ export default function OverviewPage() {
       number: i.number,
       title: i.title,
       statusName: i.status?.name || "Todo",
+      statusCategory: i.status?.category,
       statusColor: i.status?.color,
       priority: i.priority || "none",
       assigneeId: i.assigneeId,
+      completedAt: i.completedAt,
     }));
   }, [projectIssues, projects, user]);
 
@@ -123,9 +129,11 @@ export default function OverviewPage() {
       number: i.number,
       title: i.title,
       statusName: i.status?.name || "Todo",
+      statusCategory: i.status?.category,
       statusColor: i.status?.color,
       priority: i.priority || "none",
       assigneeId: i.assigneeId,
+      completedAt: i.completedAt,
     }));
   }, [projectIssues, projects]);
 
@@ -220,10 +228,12 @@ export default function OverviewPage() {
     );
   }
 
-  if (workspace === undefined) {
+  if (loading) {
     return (
       <AppShell workspaceId={workspaceId}>
-        <LoadingBlock />
+        <PageStack>
+          <OverviewSkeleton />
+        </PageStack>
       </AppShell>
     );
   }
@@ -269,6 +279,7 @@ export default function OverviewPage() {
             rollup={realRollup}
             issues={allWorkspaceIssues}
             workspaceId={id}
+            projectList={projectList}
           />
         );
       case "project_health":
@@ -306,15 +317,15 @@ export default function OverviewPage() {
   const currentUserId = user?._id;
 
   const assignedToUserIssues = (projectIssues ?? []).filter(
-    (i) => currentUserId && i.assigneeId === currentUserId && !i.archivedAt && i.status?.category !== "completed" && i.status?.category !== "cancelled"
+    (i) => currentUserId && i.assigneeId === currentUserId && !i.archivedAt && isOpenIssue(i, i.status?.category)
   );
 
   const dueThisWeekIssues = (projectIssues ?? []).filter(
-    (i) => i.dueDate && i.dueDate >= now - 24 * 60 * 60 * 1000 && i.dueDate <= oneWeekLater && !i.archivedAt && i.status?.category !== "completed" && i.status?.category !== "cancelled"
+    (i) => i.dueDate && i.dueDate >= now - 24 * 60 * 60 * 1000 && i.dueDate <= oneWeekLater && !i.archivedAt && isOpenIssue(i, i.status?.category)
   );
 
   const needsReviewIssues = (projectIssues ?? []).filter(
-    (i) => (i.status?.name?.toLowerCase().includes("review") || i.status?.category === "in_progress") && !i.archivedAt
+    (i) => (i.status?.name?.toLowerCase().includes("review") || i.status?.category === "review") && !i.archivedAt && isOpenIssue(i, i.status?.category)
   );
 
   // Filtered issue destination link
@@ -579,7 +590,7 @@ export default function OverviewPage() {
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
             </div>
             <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
-              {realRollup.open}
+              {projectList.length > 0 ? projectList.reduce((s, p) => s + p.openIssueCount, 0) : realRollup.open}
             </div>
             <p className="mt-0.5 text-[11px] text-[#575657]">Across {projectList.length} projects</p>
           </Link>
@@ -627,28 +638,24 @@ export default function OverviewPage() {
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
             </div>
             <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
-              {realRollup.completed}
+              {projectList.length > 0 ? projectList.reduce((s, p) => s + p.doneIssueCount, 0) : realRollup.completed}
             </div>
             <p className="mt-0.5 text-[11px] text-[#575657]">Finished work items</p>
           </Link>
         </div>
 
-        {loading ? (
-          <LoadingBlock />
-        ) : (
-          <div className="w-full">
-            <DraggableWidgetGrid
-              items={layout}
-              onChange={handleLayoutChange}
-              renderItem={renderWidgetItem}
-              editable={isEditing}
-              maxColumns={4}
-              gap={16}
-              radius={20}
-              rowRatio={0.70}
-            />
-          </div>
-        )}
+        <div className="w-full">
+          <DraggableWidgetGrid
+            items={layout}
+            onChange={handleLayoutChange}
+            renderItem={renderWidgetItem}
+            editable={isEditing}
+            maxColumns={4}
+            gap={16}
+            radius={20}
+            rowRatio={0.70}
+          />
+        </div>
       </PageStack>
     </AppShell>
   );

@@ -15,7 +15,7 @@ import { DEFAULT_STATUS_ROWS } from "./workspaces";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
-const PAGE_SIZE_MAX = 100;
+const PAGE_SIZE_MAX = 500;
 
 // ---------------------------------------------------------------------------
 // Issue list with filters, sorting and pagination (URL-syncable filters)

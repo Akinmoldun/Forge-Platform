@@ -59,35 +59,6 @@ import { toast } from "sonner";
 
 type PendingMap = Record<string, Partial<Record<RuleKey, boolean>>>;
 
-
-
-const SAMPLE_STAGE_ISSUES: Record<string, Array<{ title: string; priority: string }>> = {
-  backlog: [
-    { title: "Audit telemetry ingest pipeline backpressure", priority: "medium" },
-    { title: "Define design tokens for compact board view", priority: "low" },
-    { title: "Investigate battery drain on background geo-sync", priority: "high" },
-  ],
-  unstarted: [
-    { title: "Draft architecture RFC for multi-region replication", priority: "high" },
-    { title: "Prepare database migration scripts for user quotas", priority: "medium" },
-  ],
-  started: [
-    { title: "Implement optimistic mutation queue in offline buffer", priority: "urgent" },
-    { title: "Tune WebGL shader compile time on low-end GPUs", priority: "high" },
-  ],
-  review: [
-    { title: "Verify biometric auth fallback prompt on iOS 17", priority: "urgent" },
-    { title: "Audit Stripe webhook signature tolerance window", priority: "high" },
-  ],
-  completed: [
-    { title: "Virtualize backlog table rendering for 10k+ rows", priority: "medium" },
-    { title: "Enforce prorated calculation on mid-cycle downgrades", priority: "high" },
-  ],
-  cancelled: [
-    { title: "Deprecate legacy v1 token endpoint", priority: "low" },
-  ],
-};
-
 export default function WorkflowPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const wid = workspaceId as Id<"workspaces">;
@@ -243,29 +214,10 @@ export default function WorkflowPage() {
         column.issues.map((i) => ({ ...i })),
       );
     }
-    // Synthesize realistic cards for any status that has 0 issues or is a demo status
-    // so the visual pipeline is NEVER empty
-    let issueNumberSeed = 50;
-    for (const s of statuses) {
-      const existing = map.get(s._id) ?? [];
-      if (existing.length === 0) {
-        const cat = (s.category || "started").toLowerCase();
-        const templates = SAMPLE_STAGE_ISSUES[cat] || SAMPLE_STAGE_ISSUES.started;
-        const synth: WorkflowIssueCard[] = templates.map((t, idx) => ({
-          _id: `synth_issue_${s._id}_${idx}`,
-          number: ++issueNumberSeed,
-          title: t.title,
-          priority: t.priority,
-          assigneeName: idx % 2 === 0 ? "Staff Engineer" : "Tech Lead",
-          dueDate: Date.now() + (idx * 2 + 1) * 86400000,
-        }));
-        map.set(s._id, synth);
-      }
-    }
     return map;
-  }, [board, statuses]);
+  }, [board]);
 
-  /** Accurate per-status totals: getBoard caps the cards it returns per column. */
+  /** Accurate per-status totals from summary or board */
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const column of board?.columns ?? []) {
@@ -273,19 +225,18 @@ export default function WorkflowPage() {
     }
     for (const row of summary?.byStatus ?? []) {
       for (const status of statuses) {
-        if (status.name === row.statusName) map.set(status._id, row.count);
+        if (status.name.toLowerCase() === row.statusName.toLowerCase()) {
+          map.set(status._id, row.count);
+        }
       }
     }
-    // Ensure every status has a count > 0 so the visual pipeline shows load bars
     for (const s of statuses) {
-      const c = map.get(s._id) ?? 0;
-      if (c === 0) {
-        const synthCount = (issuesByStatus.get(s._id) ?? []).length;
-        map.set(s._id, Math.max(1, synthCount));
+      if (!map.has(s._id)) {
+        map.set(s._id, 0);
       }
     }
     return map;
-  }, [board, summary, statuses, issuesByStatus]);
+  }, [board, summary, statuses]);
 
   const activeStatus = statuses.find((s) => s._id === selectedStatusId) ?? null;
 

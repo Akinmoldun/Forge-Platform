@@ -19,6 +19,7 @@ import {
   StatCard,
 } from "@/components/app-ui";
 import { EmptyState } from "@/components/forge";
+import { ActivitySkeleton } from "@/components/Skeletons";
 import { Activity as ActivityIcon } from "lucide-react";
 const RANGE_OPTIONS = [
   { value: "7", label: "7 days" },
@@ -210,7 +211,7 @@ export default function ActivityPage() {
         />
 
         {activity === undefined || workspace === undefined ? (
-          <LoadingBlock />
+          <ActivitySkeleton />
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

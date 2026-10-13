@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   FilterBar,
   FilterSelect,
-  LoadingBlock,
   PageHeader,
   PageStack,
   Panel,
@@ -26,6 +25,7 @@ import {
   EmptyIllustration,
 } from "@/components/Illustrations";
 import { EmptyState, RiskBadge, timeAgo } from "@/components/forge";
+import { ProjectsSkeleton } from "@/components/Skeletons";
 import { useProjectRisks } from "@/hooks/use-workspace-data";
 import {
   AlertTriangle,
@@ -155,7 +155,7 @@ export default function ProjectsPage() {
         />
 
         {loading ? (
-          <LoadingBlock />
+          <ProjectsSkeleton />
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

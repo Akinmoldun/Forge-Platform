@@ -1,21 +1,26 @@
 /**
  * Shared helper for open vs completed issue counting on the client.
+ * An open issue is one whose status category is not "completed" and not "cancelled",
+ * whose status name is not "done" / "cancelled", and has no completedAt timestamp.
  */
 
-export function isIssueDone(
-  issue: { completedAt?: number },
+export function isOpenIssue(
+  issue: { completedAt?: number; status?: { category?: string; name?: string } | null },
   statusCategory?: string,
 ): boolean {
-  return (
-    statusCategory === "completed" ||
-    statusCategory === "cancelled" ||
-    Boolean(issue.completedAt)
-  );
+  const cat = (statusCategory || issue.status?.category || "").toLowerCase();
+  const name = (issue.status?.name || "").toLowerCase();
+  if (cat === "completed" || cat === "cancelled") return false;
+  if (name === "done" || name === "cancelled") return false;
+  if (issue.completedAt) return false;
+  return true;
 }
 
-export function isIssueOpen(
-  issue: { completedAt?: number },
+export function isIssueDone(
+  issue: { completedAt?: number; status?: { category?: string; name?: string } | null },
   statusCategory?: string,
 ): boolean {
-  return !isIssueDone(issue, statusCategory);
+  return !isOpenIssue(issue, statusCategory);
 }
+
+export const isIssueOpen = isOpenIssue;

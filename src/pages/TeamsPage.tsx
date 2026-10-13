@@ -41,6 +41,7 @@ import { ConfirmAction } from "@/components/ConfirmAction";
 import { InviteMembersDialog, inviteLink } from "@/components/InviteMembersDialog";
 import { EmptyState, PriorityBadge, formatDate, timeAgo } from "@/components/forge";
 import { AvatarIllustration } from "@/components/Illustrations";
+import { TeamsSkeleton } from "@/components/Skeletons";
 import { useProjectIssues } from "@/hooks/use-workspace-data";
 import { isIssueDone } from "@/lib/issueStatus";
 import { cn } from "@/lib/utils";
@@ -288,7 +289,7 @@ export default function TeamsPage() {
         </div>
 
         {members === undefined || issuesLoading ? (
-          <LoadingBlock />
+          <TeamsSkeleton />
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
