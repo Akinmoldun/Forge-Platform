@@ -16,6 +16,7 @@ import {
   AvatarIllustration,
   PriorityGlyph,
   StatusPill,
+  EmptyIllustration,
 } from "@/components/Illustrations";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +47,6 @@ import {
   Plus,
   Search,
   TrendingUp,
-  ArrowUpDown,
   Activity as ActivityIcon,
   Lock,
   X,
@@ -1031,9 +1031,37 @@ function BoardView({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [columnLimit, setColumnLimit] = useState<Record<string, number>>({});
   const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
+  const [optimisticMoves, setOptimisticMoves] = useState<Record<string, string>>({});
 
   if (!board) return <BoardSkeleton />;
   const now = Date.now();
+
+  const allIssuesList = board.columns.flatMap((c) =>
+    c.issues.map((i) => ({ ...i, originalStatusId: c.status._id }))
+  );
+
+  const totalBoardIssues = allIssuesList.length;
+  if (totalBoardIssues === 0 && !searchQuery && priorityFilter === "all" && assigneeFilter === "all") {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center rounded-[12px] border border-dashed border-border bg-[#FAFAFA]">
+        <EmptyIllustration type="no-issues" size={64} className="mb-3" />
+        <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No issues yet</h3>
+        <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
+          Get started by creating the first issue for this project.
+        </p>
+        {canWrite && (
+          <Button
+            size="sm"
+            onClick={() => onNewIssueInStatus?.(board.columns[0]?.status._id ?? "")}
+            className="mt-4 rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
+          >
+            <Plus className="size-4 mr-1.5" />
+            Create first issue
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <DragScroll fadeColor="from-[#FBFBFC]" className="pb-6 pt-1">
@@ -1047,8 +1075,15 @@ function BoardView({
             statusNameLower.includes("changes requested") ||
             statusNameLower.includes("cancelled");
 
+          // Resolve issues belonging to this column, taking optimistic moves into account
+          const colIssues = allIssuesList.filter((i) => {
+            const movedTo = optimisticMoves[i._id];
+            if (movedTo) return movedTo === col.status._id;
+            return i.originalStatusId === col.status._id;
+          });
+
           // Filter column issues by search, priority, assignee
-          const filteredIssues = col.issues.filter((i) => {
+          const filteredIssues = colIssues.filter((i) => {
             if (
               priorityFilter &&
               priorityFilter !== "all" &&
@@ -1129,7 +1164,17 @@ function BoardView({
                 try {
                   const { issueId, statusId } = JSON.parse(raw);
                   if (!issueId || statusId === col.status._id) return;
-                  await onStatusChange(issueId, col.status._id);
+                  // Optimistically move card instantly
+                  setOptimisticMoves((prev) => ({ ...prev, [issueId]: col.status._id }));
+                  try {
+                    await onStatusChange(issueId, col.status._id);
+                  } finally {
+                    setOptimisticMoves((prev) => {
+                      const next = { ...prev };
+                      delete next[issueId];
+                      return next;
+                    });
+                  }
                 } catch {
                   // ignore parse errors
                 }
@@ -1302,11 +1347,13 @@ function ListView({
   if (!issues) return <ListTableSkeleton />;
   if (issues.issues.length === 0) {
     return (
-      <EmptyState
-        icon={<ArrowUpDown className="size-5" />}
-        title="No issues match"
-        description="Try clearing filters, or create the first issue for this project."
-      />
+      <div className="flex flex-col items-center justify-center p-12 text-center rounded-[12px] border border-dashed border-border bg-[#FAFAFA]">
+        <EmptyIllustration type="no-issues" size={64} className="mb-3" />
+        <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No issues yet</h3>
+        <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
+          Create the first issue for this project to start tracking work.
+        </p>
+      </div>
     );
   }
   return (

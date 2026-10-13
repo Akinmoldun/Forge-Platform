@@ -90,7 +90,6 @@ export function CreateProjectDialog({
         name: name.trim(),
         key: key.trim().toUpperCase(),
         description: description.trim() || undefined,
-        populateDemoIssues: false,
       });
       setOpen(false);
       reset();

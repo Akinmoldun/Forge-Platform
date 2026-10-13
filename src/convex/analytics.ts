@@ -93,21 +93,18 @@ async function hydrateEvents(
 // ---------------------------------------------------------------------------
 
 export const listNotifications = query({
-  args: { workspaceId: v.optional(v.id("workspaces")) },
+  args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    // Session-safe: this query is mounted in the app sidebar, which can render
-    // before the auth token finishes loading. Return empty instead of throwing
-    // so it never 500s during the unauthenticated window.
-    const user = await optionalUser(ctx);
-    if (!user) return { notifications: [], unreadCount: 0 };
-    let rows = await ctx.db
+    // Session-safe & tenant-scoped: verify caller is authenticated member of this workspace
+    const wsCtx = await findWorkspaceContext(ctx, args.workspaceId);
+    if (!wsCtx) return { notifications: [], unreadCount: 0 };
+    const { userId, workspaceId } = wsCtx;
+    const userNotifications = await ctx.db
       .query("notifications")
-      .withIndex("by_recipient_created", (q) => q.eq("recipientId", user._id))
+      .withIndex("by_recipient_created", (q) => q.eq("recipientId", userId))
       .order("desc")
       .take(100);
-    if (args.workspaceId) {
-      rows = rows.filter((n) => n.workspaceId === args.workspaceId);
-    }
+    const rows = userNotifications.filter((n) => n.workspaceId === workspaceId);
     return {
       notifications: rows,
       unreadCount: rows.filter((n) => !n.readAt).length,

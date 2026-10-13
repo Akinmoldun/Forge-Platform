@@ -110,7 +110,6 @@ export const createProject = mutation({
     name: v.string(),
     key: v.string(),
     description: v.optional(v.string()),
-    populateDemoIssues: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { workspaceId, userId, role } = await loadWorkspaceContext(
@@ -197,15 +196,7 @@ export const createProject = mutation({
       });
     }
 
-    // Real projects start empty by default
-    if (args.populateDemoIssues === true) {
-      await seedIssuesForProjectHelper(ctx, {
-        workspaceId,
-        projectId,
-        userId,
-        statusDocs,
-      });
-    }
+    // Real projects start completely empty with 0 issues
 
     await recordEvent(ctx, {
       workspaceId,

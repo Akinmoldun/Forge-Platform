@@ -123,7 +123,7 @@ async function runIsolationTests() {
   console.log("[PASS] User A created project 'Chassis' with key 'CHA' in Workspace A");
 
   // 4. User B creates project "Chassis" (KEY: CHA) in Workspace B -> MUST SUCCEED (scoped per workspace)
-  const projB = db.createProject(userB._id, wsB._id, "Chassis", "CHA");
+  const _projB = db.createProject(userB._id, wsB._id, "Chassis", "CHA");
   console.log("[PASS] User B created project 'Chassis' with same key 'CHA' in Workspace B (no global collision)");
 
   // 5. Add issue to User A's project
@@ -142,8 +142,9 @@ async function runIsolationTests() {
   try {
     db.loadProjectContext(userB._id, projA._id);
     bAccessProjectA = true;
-  } catch (err: any) {
-    console.log(`[PASS] User B blocked from Project A: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`[PASS] User B blocked from Project A: ${msg}`);
   }
   if (bAccessProjectA) throw new Error("SECURITY FAILURE: User B was able to access Project A!");
 
@@ -152,8 +153,9 @@ async function runIsolationTests() {
   try {
     db.loadIssueContext(userB._id, issueA._id);
     bAccessIssueA = true;
-  } catch (err: any) {
-    console.log(`[PASS] User B blocked from Issue A: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`[PASS] User B blocked from Issue A: ${msg}`);
   }
   if (bAccessIssueA) throw new Error("SECURITY FAILURE: User B was able to access Issue A!");
 
@@ -162,8 +164,9 @@ async function runIsolationTests() {
   try {
     db.createProject(userA._id, wsA._id, "Chassis Duplicate", "CHA");
     duplicateKeyAllowed = true;
-  } catch (err: any) {
-    console.log(`[PASS] Duplicate key in same workspace blocked: ${err.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`[PASS] Duplicate key in same workspace blocked: ${msg}`);
   }
   if (duplicateKeyAllowed) throw new Error("FAILURE: Duplicate project key was allowed in same workspace!");
 

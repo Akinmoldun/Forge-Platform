@@ -18,6 +18,8 @@ function useConvexAuthReal() {
   const rawUser = useQuery(api.users.currentUser);
   const { signIn: rawSignIn, signOut: rawSignOut } = useAuthActions();
 
+  const isUserPending = isAuthenticated && rawUser === undefined;
+  const isLoading = isAuthLoading || isUserPending;
   const user = rawUser ?? null;
 
   const signIn = async (provider: string, args?: unknown) => {
@@ -38,10 +40,10 @@ function useConvexAuthReal() {
   };
 
   return {
-    isLoading: isAuthLoading,
-    authResolved: !isAuthLoading,
+    isLoading,
+    authResolved: !isLoading,
     isAuthenticated,
-    isSessionPending: isAuthLoading,
+    isSessionPending: isLoading,
     isSignedOut: !isAuthLoading && !isAuthenticated,
     user,
     signIn,

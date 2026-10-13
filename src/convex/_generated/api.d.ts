@@ -19,6 +19,7 @@ import type * as email_index from "../email/index.js";
 import type * as email_templates from "../email/templates.js";
 import type * as emails from "../emails.js";
 import type * as guestDemo from "../guestDemo.js";
+import type * as guestDemo_cleanup from "../guestDemo/cleanup.js";
 import type * as guestDemo_constants from "../guestDemo/constants.js";
 import type * as guestDemo_seed from "../guestDemo/seed.js";
 import type * as http from "../http.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "email/templates": typeof email_templates;
   emails: typeof emails;
   guestDemo: typeof guestDemo;
+  "guestDemo/cleanup": typeof guestDemo_cleanup;
   "guestDemo/constants": typeof guestDemo_constants;
   "guestDemo/seed": typeof guestDemo_seed;
   http: typeof http;

@@ -92,7 +92,6 @@ export const addWorkflowStatus = mutation({
     category: statusCategoryValidator,
     color: v.optional(v.string()),
     position: v.optional(v.number()),
-    seedIssues: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const projectCtx = await loadProjectContext(ctx, args.projectId);
@@ -153,38 +152,6 @@ export const addWorkflowStatus = mutation({
           requiresComment: false,
           requiresApproval: true,
           createdAt: now,
-        });
-      }
-    }
-
-    // Only seed issues if explicitly requested (default is empty)
-    if (args.seedIssues === true) {
-      const sampleTitles = [
-        `Implement core logic and unit tests for ${name}`,
-        `Verify edge cases and audit telemetry in ${name}`,
-        `Resolve reviewer feedback and benchmark throughput in ${name}`,
-      ];
-      const existingIssues = await ctx.db
-        .query("issues")
-        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-        .collect();
-      let nextNum = existingIssues.reduce((max, i) => Math.max(max, i.number), 0) + 1;
-
-      for (let i = 0; i < sampleTitles.length; i++) {
-        await ctx.db.insert("issues", {
-          workspaceId,
-          projectId: args.projectId,
-          number: nextNum++,
-          title: sampleTitles[i],
-          description: `### Scope\nWork item queued in stage **${name}**.\n\n### Acceptance Criteria\n- [x] Initial design specification ratified\n- [ ] Regression test matrix passed\n- [ ] Quality sign-off verified`,
-          statusId,
-          priority: i === 0 ? "high" : i === 1 ? "medium" : "low",
-          assigneeId: userId,
-          reporterId: userId,
-          dueDate: now + (i + 3) * 86400000,
-          estimatePoints: i === 0 ? 5 : 3,
-          createdAt: now - (i + 1) * 86400000,
-          updatedAt: now,
         });
       }
     }
@@ -349,49 +316,16 @@ export const seedPrebuiltWorkflowStages = mutation({
 
     let currentPos = existingStatuses.length;
     const now = Date.now();
-    const existingIssues = await ctx.db
-      .query("issues")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .collect();
-    let nextNum = existingIssues.reduce((max, i) => Math.max(max, i.number), 0) + 1;
-
     let addedStagesCount = 0;
-    let addedIssuesCount = 0;
+    const addedIssuesCount = 0;
 
     for (const stage of PREBUILT_STAGES) {
       if (existingNames.has(stage.name.toLowerCase())) {
-        // If status exists, ensure it has issues
-        const targetStatus = existingStatuses.find(
-          (s) => s.name.toLowerCase() === stage.name.toLowerCase(),
-        );
-        if (targetStatus) {
-          const statusIssues = existingIssues.filter((i) => i.statusId === targetStatus._id);
-          if (statusIssues.length < 2) {
-            for (const iss of stage.issues) {
-              await ctx.db.insert("issues", {
-                workspaceId,
-                projectId: args.projectId,
-                number: nextNum++,
-                title: iss.title,
-                description: `### Scope\nPrebuilt demo task for stage **${stage.name}**.\n\n### Acceptance Criteria\n- [x] Implementation verified\n- [ ] Quality checks passed`,
-                statusId: targetStatus._id,
-                priority: iss.priority,
-                assigneeId: userId,
-                reporterId: userId,
-                dueDate: now + 3 * 86400000,
-                estimatePoints: iss.points,
-                createdAt: now - 86400000 * 2,
-                updatedAt: now,
-              });
-              addedIssuesCount++;
-            }
-          }
-        }
         continue;
       }
 
       // Insert new status
-      const sId = await ctx.db.insert("workflowStatuses", {
+      await ctx.db.insert("workflowStatuses", {
         workspaceId,
         workflowId: workflow._id,
         name: stage.name,
@@ -400,27 +334,6 @@ export const seedPrebuiltWorkflowStages = mutation({
         color: stage.color,
       });
       addedStagesCount++;
-
-      // Seed issues for it
-      for (let k = 0; k < stage.issues.length; k++) {
-        const iss = stage.issues[k];
-        await ctx.db.insert("issues", {
-          workspaceId,
-          projectId: args.projectId,
-          number: nextNum++,
-          title: iss.title,
-          description: `### Objective\n${iss.title}.\n\n### Acceptance Criteria\n- [x] Edge case error handling verified\n- [ ] Automated regression tests passed\n- [ ] Performance benchmark verified`,
-          statusId: sId,
-          priority: iss.priority,
-          assigneeId: userId,
-          reporterId: userId,
-          dueDate: now + (k + 2) * 86400000,
-          estimatePoints: iss.points,
-          createdAt: now - (k + 1) * 86400000 * 2,
-          updatedAt: now,
-        });
-        addedIssuesCount++;
-      }
     }
 
     // Refresh all transitions so everything connects smoothly

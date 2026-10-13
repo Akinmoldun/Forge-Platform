@@ -24,7 +24,7 @@ import {
 } from "@/components/app-ui";
 import { EmptyState } from "@/components/forge";
 import { WorkflowSkeleton } from "@/components/Skeletons";
-import { StatusPill } from "@/components/Illustrations";
+import { StatusPill, EmptyIllustration } from "@/components/Illustrations";
 import { ProgressRing } from "@/components/motion";
 import {
   AutomationRulesPanel,
@@ -374,6 +374,30 @@ export default function WorkflowPage() {
   const loading =
     effectiveProjectId !== "" &&
     (project === undefined || workflowData === undefined || board === undefined);
+
+  if (projects !== undefined && projectList.length === 0) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <PageStack>
+          {header}
+          <Panel>
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <EmptyIllustration type="no-projects" size={64} className="mb-3" />
+              <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No projects yet</h3>
+              <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
+                Workflows belong to projects. Create your first project to view and customize its workflow pipeline.
+              </p>
+              <div className="mt-4">
+                <Button size="sm" asChild className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626]">
+                  <Link to={`/app/workspaces/${workspaceId}/projects`}>Go to projects</Link>
+                </Button>
+              </div>
+            </div>
+          </Panel>
+        </PageStack>
+      </AppShell>
+    );
+  }
 
   if (loading) {
     return (

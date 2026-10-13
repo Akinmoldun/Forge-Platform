@@ -14,7 +14,21 @@ async function main() {
 
   const client = new ConvexHttpClient(cloudUrl);
   try {
-    const report = await (client as any).query((api as any).guestDemo.dryRunCleanup, {});
+    const report = (await (client as unknown as { query: (fn: unknown, args: unknown) => Promise<Record<string, unknown>> }).query(
+      (api as unknown as { guestDemo: { dryRunCleanup: unknown } }).guestDemo.dryRunCleanup,
+      {},
+    )) as {
+      totalRecordsIdentified: number;
+      demoWorkspaces: unknown[];
+      demoUsers: unknown[];
+      demoProjects: unknown[];
+      demoIssuesCount: number;
+      demoCommentsCount: number;
+      demoDependenciesCount: number;
+      demoLabelsCount: number;
+      demoActivityEventsCount: number;
+      demoNotificationsCount: number;
+    };
     console.log("=== DRY RUN CLEANUP REPORT ===");
     console.log(`Total demo/seed records identified: ${report.totalRecordsIdentified}`);
     console.log(`Demo Workspaces (${report.demoWorkspaces.length}):`, report.demoWorkspaces);
@@ -28,8 +42,9 @@ async function main() {
     console.log(`Demo Notifications: ${report.demoNotificationsCount}`);
     console.log("===============================");
     console.log("Dry run complete. No records were deleted.");
-  } catch (err: any) {
-    console.warn("Dry run query notice:", err?.message || err);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("Dry run query notice:", message);
     console.log("To run cleanup in the app, navigate to Workspace Settings > Danger Zone > Demo Data Cleanup.");
   }
 }
