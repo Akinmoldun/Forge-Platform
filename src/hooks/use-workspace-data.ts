@@ -350,16 +350,18 @@ export function rollupWorkspace(
 
   const byStatusMap = new Map<string, StatusSummary>();
   for (const summary of present) {
-    for (const row of summary.byStatus) {
+    const statusRows = Array.isArray(summary.byStatus) ? summary.byStatus : [];
+    for (const row of statusRows) {
+      if (!row || !row.statusName) continue;
       const existing = byStatusMap.get(row.statusName);
       if (existing) {
-        existing.count += row.count;
+        existing.count += (row.count || 0);
       } else {
         byStatusMap.set(row.statusName, {
           statusName: row.statusName,
-          category: row.category,
+          category: row.category || "backlog",
           color: row.color || STATUS_FALLBACK_COLORS[row.category] || "#8b8b93",
-          count: row.count,
+          count: row.count || 0,
         });
       }
     }
@@ -368,36 +370,47 @@ export function rollupWorkspace(
   const priorityOrder = ["urgent", "high", "medium", "low", "none"];
   const byPriorityMap = new Map<string, number>(priorityOrder.map((p) => [p, 0]));
   for (const summary of present) {
-    for (const row of summary.byPriority) {
-      byPriorityMap.set(row.priority, (byPriorityMap.get(row.priority) ?? 0) + row.count);
+    const priorityRows = Array.isArray(summary.byPriority) ? summary.byPriority : [];
+    for (const row of priorityRows) {
+      if (!row || !row.priority) continue;
+      byPriorityMap.set(row.priority, (byPriorityMap.get(row.priority) ?? 0) + (row.count || 0));
     }
   }
 
   const throughputMap = new Map<string, number>();
   for (const summary of present) {
-    for (const row of summary.throughput) {
-      throughputMap.set(row.label, (throughputMap.get(row.label) ?? 0) + row.count);
+    const throughputRows = Array.isArray(summary.throughput) ? summary.throughput : [];
+    for (const row of throughputRows) {
+      if (!row || !row.label) continue;
+      throughputMap.set(row.label, (throughputMap.get(row.label) ?? 0) + (row.count || 0));
     }
   }
   const throughput = [...throughputMap.entries()].map(([label, count]) => ({ label, count }));
 
   const workloadMap = new Map<string, { userId: string; name: string; openIssues: number; overdue: number }>();
   for (const summary of present) {
-    for (const row of summary.workload) {
+    const workloadRows = Array.isArray(summary.workload) ? summary.workload : [];
+    for (const row of workloadRows) {
+      if (!row || !row.userId) continue;
       const existing = workloadMap.get(row.userId);
       if (existing) {
-        existing.openIssues += row.openIssues;
-        existing.overdue += row.overdue;
+        existing.openIssues += (row.openIssues || 0);
+        existing.overdue += (row.overdue || 0);
       } else {
-        workloadMap.set(row.userId, { ...row });
+        workloadMap.set(row.userId, {
+          userId: row.userId,
+          name: row.name || "Member",
+          openIssues: row.openIssues || 0,
+          overdue: row.overdue || 0,
+        });
       }
     }
   }
   const workload = [...workloadMap.values()].sort((a, b) => b.openIssues - a.openIssues);
 
   const riskFactors = presentRisks
-    .flatMap((risk) => risk.factors)
-    .sort((a, b) => b.points - a.points)
+    .flatMap((risk) => (Array.isArray(risk.factors) ? risk.factors : []))
+    .sort((a, b) => (b.points || 0) - (a.points || 0))
     .slice(0, 6);
   const riskScore = presentRisks.length
     ? Math.round(mean(presentRisks.map((r) => r.score)) ?? 0)

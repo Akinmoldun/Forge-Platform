@@ -590,16 +590,19 @@ function AnalyticsTab({
   const overduePct = summary.openCount > 0 ? Math.round((summary.overdueCount / summary.openCount) * 100) : 0;
 
   // Throughput: 8 weeks total and max calculation
-  const totalCompleted8Weeks = summary.throughput.reduce((sum, t) => sum + t.count, 0) || summary.completedCount;
-  const maxThroughput = Math.max(1, ...summary.throughput.map((t) => t.count));
+  const throughputList = Array.isArray(summary.throughput) ? summary.throughput : [];
+  const totalCompleted8Weeks = throughputList.reduce((sum, t) => sum + (t?.count || 0), 0) || summary.completedCount;
+  const maxThroughput = Math.max(1, ...throughputList.map((t) => t?.count || 0));
 
   // Workload: sorted top 6 by open issues, expandable
-  const sortedWorkload = [...summary.workload].sort((a, b) => b.openIssues - a.openIssues);
+  const workloadList = Array.isArray(summary.workload) ? summary.workload : [];
+  const sortedWorkload = [...workloadList].sort((a, b) => b.openIssues - a.openIssues);
   const visibleWorkload = showAllMembers ? sortedWorkload : sortedWorkload.slice(0, 6);
   const maxLoad = Math.max(1, sortedWorkload[0]?.openIssues ?? 1);
 
   // Highest point factor gets the rose highlight
-  const maxFactorPoints = Math.max(0, ...(risk?.factors.map((f) => f.points) ?? [0]));
+  const riskFactorsList = Array.isArray(risk?.factors) ? risk.factors : [];
+  const maxFactorPoints = Math.max(0, ...riskFactorsList.map((f) => f.points));
 
   return (
     <div className="space-y-6">
@@ -945,7 +948,7 @@ function AnalyticsTab({
             {/* Status list */}
             <div className="space-y-3">
               <p className="text-xs font-medium text-[#575657] pb-0.5">Status</p>
-              {summary.byStatus.map((s) => {
+              {(Array.isArray(summary.byStatus) ? summary.byStatus : []).map((s) => {
                 const norm = s.statusName.toLowerCase();
                 const tint =
                   (s.color && s.color !== "#8b8b93" ? s.color : undefined) ||
@@ -990,7 +993,7 @@ function AnalyticsTab({
             {/* Priority list */}
             <div className="space-y-3">
               <p className="text-xs font-medium text-[#575657] pb-0.5">Priority</p>
-              {summary.byPriority.map((p) => {
+              {(Array.isArray(summary.byPriority) ? summary.byPriority : []).map((p) => {
                 const priorityColor =
                   p.priority === "urgent" ? "#D78FC6"
                   : p.priority === "high" ? "#D6C6A1"

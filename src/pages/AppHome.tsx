@@ -36,17 +36,20 @@ export default function AppHome() {
   const { user } = useAuth();
   useDemoStoreSubscriber();
 
-  const isAnonymousGuest = Boolean(user?.isAnonymous);
+  // Real accounts have an email and are not anonymous.
+  // Guests, anonymous users, or unauthenticated users immediately receive in-code demo workspaces.
+  const isRealUser = Boolean(user && !user.isAnonymous && user.email);
+  const isAnonymousGuest = !isRealUser;
 
   // For real accounts, list Convex workspaces.
   // For anonymous guest accounts, skip Convex query and serve in-code demo workspaces.
   const rawWorkspaces = useQuery(
     api.workspaces.listMyWorkspaces,
-    !isAnonymousGuest ? {} : "skip"
+    isRealUser ? {} : "skip"
   );
   const myInvitations = useQuery(
     api.workspaces.getMyInvitations,
-    !isAnonymousGuest ? {} : "skip"
+    isRealUser ? {} : "skip"
   );
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);

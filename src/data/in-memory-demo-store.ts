@@ -43,6 +43,8 @@ export interface DemoIssue {
   reporter?: { _id: string; name: string; email: string };
   estimatePoints?: number;
   dueDate?: number;
+  startedAt?: number;
+  completedAt?: number;
   labels: Array<{ _id: string; name: string; color: string }>;
   dependencies?: string[];
   blockedBy?: string[];
@@ -211,6 +213,8 @@ function generateInitialIssues(): DemoIssue[] {
             DEMO_LABELS[index % DEMO_LABELS.length],
             DEMO_LABELS[(index + 2) % DEMO_LABELS.length],
           ].map((l, li) => ({ _id: `demo-label-${li}`, name: l.name, color: l.color })),
+          startedAt: status.category !== "backlog" && status.category !== "unstarted" ? createdAt + 3600000 : undefined,
+          completedAt: status.category === "completed" ? updatedAt : undefined,
           createdAt,
           updatedAt,
         });
@@ -514,10 +518,16 @@ class InMemoryDemoStore {
       }
     }
 
+    const completedAt =
+      updatedStatus.category === "completed"
+        ? (old.completedAt || Date.now())
+        : undefined;
+
     this.issues[idx] = {
       ...old,
       ...updates,
       status: updatedStatus,
+      completedAt,
       updatedAt: Date.now(),
     };
 
@@ -574,34 +584,141 @@ class InMemoryDemoStore {
   }
 
   public getProjectSummary(projectId: string) {
-    const issues = this.issues.filter((i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`);
+    const issues = this.issues.filter(
+      (i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`
+    );
     const completed = issues.filter((i) => i.status.category === "completed");
-    const open = issues.length - completed.length;
+    const open = issues.filter(
+      (i) => i.status.category !== "completed" && i.status.category !== "cancelled"
+    );
+    const now = Date.now();
+    const overdue = open.filter((i) => i.dueDate && i.dueDate < now);
+    const unassigned = open.filter((i) => !i.assigneeId);
+
+    // Throughput across 8 weeks (W-7 to W-0)
+    const throughput: Array<{ label: string; count: number }> = [];
+    for (let w = 7; w >= 0; w--) {
+      const end = now - w * 7 * 24 * 60 * 60 * 1000;
+      const start = end - 7 * 24 * 60 * 60 * 1000;
+      const count = completed.filter((i) => {
+        const t = i.completedAt || i.updatedAt;
+        return t > start && t <= end;
+      }).length;
+      throughput.push({ label: `W-${w}`, count });
+    }
+    if (completed.length > 0 && throughput.every((t) => t.count === 0)) {
+      const chunk = Math.max(1, Math.floor(completed.length / 8));
+      for (let w = 0; w < 8; w++) {
+        throughput[w].count = w === 7 ? completed.length - chunk * 7 : chunk;
+      }
+    }
+
+    // Priorities
+    const byPriority = (["urgent", "high", "medium", "low", "none"] as const).map((p) => ({
+      priority: p,
+      count: open.filter((i) => i.priority === p).length,
+    }));
+
+    // Status distribution
+    const byStatus = DEMO_STATUSES.map((s) => ({
+      statusName: s.name,
+      category: s.category,
+      color: s.color,
+      count: issues.filter((i) => i.statusId === s._id || i.status.name === s.name).length,
+    }));
+
+    // Workload by team member
+    const memberMap = new Map<string, { userId: string; name: string; openIssues: number; overdue: number }>();
+    for (const issue of open) {
+      const uId = issue.assigneeId || "unassigned";
+      const uName = issue.assignee?.name || "Unassigned";
+      const existing = memberMap.get(uId) || {
+        userId: uId,
+        name: uName,
+        openIssues: 0,
+        overdue: 0,
+      };
+      existing.openIssues += 1;
+      if (issue.dueDate && issue.dueDate < now) {
+        existing.overdue += 1;
+      }
+      memberMap.set(uId, existing);
+    }
+    const workload = [...memberMap.values()].sort((a, b) => b.openIssues - a.openIssues);
+
     return {
       total: issues.length,
-      openCount: open,
+      openCount: open.length,
       completedCount: completed.length,
       completedThisWeek: Math.min(completed.length, 3),
-      overdueCount: 1,
-      unassignedCount: 0,
-      avgCycleDays: 3.2,
+      overdueCount: overdue.length,
+      unassignedCount: unassigned.length,
+      avgCycleDays: completed.length > 0 ? 3.4 : null,
+      medianCycleDays: completed.length > 0 ? 3.0 : null,
+      avgReviewWaitDays: completed.length > 0 ? 1.2 : null,
+      throughput,
+      byPriority,
+      byStatus,
+      workload,
+      hasData: issues.length > 0,
     };
   }
 
   public getProjectRisk(projectId: string) {
-    const issues = this.issues.filter((i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`);
-    const urgentCount = issues.filter((i) => i.priority === "urgent" && i.status.category !== "completed").length;
-    const score = urgentCount > 0 ? 35 : 15;
+    const issues = this.issues.filter(
+      (i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`
+    );
+    const open = issues.filter(
+      (i) => i.status.category !== "completed" && i.status.category !== "cancelled"
+    );
+    const urgentCount = open.filter((i) => i.priority === "urgent" || i.priority === "high").length;
+    const now = Date.now();
+    const overdueCount = open.filter((i) => i.dueDate && i.dueDate < now).length;
+    const blockedCount = 0;
+    const staleCount = 0;
+
+    let score = 0;
+    const factors: Array<{ label: string; detail: string; points: number }> = [];
+
+    if (urgentCount > 0) {
+      const pts = Math.min(25, urgentCount * 5);
+      score += pts;
+      factors.push({
+        label: "High-priority backlog",
+        detail: `${urgentCount} urgent/high open issue${urgentCount > 1 ? "s" : ""}`,
+        points: pts,
+      });
+    }
+
+    if (overdueCount > 0) {
+      const pts = Math.min(25, overdueCount * 5);
+      score += pts;
+      factors.push({
+        label: "Overdue issues",
+        detail: `${overdueCount} open issue${overdueCount > 1 ? "s" : ""} past target date`,
+        points: pts,
+      });
+    }
+
+    if (factors.length === 0) {
+      factors.push({
+        label: "On track",
+        detail: "No active risk factors detected",
+        points: 0,
+      });
+    }
+
+    const level = score >= 60 ? "critical" : score >= 35 ? "high" : score >= 15 ? "medium" : "low";
+
     return {
       score,
-      level: score > 30 ? ("medium" as const) : ("low" as const),
-      factors: [
-        { label: "Urgent open issues", weight: 0.4, severity: urgentCount > 0 ? "warning" : "ok" },
-        { label: "Cycle time stability", weight: 0.3, severity: "ok" },
-        { label: "Dependency blockage risk", weight: 0.3, severity: "ok" },
-      ],
-      blockedCount: 0,
-      overdueCount: 1,
+      level,
+      factors,
+      blockedCount,
+      overdueCount,
+      staleCount,
+      highPriorityOpenCount: urgentCount,
+      hasData: issues.length > 0,
     };
   }
 

@@ -390,7 +390,8 @@ export function StatusDistributionWidget({
 }: {
   rollup: OverviewDataProps["rollup"];
 }) {
-  const statusTotal = rollup.byStatus.reduce((sum, s) => sum + s.count, 0);
+  const statusList = Array.isArray(rollup?.byStatus) ? rollup.byStatus : [];
+  const statusTotal = statusList.reduce((sum, s) => sum + (s?.count || 0), 0);
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -406,7 +407,7 @@ export function StatusDistributionWidget({
           <p className="text-[12px] text-[#575657] text-center py-4">No issues recorded yet.</p>
         ) : (
           <StackedBar
-            segments={rollup.byStatus.map((s) => ({
+            segments={statusList.map((s) => ({
               label: s.statusName,
               value: s.count,
               color: s.color || STATUS_PALETTE[s.statusName] || "#9A9A9F",
@@ -435,7 +436,7 @@ export function PriorityBreakdownWidget({
     ? issues.filter((i) => isOpenIssue(i, i.statusCategory))
     : [];
 
-  const totalOpen = openIssues.length > 0 ? openIssues.length : rollup.open;
+  const totalOpen = openIssues.length > 0 ? openIssues.length : (rollup?.open ?? 0);
 
   const priorities = [
     { id: "urgent", label: "Urgent", color: PRIORITY_PALETTE.urgent },
@@ -468,7 +469,8 @@ export function PriorityBreakdownWidget({
               return pr === p.id;
             }).length;
           } else {
-            const found = rollup.byPriority.find(
+            const priorityList = Array.isArray(rollup?.byPriority) ? rollup.byPriority : [];
+            const found = priorityList.find(
               (r) => r.priority.toLowerCase() === p.id,
             );
             count = found ? found.count : 0;
