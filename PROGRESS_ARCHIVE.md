@@ -83,3 +83,18 @@ If you are a new session, read this file, find the first unchecked item, and con
 # ARCHIVED PROGRESS (Round 2)
 The previous contents of PROGRESS.md before reset:
 See previous tasks (Guest/Demo workspace stuck on "Preparing workspace", Logo Click Behavior, Final Verification).
+
+
+---
+
+# ARCHIVED ON RESET (Previous Session)
+8: ## TASK 1 (CRITICAL): Try Demo crashes the Overview page
+9: - [x] 1.1 Find where `byStatus` is read in `use-workspace-data` and in `OverviewPage`.
+10: - [x] 1.2 Fix root cause: make in-code demo data match exact shape real-account data returns.
+11: - [x] 1.3 Make consumer code defensive.
+12: - [x] 1.4 Search WHOLE codebase for the same pattern.
+13: - [x] 1.5 Fix error boundary so it does not retry the failing render in an endless loop.
+14: - [x] 1.6 Verify demo and real accounts.
+16: ## TASK 2: manifest.webmanifest syntax error - Fixed.
+20: ## TASK 3: Find and fix the other errors - 0 errors, 0 warnings.
+25: ## TASK 4: Final verification - Passed.

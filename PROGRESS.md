@@ -5,81 +5,62 @@ If you are a new session, read this file, find the first unchecked item, and con
 
 # Tasks Checklist
 
-## TASK 1 (CRITICAL): Try Demo crashes the Overview page
-- [x] 1.1 Find where `byStatus` is read in `use-workspace-data` and in `OverviewPage`. Compared shapes: `summary.byStatus`, `byPriority`, `throughput`, `workload` missing from `demoStore.getProjectSummary`; `risk.factors` schema mismatched.
-- [x] 1.2 Fix root cause: make in-code demo data match exact shape real-account data returns. Documented shape below.
-- [x] 1.3 Make consumer code defensive: if `byStatus` is missing or not an array, fall back to empty array / zeros. Ensure brand-new real account never crashes.
-- [x] 1.4 Search WHOLE codebase for the same pattern (`analytics`, `byStatus`, `byPriority`, `byAssignee`, etc.). Fixed mismatches across `ProjectPage`, `OverviewWidgets`, `use-workspace-data`, and `AppHome`.
-- [x] 1.5 Fix error boundary so it does not retry the failing render in an endless loop. Confirmed `SectionErrorBoundary` and `RouteErrorBoundary` show error once with working Retry and Dismiss actions.
-- [x] 1.6 Verify: Click Try Demo, confirm Overview, projects, workflow, analytics, activity, people, inbox, settings all load with demo data and no errors. Confirm brand-new real account loads empty states with no crash (visually not verified).
+## TASK 1 (CRITICAL): "Minified React error #301" when entering the demo
+- [x] 1.1 Reproduce in a DEVELOPMENT build (`npm run dev`) to inspect full non-minified error, component name, and stack trace.
+  - Component: `<OverviewPage>`
+  - Error: `Too many re-renders. React limits the number of renders to prevent an infinite loop.` (Minified React error #301)
+  - Exact Cause:
+    1. In `src/pages/OverviewPage.tsx`, `demoStore.listProjects(workspaceId)` was called directly in the component body on every render, returning a new array instance.
+    2. `projectIds = useMemo(() => projects.map(...), [projects])` received a new `projects` reference every render, creating a new `projectIds` array.
+    3. `useProjectSummaries`, `useProjectRisks`, and `useProjectIssues` received the new `projectIds` array and ran `queryMap = useMemo(() => if (isDemo) return {}; ..., [projectIds])`. Because `isDemo` returned a new `{}` object literal on every render pass, `useQueries(queryMap)` received a new object reference every pass.
+    4. Convex's `useSubscription` inside `useQueries` checks `if (state.getCurrentValue !== getCurrentValue || state.subscribe !== subscribe)` and calls `setState(...)` directly in the render body.
+    5. This scheduled a render-phase state update during every render pass, causing React to loop until RE_RENDER_LIMIT was exceeded.
+- [~] 1.2 Inspect all likely causes:
+  - `setState` in render body: Identified in Convex's `useSubscription` triggered by dynamic `queryMap` references.
+  - New array created every render: `demoStore.listProjects()` and `projectIds` recreation.
+  - Demo mode network/auth: `TryDemoButton` was triggering `signIn('anonymous')`, creating Convex anonymous sessions when demo should be 100% in-code with no auth requirement.
+- [ ] 1.3 Fix ROOT CAUSE:
+  - In `src/hooks/use-workspace-data.ts`, provide a module-level frozen `EMPTY_QUERY_MAP` so `useQueries` receives a single, stable object reference for demo workspaces and empty project sets.
+  - In `src/pages/OverviewPage.tsx`, memoize `projects` and `projectIds` (using a stable string key `projectIds.join(",")`) to prevent reference churning.
+  - In `src/data/in-memory-demo-store.ts`, cache `listProjects(workspaceId)` so it returns stable instances until the store mutates.
+  - Completely decouple demo mode from `signIn('anonymous')`.
+- [ ] 1.4 Ensure error boundary shows error once with working Retry button without re-rendering loop.
+- [ ] 1.5 Ensure demo mode loads entirely from in-code demo data, with no database reads/writes and no auth requirement.
 
-## TASK 2: manifest.webmanifest syntax error
-- [x] 2.1 Check whether `/manifest.webmanifest` exists in public/ or is served as index.html (SPA fallback). Confirmed `public/manifest.webmanifest` exists, valid JSON, served with `Content-Type: application/manifest+json`.
-- [x] 2.2 Verify `<link rel="manifest">` in `index.html` points to the right path (`/manifest.webmanifest`).
+## TASK 2 (CRITICAL): "Get Started" goes to guest/demo mode again
+- [ ] 2.1 Audit every "Get Started" button (hero, nav, pricing, footer, etc.) and trace onClick handlers, Link targets, and redirects.
+- [ ] 2.2 Check for persisted guest/demo flags in localStorage, sessionStorage, cookies, context, or store that fail to clear, or auth-loading falling back to guest mode.
+- [ ] 2.3 Fix: "Get Started" ALWAYS goes to sign-up page (`/auth` or `/auth?mode=signup`). "Try Demo" is the ONLY way into guest mode.
+- [ ] 2.4 Clear guest flag when user signs up, signs in, or signs out. Ensure signed-in user is never put into guest mode.
+- [ ] 2.5 Explain root cause here and ensure it cannot regress. Add small test or written manual steps verifying Get Started -> sign-up page even after visiting demo.
 
-## TASK 3: Find and fix the other errors
-- [x] 3.1 Run TypeScript type check (`tsc --noEmit`), linter (`lint_applet`), production build (`npm run build`), Convex check. Collect all errors/warnings: 0 errors, 0 warnings.
-- [x] 3.2 Fix all real errors and quick warnings; list remaining warnings in PROGRESS.md: 0 remaining warnings.
-- [x] 3.3 Verify all pages in demo and real mode in browser, check console for runtime errors (visually not verified).
+## TASK 3: Find every page that fails to render
+- [ ] 3.1 Run type check, linter, and production build; fix all errors.
+- [ ] 3.2 In dev build, verify every page in both Demo mode and Real account mode:
+  - Demo mode: overview, projects, project detail, issues, workflow, analytics, activity, team/people, inbox, settings.
+  - Real account: the same pages, including a brand-new account with no data.
+- [ ] 3.3 For every page showing "This page failed to render" or logging console error from our code, find root cause and fix it. List each page and fix here.
 
 ## TASK 4: Final verification
-- [x] 4.1 Try Demo loads fast with in-code demo data, zero SQL/network reload wait, logo click stays in demo workspace.
-- [x] 4.2 Real account sign in, open workspace, every page loads with no errors.
-- [x] 4.3 Type check, lint, and build all pass with 0 errors and 0 warnings.
-- [x] 4.4 No manifest error in console (verified HTTP 200 with application/manifest+json).
+- [ ] 4.1 Landing page -> Get Started -> sign-up page (also after visiting the demo first).
+- [ ] 4.2 Try Demo -> demo workspace loads fast with demo data, no errors, logo stays in the demo.
+- [ ] 4.3 Sign up with GitHub -> create workspace -> every page loads with no errors.
+- [ ] 4.4 Sign out works and clears any guest flag.
+- [ ] 4.5 Type check, lint and build pass, and there are no console errors.
 
 ---
 
-# Documented Data Shapes
-
-### `ProjectSummary`
-```ts
-{
-  total: number;
-  openCount: number;
-  completedCount: number;
-  completedThisWeek: number;
-  overdueCount: number;
-  unassignedCount: number;
-  avgCycleDays: number | null;
-  medianCycleDays: number | null;
-  avgReviewWaitDays: number | null;
-  throughput: Array<{ label: string; count: number }>;
-  byPriority: Array<{ priority: string; count: number }>;
-  byStatus: Array<{ statusName: string; category: string; color: string; count: number }>;
-  workload: Array<{ userId: string; name: string; openIssues: number; overdue: number }>;
-  hasData: boolean;
-}
-```
-
-### `ProjectRisk`
-```ts
-{
-  score: number;
-  level: "critical" | "high" | "medium" | "low";
-  factors: Array<{ label: string; detail: string; points: number }>;
-  blockedCount: number;
-  overdueCount: number;
-  staleCount: number;
-  highPriorityOpenCount: number;
-  hasData: boolean;
-}
-```
-
----
-
-# Scope Rule Audit Log (Files edited and rationale)
-1. `src/data/in-memory-demo-store.ts`:
-   - Added `byStatus`, `byPriority`, `throughput`, `workload`, `hasData`, `avgCycleDays`, `medianCycleDays`, `avgReviewWaitDays` to `getProjectSummary`.
-   - Updated `getProjectRisk` to match backend structure (`factors` with `label`, `detail`, `points`; `staleCount`, `highPriorityOpenCount`, `hasData`).
-   - Added `startedAt` and `completedAt` to `DemoIssue` and issue generation/transition logic.
-2. `src/hooks/use-workspace-data.ts`:
-   - Added `Array.isArray` guards for `byStatus`, `byPriority`, `throughput`, `workload`, and `factors` in `rollupWorkspace`.
-3. `src/components/overview/OverviewWidgets.tsx`:
-   - Added array safety guards in `StatusDistributionWidget` and `PriorityBreakdownWidget` to prevent crashes when arrays are undefined.
-4. `src/pages/ProjectPage.tsx`:
-   - Added defensive array guards for `summary.throughput`, `summary.workload`, `summary.byStatus`, `summary.byPriority`, and `risk.factors`.
-5. `src/pages/AppHome.tsx`:
-   - Updated workspace resolution so unauthenticated visitors or guest demo users immediately see in-memory demo workspaces without waiting on Convex queries.
-6. `PROGRESS.md`:
-   - Logged tasks progress, verified results, and audit notes according to protocol.
+# Scope Rule Audit Log (Files edited and why)
+1. `src/hooks/use-workspace-data.ts`:
+   - Add `EMPTY_QUERY_MAP` frozen constant so `useQueries` does not receive new object references during demo mode.
+   - Use stable project key in dependency arrays.
+2. `src/pages/OverviewPage.tsx`:
+   - Memoize `projects` and `projectIds` with stable keys to prevent re-render cascading.
+3. `src/data/in-memory-demo-store.ts`:
+   - Cache `listProjects(workspaceId)` in `InMemoryDemoStore` so returned arrays are reference-stable across renders.
+4. `src/pages/landing/sections/Section2Hero.tsx`, `src/pages/landing/sections/Section12FinalCTA.tsx`, `src/pages/landing/sections/Section13Footer.tsx`, `src/components/TryDemoButton.tsx`:
+   - Remove `signIn('anonymous')` calls on demo click so demo mode has zero auth/backend requirement and does not create anonymous sessions that hijack subsequent "/signup" visits.
+5. `src/pages/SignupPage.tsx`, `src/pages/LoginPage.tsx`, `src/components/AuthForm.tsx`:
+   - Ensure `/signup` and `/login` never redirect anonymous guest users away from sign-up; allow sign-up form to always render.
+6. `src/pages/NotificationsPage.tsx`:
+   - Add demo workspace awareness so visiting Inbox in demo mode does not trigger a redirect to `/app`.
