@@ -73,28 +73,46 @@ const LABEL_COLORS = [
   "#B3261E",
 ];
 
+import { demoStore, useDemoStoreSubscriber, DEMO_LABELS } from "@/data/in-memory-demo-store";
+
 export default function WorkspaceSettings() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
   const navigate = useNavigate();
   const convex = useConvex();
 
-  const workspace = useQuery(
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const invitations = useQuery(
+  const rawInvitations = useQuery(
     api.workspaces.listInvitations,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const labels = useQuery(
+  const rawLabels = useQuery(
     api.projects.listLabels,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
+
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const members = isDemo ? (demoStore.listTeammates(workspaceId) as unknown as typeof rawMembers) : rawMembers;
+  const invitations = isDemo ? [] : rawInvitations;
+  const labels = isDemo
+    ? (DEMO_LABELS.map((l, i) => ({
+        _id: `demo-label-${i}`,
+        name: l.name,
+        color: l.color,
+        workspaceId,
+      })) as unknown as typeof rawLabels)
+    : rawLabels;
+
 
   const updateWorkspace = useMutation(api.workspaces.updateWorkspace);
   const updateMemberRole = useMutation(api.workspaces.updateMemberRole);
@@ -183,19 +201,22 @@ export default function WorkspaceSettings() {
 
   const isOwner = workspace.role === "owner";
   const isAdmin = workspace.role === "admin" || isOwner;
-  const isDemo =
-    workspace.workspace.name.startsWith("Demo:") ||
-    workspace.workspace.slug.startsWith("demo-");
+  const wsData = workspace.workspace as {
+    name: string;
+    slug: string;
+    iconKey?: string;
+    description?: string;
+  };
 
-  const nameValue = name ?? workspace.workspace.name;
-  const descValue = description ?? (workspace.workspace.description ?? "");
-  const iconKeyValue = iconKey ?? (workspace.workspace.iconKey ?? "mountain");
-  const workspaceRealName = workspace.workspace.name;
+  const nameValue = name ?? wsData.name;
+  const descValue = description ?? (wsData.description ?? "");
+  const iconKeyValue = iconKey ?? (wsData.iconKey ?? "mountain");
+  const workspaceRealName = wsData.name;
 
   const hasGeneralChanges =
-    nameValue.trim() !== workspace.workspace.name ||
-    descValue.trim() !== (workspace.workspace.description ?? "") ||
-    iconKeyValue !== (workspace.workspace.iconKey ?? "mountain");
+    nameValue.trim() !== wsData.name ||
+    descValue.trim() !== (wsData.description ?? "") ||
+    iconKeyValue !== (wsData.iconKey ?? "mountain");
 
   const handleSaveGeneral = async () => {
     if (savingGeneral) return;

@@ -39,6 +39,14 @@ export function RequireAuth({
   const navigate = useNavigate();
   const location = useLocation();
 
+  // In-code demo workspaces have no auth requirement: allow demo routes immediately
+  if (
+    location.pathname.includes("/demo-") ||
+    location.pathname.includes("demo-ws-")
+  ) {
+    return <>{children}</>;
+  }
+
   // Still resolving, or the client is refreshing the access token: show the
   // loading state. Redirecting here is what sent signed-in users to /auth.
   if (isSessionPending) {

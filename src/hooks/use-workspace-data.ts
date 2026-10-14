@@ -16,6 +16,7 @@ import type { FunctionReference } from "convex/server";
 import type { Value } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { demoStore } from "@/data/in-memory-demo-store";
 
 /** Shape useQueries accepts, widened so a dynamic key set can be built. */
 type QueryRequest = { query: FunctionReference<"query">; args: Record<string, Value> };
@@ -124,17 +125,30 @@ function isError(value: unknown): value is Error {
 
 /** Aggregated per-project summaries, keyed by project id. */
 export function useProjectSummaries(projectIds: Id<"projects">[]) {
+  const isDemo = useMemo(
+    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    [projectIds]
+  );
+
   const queryMap = useMemo(() => {
+    if (isDemo) return {};
     const map: Record<string, QueryRequest> = {};
     for (const id of projectIds) {
       map[id] = { query: api.analytics.getProjectSummary, args: { projectId: id } };
     }
     return map;
-  }, [projectIds]);
+  }, [projectIds, isDemo]);
 
   const raw = useQueries(queryMap);
 
   return useMemo(() => {
+    if (isDemo) {
+      const entries = projectIds.map((id) => ({
+        projectId: id,
+        summary: demoStore.getProjectSummary(String(id)),
+      }));
+      return { entries, loading: false };
+    }
     const entries: Array<{ projectId: Id<"projects">; summary: ProjectSummary | null }> = [];
     let pending = false;
     for (const id of projectIds) {
@@ -147,22 +161,35 @@ export function useProjectSummaries(projectIds: Id<"projects">[]) {
       entries.push({ projectId: id, summary: (value ?? null) as ProjectSummary | null });
     }
     return { entries, loading: pending };
-  }, [raw, projectIds]);
+  }, [raw, projectIds, isDemo]);
 }
 
 /** Aggregated risk scores, keyed by project id. */
 export function useProjectRisks(projectIds: Id<"projects">[]) {
+  const isDemo = useMemo(
+    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    [projectIds]
+  );
+
   const queryMap = useMemo(() => {
+    if (isDemo) return {};
     const map: Record<string, QueryRequest> = {};
     for (const id of projectIds) {
       map[id] = { query: api.analytics.getProjectRisk, args: { projectId: id } };
     }
     return map;
-  }, [projectIds]);
+  }, [projectIds, isDemo]);
 
   const raw = useQueries(queryMap);
 
   return useMemo(() => {
+    if (isDemo) {
+      const entries = projectIds.map((id) => ({
+        projectId: id,
+        risk: demoStore.getProjectRisk(String(id)),
+      }));
+      return { entries, loading: false };
+    }
     const entries: Array<{ projectId: Id<"projects">; risk: ProjectRisk | null }> = [];
     let pending = false;
     for (const id of projectIds) {
@@ -175,7 +202,7 @@ export function useProjectRisks(projectIds: Id<"projects">[]) {
       entries.push({ projectId: id, risk: (value ?? null) as ProjectRisk | null });
     }
     return { entries, loading: pending };
-  }, [raw, projectIds]);
+  }, [raw, projectIds, isDemo]);
 }
 
 /**
@@ -184,7 +211,13 @@ export function useProjectRisks(projectIds: Id<"projects">[]) {
  * showing a partial total.
  */
 export function useProjectIssues(projectIds: Id<"projects">[]) {
+  const isDemo = useMemo(
+    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    [projectIds]
+  );
+
   const queryMap = useMemo(() => {
+    if (isDemo) return {};
     const map: Record<string, QueryRequest> = {};
     for (const id of projectIds) {
       map[id] = {
@@ -193,11 +226,25 @@ export function useProjectIssues(projectIds: Id<"projects">[]) {
       };
     }
     return map;
-  }, [projectIds]);
+  }, [projectIds, isDemo]);
 
   const raw = useQueries(queryMap);
 
   return useMemo(() => {
+    if (isDemo) {
+      const demoIssues = projectIds.flatMap((id) => demoStore.listIssues(String(id)));
+      const totals = new Map<string, number>();
+      for (const id of projectIds) {
+        totals.set(String(id), demoStore.listIssues(String(id)).length);
+      }
+      return {
+        issues: demoIssues as unknown as WorkspaceIssue[],
+        totals,
+        truncated: [],
+        loading: false,
+        pageSize: ISSUE_PAGE_SIZE,
+      };
+    }
     const issues: WorkspaceIssue[] = [];
     const totals = new Map<string, number>();
     let pending = false;
@@ -216,22 +263,32 @@ export function useProjectIssues(projectIds: Id<"projects">[]) {
     const truncated = [...totals.entries()].filter(([, total]) => total > ISSUE_PAGE_SIZE);
     issues.sort((a, b) => b.updatedAt - a.updatedAt);
     return { issues, totals, truncated, loading: pending, pageSize: ISSUE_PAGE_SIZE };
-  }, [raw, projectIds]);
+  }, [raw, projectIds, isDemo]);
 }
 
 /** Status-change events per project, used to rebuild the review-wait metric. */
 export function useProjectStatusEvents(projectIds: Id<"projects">[], limit = 200) {
+  const isDemo = useMemo(
+    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    [projectIds]
+  );
+
   const queryMap = useMemo(() => {
+    if (isDemo) return {};
     const map: Record<string, QueryRequest> = {};
     for (const id of projectIds) {
       map[id] = { query: api.analytics.listProjectActivity, args: { projectId: id, limit } };
     }
     return map;
-  }, [projectIds, limit]);
+  }, [projectIds, limit, isDemo]);
 
   const raw = useQueries(queryMap);
 
   return useMemo(() => {
+    if (isDemo) {
+      const demoEvents = demoStore.listActivities(undefined, limit);
+      return { events: demoEvents as unknown as StatusChangeEvent[], loading: false };
+    }
     const events: StatusChangeEvent[] = [];
     let pending = false;
     for (const id of projectIds) {
@@ -241,15 +298,13 @@ export function useProjectStatusEvents(projectIds: Id<"projects">[], limit = 200
         continue;
       }
       if (isError(value)) continue;
-      const list = (value ?? []) as StatusChangeEvent[];
-      for (const event of list) {
-        if (event.eventType === "issue.status_changed") events.push(event);
-      }
+      events.push(...((value as StatusChangeEvent[]) ?? []));
     }
-    events.sort((a, b) => a.createdAt - b.createdAt);
+    events.sort((a, b) => b.createdAt - a.createdAt);
     return { events, loading: pending };
-  }, [raw, projectIds]);
+  }, [raw, projectIds, isDemo, limit]);
 }
+
 
 /* --------------------------------------------------------------- roll-ups */
 

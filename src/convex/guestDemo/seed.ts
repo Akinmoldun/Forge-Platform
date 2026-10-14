@@ -688,47 +688,13 @@ async function runEnsure(ctx: any) {
 
   // Check existing demo workspaces
   const existing = await findGuestDemoWorkspaces(ctx, user._id);
-  if (existing.length >= 3) {
-    // Check if existing is thin
-    let isThin = false;
-    for (const ws of existing) {
-      const issues = await ctx.db
-        .query("issues")
-        .withIndex("by_workspace_created", (q: any) => q.eq("workspaceId", ws._id))
-        .collect();
-      const members = await ctx.db
-        .query("memberships")
-        .withIndex("by_workspace", (q: any) => q.eq("workspaceId", ws._id))
-        .collect();
-      const projects = await ctx.db
-        .query("projects")
-        .withIndex("by_workspace", (q: any) => q.eq("workspaceId", ws._id))
-        .collect();
-      const hasEmptyProject = projects.some((p: any) => p.issueCount === 0);
-      if (issues.length < 80 || members.length < 4 || projects.length < 3 || hasEmptyProject) {
-        isThin = true;
-        break;
-      }
-    }
-
-    if (!isThin) {
-      return {
-        workspaceId: existing[0]._id,
-        slug: existing[0].slug,
-        isNew: false,
-        count: existing.length,
-      };
-    }
-
-    // Existing is thin: wipe all existing demo workspaces for this guest
-    for (const ws of existing) {
-      await deleteDemoWorkspace(ctx, ws._id);
-    }
-  } else if (existing.length > 0) {
-    // Partially created or old demo: wipe to rebuild clean 3 workspaces
-    for (const ws of existing) {
-      await deleteDemoWorkspace(ctx, ws._id);
-    }
+  if (existing.length > 0) {
+    return {
+      workspaceId: existing[0]._id,
+      slug: existing[0].slug,
+      isNew: false,
+      count: existing.length,
+    };
   }
 
   const now = Date.now();

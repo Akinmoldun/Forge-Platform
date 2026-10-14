@@ -27,6 +27,8 @@ import { FolderKanban, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PRIORITIES } from "@/components/forge";
+import { demoStore } from "@/data/in-memory-demo-store";
+
 
 const PRIORITY_DOTS: Record<string, string> = {
   urgent: "#D78FC6",
@@ -85,6 +87,12 @@ export function CreateProjectDialog({
     if (!valid || creating) return;
     setCreating(true);
     try {
+      if (demoStore.isDemoWorkspace(workspaceId)) {
+        setOpen(false);
+        reset();
+        toast.success(`Project ${key.trim().toUpperCase()} created (demo mode)`);
+        return;
+      }
       const result = await createProject({
         workspaceId,
         name: name.trim(),
@@ -102,6 +110,7 @@ export function CreateProjectDialog({
       setCreating(false);
     }
   };
+
 
   if (!canCreate) return null;
 
@@ -286,18 +295,24 @@ export function CreateIssueDialog({
 
   const effectiveProject = projectId || defaultProjectId || projects[0]?._id || "";
 
-  // Query workflow statuses for the selected project to populate the status dropdown
-  const workflowData = useQuery(
-    api.workflows.getWorkflow,
-    effectiveProject ? { projectId: effectiveProject as Id<"projects"> } : "skip",
+  const isDemo = Boolean(
+    String(effectiveProject).startsWith("demo-") ||
+    (workspaceId && demoStore.isDemoWorkspace(workspaceId))
   );
-  const statuses = workflowData?.statuses ?? [];
 
-  // Query members for assignee dropdown if workspaceId is available
-  const members = useQuery(
-    api.workspaces.listMembers,
-    workspaceId ? { workspaceId } : "skip",
+  // Query workflow statuses for the selected project to populate the status dropdown
+  const rawWorkflowData = useQuery(
+    api.workflows.getWorkflow,
+    !isDemo && effectiveProject ? { projectId: effectiveProject as Id<"projects"> } : "skip",
   );
+  const rawMembers = useQuery(
+    api.workspaces.listMembers,
+    !isDemo && workspaceId ? { workspaceId } : "skip",
+  );
+
+  const workflowData = isDemo ? demoStore.getWorkflow() : rawWorkflowData;
+  const statuses = workflowData?.statuses ?? [];
+  const members = isDemo ? demoStore.listTeammates(workspaceId) : rawMembers;
 
   // Default status to first backlog status if not explicitly picked
   const effectiveStatusId = statusId || (statuses[0]?._id ?? "");
@@ -323,6 +338,46 @@ export function CreateIssueDialog({
     if (!valid || creating) return;
     setCreating(true);
     try {
+      if (isDemo) {
+        const chosenProject =
+          projects.find((p) => p._id === effectiveProject) ||
+          demoStore.getProject(effectiveProject)?.project;
+        const newIssue = demoStore.createIssue({
+          workspaceId:
+            workspaceId ||
+            (chosenProject && "workspaceId" in chosenProject
+              ? String(chosenProject.workspaceId)
+              : "demo-ws-northstar"),
+          projectId: effectiveProject,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          priority:
+            priority !== "none"
+              ? (priority as "urgent" | "high" | "medium" | "low")
+              : "medium",
+          statusId: effectiveStatusId || undefined,
+        });
+
+        setOpen(false);
+        setTitle("");
+        setDescription("");
+        setPriority("none");
+        setStatusId("");
+        setAssigneeId("none");
+
+        const projectLabel = chosenProject ? chosenProject.name : "project";
+        const keyPrefix = chosenProject ? chosenProject.key : "ISSUE";
+        toast.success(`Issue ${keyPrefix}-${newIssue.number} created in ${projectLabel}`, {
+          action: {
+            label: "Open",
+            onClick: () => navigate(`/app/issues/${newIssue._id}`),
+          },
+        });
+
+        onCreated?.(newIssue._id as never);
+        return;
+      }
+
       const chosenProject = projects.find((p) => p._id === effectiveProject);
       const result = await createIssue({
         projectId: effectiveProject as Id<"projects">,
@@ -356,6 +411,7 @@ export function CreateIssueDialog({
       setCreating(false);
     }
   };
+
 
   return (
     <>

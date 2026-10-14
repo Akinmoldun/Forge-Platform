@@ -57,22 +57,32 @@ const PRIORITY_TONE: Record<string, string> = {
   none: "bg-[#9A9A9F]",
 };
 
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+
 export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const projects = useQuery(
+  const rawProjects = useQuery(
     api.projects.listProjects,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
+
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const projects = isDemo ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects) : rawProjects;
+  const members = isDemo ? (demoStore.listTeammates(workspaceId) as unknown as typeof rawMembers) : rawMembers;
+
 
   const [range, setRange] = useState<string>("90");
   const [projectFilter, setProjectFilter] = useState("all");

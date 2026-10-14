@@ -209,19 +209,20 @@ export function Section2Hero() {
 
   const handleStart = async () => {
     setError(null);
-    if (isAuthenticated) {
-      navigate('/app');
-      return;
-    }
     setIsLoading(true);
     try {
-      await signIn('anonymous');
-      navigate('/app');
-    } catch (err) {
-      console.error('Guest demo sign-in error:', err);
-      setError('Could not start demo. Try again.');
-      setIsLoading(false);
+      if (!isAuthenticated) {
+        await Promise.race([
+          signIn('anonymous'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        ]).catch(() => {
+          // Demo requires no auth, proceed immediately
+        });
+      }
+    } catch {
+      // Proceed to demo workspace
     }
+    navigate('/app/workspaces/demo-ws-northstar');
   };
 
   const heroSectionRef = useRef<HTMLElement>(null);

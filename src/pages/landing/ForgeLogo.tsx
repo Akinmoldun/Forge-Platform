@@ -6,12 +6,21 @@ export interface ForgeLogoProps {
 }
 
 export function ForgeLogo({ className = '', onClick }: ForgeLogoProps) {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (onClick) {
+      onClick(e);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <a
       href="#hero"
-      onClick={onClick}
+      onClick={handleClick}
       aria-label="Home"
-      className={`flex items-center text-[#0D0D0D] hover:opacity-80 transition-opacity select-none shrink-0 ${className}`.trim()}
+      className={`flex items-center text-[#0D0D0D] hover:opacity-80 transition-opacity select-none shrink-0 cursor-pointer ${className}`.trim()}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -26,3 +35,4 @@ export function ForgeLogo({ className = '', onClick }: ForgeLogoProps) {
     </a>
   );
 }
+

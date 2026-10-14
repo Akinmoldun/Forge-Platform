@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
@@ -54,11 +54,18 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  demoStore,
+  useDemoStoreSubscriber,
+  DEMO_STATUSES,
+  DEMO_TRANSITIONS,
+} from "@/data/in-memory-demo-store";
 
 type ViewMode = "board" | "list";
 
 export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" }) {
   const { user } = useAuth();
+  useDemoStoreSubscriber();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,33 +78,38 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   });
 
-  const project = useQuery(
+  const isDemo = Boolean(
+    projectId?.startsWith("demo-") ||
+    demoStore.isDemoWorkspace(projectId)
+  );
+
+  const rawProject = useQuery(
     api.projects.getProject,
-    projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && projectId ? { projectId: projectId as never } : "skip"
   );
-  const allProjects = useQuery(
+  const rawAllProjects = useQuery(
     api.projects.listProjects,
-    project?.project?.workspaceId ? { workspaceId: project.project.workspaceId } : "skip",
+    !isDemo && rawProject?.project?.workspaceId ? { workspaceId: rawProject.project.workspaceId } : "skip",
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    project?.project?.workspaceId ? { workspaceId: project.project.workspaceId } : "skip",
+    !isDemo && rawProject?.project?.workspaceId ? { workspaceId: rawProject.project.workspaceId } : "skip",
   );
-  const board = useQuery(
+  const rawBoard = useQuery(
     api.issues.getBoard,
-    projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && projectId ? { projectId: projectId as never } : "skip"
   );
-  const risk = useQuery(
+  const rawRisk = useQuery(
     api.analytics.getProjectRisk,
-    projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && projectId ? { projectId: projectId as never } : "skip"
   );
-  const summary = useQuery(
+  const rawSummary = useQuery(
     api.analytics.getProjectSummary,
-    projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && projectId ? { projectId: projectId as never } : "skip"
   );
-  const projectActivity = useQuery(
+  const rawProjectActivity = useQuery(
     api.analytics.listProjectActivity,
-    projectId
+    !isDemo && projectId
       ? {
           projectId: projectId as never,
           limit: 40,
@@ -105,9 +117,48 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
       : "skip"
   );
 
+  const demoProjData = useMemo(() => {
+    if (!isDemo || !projectId) return null;
+    return demoStore.getProject(projectId);
+  }, [isDemo, projectId]);
+
+  const project = isDemo ? (demoProjData as unknown as typeof rawProject) : rawProject;
+  const allProjects = isDemo
+    ? (demoStore.listProjects(demoProjData?.project.workspaceId) as unknown as typeof rawAllProjects)
+    : rawAllProjects;
+  const members = isDemo
+    ? (demoStore.listTeammates(demoProjData?.project.workspaceId) as unknown as typeof rawMembers)
+    : rawMembers;
+
+  const demoBoard = useMemo(() => {
+    if (!isDemo || !projectId) return null;
+    const projectIssues = demoStore.listIssues(projectId);
+    return {
+      project: demoProjData?.project,
+      workflow: demoStore.getWorkflow().workflow,
+      columns: DEMO_STATUSES.map((status) => ({
+        status,
+        issues: projectIssues.filter((i) => i.statusId === status._id),
+      })),
+      transitions: DEMO_TRANSITIONS,
+    };
+  }, [isDemo, projectId, demoProjData]);
+
+  const board = isDemo ? (demoBoard as unknown as typeof rawBoard) : rawBoard;
+  const risk = isDemo ? (demoStore.getProjectRisk(projectId!) as unknown as typeof rawRisk) : rawRisk;
+  const summary = isDemo ? (demoStore.getProjectSummary(projectId!) as unknown as typeof rawSummary) : rawSummary;
+  const projectActivity = isDemo
+    ? (demoStore.listActivities(demoProjData?.project.workspaceId) as unknown as typeof rawProjectActivity)
+    : rawProjectActivity;
+
   const transitionIssue = useMutation(api.issues.transitionIssue);
 
   const handleStatusChange = async (issueId: string, toStatusId: string) => {
+    if (isDemo) {
+      demoStore.updateIssue(issueId, { statusId: toStatusId });
+      toast.success("Status updated");
+      return;
+    }
     const toStatusName =
       board?.columns.find((c) => c.status._id === toStatusId)?.status.name || "the next status";
     try {
@@ -132,6 +183,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   };
 
+
   const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
   const [colStatusId, setColStatusId] = useState<string>("");
 
@@ -147,9 +199,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     return () => clearTimeout(t);
   }, [search]);
 
-  const issues = useQuery(
+  const rawIssues = useQuery(
     api.issues.listIssues,
-    projectId
+    !isDemo && projectId
       ? {
           projectId: projectId as never,
           search: debouncedSearch || undefined,
@@ -167,6 +219,32 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         }
       : "skip"
   );
+
+  const demoIssues = useMemo(() => {
+    if (!isDemo || !projectId) return null;
+    let list = demoStore.listIssues(projectId);
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      list = list.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.description.toLowerCase().includes(q)
+      );
+    }
+    if (priorityFilter !== "all") {
+      list = list.filter((i) => i.priority === priorityFilter);
+    }
+    return {
+      issues: list,
+      total: list.length,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    };
+  }, [isDemo, projectId, debouncedSearch, priorityFilter]);
+
+  const issues = isDemo ? (demoIssues as unknown as typeof rawIssues) : rawIssues;
+
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);

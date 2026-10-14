@@ -58,20 +58,35 @@ import {
 import { DragScroll } from "@/components/DragScroll";
 import { toast } from "sonner";
 
+import {
+  demoStore,
+  useDemoStoreSubscriber,
+  DEMO_STATUSES,
+  DEMO_TRANSITIONS,
+} from "@/data/in-memory-demo-store";
+
 type PendingMap = Record<string, Partial<Record<RuleKey, boolean>>>;
 
 export default function WorkflowPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const projects = useQuery(
+  const rawProjects = useQuery(
     api.projects.listProjects,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
+
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const projects = isDemo
+    ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects)
+    : rawProjects;
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedStatusId, setSelectedStatusId] = useState<string | null>(null);
@@ -83,19 +98,44 @@ export default function WorkflowPage() {
   const [automationsOpen, setAutomationsOpen] = useState(false);
 
   const projectList = useMemo(() => projects ?? [], [projects]);
-  // The first project is the default scope, so the editor is never empty on load.
   const effectiveProjectId = selectedProjectId ?? projectList[0]?._id ?? "";
-  const queryArgs = effectiveProjectId
+  const queryArgs = !isDemo && effectiveProjectId
     ? { projectId: effectiveProjectId as Id<"projects"> }
     : ("skip" as const);
 
-  const project = useQuery(api.projects.getProject, queryArgs);
-  const workflowData = useQuery(api.workflows.getWorkflow, queryArgs);
-  const board = useQuery(api.issues.getBoard, queryArgs);
-  const summary = useQuery(api.analytics.getProjectSummary, queryArgs);
-  const automations = useQuery(api.analytics.listAutomationRules, queryArgs);
+  const rawProject = useQuery(api.projects.getProject, queryArgs);
+  const rawWorkflowData = useQuery(api.workflows.getWorkflow, queryArgs);
+  const rawBoard = useQuery(api.issues.getBoard, queryArgs);
+  const rawSummary = useQuery(api.analytics.getProjectSummary, queryArgs);
+  const rawAutomations = useQuery(api.analytics.listAutomationRules, queryArgs);
+
+  const demoWorkflow = useMemo(() => {
+    if (!isDemo) return null;
+    return demoStore.getWorkflow();
+  }, [isDemo]);
+
+  const demoBoard = useMemo(() => {
+    if (!isDemo || !effectiveProjectId) return null;
+    const projectIssues = demoStore.listIssues(effectiveProjectId);
+    return {
+      project: demoStore.getProject(effectiveProjectId)?.project,
+      workflow: demoStore.getWorkflow().workflow,
+      columns: DEMO_STATUSES.map((status) => ({
+        status,
+        issues: projectIssues.filter((i) => i.statusId === status._id),
+      })),
+      transitions: DEMO_TRANSITIONS,
+    };
+  }, [isDemo, effectiveProjectId]);
+
+  const project = isDemo ? demoStore.getProject(effectiveProjectId) : rawProject;
+  const workflowData = isDemo ? (demoWorkflow as unknown as typeof rawWorkflowData) : rawWorkflowData;
+  const board = isDemo ? (demoBoard as unknown as typeof rawBoard) : rawBoard;
+  const summary = isDemo ? (demoStore.getProjectSummary(effectiveProjectId) as unknown as typeof rawSummary) : rawSummary;
+  const automations = isDemo ? (demoWorkflow?.automationRules as unknown as typeof rawAutomations) : rawAutomations;
 
   const updateTransition = useMutation(api.workflows.updateTransitionRules);
+
 
   // Staged rule edits belong to one project and one workflow. Switching either
   // discards them, so edits can never be written onto a different workflow.

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -34,20 +34,34 @@ import {
 import { ArrowLeft, Archive, ArchiveRestore, Lock, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
 
 export default function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
+  useDemoStoreSubscriber();
   const pid = projectId as Id<"projects">;
   const navigate = useNavigate();
 
-  const project = useQuery(
+  const isDemo = Boolean(projectId?.startsWith("demo-"));
+
+  const rawProject = useQuery(
     api.projects.getProject,
-    projectId ? { projectId: pid } : "skip"
+    !isDemo && projectId ? { projectId: pid } : "skip"
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    project?.project?.workspaceId ? { workspaceId: project.project.workspaceId } : "skip",
+    !isDemo && rawProject?.project?.workspaceId ? { workspaceId: rawProject.project.workspaceId } : "skip",
   );
+
+  const demoProject = useMemo(() => {
+    if (!isDemo || !projectId) return null;
+    return demoStore.getProject(projectId);
+  }, [isDemo, projectId]);
+
+  const project = isDemo ? (demoProject as unknown as typeof rawProject) : rawProject;
+  const members = isDemo
+    ? (demoStore.listTeammates(demoProject?.project.workspaceId) as unknown as typeof rawMembers)
+    : rawMembers;
 
   const updateProject = useMutation(api.projects.updateProject);
   const archiveProject = useMutation(api.projects.archiveProject);
@@ -113,6 +127,15 @@ export default function ProjectSettings() {
     if (!nameValue.trim() || saving) return;
     setSaving(true);
     try {
+      if (isDemo) {
+        toast.success("Project settings saved (demo mode)");
+        setName(null);
+        setDescription(null);
+        setIconKey(null);
+        setColor(null);
+        setDefaultAssigneeId(null);
+        return;
+      }
       await updateProject({
         projectId: pid,
         name: nameValue.trim(),
@@ -138,6 +161,10 @@ export default function ProjectSettings() {
   const handleToggleArchive = async () => {
     setArchiving(true);
     try {
+      if (isDemo) {
+        toast.success(isArchived ? "Project restored to active (demo mode)" : "Project archived (demo mode)");
+        return;
+      }
       if (isArchived) {
         await restoreProject({ projectId: pid });
         toast.success("Project restored to active");
@@ -156,6 +183,12 @@ export default function ProjectSettings() {
     if (deleteConfirmName.trim() !== projectRealName.trim() || deleting) return;
     setDeleting(true);
     try {
+      if (isDemo) {
+        toast.success("Project deleted (demo mode)");
+        setDeleteDialogOpen(false);
+        navigate(`/app/workspaces/${project?.project.workspaceId || "demo-ws-northstar"}`);
+        return;
+      }
       await deleteProject({ projectId: pid });
       toast.success("Project deleted");
       setDeleteDialogOpen(false);

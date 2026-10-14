@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useConvex } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { ensureGuestWorkspace, resetGuestDemo } from "@/lib/guestDemo";
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,59 +28,55 @@ import {
   Building2,
   Mail,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AppHome() {
   const { user } = useAuth();
-  const convex = useConvex();
-  const workspaces = useQuery(api.workspaces.listMyWorkspaces);
-  const myInvitations = useQuery(api.workspaces.getMyInvitations);
+  useDemoStoreSubscriber();
+
+  const isAnonymousGuest = Boolean(user?.isAnonymous);
+
+  // For real accounts, list Convex workspaces.
+  // For anonymous guest accounts, skip Convex query and serve in-code demo workspaces.
+  const rawWorkspaces = useQuery(
+    api.workspaces.listMyWorkspaces,
+    !isAnonymousGuest ? {} : "skip"
+  );
+  const myInvitations = useQuery(
+    api.workspaces.getMyInvitations,
+    !isAnonymousGuest ? {} : "skip"
+  );
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [autoSeeding, setAutoSeeding] = useState(false);
-  const [resettingDemo, setResettingDemo] = useState(false);
-  const [seedError, setSeedError] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
   const create = useMutation(api.workspaces.createWorkspace);
   const acceptMyInvitation = useMutation(api.workspaces.acceptMyInvitation);
 
-  const startDemoProvisioning = useCallback(() => {
-    setSeedError(null);
-    setAutoSeeding(true);
-    ensureGuestWorkspace(convex)
-      .then(() => {
-        setAutoSeeding(false);
-      })
-      .catch((err) => {
-        console.error("Auto-seeding guest workspace error:", err);
-        setSeedError(err instanceof Error ? err.message : "Demo is unavailable right now");
-        setAutoSeeding(false);
-      });
-  }, [convex]);
+  // Safety timeout guard: ensures workspaces loading never hangs indefinitely
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const _handleResetDemo = async () => {
-    setSeedError(null);
-    setResettingDemo(true);
-    setAutoSeeding(true);
-    try {
-      await resetGuestDemo(convex);
-      toast.success("Demo reset in progress");
-    } catch (err) {
-      console.error("Reset demo error:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to reset demo");
-    } finally {
-      setResettingDemo(false);
-      setAutoSeeding(false);
-    }
+  const demoWorkspaces = useMemo(() => demoStore.listWorkspaces(), []);
+
+  const workspaces = useMemo(() => {
+    if (isAnonymousGuest) return demoWorkspaces;
+    return rawWorkspaces;
+  }, [isAnonymousGuest, demoWorkspaces, rawWorkspaces]);
+
+  const handleResetDemo = () => {
+    demoStore.resetDemo();
+    toast.success("Demo reset fresh");
   };
 
-  const isAnonymousGuest = Boolean(user?.isAnonymous);
-
-  // Note: Demo workspaces are never auto-seeded into the database on viewing AppHome.
-  // They only populate if the user explicitly triggers "Try demo" or demo actions.
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2
@@ -120,31 +116,24 @@ export default function AppHome() {
     }
   };
 
-  // If initial seed completely failed and user has no workspaces, show error state with retry
-  if (seedError && isAnonymousGuest && (!workspaces || workspaces.length === 0)) {
+  // If query timed out and workspaces still haven't loaded, show clear error with Retry
+  if (timedOut && workspaces === undefined) {
     return (
       <AppShell>
         <div className="mx-auto max-w-[600px] flex flex-col items-center justify-center py-24 text-center">
           <div className="size-12 rounded-2xl bg-[#B3261E]/10 border border-[#B3261E]/20 text-[#B3261E] flex items-center justify-center mb-4">
             <Building2 className="size-6" />
           </div>
-          <h2 className="text-[18px] font-medium text-[#0D0D0D]">Demo is unavailable right now</h2>
+          <h2 className="text-[18px] font-medium text-[#0D0D0D]">Workspaces took too long to load</h2>
           <p className="mt-1.5 text-[13px] text-[#575657] max-w-sm">
-            {seedError}
+            We couldn't load your workspaces. Please try refreshing.
           </p>
           <div className="mt-5 flex gap-3">
             <Button
-              onClick={startDemoProvisioning}
+              onClick={() => window.location.reload()}
               className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-5 text-[13px]"
             >
-              Try again
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setSeedError(null)}
-              className="rounded-full h-9 px-4 text-[13px]"
-            >
-              Dismiss
+              <RotateCcw className="size-3.5 mr-1.5" /> Retry
             </Button>
           </div>
         </div>
@@ -152,7 +141,6 @@ export default function AppHome() {
     );
   }
 
-  const isPreparingDemos = isAnonymousGuest && (autoSeeding || resettingDemo || (workspaces && workspaces.filter((w) => w.name.startsWith("Demo: ")).length < 3));
 
   return (
     <AppShell>
@@ -168,12 +156,22 @@ export default function AppHome() {
                 Each workspace is an isolated tenant with its own members, projects, and workflows.
               </p>
             </div>
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
-                  <Plus className="size-4 mr-1" /> New workspace
+            <div className="flex items-center gap-2">
+              {isAnonymousGuest && (
+                <Button
+                  variant="outline"
+                  onClick={handleResetDemo}
+                  className="rounded-full h-9 px-3.5 text-[13px] border-border text-[#575657] hover:text-[#0D0D0D]"
+                >
+                  <RotateCcw className="size-3.5 mr-1.5" /> Reset demo
                 </Button>
-              </DialogTrigger>
+              )}
+              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+                    <Plus className="size-4 mr-1" /> New workspace
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Create a workspace</DialogTitle>
@@ -225,6 +223,7 @@ export default function AppHome() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </FadeIn>
 
@@ -260,7 +259,7 @@ export default function AppHome() {
                         <Loader2 className="size-3.5 animate-spin mr-1.5" /> Accepting…
                       </>
                     ) : (
-                      "Accept invitation"
+                      "Accept"
                     )}
                   </Button>
                 </div>
@@ -269,17 +268,9 @@ export default function AppHome() {
           </FadeIn>
         )}
 
-        {/* Demo creation progress indicator */}
-        {isPreparingDemos && (
-          <div className="mt-4 flex items-center gap-2 text-[13px] text-[#575657]">
-            <Loader2 className="size-4 animate-spin text-[#0D0D0D]" />
-            <span>Preparing your demo workspaces...</span>
-          </div>
-        )}
-
         {/* Workspaces Grid */}
         <div className="mt-6">
-          {workspaces === undefined || (isAnonymousGuest && workspaces.length === 0) ? (
+          {workspaces === undefined ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="h-44 rounded-[16px] border border-border bg-white p-5 animate-pulse flex flex-col justify-between">
                 <div className="size-10 rounded-xl bg-[#F1F1F3]" />
@@ -362,23 +353,6 @@ export default function AppHome() {
                   </StaggerItem>
                 );
               })}
-
-              {/* Show placeholder skeleton if guest demo is still provisioning remaining workspaces */}
-              {isAnonymousGuest && isPreparingDemos && workspaces.length < 3 && (
-                Array.from({ length: 3 - workspaces.length }).map((_, i) => (
-                  <div
-                    key={`prep-skel-${i}`}
-                    className="h-44 rounded-[16px] border border-dashed border-border bg-white/60 p-5 animate-pulse flex flex-col justify-between"
-                  >
-                    <div className="size-10 rounded-xl bg-[#F1F1F3]" />
-                    <div className="space-y-2">
-                      <div className="h-4 w-3/4 rounded bg-[#F1F1F3]" />
-                      <div className="h-3 w-1/2 rounded bg-[#F1F1F3]" />
-                    </div>
-                    <div className="h-4 w-full rounded bg-[#F1F1F3]" />
-                  </div>
-                ))
-              )}
             </Stagger>
           )}
         </div>

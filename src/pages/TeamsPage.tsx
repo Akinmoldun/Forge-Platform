@@ -67,29 +67,34 @@ const LOAD_OPTIONS: Array<{ value: LoadFilter; label: string }> = [
   { value: "heavy", label: "5 or more open" },
 ];
 
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+
 export default function TeamsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const projects = useQuery(
+  const rawProjects = useQuery(
     api.projects.listProjects,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const invitations = useQuery(
+  const rawInvitations = useQuery(
     api.workspaces.listInvitations,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const activity = useQuery(
+  const rawActivity = useQuery(
     api.analytics.listWorkspaceActivity,
-    workspaceId
+    !isDemo && workspaceId
       ? {
           workspaceId: wid,
           limit: 200,
@@ -97,9 +102,16 @@ export default function TeamsPage() {
       : "skip"
   );
 
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const members = isDemo ? (demoStore.listTeammates(workspaceId) as unknown as typeof rawMembers) : rawMembers;
+  const projects = isDemo ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects) : rawProjects;
+  const invitations = isDemo ? [] : rawInvitations;
+  const activity = isDemo ? (demoStore.listActivities(workspaceId, 200) as unknown as typeof rawActivity) : rawActivity;
+
   const updateRole = useMutation(api.workspaces.updateMemberRole);
   const removeMember = useMutation(api.workspaces.removeMember);
   const resendInvitation = useMutation(api.workspaces.resendInvitation);
+
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");

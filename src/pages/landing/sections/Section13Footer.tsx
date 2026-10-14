@@ -11,16 +11,19 @@ export function Section13Footer() {
   const navigate = useNavigate();
 
   const handleDemo = async () => {
-    if (isAuthenticated) {
-      navigate('/app');
-      return;
-    }
     try {
-      await signIn('anonymous');
-      navigate('/app');
+      if (!isAuthenticated) {
+        await Promise.race([
+          signIn('anonymous'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        ]).catch(() => {
+          // Demo requires no auth, proceed immediately
+        });
+      }
     } catch {
-      navigate('/login');
+      // Proceed to demo workspace
     }
+    navigate('/app/workspaces/demo-ws-northstar');
   };
 
   const scrollToTop = (e?: React.MouseEvent) => {

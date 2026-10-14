@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useConvex } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -48,7 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { resetGuestDemo } from "@/lib/guestDemo";
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
@@ -306,7 +306,6 @@ function AccountMenu({
 // ---------------------------------------------------------------------------
 function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
   const { user } = useAuth();
-  const convex = useConvex();
   const navigate = useNavigate();
   const [resetting, setResetting] = useState(false);
   const [hidden, setHidden] = useState<boolean>(() => {
@@ -323,9 +322,9 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
     if (resetting) return;
     setResetting(true);
     try {
-      const res = await resetGuestDemo(convex, workspaceId || "");
+      demoStore.resetDemo();
       toast.success("Demo reset fresh");
-      navigate(`/app/workspaces/${res.workspaceId}`);
+      navigate(`/app/workspaces/${workspaceId || "demo-ws-northstar"}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to reset demo");
     } finally {
@@ -404,6 +403,7 @@ export function AppShell({
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  useDemoStoreSubscriber();
 
   // If outside workspace
   const isInsideWorkspace = isWorkspaceRoute(pathname);
@@ -412,53 +412,104 @@ export function AppShell({
   const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
   const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
 
+  // 1. Resolve workspace ID candidate from route or props
+  const matchedWsId = pathname.match(/^\/app\/workspaces\/([^/]+)/)?.[1];
+  const initialWsId = workspaceId || matchedWsId;
+
+  const isDemoWs = Boolean(
+    initialWsId?.startsWith("demo-") ||
+    pathname.includes("/demo-") ||
+    pathname.includes("demo-ws-") ||
+    user?.isAnonymous
+  );
+
   const activeProjectQuery = useQuery(
     api.projects.getProject,
-    !workspaceId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
+    !isDemoWs && !initialWsId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
   );
   const issueDetail = useQuery(
     api.issues.getIssue,
-    activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
+    !isDemoWs && !initialWsId && activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
   );
 
   const effectiveWorkspaceId =
-    workspaceId ||
+    initialWsId ||
     activeProjectQuery?.project?.workspaceId ||
-    issueDetail?.workspaceId;
+    issueDetail?.workspaceId ||
+    (isDemoWs ? "demo-ws-northstar" : undefined);
 
   // Queries
-  const myWorkspaces = useQuery(
+  const rawMyWorkspaces = useQuery(
     api.workspaces.listMyWorkspaces,
-    user ? {} : "skip"
+    !isDemoWs && user ? {} : "skip"
   );
-  const currentWorkspace = useQuery(
+  const rawCurrentWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    !isDemoWs && effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
   );
-  const projects = useQuery(
+  const rawProjects = useQuery(
     api.projects.listProjects,
-    effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    !isDemoWs && effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
   );
-  const notifications = useQuery(
+  const rawNotifications = useQuery(
     api.analytics.listNotifications,
-    effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    !isDemoWs && effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
   );
+
+  const demoWsData = useMemo(() => {
+    if (!isDemoWs) return null;
+    return {
+      workspace: demoStore.getWorkspace(effectiveWorkspaceId),
+      projects: demoStore.listProjects(effectiveWorkspaceId),
+      workspaces: demoStore.listWorkspaces(),
+    };
+  }, [isDemoWs, effectiveWorkspaceId]);
+
+  const currentWorkspace = isDemoWs ? demoWsData?.workspace : rawCurrentWorkspace;
+  const projects = isDemoWs ? (demoWsData?.projects as unknown as typeof rawProjects) : rawProjects;
+  const myWorkspaces = isDemoWs ? (demoWsData?.workspaces as unknown as typeof rawMyWorkspaces) : rawMyWorkspaces;
+  const notifications = isDemoWs ? { notifications: [], unreadCount: 0 } : rawNotifications;
 
   const unreadCount = notifications?.unreadCount ?? 0;
 
-  // Logo destination: real workspace dashboard if logged in with real account; home page ('/') if guest or logged out
-  const dashboardHref = useMemo(() => {
-    if (!user || user.isAnonymous) return "/";
-    // If inside a workspace that is not a demo workspace
-    if (effectiveWorkspaceId && currentWorkspace && !currentWorkspace.workspace.name.startsWith("Demo: ")) {
-      return `/app/workspaces/${effectiveWorkspaceId}`;
-    }
-    // Prefer non-demo workspace first
-    const realWs = myWorkspaces?.find((w) => !w.name.startsWith("Demo: "));
-    if (realWs) return `/app/workspaces/${realWs._id}`;
-    if (myWorkspaces && myWorkspaces.length > 0) return `/app/workspaces/${myWorkspaces[0]._id}`;
-    return "/app";
-  }, [user, effectiveWorkspaceId, currentWorkspace, myWorkspaces]);
+  // Logo click handler:
+  // - Inside ANY workspace (guest/demo or real): keeps user in CURRENT workspace and resets to home view with soft refresh
+  // - Never leaves workspace, never goes to marketing page, never logs out
+  // - In demo/guest mode, stays in demo workspace
+  const handleLogoClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (effectiveWorkspaceId) {
+        const homePath = `/app/workspaces/${effectiveWorkspaceId}`;
+        const isAlreadyHome =
+          pathname === homePath || pathname === `${homePath}/overview`;
+
+        if (isAlreadyHome) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          window.dispatchEvent(
+            new CustomEvent("forge:soft-refresh", {
+              detail: { workspaceId: effectiveWorkspaceId },
+            })
+          );
+        } else {
+          navigate(homePath);
+        }
+        return;
+      }
+
+      if (user && !user.isAnonymous) {
+        if (myWorkspaces && myWorkspaces.length > 0) {
+          navigate(`/app/workspaces/${myWorkspaces[0]._id}`);
+        } else {
+          navigate("/app");
+        }
+      } else {
+        navigate("/app/workspaces/demo-ws-northstar");
+      }
+    },
+    [effectiveWorkspaceId, pathname, navigate, user, myWorkspaces]
+  );
+
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
@@ -643,16 +694,18 @@ export function AppShell({
         {/* 56px Top bar outside workspace */}
         <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
           <div className="mx-auto flex h-14 w-full max-w-[1100px] items-center justify-between px-4 sm:px-6">
-            <Link
-              to={dashboardHref}
-              className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
+            <button
+              type="button"
+              onClick={handleLogoClick}
+              className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2 cursor-pointer text-left"
               aria-label="Forge home"
             >
               <ForgeLogo className="size-6 text-[#0D0D0D]" />
               <span className="text-[16px] font-semibold tracking-tight text-[#0D0D0D] select-none">
                 Forge
               </span>
-            </Link>
+            </button>
+
 
             <div className="flex shrink-0 items-center">
               <AccountMenu onOpenShortcuts={() => setShortcutsOpen(true)} />
@@ -784,16 +837,18 @@ export function AppShell({
         <div className="flex h-12 items-center justify-between px-3 border-b border-border/40 shrink-0">
           {!collapsed ? (
             <>
-              <Link
-                to={dashboardHref}
-                className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
+              <button
+                type="button"
+                onClick={handleLogoClick}
+                className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85 cursor-pointer text-left"
                 aria-label="Forge home"
               >
                 <ForgeLogo className="size-5 text-[#0D0D0D]" />
                 <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
                   Forge
                 </span>
-              </Link>
+              </button>
+
 
               <Tooltip>
                 <TooltipTrigger asChild>

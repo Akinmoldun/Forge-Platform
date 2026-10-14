@@ -15,7 +15,7 @@ export function TryDemoButton({
   variant = 'primary',
   children,
   className = '',
-  redirect = '/app',
+  redirect = '/app/workspaces/demo-ws-northstar',
   onClick,
 }: TryDemoButtonProps) {
   const { isAuthenticated, signIn } = useAuth();
@@ -23,34 +23,26 @@ export function TryDemoButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const withTimeout = <T,>(promise: Promise<T> | Promise<unknown>, ms = 10000): Promise<T> => {
-    return Promise.race([
-      promise as Promise<T>,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out')), ms),
-      ),
-    ]);
-  };
-
   const handleClick = async () => {
     setError(null);
     if (onClick) onClick();
 
-    if (isAuthenticated) {
-      navigate(redirect);
-      return;
-    }
-
     setLoading(true);
     try {
-      await withTimeout(signIn('anonymous'), 10000);
-      navigate(redirect);
-    } catch (err) {
-      console.error('Guest demo sign-in error:', err);
-      setError("We couldn't start the demo, try again");
+      if (!isAuthenticated) {
+        await Promise.race([
+          signIn('anonymous'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        ]).catch(() => {
+          // Demo requires no auth, proceed immediately
+        });
+      }
+    } catch {
+      // Proceed to demo workspace
     } finally {
       setLoading(false);
     }
+    navigate(redirect);
   };
 
   const baseStyles =

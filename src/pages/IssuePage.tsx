@@ -58,29 +58,53 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { demoStore, useDemoStoreSubscriber, DEMO_LABELS } from "@/data/in-memory-demo-store";
+
 export default function IssuePage() {
   const { user } = useAuth();
+  useDemoStoreSubscriber();
   const { issueId } = useParams<{ issueId: string }>();
-  const detail = useQuery(
+
+  const isDemo = Boolean(issueId?.startsWith("demo-"));
+
+  const rawDetail = useQuery(
     api.issues.getIssue,
-    issueId ? { issueId: issueId as never } : "skip"
+    !isDemo && issueId ? { issueId: issueId as never } : "skip"
   );
-  const comments = useQuery(
+  const rawComments = useQuery(
     api.collaboration.listComments,
-    issueId ? { issueId: issueId as never } : "skip"
+    !isDemo && issueId ? { issueId: issueId as never } : "skip"
   );
-  const activity = useQuery(
+  const rawActivity = useQuery(
     api.analytics.listIssueActivity,
-    issueId ? { issueId: issueId as never } : "skip"
+    !isDemo && issueId ? { issueId: issueId as never } : "skip"
   );
-  const labels = useQuery(
+
+  const demoIssueData = useMemo(() => {
+    if (!isDemo || !issueId) return null;
+    return demoStore.getIssue(issueId);
+  }, [isDemo, issueId]);
+
+  const detail = isDemo ? (demoIssueData as unknown as typeof rawDetail) : rawDetail;
+  const comments = isDemo ? (demoIssueData?.comments as unknown as typeof rawComments) : rawComments;
+  const activity = isDemo ? (demoIssueData?.activities as unknown as typeof rawActivity) : rawActivity;
+
+  const rawLabels = useQuery(
     api.projects.listLabels,
-    detail ? { workspaceId: detail.workspaceId } : "skip",
+    !isDemo && detail ? { workspaceId: detail.workspaceId } : "skip",
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    detail ? { workspaceId: detail.workspaceId } : "skip",
+    !isDemo && detail ? { workspaceId: detail.workspaceId } : "skip",
   );
+
+  const labels = isDemo
+    ? (DEMO_LABELS.map((l, i) => ({ _id: `demo-lbl-${i}`, name: l.name, color: l.color })) as unknown as typeof rawLabels)
+    : rawLabels;
+  const members = isDemo
+    ? (demoStore.listTeammates(detail?.workspaceId) as unknown as typeof rawMembers)
+    : rawMembers;
+
 
   const updateIssue = useMutation(api.issues.updateIssue);
   const transitionIssue = useMutation(api.issues.transitionIssue);

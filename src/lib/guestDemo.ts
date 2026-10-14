@@ -21,6 +21,8 @@ interface ApiWithGuestDemo {
   };
 }
 
+let inFlightEnsure: Promise<GuestDemoResult> | null = null;
+
 /**
  * Ensures the authenticated anonymous guest has demo workspaces.
  * Only calls the server function guestDemo.ensure (or guestDemo/seed:ensure).
@@ -29,6 +31,8 @@ interface ApiWithGuestDemo {
 export async function ensureGuestWorkspace(
   convex: ConvexReactClient,
 ): Promise<GuestDemoResult> {
+  if (inFlightEnsure) return inFlightEnsure;
+
   const typedApi = api as unknown as ApiWithGuestDemo;
   const guestSeed = typedApi.guestDemo?.ensure || typedApi.guestDemo?.seed?.ensure;
 
@@ -36,19 +40,25 @@ export async function ensureGuestWorkspace(
     throw new Error("Demo is unavailable right now");
   }
 
-  try {
-    const res = (await convex.mutation(guestSeed, {})) as GuestDemoResult | null;
-    if (!res || !res.workspaceId) {
-      throw new Error("Demo is unavailable right now");
+  inFlightEnsure = (async () => {
+    try {
+      const res = (await convex.mutation(guestSeed, {})) as GuestDemoResult | null;
+      if (!res || !res.workspaceId) {
+        throw new Error("Demo is unavailable right now");
+      }
+      return res;
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes("Could not find public function")) {
+        throw new Error("Demo is unavailable right now");
+      }
+      throw err;
+    } finally {
+      inFlightEnsure = null;
     }
-    return res;
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    if (errorMsg.includes("Could not find public function")) {
-      throw new Error("Demo is unavailable right now");
-    }
-    throw err;
-  }
+  })();
+
+  return inFlightEnsure;
 }
 
 /**

@@ -174,6 +174,13 @@ function AppProviders({ children }: { children: React.ReactNode }) {
  * notice is displayed with a link back to public Forge pages.
  */
 function withConvexAuth(children: React.ReactNode) {
+  if (
+    typeof window !== "undefined" &&
+    (window.location.pathname.includes("/demo-") ||
+      window.location.pathname.includes("demo-ws-"))
+  ) {
+    return children;
+  }
   if (!convex) return <BackendSetupNotice />;
   return children;
 }

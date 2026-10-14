@@ -67,3 +67,13 @@ If you are a new session, read this file, find the first unchecked item, and con
 - [x] 4.2 RUNTIME VERIFICATION:
   - Executed `scripts/verify-isolation.ts` with all tests passing.
   - Confirmed empty state handling and multi-tenant isolation.
+
+---
+
+## PREVIOUS PROGRESS ARCHIVE (Session ending 2026-10-14)
+- [x] Stopped automatic guest sign-in & accidental demo creation in AuthForm, LoginPage, SignupPage.
+- [x] Removed background demo provisioning in AppHome.
+- [x] Extracted demo fixtures into `src/data/demo-fixtures.ts`.
+- [x] Audited logo click behavior in marketing nav and shell.
+- [x] Audited activityEvents isolation.
+

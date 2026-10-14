@@ -120,23 +120,32 @@ function dayLabel(timestamp: number): string {
   });
 }
 
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+
 export default function ActivityPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
   );
-  const activity = useQuery(
+  const rawActivity = useQuery(
     api.analytics.listWorkspaceActivity,
-    workspaceId ? { workspaceId: wid, limit: 200 } : "skip"
+    !isDemo && workspaceId ? { workspaceId: wid, limit: 200 } : "skip"
   );
+
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const activity = isDemo ? (demoStore.listActivities(workspaceId, 200) as unknown as typeof rawActivity) : rawActivity;
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [actor, setActor] = useState("all");
   const [range, setRange] = useState<string>("30");
+
 
   const events = activity ?? [];
   // Clock captured once so the range window and the memoised groups stay stable.

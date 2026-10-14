@@ -35,6 +35,8 @@ import {
   Timer,
 } from "lucide-react";
 
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+
 type StatusFilter = "all" | "planning" | "active" | "paused" | "completed";
 
 const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
@@ -47,20 +49,29 @@ const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 
 export default function ProjectsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const id = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && workspaceId ? { workspaceId: id } : "skip"
   );
-  const projects = useQuery(
+  const rawProjects = useQuery(
     api.projects.listProjects,
-    workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && workspaceId ? { workspaceId: id } : "skip"
   );
-  const members = useQuery(
+  const rawMembers = useQuery(
     api.workspaces.listMembers,
-    workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && workspaceId ? { workspaceId: id } : "skip"
   );
+
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const projects = isDemo ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects) : rawProjects;
+  const members = isDemo ? (demoStore.listTeammates(workspaceId) as unknown as typeof rawMembers) : rawMembers;
+
+
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");

@@ -13,19 +13,20 @@ export function Section12FinalCTA() {
 
   const handleDemo = async () => {
     setError(null);
-    if (isAuthenticated) {
-      navigate('/app');
-      return;
-    }
     setIsLoading(true);
     try {
-      await signIn('anonymous');
-      navigate('/app');
-    } catch (err) {
-      console.error('Guest sign-in error:', err);
-      setError('Failed to start demo. Please try again.');
-      setIsLoading(false);
+      if (!isAuthenticated) {
+        await Promise.race([
+          signIn('anonymous'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        ]).catch(() => {
+          // Demo requires no auth, proceed immediately
+        });
+      }
+    } catch {
+      // Proceed to demo workspace
     }
+    navigate('/app/workspaces/demo-ws-northstar');
   };
 
   return (

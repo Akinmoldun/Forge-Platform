@@ -53,23 +53,43 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  useDemoStoreSubscriber();
   const id = workspaceId as Id<"workspaces">;
   const { user } = useAuth();
   const userId = user?._id || user?.email || "anonymous";
+  const isDemo = demoStore.isDemoWorkspace(workspaceId);
 
-  const workspace = useQuery(
+  // Soft refresh listener when user clicks logo while already on workspace home
+  const [, setRefreshCount] = useState(0);
+  useEffect(() => {
+    const handleSoftRefresh = (e: Event) => {
+      const custom = e as CustomEvent<{ workspaceId?: string }>;
+      if (!custom.detail?.workspaceId || custom.detail.workspaceId === workspaceId) {
+        setRefreshCount((c) => c + 1);
+        if (isDemo) {
+          demoStore.notify();
+        }
+      }
+    };
+    window.addEventListener("forge:soft-refresh", handleSoftRefresh);
+    return () => window.removeEventListener("forge:soft-refresh", handleSoftRefresh);
+  }, [workspaceId, isDemo]);
+
+  const rawWorkspace = useQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && workspaceId ? { workspaceId: id } : "skip"
   );
-  const projects = useQuery(
+  const rawProjects = useQuery(
     api.projects.listProjects,
-    workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && workspaceId ? { workspaceId: id } : "skip"
   );
-  const activity = useQuery(
+  const rawActivity = useQuery(
     api.analytics.listWorkspaceActivity,
-    workspaceId
+    !isDemo && workspaceId
       ? {
           workspaceId: id,
           limit: 12,
@@ -77,10 +97,15 @@ export default function OverviewPage() {
       : "skip"
   );
 
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const projects = isDemo ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects) : rawProjects;
+  const activity = isDemo ? (demoStore.listActivities(workspaceId, 12) as unknown as typeof rawActivity) : rawActivity;
+
   const projectIds = useMemo(
     () => (projects ?? []).map((p) => p._id) as Id<"projects">[],
     [projects],
   );
+
   const { entries: summaryEntries, loading: summariesLoading } = useProjectSummaries(projectIds);
   const { entries: riskEntries, loading: risksLoading } = useProjectRisks(projectIds);
   const { issues: projectIssues, loading: issuesLoading } = useProjectIssues(projectIds);
