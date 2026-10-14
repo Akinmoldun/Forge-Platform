@@ -77,3 +77,9 @@ If you are a new session, read this file, find the first unchecked item, and con
 - [x] Audited logo click behavior in marketing nav and shell.
 - [x] Audited activityEvents isolation.
 
+
+
+---
+# ARCHIVED PROGRESS (Round 2)
+The previous contents of PROGRESS.md before reset:
+See previous tasks (Guest/Demo workspace stuck on "Preparing workspace", Logo Click Behavior, Final Verification).
