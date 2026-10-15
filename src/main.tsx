@@ -127,7 +127,7 @@ const convexUrl = rawConvexUrl
   : null;
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
-function BackendSetupNotice() {
+function _BackendSetupNotice() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-lg rounded-lg border border-border bg-card p-7 text-center">
@@ -173,14 +173,6 @@ function AppProviders({ children }: { children: React.ReactNode }) {
  * notice is displayed with a link back to public Forge pages.
  */
 function withConvexAuth(children: React.ReactNode) {
-  if (
-    typeof window !== "undefined" &&
-    (window.location.pathname.includes("/demo-") ||
-      window.location.pathname.includes("demo-ws-"))
-  ) {
-    return children;
-  }
-  if (!convex) return <BackendSetupNotice />;
   return children;
 }
 

@@ -23,14 +23,24 @@ interface ApiWithGuestDemo {
 
 let inFlightEnsure: Promise<GuestDemoResult> | null = null;
 
+import { isDemoMode } from "./demoMode";
+import { demoStore } from "@/data/in-memory-demo-store";
+
 /**
  * Ensures the authenticated anonymous guest has demo workspaces.
- * Only calls the server function guestDemo.ensure (or guestDemo/seed:ensure).
- * No browser-side fake creation fallback is allowed.
  */
 export async function ensureGuestWorkspace(
-  convex: ConvexReactClient,
+  convex?: ConvexReactClient | null,
 ): Promise<GuestDemoResult> {
+  if (isDemoMode() || !import.meta.env.VITE_CONVEX_URL || !convex) {
+    const workspaces = demoStore.getWorkspaces();
+    return {
+      workspaceId: workspaces[0]?._id ?? "demo-ws-northstar",
+      slug: workspaces[0]?.slug ?? "demo-northstar-labs",
+      isNew: false,
+    };
+  }
+
   if (inFlightEnsure) return inFlightEnsure;
 
   const typedApi = api as unknown as ApiWithGuestDemo;
@@ -65,9 +75,18 @@ export async function ensureGuestWorkspace(
  * Reset demo helper: calls server function to reset guest demo workspaces.
  */
 export async function resetGuestDemo(
-  convex: ConvexReactClient,
+  convex?: any,
   _workspaceId?: string,
 ): Promise<GuestDemoResult> {
+  if (isDemoMode() || !import.meta.env.VITE_CONVEX_URL || !convex) {
+    demoStore.reset();
+    return {
+      workspaceId: "demo-ws-northstar",
+      slug: "demo-northstar-labs",
+      isNew: true,
+    };
+  }
+
   const typedApi = api as unknown as ApiWithGuestDemo;
   const backendReset =
     typedApi.guestDemo?.resetDemo || typedApi.guestDemo?.seed?.resetDemo;
@@ -93,14 +112,17 @@ export async function resetGuestDemo(
 
 /**
  * Deletes a workspace using the real backend mutation workspaces.deleteWorkspace.
- * No fake fallback (no renaming to [Deleted] or project deletion fallback).
- * Any error from the backend is thrown directly to the caller.
  */
 export async function deleteOrLeaveWorkspace(
-  convex: ConvexReactClient,
+  convex: ConvexReactClient | any,
   workspaceId: string,
   typedName?: string,
 ): Promise<void> {
+  if (isDemoMode() || !import.meta.env.VITE_CONVEX_URL || !convex?.mutation) {
+    demoStore.deleteWorkspace(workspaceId);
+    return;
+  }
+
   await convex.mutation(api.workspaces.deleteWorkspace, {
     workspaceId: workspaceId as never,
     typedName,

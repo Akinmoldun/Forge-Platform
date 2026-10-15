@@ -1,6 +1,0 @@
-.env.local
-node_modules
-.cache/
-.config/
-dist/
-build/

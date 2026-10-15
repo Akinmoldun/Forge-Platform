@@ -1,5 +1,4 @@
-import { useMutation, useConvex } from "convex/react";
-import { useSafeQuery } from "@/hooks/use-safe-query";
+import { useMutation, useConvex, useSafeQuery } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";

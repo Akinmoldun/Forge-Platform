@@ -60,20 +60,58 @@ function useConvexAuthReal() {
   };
 }
 
+import { useState } from "react";
+
+const DEMO_USER: ForgeUser = {
+  _id: "demo-user-alex",
+  _creationTime: Date.now(),
+  name: "Alex Mercer",
+  email: "alex@northstar.invalid",
+  isAnonymous: false,
+};
+
 function useMockAuth() {
+  const [currentUser, setCurrentUser] = useState<ForgeUser | null>(() => {
+    try {
+      if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("forge_signed_out") === "true") {
+        return null;
+      }
+    } catch {
+      // ignore
+    }
+    return DEMO_USER;
+  });
+
+  const isAuthenticated = Boolean(currentUser);
+
   return {
     isLoading: false,
     authResolved: true,
-    isAuthenticated: false,
+    isAuthenticated,
     isSessionPending: false,
-    isSignedOut: true,
+    isSignedOut: !isAuthenticated,
     hasOAuthCode: false,
-    user: null,
-    signIn: async (_provider?: string, _params?: unknown) => ({
-      signingIn: false,
-      redirect: undefined as URL | undefined,
-    }),
-    signOut: async () => {},
+    user: currentUser,
+    signIn: async (_provider?: string, _params?: unknown) => {
+      try {
+        sessionStorage.removeItem("forge_signed_out");
+      } catch {
+        // ignore
+      }
+      setCurrentUser(DEMO_USER);
+      return {
+        signingIn: false,
+        redirect: undefined as URL | undefined,
+      };
+    },
+    signOut: async () => {
+      try {
+        sessionStorage.setItem("forge_signed_out", "true");
+      } catch {
+        // ignore
+      }
+      setCurrentUser(null);
+    },
   };
 }
 

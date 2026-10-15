@@ -7,7 +7,7 @@
  * exposes the parts that can change (enabled state) and shows the rest read
  * only, with an honest hint about recreating a rule to change its trigger.
  */
-import { useMutation } from "convex/react";
+import { useMutation } from "@/hooks/use-safe-query";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";

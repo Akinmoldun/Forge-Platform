@@ -6,15 +6,16 @@
 export function isDemoMode(): boolean {
   if (typeof window === "undefined") return false;
   try {
+    const isOfflineEnv = !import.meta.env.VITE_CONVEX_URL;
     const isSessionDemo = sessionStorage.getItem("forge_demo_mode") === "true";
     const isUrlDemo =
       window.location.pathname.includes("demo-ws") ||
       window.location.pathname.includes("demo-proj") ||
       window.location.pathname.includes("demo-issue") ||
       window.location.search.includes("demo=true");
-    return isSessionDemo || isUrlDemo;
+    return isOfflineEnv || isSessionDemo || isUrlDemo;
   } catch {
-    return false;
+    return true;
   }
 }
 

@@ -531,11 +531,15 @@ class InMemoryDemoStore {
 
   // --- Query Methods ---
 
-  public getWorkspaces(): DemoWorkspace[] {
-    return [...this.workspaces];
+  public getWorkspaces(): (DemoWorkspace & { projectCount: number; memberCount: number })[] {
+    return this.workspaces.map((w) => ({
+      ...w,
+      projectCount: this.projects.filter((p) => p.workspaceId === w._id && p.status !== "archived").length,
+      memberCount: this.users.length,
+    }));
   }
 
-  public listWorkspaces(): DemoWorkspace[] {
+  public listWorkspaces(): (DemoWorkspace & { projectCount: number; memberCount: number })[] {
     return this.getWorkspaces();
   }
 
@@ -991,6 +995,95 @@ class InMemoryDemoStore {
       }
       this.notify();
     }
+  }
+
+  public createWorkspace(args: { name: string; slug?: string }): { workspaceId: string } {
+    const wsId = `demo-ws-${Date.now()}`;
+    const slug =
+      args.slug ||
+      args.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-");
+    const newWs: DemoWorkspace = {
+      _id: wsId,
+      name: args.name,
+      slug,
+      role: "owner",
+      createdAt: Date.now(),
+      ownerId: "demo-user-alex",
+    };
+    this.workspaces.unshift(newWs);
+    this.notify();
+    return { workspaceId: wsId };
+  }
+
+  public updateWorkspace(workspaceId: string, patch: Partial<DemoWorkspace>) {
+    const ws = this.workspaces.find((w) => w._id === workspaceId);
+    if (ws) {
+      Object.assign(ws, patch);
+      this.notify();
+    }
+    return { ok: true };
+  }
+
+  public deleteWorkspace(workspaceId: string) {
+    this.workspaces = this.workspaces.filter((w) => w._id !== workspaceId);
+    this.notify();
+    return { ok: true };
+  }
+
+  public archiveProject(projectId: string) {
+    const p = this.projects.find((proj) => proj._id === projectId);
+    if (p) {
+      p.status = "archived";
+      this.notify();
+    }
+    return { ok: true };
+  }
+
+  public deleteProject(projectId: string) {
+    this.projects = this.projects.filter((proj) => proj._id !== projectId);
+    this.issues = this.issues.filter((i) => i.projectId !== projectId);
+    this.notify();
+    return { ok: true };
+  }
+
+  public createLabel(args: { workspaceId: string; name: string; color: string }) {
+    const lblId = `demo-lbl-${Date.now()}`;
+    DEMO_LABELS.push({ _id: lblId, workspaceId: args.workspaceId, name: args.name, color: args.color });
+    this.notify();
+    return { labelId: lblId };
+  }
+
+  public addComment(args: { issueId: string; body: string }) {
+    const issue = this.issues.find((i) => i._id === args.issueId);
+    if (issue) {
+      if (!(issue as any).comments) (issue as any).comments = [];
+      const newComment = {
+        _id: `demo-comm-${Date.now()}`,
+        issueId: args.issueId,
+        authorId: "demo-user-alex",
+        authorName: "Alex Mercer",
+        body: args.body,
+        createdAt: Date.now(),
+      };
+      (issue as any).comments.push(newComment);
+      this.notify();
+      return newComment;
+    }
+    return { ok: true };
+  }
+
+  public reset() {
+    this.workspaces = [];
+    this.projects = [];
+    this.statuses.clear();
+    this.issues = [];
+    this.activities = [];
+    this.notifications = [];
+    this.seedSynchronously();
+    this.notify();
   }
 
   public hasId(id: string): boolean {
