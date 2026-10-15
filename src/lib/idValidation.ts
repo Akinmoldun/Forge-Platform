@@ -14,9 +14,18 @@ export function isDemoId(id: unknown): boolean {
  */
 export function isConvexId(id: unknown): boolean {
   if (typeof id !== "string" || !id) return false;
-  if (isDemoId(id)) return false;
+  const trimmed = id.trim();
+  if (
+    trimmed === "" ||
+    trimmed === "undefined" ||
+    trimmed === "null" ||
+    trimmed === "skip"
+  ) {
+    return false;
+  }
+  if (isDemoId(trimmed)) return false;
   // Convex table IDs are alphanumeric without hyphens and at least 10 characters
-  return !id.includes("-") && id.length >= 10;
+  return !trimmed.includes("-") && trimmed.length >= 10;
 }
 
 /**

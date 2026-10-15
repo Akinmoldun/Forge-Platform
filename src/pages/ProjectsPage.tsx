@@ -1,6 +1,6 @@
 import { useSafeQuery as useQuery } from "@/hooks/use-safe-query";
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, Navigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AppShell } from "@/components/AppShell";
@@ -46,7 +46,8 @@ const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 
 export default function ProjectsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const id = workspaceId as Id<"workspaces">;
+  const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
+  const id = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
 
   const workspace = useQuery(
     api.workspaces.getWorkspace,
@@ -122,6 +123,10 @@ export default function ProjectsPage() {
       blocked: [...riskByProject.values()].reduce((sum, r) => sum + r.blocked, 0),
     };
   }, [projects, riskByProject]);
+
+  if (!isValidWsId) {
+    return <Navigate to="/app" replace />;
+  }
 
   if (workspace === null) {
     return (

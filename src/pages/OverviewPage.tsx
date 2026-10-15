@@ -1,6 +1,6 @@
 import { useSafeQuery as useQuery } from "@/hooks/use-safe-query";
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, Navigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AppShell } from "@/components/AppShell";
@@ -54,7 +54,8 @@ import {
 
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const id = workspaceId as Id<"workspaces">;
+  const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
+  const id = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
   const { user } = useAuth();
   const userId = user?._id || user?.email || "anonymous";
 
@@ -197,6 +198,10 @@ export default function OverviewPage() {
       console.warn("Failed to clear overview layout:", e);
     }
   };
+
+  if (!isValidWsId) {
+    return <Navigate to="/app" replace />;
+  }
 
   const loading =
     workspace === undefined ||

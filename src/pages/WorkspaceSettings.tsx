@@ -2,7 +2,7 @@ import { useMutation, useConvex } from "convex/react";
 import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import { useState, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, useNavigate, Link, Navigate } from "react-router";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,8 @@ import { demoStore, useDemoStoreSubscriber, DEMO_LABELS } from "@/data/in-memory
 export default function WorkspaceSettings() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   useDemoStoreSubscriber();
-  const wid = workspaceId as Id<"workspaces">;
+  const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
+  const wid = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
   const navigate = useNavigate();
   const convex = useConvex();
 
@@ -87,19 +88,19 @@ export default function WorkspaceSettings() {
 
   const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
   const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
   const rawInvitations = useSafeQuery(
     api.workspaces.listInvitations,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
   const rawLabels = useSafeQuery(
     api.projects.listLabels,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
@@ -192,6 +193,10 @@ export default function WorkspaceSettings() {
       </AppShell>
     );
   }
+  if (!isValidWsId) {
+    return <Navigate to="/app" replace />;
+  }
+
   if (workspace === null) {
     return (
       <AppShell>

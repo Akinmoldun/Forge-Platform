@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useNavigate, useParams, Link, useSearchParams } from "react-router";
+import { useNavigate, useParams, Link, useSearchParams, Navigate } from "react-router";
 import { AppShell } from "@/components/AppShell";
 import {
   EmblemIllustration,
@@ -70,17 +70,23 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   });
 
+  const isValidProjectId = Boolean(projectId && projectId !== "undefined" && projectId !== "null");
+
   const project = useQuery(
     api.projects.getProject,
-    projectId ? { projectId: projectId as never } : "skip",
+    isValidProjectId ? { projectId: projectId as never } : "skip",
   );
   const allProjects = useQuery(
     api.projects.listProjects,
-    project ? { workspaceId: project.project.workspaceId } : "skip",
+    project?.project?.workspaceId
+      ? { workspaceId: project.project.workspaceId }
+      : "skip",
   );
   const members = useQuery(
     api.workspaces.listMembers,
-    project ? { workspaceId: project.project.workspaceId } : "skip",
+    project?.project?.workspaceId
+      ? { workspaceId: project.project.workspaceId }
+      : "skip",
   );
   const board = useQuery(
     api.issues.getBoard,
@@ -141,21 +147,26 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     return () => clearTimeout(t);
   }, [search]);
 
-  const issues = useQuery(api.issues.listIssues, {
-    projectId: projectId as never,
-    search: debouncedSearch || undefined,
-    priority:
-      priorityFilter !== "all"
-        ? (priorityFilter as "urgent" | "high" | "medium" | "low" | "none")
-        : undefined,
-    assigneeId:
-      assigneeFilter === "all"
-        ? undefined
-        : assigneeFilter === "unassigned"
-          ? ("unassigned" as const)
-          : (assigneeFilter as never),
-    pageSize: 50,
-  });
+  const issues = useQuery(
+    api.issues.listIssues,
+    isValidProjectId
+      ? {
+          projectId: projectId as never,
+          search: debouncedSearch || undefined,
+          priority:
+            priorityFilter !== "all"
+              ? (priorityFilter as "urgent" | "high" | "medium" | "low" | "none")
+              : undefined,
+          assigneeId:
+            assigneeFilter === "all"
+              ? undefined
+              : assigneeFilter === "unassigned"
+                ? ("unassigned" as const)
+                : (assigneeFilter as never),
+          pageSize: 50,
+        }
+      : "skip",
+  );
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -165,6 +176,10 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   };
 
   const openCount = project?.openIssueCount ?? 0;
+
+  if (!isValidProjectId) {
+    return <Navigate to="/app" replace />;
+  }
 
   if (project === null) {
     return (

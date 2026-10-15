@@ -116,6 +116,24 @@ function resolveDemoQueryData(queryName: string, args: Record<string, any>) {
   return undefined;
 }
 
+function hasInvalidIdArg(args: unknown): boolean {
+  if (!args || args === "skip" || typeof args !== "object") return false;
+  for (const [key, val] of Object.entries(args as Record<string, unknown>)) {
+    if (key.toLowerCase().endsWith("id")) {
+      if (
+        val === undefined ||
+        val === null ||
+        val === "" ||
+        val === "undefined" ||
+        val === "null"
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /**
  * Safe wrapper around Convex useQuery that prevents any demo ID from ever being dispatched to Convex.
  * Automatically routes demo queries to the in-memory demoStore with live reactive updates.
@@ -124,10 +142,10 @@ export function useSafeQuery<Query extends FunctionReference<"query">>(
   query: Query,
   args: Query["_args"] | "skip",
 ): Query["_returnType"] | undefined {
-  const isSkipped = args === "skip";
+  const isSkipped = args === "skip" || hasInvalidIdArg(args);
   const isDemo = !isSkipped && (containsDemoId(args) || (isDemoMode() && (!args || Object.keys(args).length === 0)));
 
-  // Force "skip" to Convex if args contain a demo ID or in demo mode
+  // Force "skip" to Convex if args contain a demo ID or in demo mode or invalid arg
   const convexArgs = isSkipped || isDemo ? "skip" : args;
   const convexResult = useConvexQuery(query, convexArgs as any);
 

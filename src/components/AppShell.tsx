@@ -394,7 +394,7 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
 // ---------------------------------------------------------------------------
 export function AppShell({
   children,
-  workspaceId,
+  workspaceId: propWorkspaceId,
   pageActions,
 }: {
   children: React.ReactNode;
@@ -408,10 +408,30 @@ export function AppShell({
   // If outside workspace
   const isInsideWorkspace = isWorkspaceRoute(pathname);
 
+  // Current active project or issue if on project/issue page
+  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
+  const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
+  const issueDetail = useSafeQuery(
+    api.issues.getIssue,
+    activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
+  );
+  const activeProjectDetail = useSafeQuery(
+    api.projects.getProject,
+    !propWorkspaceId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
+  );
+
+  const effectiveWorkspaceId =
+    propWorkspaceId ||
+    activeProjectDetail?.project?.workspaceId ||
+    issueDetail?.workspaceId;
+
+  const workspaceId = effectiveWorkspaceId;
+
   // Queries (safe for both real Convex IDs and demo IDs)
+  // Always load user's workspaces when authenticated or in demo mode so workspace switcher & logo routing work everywhere
   const myWorkspaces = useSafeQuery(
     api.workspaces.listMyWorkspaces,
-    isInsideWorkspace ? {} : "skip"
+    user || isDemoMode() ? {} : "skip"
   );
   const currentWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
@@ -428,30 +448,44 @@ export function AppShell({
 
   const unreadCount = notifications?.unreadCount ?? 0;
 
-  // Current active project or issue if on project/issue page
-  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
-  const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
-  const issueDetail = useSafeQuery(
-    api.issues.getIssue,
-    activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
-  );
-  const activeProjectDetail = useSafeQuery(
-    api.projects.getProject,
-    !workspaceId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
-  );
-
-  const effectiveWorkspaceId =
-    workspaceId ||
-    activeProjectDetail?.project?.workspaceId ||
-    issueDetail?.workspaceId;
+  // Persist active workspace in localStorage for instant routing
+  useEffect(() => {
+    if (workspaceId && !isDemoId(workspaceId) && workspaceId !== "undefined" && workspaceId !== "null") {
+      try {
+        localStorage.setItem("forge_last_active_workspace", workspaceId);
+      } catch {
+        // ignore
+      }
+    }
+  }, [workspaceId]);
 
   // Logo destination: dashboard if logged in, landing page if logged out
   const dashboardHref = useMemo(() => {
-    if (!user) return "/";
-    if (effectiveWorkspaceId) return `/app/workspaces/${effectiveWorkspaceId}`;
-    if (myWorkspaces && myWorkspaces.length > 0) return `/app/workspaces/${myWorkspaces[0]._id}`;
+    const isDemo = isDemoMode();
+    if (!user && !isDemo) return "/";
+
+    if (workspaceId) {
+      return `/app/workspaces/${workspaceId}`;
+    }
+    if (isDemo) {
+      return "/app/workspaces/demo-ws-northstar";
+    }
+
+    try {
+      const lastWs = localStorage.getItem("forge_last_active_workspace");
+      if (lastWs && myWorkspaces?.some((w) => w._id === lastWs)) {
+        return `/app/workspaces/${lastWs}`;
+      }
+    } catch {
+      // ignore
+    }
+
+    if (myWorkspaces && myWorkspaces.length > 0) {
+      return `/app/workspaces/${myWorkspaces[0]._id}`;
+    }
+
     return "/app";
-  }, [user, effectiveWorkspaceId, myWorkspaces]);
+  }, [user, workspaceId, myWorkspaces]);
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||

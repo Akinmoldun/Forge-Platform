@@ -1,6 +1,6 @@
 import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, Navigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AppShell } from "@/components/AppShell";
@@ -62,21 +62,22 @@ import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
 export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   useDemoStoreSubscriber();
-  const wid = workspaceId as Id<"workspaces">;
+  const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
+  const wid = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
 
   const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
   const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
   const rawProjects = useSafeQuery(
     api.projects.listProjects,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
   const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
@@ -209,6 +210,10 @@ export default function AnalyticsPage() {
     members === undefined ||
     issuesLoading ||
     eventsLoading;
+
+  if (!isValidWsId) {
+    return <Navigate to="/app" replace />;
+  }
 
   if (workspace === null) {
     return (

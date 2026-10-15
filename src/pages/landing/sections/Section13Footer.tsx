@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
-import { enableDemoMode } from '@/lib/demoMode';
+import { enableDemoMode, isDemoMode } from '@/lib/demoMode';
 import { ArrowUpRight } from 'lucide-react';
 import { Reveal } from '../Reveal';
 import { ForgeLogo } from '../ForgeLogo';
@@ -18,8 +18,17 @@ export function Section13Footer() {
 
   const scrollToTop = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    if (isAuthenticated) {
-      navigate('/app');
+    if (isAuthenticated || isDemoMode()) {
+      try {
+        const lastWs = localStorage.getItem("forge_last_active_workspace");
+        if (lastWs) {
+          navigate(`/app/workspaces/${lastWs}`);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      navigate(isDemoMode() ? '/app/workspaces/demo-ws-northstar' : '/app');
       return;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });

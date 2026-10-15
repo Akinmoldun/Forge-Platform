@@ -5,6 +5,7 @@ import { ForgeLogo } from '../ForgeLogo';
 import { useMotion } from '../motion/MotionProvider';
 import { MagneticButton } from '../motion/MagneticButton';
 import { useAuth } from '@/hooks/use-auth';
+import { isDemoMode } from '@/lib/demoMode';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
@@ -132,8 +133,17 @@ export function Section1Nav() {
   // Smooth scroll to top when clicking brand (or go to dashboard if logged in)
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isAuthenticated) {
-      navigate('/app');
+    if (isAuthenticated || isDemoMode()) {
+      try {
+        const lastWs = localStorage.getItem("forge_last_active_workspace");
+        if (lastWs) {
+          navigate(`/app/workspaces/${lastWs}`);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      navigate(isDemoMode() ? '/app/workspaces/demo-ws-northstar' : '/app');
       return;
     }
     scrollTo(0, { offset: 0, duration: 1.4 });
