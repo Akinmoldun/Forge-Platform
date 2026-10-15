@@ -11,7 +11,7 @@ If you are a new session, read this file, find the first unchecked item, and con
 ---
 
 ## TASK 2: Demo experience (frontend only)
-- [ ] "Try Demo" and "Try demo as guest" set local demo flag and navigate to /app without network calls.
+- [ ] "Try Demo" and "Try demo as guest" (hero, login and signup pages) set local demo flag and navigate to /app without network calls.
 - [ ] Demo workspaces fully populated from static files in `src/data/demo/`: at least 2 workspaces, 3 projects each, 15+ issues per project across all statuses, team members, activity, analytics. Script prints counts.
 - [ ] Demo banner ("Demo mode: this is a sample workspace, not an account") at top of every demo page with "Create account" button.
 - [ ] Demo mutations change local state only and reset on refresh.
@@ -58,5 +58,5 @@ If you are a new session, read this file, find the first unchecked item, and con
 
 ---
 
-## PROPOSED DELETIONS
-*(Pending audit in Task 4)*
+# PROPOSED DELETIONS
+(Awaiting audit in Task 4)

@@ -15,7 +15,7 @@ import "@fontsource/hanken-grotesk/500.css";
 import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/hanken-grotesk/700.css";
 import "./index.css";
-const HomePage = safeLazy(() => import("./pages/HomePage"));
+import HomePage from "./pages/HomePage";
 
 /** Safe lazy loader that auto-retries failed dynamic imports (e.g. dev server restarts) */
 function safeLazy<T extends React.ComponentType<any>>(
@@ -55,13 +55,9 @@ const ProfileSettingsPage = safeLazy(() => import("./pages/ProfileSettingsPage")
 const InvitePage = safeLazy(() => import("./pages/InvitePage"));
 const NotFound = safeLazy(() => import("./pages/NotFound"));
 
-// Simple loading fallback for route transitions
+// Silent fallback for route transitions with no text
 function RouteLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading...</div>
-    </div>
-  );
+  return <div className="min-h-screen bg-[#FBFBFC]" />;
 }
 
 /** Silent error boundary — if VlyToolbar crashes it renders nothing instead of

@@ -42,14 +42,16 @@ if (typeof globalThis.window === "undefined") {
     head: { appendChild: () => {} },
     body: { appendChild: () => {} },
   };
+  const localMap = new Map<string, string>();
   (globalThis as any).localStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
+    getItem: (k: string) => localMap.get(k) ?? null,
+    setItem: (k: string, v: string) => localMap.set(k, String(v)),
+    removeItem: (k: string) => localMap.delete(k),
   };
+  const sessionMap = new Map<string, string>();
   (globalThis as any).sessionStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
+    getItem: (k: string) => sessionMap.get(k) ?? null,
+    setItem: (k: string, v: string) => sessionMap.set(k, String(v)),
+    removeItem: (k: string) => sessionMap.delete(k),
   };
 }

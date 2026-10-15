@@ -97,9 +97,11 @@ export function RequireAuth({
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-6 text-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground mb-3" />
-        <p className="text-sm font-medium text-muted-foreground">
-          {hasOAuthCode ? "Signing you in with GitHub..." : "Loading session..."}
-        </p>
+        {hasOAuthCode && (
+          <p className="text-sm font-medium text-muted-foreground">
+            Signing you in with GitHub...
+          </p>
+        )}
       </main>
     );
   }

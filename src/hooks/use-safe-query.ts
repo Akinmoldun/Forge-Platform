@@ -210,7 +210,7 @@ function useRealSafeQuery<Query extends FunctionReference<"query">>(
   args?: Query["_args"] | "skip",
 ): Query["_returnType"] | undefined {
   const isSkipped = args === "skip" || hasInvalidIdArg(args);
-  const isDemo = !isSkipped && (containsDemoId(args) || (isDemoMode() && (!args || Object.keys(args).length === 0)));
+  const isDemo = !isSkipped && (isDemoMode() || containsDemoId(args));
 
   const convexArgs = isSkipped || isDemo ? "skip" : (args ?? {});
   const convexResult = useConvexQuery(query, convexArgs as any);

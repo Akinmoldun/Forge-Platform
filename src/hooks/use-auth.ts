@@ -1,10 +1,12 @@
 import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth } from "convex/react";
+import { useSafeQuery } from "@/hooks/use-safe-query";
+import { isDemoMode } from "@/lib/demoMode";
 
 const isConvexConfigured = Boolean(
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_CONVEX_URL) ||
-    process.env.VITE_CONVEX_URL,
+    (typeof process !== "undefined" && process.env?.VITE_CONVEX_URL),
 );
 
 export interface ForgeUser {
@@ -18,7 +20,7 @@ export interface ForgeUser {
 
 function useConvexAuthReal() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
-  const rawUser = useQuery(api.users.currentUser);
+  const rawUser = useSafeQuery(api.users.currentUser, {});
   const { signIn: rawSignIn, signOut: rawSignOut } = useAuthActions();
 
   const user = rawUser ?? null;

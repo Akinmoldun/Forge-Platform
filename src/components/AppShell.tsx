@@ -318,7 +318,8 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
     }
   });
 
-  if (!user?.isAnonymous || hidden) return null;
+  const isDemo = isDemoMode() || isDemoId(workspaceId);
+  if (!isDemo || hidden) return null;
 
   const handleResetDemo = async () => {
     if (resetting) return;
@@ -347,7 +348,7 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
     <div className="h-[36px] bg-gradient-to-r from-[#F7F2EC] via-[#F1F4F9] to-[#F3F7ED] text-[#0D0D0D] px-4 text-[12px] flex items-center justify-between border-b border-black/[0.08] shrink-0 select-none">
       <div className="flex items-center gap-2 min-w-0">
         <span className="truncate text-[#0D0D0D] font-normal">
-          You're exploring a demo workspace. Changes here are temporary.
+          Demo mode: this is a sample workspace, not an account
         </span>
       </div>
       <div className="flex items-center gap-3 shrink-0">
