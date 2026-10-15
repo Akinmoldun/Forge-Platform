@@ -74,6 +74,7 @@ const LABEL_COLORS = [
 ];
 
 import { demoStore, useDemoStoreSubscriber, DEMO_LABELS } from "@/data/in-memory-demo-store";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 
 export default function WorkspaceSettings() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -182,6 +183,23 @@ export default function WorkspaceSettings() {
     const start = (memberPage - 1) * MEMBERS_PER_PAGE;
     return filteredMembers.slice(start, start + MEMBERS_PER_PAGE);
   }, [filteredMembers, memberPage]);
+
+  const isSettingsLoading = workspace === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isSettingsLoading, 8000);
+
+  if (loadTimedOut && isSettingsLoading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <div className="mx-auto max-w-3xl py-12">
+          <LoadingTimeoutState
+            title="Settings took too long to load"
+            description="We couldn't load your workspace settings within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   if (workspace === undefined) {
     return (

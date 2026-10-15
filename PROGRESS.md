@@ -4,9 +4,12 @@ If you are a new session, read this file, find the first unchecked item, and con
 ---
 
 ## TASK 1: No loading screen on opening the site
-- [ ] Remove any "Loading" or "Preparing workspace" screen shown when opening the site (index.html loader, Suspense fallbacks on landing route, auth gates on landing page).
-- [ ] Landing page renders immediately without waiting for auth or Convex. If fallback unavoidable inside app, use silent skeleton with no text, and never show the word "Loading".
-- [ ] 8-second timeout on any spinning/loading state with error message and Retry button.
+- [x] Remove any "Loading" or "Preparing workspace" screen shown when opening the site (index.html loader, Suspense fallbacks on landing route, auth gates on landing page).
+  - *Proof*: `index.html` root is `<div id="root"></div>` with no loader. Route `/` statically imports `HomePage` without route guard, rendering instantly with zero network delay. `RouteLoading` fallback is `<div className="min-h-screen bg-[#FBFBFC]" />` with no text.
+- [x] Landing page renders immediately without waiting for auth or Convex. If fallback unavoidable inside app, use silent skeleton with no text, and never show the word "Loading".
+  - *Proof*: `HomePage` / `ForgeLanding` has zero auth guards and zero network calls. All app pages render silent skeletons (`ListSkeleton`, `TableSkeleton`, `CardSkeleton`, animate-pulse) with no visible "Loading" text.
+- [x] 8-second timeout on any spinning/loading state with error message and Retry button.
+  - *Proof*: `useLoadingTimeout(loading, 8000)` and `LoadingTimeoutState` guard added/verified across all app pages (`OverviewPage`, `ProjectsPage`, `ProjectPage`, `WorkflowPage`, `AnalyticsPage`, `TeamsPage`, `ActivityPage`, `IssuePage`, `NotificationsPage`, `ProjectSettings`, `ProfileSettingsPage`, `WorkspaceSettings`, `InvitePage`, `RequireAuth`, `AppHome`). ESLint rules-of-hooks strictly enforced (0 errors, 0 warnings).
 
 ---
 

@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { DragScroll } from "@/components/DragScroll";
 import { toast } from "sonner";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 
 import {
   demoStore,
@@ -321,8 +322,25 @@ export default function WorkflowPage() {
 
   /* ------------------------------------------------------------- states */
 
+  const isWorkflowLoading = workspace === undefined || projects === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isWorkflowLoading, 8000);
+
   if (!isValidWsId) {
     return <Navigate to="/app" replace />;
+  }
+
+  if (loadTimedOut && isWorkflowLoading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <PageStack>
+          <LoadingTimeoutState
+            title="Workflow took too long to load"
+            description="We couldn't load your workflow rules within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </PageStack>
+      </AppShell>
+    );
   }
 
   if (workspace === null) {
@@ -341,7 +359,7 @@ export default function WorkflowPage() {
     );
   }
 
-  if (workspace === undefined || projects === undefined) {
+  if (isWorkflowLoading) {
     return (
       <AppShell workspaceId={workspaceId}>
         <PageStack>

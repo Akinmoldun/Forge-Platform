@@ -41,6 +41,7 @@ import {
   ListTableSkeleton,
   ProjectAnalyticsSkeleton,
 } from "@/components/Skeletons";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 import { AnimatedNumber } from "@/components/motion";
 import {
   Plus,
@@ -177,8 +178,25 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
 
   const openCount = project?.openIssueCount ?? 0;
 
+  const isProjectLoading = project === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isProjectLoading, 8000);
+
   if (!isValidProjectId) {
     return <Navigate to="/app" replace />;
+  }
+
+  if (loadTimedOut && isProjectLoading) {
+    return (
+      <AppShell>
+        <div className="py-12">
+          <LoadingTimeoutState
+            title="Project took too long to load"
+            description="We couldn't load this project within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
   }
 
   if (project === null) {
@@ -188,6 +206,20 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           title="Project not found"
           description="It may have been deleted, or you may not have access."
         />
+      </AppShell>
+    );
+  }
+
+  if (loadTimedOut && project === undefined) {
+    return (
+      <AppShell>
+        <div className="py-12">
+          <LoadingTimeoutState
+            title="Project took too long to load"
+            description="We couldn't load this project within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
       </AppShell>
     );
   }

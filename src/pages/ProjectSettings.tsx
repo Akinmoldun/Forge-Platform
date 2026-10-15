@@ -36,6 +36,8 @@ import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
 
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
+
 export default function ProjectSettings() {
   const { projectId } = useParams<{ projectId: string }>();
   useDemoStoreSubscriber();
@@ -63,6 +65,9 @@ export default function ProjectSettings() {
     ? (demoStore.listTeammates(demoProject?.project.workspaceId) as unknown as typeof rawMembers)
     : rawMembers;
 
+  const isProjectLoading = project === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isProjectLoading, 8000);
+
   const updateProject = useMutation(api.projects.updateProject);
   const archiveProject = useMutation(api.projects.archiveProject);
   const restoreProject = useMutation(api.projects.restoreProject);
@@ -79,6 +84,20 @@ export default function ProjectSettings() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  if (loadTimedOut && isProjectLoading) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-2xl py-12">
+          <LoadingTimeoutState
+            title="Project settings took too long to load"
+            description="We couldn't load the project settings within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   if (project === null) {
     return (

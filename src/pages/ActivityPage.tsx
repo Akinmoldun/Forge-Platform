@@ -121,6 +121,7 @@ function dayLabel(timestamp: number): string {
 }
 
 import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 
 export default function ActivityPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -142,11 +143,13 @@ export default function ActivityPage() {
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
   const activity = isDemo ? (demoStore.listActivities(workspaceId, 200) as unknown as typeof rawActivity) : rawActivity;
 
+  const isActivityLoading = activity === undefined || workspace === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isActivityLoading, 8000);
+
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [actor, setActor] = useState("all");
   const [range, setRange] = useState<string>("30");
-
 
   const events = activity ?? [];
   // Clock captured once so the range window and the memoised groups stay stable.
@@ -192,6 +195,20 @@ export default function ActivityPage() {
     return groups;
   }, [paginated]);
 
+  if (loadTimedOut && isActivityLoading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <div className="mx-auto max-w-4xl py-12">
+          <LoadingTimeoutState
+            title="Activity took too long to load"
+            description="We couldn't retrieve the activity log within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
   if (workspace === null) {
     return (
       <AppShell workspaceId={workspaceId}>
@@ -230,7 +247,13 @@ export default function ActivityPage() {
           description="The audit trail for this workspace. Every issue, project, membership, and workflow change, newest first."
         />
 
-        {activity === undefined || workspace === undefined ? (
+        {loadTimedOut && isActivityLoading ? (
+          <LoadingTimeoutState
+            title="Activity took too long to load"
+            description="We couldn't load workspace activity within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        ) : isActivityLoading ? (
           <ActivitySkeleton />
         ) : (
           <>

@@ -44,6 +44,8 @@ const ROLE_PERMISSIONS: Record<string, { label: string; description: string }> =
   },
 };
 
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
+
 export default function InvitePage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
@@ -56,6 +58,9 @@ export default function InvitePage() {
     token ? { token } : "skip",
   );
   const accept = useMutation(api.workspaces.acceptInvitation);
+
+  const isInviteLoading = Boolean(token && invitation === undefined);
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isInviteLoading, 8000);
 
   const now = Date.now();
   const isRevoked = Boolean(invitation?.revokedAt);
@@ -112,6 +117,14 @@ export default function InvitePage() {
                 <p className="text-xs text-[#575657]">
                   The invitation link you opened does not include a token parameter.
                 </p>
+              </div>
+            ) : loadTimedOut && isInviteLoading ? (
+              <div className="py-6">
+                <LoadingTimeoutState
+                  title="Invitation verification timed out"
+                  description="We couldn't verify this invitation token within 8 seconds. Please check your connection and retry."
+                  onRetry={retryLoading}
+                />
               </div>
             ) : invitation === undefined ? (
               <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">

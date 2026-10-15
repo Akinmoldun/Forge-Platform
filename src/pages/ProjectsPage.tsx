@@ -24,6 +24,7 @@ import {
   AvatarIllustration,
   EmptyIllustration,
 } from "@/components/Illustrations";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 import { EmptyState, RiskBadge, timeAgo } from "@/components/forge";
 import { ProjectsSkeleton } from "@/components/Skeletons";
 import { useProjectRisks } from "@/hooks/use-workspace-data";
@@ -95,9 +96,7 @@ export default function ProjectsPage() {
   const canWrite = workspace ? workspace.role !== "viewer" : false;
   const loading =
     workspace === undefined || projects === undefined || members === undefined || risksLoading;
-
-
-
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(loading, 8000);
 
   const filtered = useMemo(() => {
     const list = projects ?? [];
@@ -154,7 +153,13 @@ export default function ProjectsPage() {
           }
         />
 
-        {loading ? (
+        {loadTimedOut && loading ? (
+          <LoadingTimeoutState
+            title="Projects took too long to load"
+            description="We couldn't load your projects within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        ) : loading ? (
           <ProjectsSkeleton />
         ) : (
           <>

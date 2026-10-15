@@ -306,7 +306,6 @@ function AccountMenu({
 // Guest Demo Banner
 // ---------------------------------------------------------------------------
 function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
-  const { user } = useAuth();
   const convex = useConvex();
   const navigate = useNavigate();
   const [resetting, setResetting] = useState(false);

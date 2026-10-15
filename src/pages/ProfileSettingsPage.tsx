@@ -26,9 +26,14 @@ import {
 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
+
 export default function ProfileSettingsPage() {
   const currentUser = useQuery(api.users.currentUser);
   const emailConfig = useQuery(api.email.getEmailConfig);
+
+  const isProfileLoading = currentUser === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isProfileLoading, 8000);
 
   const updateProfile = useMutation(api.users.updateProfile);
   const updateAvatarKey = useMutation(api.users.updateAvatarKey);
@@ -71,6 +76,20 @@ export default function ProfileSettingsPage() {
       setEmailInvites(currentUser.emailInvites !== false);
     }
   }, [currentUser]);
+
+  if (loadTimedOut && isProfileLoading) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-2xl py-12">
+          <LoadingTimeoutState
+            title="Profile took too long to load"
+            description="We couldn't load your profile within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   if (currentUser === undefined) {
     return (

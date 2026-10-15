@@ -58,6 +58,7 @@ const PRIORITY_TONE: Record<string, string> = {
 };
 
 import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 
 export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -211,6 +212,8 @@ export default function AnalyticsPage() {
     issuesLoading ||
     eventsLoading;
 
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(loading, 8000);
+
   if (!isValidWsId) {
     return <Navigate to="/app" replace />;
   }
@@ -279,7 +282,13 @@ export default function AnalyticsPage() {
           </FilterBar>
         </PageHeader>
 
-        {loading ? (
+        {loadTimedOut && loading ? (
+          <LoadingTimeoutState
+            title="Analytics took too long to load"
+            description="We couldn't calculate delivery metrics within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        ) : loading ? (
           <ProjectAnalyticsSkeleton />
         ) : projectList.length === 0 || issues.length === 0 ? (
           <Panel>
@@ -378,7 +387,7 @@ export default function AnalyticsPage() {
                   aria-label={`Review wait time chart, average ${formatDuration(avgReview)} across weeks`}
                 >
                   {eventsLoading ? (
-                    <p className="text-xs text-muted-foreground">Loading status history...</p>
+                    <div className="h-40 w-full animate-pulse rounded-lg bg-[#F1F1F3]" />
                   ) : (
                     <LineChart
                       data={reviewSeries}

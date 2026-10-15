@@ -68,6 +68,7 @@ const LOAD_OPTIONS: Array<{ value: LoadFilter; label: string }> = [
 ];
 
 import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 
 export default function TeamsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -216,8 +217,30 @@ export default function TeamsPage() {
     };
   }, [workloadByUser, memberList, openIssuesByMember]);
 
+  const loading =
+    workspace === undefined ||
+    members === undefined ||
+    projects === undefined ||
+    issuesLoading;
+
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(loading, 8000);
+
   if (!isValidWsId) {
     return <Navigate to="/app" replace />;
+  }
+
+  if (loadTimedOut && loading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <PageStack>
+          <LoadingTimeoutState
+            title="Team members took too long to load"
+            description="We couldn't load team member information within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </PageStack>
+      </AppShell>
+    );
   }
 
   if (workspace === null) {
@@ -234,12 +257,6 @@ export default function TeamsPage() {
       </AppShell>
     );
   }
-
-  const loading =
-    workspace === undefined ||
-    members === undefined ||
-    projects === undefined ||
-    issuesLoading;
 
   if (loading) {
     return (
@@ -561,7 +578,10 @@ export default function TeamsPage() {
                   flush
                 >
                   {invitations === undefined ? (
-                    <p className="px-4 py-6 text-xs text-muted-foreground">Loading invitations...</p>
+                    <div className="space-y-2 p-4">
+                      <div className="h-9 w-full animate-pulse rounded bg-[#F1F1F3]" />
+                      <div className="h-9 w-full animate-pulse rounded bg-[#F1F1F3]" />
+                    </div>
                   ) : invitations.length === 0 ? (
                     <PanelEmpty
                       title="No invitations"

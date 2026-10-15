@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useReducedMotion } from "framer-motion";
 import { FadeIn } from "@/components/motion";
 
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
+
 export default function NotificationsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
@@ -35,9 +37,26 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const reduce = useReducedMotion();
 
+  const isNotificationsLoading = workspace === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isNotificationsLoading, 8000);
+
   // If a user types a notifications URL while not inside a workspace, redirect them to /app
   if (!workspaceId || workspace === null) {
     return <Navigate to="/app" replace />;
+  }
+
+  if (loadTimedOut && isNotificationsLoading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <div className="mx-auto max-w-3xl py-12">
+          <LoadingTimeoutState
+            title="Notifications took too long to load"
+            description="We couldn't retrieve your notifications within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
   }
 
   if (workspace === undefined) {

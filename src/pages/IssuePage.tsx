@@ -56,6 +56,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
 
 export default function IssuePage() {
   const { user } = useAuth();
@@ -126,8 +127,25 @@ export default function IssuePage() {
     });
   }, [detail]);
 
+  const isIssueLoading = detail === undefined;
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(isIssueLoading, 8000);
+
   if (!isValidIssueId) {
     return <Navigate to="/app" replace />;
+  }
+
+  if (loadTimedOut && isIssueLoading) {
+    return (
+      <AppShell>
+        <div className="py-12">
+          <LoadingTimeoutState
+            title="Issue took too long to load"
+            description="We couldn't load this issue within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
   }
 
   if (detail === null) {

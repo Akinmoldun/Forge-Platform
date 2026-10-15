@@ -52,6 +52,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 
+import { useLoadingTimeout, LoadingTimeoutState } from "@/components/LoadingTimeoutGuard";
+
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
@@ -199,10 +201,6 @@ export default function OverviewPage() {
     }
   };
 
-  if (!isValidWsId) {
-    return <Navigate to="/app" replace />;
-  }
-
   const loading =
     workspace === undefined ||
     projects === undefined ||
@@ -210,6 +208,26 @@ export default function OverviewPage() {
     risksLoading ||
     activity === undefined ||
     (projectIds.length > 0 && issuesLoading);
+
+  const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(loading, 8000);
+
+  if (!isValidWsId) {
+    return <Navigate to="/app" replace />;
+  }
+
+  if (loadTimedOut && loading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <div className="py-12">
+          <LoadingTimeoutState
+            title="Overview took too long to load"
+            description="We couldn't load your workspace overview within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   if (workspace === null) {
     return (
@@ -223,6 +241,20 @@ export default function OverviewPage() {
             </Button>
           }
         />
+      </AppShell>
+    );
+  }
+
+  if (loadTimedOut && loading) {
+    return (
+      <AppShell workspaceId={workspaceId}>
+        <PageStack>
+          <LoadingTimeoutState
+            title="Overview took too long to load"
+            description="We couldn't load your workspace dashboard within 8 seconds. Please check your connection and retry."
+            onRetry={retryLoading}
+          />
+        </PageStack>
       </AppShell>
     );
   }

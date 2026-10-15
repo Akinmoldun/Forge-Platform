@@ -2,7 +2,6 @@ import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useSafeQuery } from "@/hooks/use-safe-query";
-import { isDemoMode } from "@/lib/demoMode";
 
 const isConvexConfigured = Boolean(
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_CONVEX_URL) ||
