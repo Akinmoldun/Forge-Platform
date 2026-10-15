@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState, useMemo } from "react";
@@ -65,19 +66,19 @@ export default function IssuePage() {
   useDemoStoreSubscriber();
   const { issueId } = useParams<{ issueId: string }>();
 
-  const isDemo = Boolean(issueId?.startsWith("demo-"));
+  const isDemo = Boolean(!isConvexId(issueId) || issueId?.startsWith("demo-"));
 
-  const rawDetail = useQuery(
+  const rawDetail = useSafeQuery(
     api.issues.getIssue,
-    !isDemo && issueId ? { issueId: issueId as never } : "skip"
+    !isDemo && isConvexId(issueId) ? { issueId: issueId as never } : "skip"
   );
-  const rawComments = useQuery(
+  const rawComments = useSafeQuery(
     api.collaboration.listComments,
-    !isDemo && issueId ? { issueId: issueId as never } : "skip"
+    !isDemo && isConvexId(issueId) ? { issueId: issueId as never } : "skip"
   );
-  const rawActivity = useQuery(
+  const rawActivity = useSafeQuery(
     api.analytics.listIssueActivity,
-    !isDemo && issueId ? { issueId: issueId as never } : "skip"
+    !isDemo && isConvexId(issueId) ? { issueId: issueId as never } : "skip"
   );
 
   const demoIssueData = useMemo(() => {
@@ -89,13 +90,13 @@ export default function IssuePage() {
   const comments = isDemo ? (demoIssueData?.comments as unknown as typeof rawComments) : rawComments;
   const activity = isDemo ? (demoIssueData?.activities as unknown as typeof rawActivity) : rawActivity;
 
-  const rawLabels = useQuery(
+  const rawLabels = useSafeQuery(
     api.projects.listLabels,
-    !isDemo && detail ? { workspaceId: detail.workspaceId } : "skip",
+    !isDemo && detail && isConvexId(detail.workspaceId) ? { workspaceId: detail.workspaceId } : "skip",
   );
-  const rawMembers = useQuery(
+  const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && detail ? { workspaceId: detail.workspaceId } : "skip",
+    !isDemo && detail && isConvexId(detail.workspaceId) ? { workspaceId: detail.workspaceId } : "skip",
   );
 
   const labels = isDemo
@@ -125,9 +126,9 @@ export default function IssuePage() {
   const [addingComment, setAddingComment] = useState(false);
   const [addingDep, setAddingDep] = useState(false);
 
-  const projectIssues = useQuery(
+  const projectIssues = useSafeQuery(
     api.issues.listIssues,
-    depOpen && detail ? { projectId: detail.project._id, pageSize: 100 } : "skip",
+    !isDemo && depOpen && detail && isConvexId(detail.project._id) ? { projectId: detail.project._id, pageSize: 100 } : "skip",
   );
 
   const sortedStatuses = useMemo(() => {

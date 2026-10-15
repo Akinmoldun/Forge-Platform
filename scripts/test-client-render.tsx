@@ -3,13 +3,24 @@ import { GlobalWindow } from "happy-dom";
 const window = new GlobalWindow({ url: "http://localhost:3000/app/workspaces/demo-ws-northstar" });
 (globalThis as any).window = window;
 (globalThis as any).document = window.document;
-(globalThis as any).navigator = window.navigator;
+try {
+  (globalThis as any).navigator = window.navigator;
+} catch {
+  Object.defineProperty(globalThis, "navigator", { value: window.navigator, configurable: true, writable: true });
+}
 (globalThis as any).location = window.location;
 (globalThis as any).HTMLElement = window.HTMLElement;
 (globalThis as any).Element = window.Element;
 (globalThis as any).Node = window.Node;
 (globalThis as any).requestAnimationFrame = (cb: any) => setTimeout(cb, 0);
 (globalThis as any).cancelAnimationFrame = (id: any) => clearTimeout(id);
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as any).IntersectionObserver = MockIntersectionObserver;
+(window as any).IntersectionObserver = MockIntersectionObserver;
 
 // Storage
 (globalThis as any).localStorage = window.localStorage;
@@ -77,3 +88,5 @@ try {
 } catch (err: any) {
   console.error("Section2Hero crashed:", err);
 }
+
+process.exit(0);

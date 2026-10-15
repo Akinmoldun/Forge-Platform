@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -127,15 +127,15 @@ export default function ActivityPage() {
   useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
 
-  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
-  const rawWorkspace = useQuery(
+  const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
-  const rawActivity = useQuery(
+  const rawActivity = useSafeQuery(
     api.analytics.listWorkspaceActivity,
-    !isDemo && workspaceId ? { workspaceId: wid, limit: 200 } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid, limit: 200 } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;

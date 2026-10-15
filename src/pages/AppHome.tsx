@@ -33,13 +33,13 @@ import {
 import { toast } from "sonner";
 
 export default function AppHome() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   useDemoStoreSubscriber();
 
-  // Real accounts have an email and are not anonymous.
-  // Guests, anonymous users, or unauthenticated users immediately receive in-code demo workspaces.
-  const isRealUser = Boolean(user && !user.isAnonymous && user.email);
-  const isAnonymousGuest = !isRealUser;
+  // Real accounts are non-anonymous (email OTP or GitHub OAuth).
+  // Guests, anonymous users, or unauthenticated users receive in-code demo workspaces.
+  const isRealUser = Boolean(user && !user.isAnonymous);
+  const isAnonymousGuest = !isLoading && !isRealUser;
 
   // For real accounts, list Convex workspaces.
   // For anonymous guest accounts, skip Convex query and serve in-code demo workspaces.
@@ -71,9 +71,10 @@ export default function AppHome() {
   const demoWorkspaces = useMemo(() => demoStore.listWorkspaces(), []);
 
   const workspaces = useMemo(() => {
+    if (isLoading) return undefined;
     if (isAnonymousGuest) return demoWorkspaces;
     return rawWorkspaces;
-  }, [isAnonymousGuest, demoWorkspaces, rawWorkspaces]);
+  }, [isLoading, isAnonymousGuest, demoWorkspaces, rawWorkspaces]);
 
   const handleResetDemo = () => {
     demoStore.resetDemo();

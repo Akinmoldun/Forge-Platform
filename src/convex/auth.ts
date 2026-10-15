@@ -35,7 +35,7 @@ const rawAuth = convexAuth({
       if (target.startsWith("http://") || target.startsWith("https://")) {
         return target;
       }
-      const baseUrl = (process.env.SITE_URL || "https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app").replace(/\/+$/, "");
+      const baseUrl = (process.env.SITE_URL || "https://ais-pre-f5hmg3ing2g2i47qpg6u2d-379843806320.europe-west1.run.app").replace(/\/+$/, "");
       const cleanPath = target.startsWith("/") ? target : `/${target}`;
       return `${baseUrl}${cleanPath}`;
     },
@@ -58,12 +58,9 @@ export const signIn = action({
     calledBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Guest (anonymous), GitHub OAuth, and token refreshes pass through directly
-    if (args.provider === "anonymous" || args.provider === "github" || args.refreshToken !== undefined) {
-      if (args.provider === "github" && (!process.env.AUTH_GITHUB_ID || !process.env.AUTH_GITHUB_SECRET)) {
-        throw new Error("GitHub sign-in is not configured. Missing AUTH_GITHUB_ID or AUTH_GITHUB_SECRET.");
-      }
-      return await (rawAuth.signIn as any)._handler(ctx, args);
+    // GitHub configuration validation
+    if (args.provider === "github" && (!process.env.AUTH_GITHUB_ID || !process.env.AUTH_GITHUB_SECRET)) {
+      throw new Error("GitHub sign-in is not configured. Missing AUTH_GITHUB_ID or AUTH_GITHUB_SECRET.");
     }
 
     if (args.provider === "email-otp") {

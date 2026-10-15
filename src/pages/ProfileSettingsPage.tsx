@@ -82,7 +82,7 @@ export default function ProfileSettingsPage() {
     );
   }
 
-  const isGuest = currentUser?.isAnonymous || !currentUser?.email;
+  const isGuest = Boolean(currentUser?.isAnonymous);
 
   const handleSaveProfile = async () => {
     if (savingProfile) return;
@@ -356,7 +356,7 @@ export default function ProfileSettingsPage() {
               </Label>
               <Input
                 id="email"
-                value={currentUser?.email || (isGuest ? "Guest account (no email)" : "")}
+                value={currentUser?.email || (isGuest ? "Guest account (no email)" : "No email provided by GitHub")}
                 disabled
                 className="h-10 rounded-[12px] text-[13px] bg-[#F1F1F3] text-[#575657]"
               />

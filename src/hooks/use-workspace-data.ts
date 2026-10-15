@@ -127,10 +127,9 @@ const EMPTY_QUERY_MAP: Record<string, QueryRequest> = Object.freeze({});
 
 /** Aggregated per-project summaries, keyed by project id. */
 export function useProjectSummaries(projectIds: Id<"projects">[]) {
-  const projectKey = projectIds.join(",");
   const isDemo = useMemo(
     () => projectIds.some((id) => String(id).startsWith("demo-")),
-    [projectKey]
+    [projectIds]
   );
 
   const queryMap = useMemo(() => {
@@ -140,7 +139,7 @@ export function useProjectSummaries(projectIds: Id<"projects">[]) {
       map[id] = { query: api.analytics.getProjectSummary, args: { projectId: id } };
     }
     return map;
-  }, [projectKey, isDemo]);
+  }, [projectIds, isDemo]);
 
   const raw = useQueries(queryMap);
 
@@ -164,15 +163,14 @@ export function useProjectSummaries(projectIds: Id<"projects">[]) {
       entries.push({ projectId: id, summary: (value ?? null) as ProjectSummary | null });
     }
     return { entries, loading: pending };
-  }, [raw, projectKey, isDemo]);
+  }, [raw, projectIds, isDemo]);
 }
 
 /** Aggregated risk scores, keyed by project id. */
 export function useProjectRisks(projectIds: Id<"projects">[]) {
-  const projectKey = projectIds.join(",");
   const isDemo = useMemo(
     () => projectIds.some((id) => String(id).startsWith("demo-")),
-    [projectKey]
+    [projectIds]
   );
 
   const queryMap = useMemo(() => {
@@ -182,7 +180,7 @@ export function useProjectRisks(projectIds: Id<"projects">[]) {
       map[id] = { query: api.analytics.getProjectRisk, args: { projectId: id } };
     }
     return map;
-  }, [projectKey, isDemo]);
+  }, [projectIds, isDemo]);
 
   const raw = useQueries(queryMap);
 
@@ -206,7 +204,7 @@ export function useProjectRisks(projectIds: Id<"projects">[]) {
       entries.push({ projectId: id, risk: (value ?? null) as ProjectRisk | null });
     }
     return { entries, loading: pending };
-  }, [raw, projectKey, isDemo]);
+  }, [raw, projectIds, isDemo]);
 }
 
 /**
@@ -215,10 +213,9 @@ export function useProjectRisks(projectIds: Id<"projects">[]) {
  * showing a partial total.
  */
 export function useProjectIssues(projectIds: Id<"projects">[]) {
-  const projectKey = projectIds.join(",");
   const isDemo = useMemo(
     () => projectIds.some((id) => String(id).startsWith("demo-")),
-    [projectKey]
+    [projectIds]
   );
 
   const queryMap = useMemo(() => {
@@ -231,7 +228,7 @@ export function useProjectIssues(projectIds: Id<"projects">[]) {
       };
     }
     return map;
-  }, [projectKey, isDemo]);
+  }, [projectIds, isDemo]);
 
   const raw = useQueries(queryMap);
 
@@ -279,7 +276,7 @@ export function useProjectStatusEvents(projectIds: Id<"projects">[], limit = 200
   );
 
   const queryMap = useMemo(() => {
-    if (isDemo) return {};
+    if (isDemo || projectIds.length === 0) return EMPTY_QUERY_MAP;
     const map: Record<string, QueryRequest> = {};
     for (const id of projectIds) {
       map[id] = { query: api.analytics.listProjectActivity, args: { projectId: id, limit } };

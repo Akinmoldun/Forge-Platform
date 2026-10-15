@@ -13,7 +13,7 @@ function renderPortalHtml(path: string, url: URL): string {
   const errorDescription = url.searchParams.get("error_description");
   const deploymentName = process.env.CONVEX_DEPLOYMENT || "ideal-corgi-476";
 
-  const siteUrl = (process.env.SITE_URL || "https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app").replace(/\/+$/, "");
+  const siteUrl = (process.env.SITE_URL || "https://ais-pre-f5hmg3ing2g2i47qpg6u2d-379843806320.europe-west1.run.app").replace(/\/+$/, "");
 
   return `<!DOCTYPE html>
 <html lang="en">

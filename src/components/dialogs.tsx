@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -296,18 +297,20 @@ export function CreateIssueDialog({
   const effectiveProject = projectId || defaultProjectId || projects[0]?._id || "";
 
   const isDemo = Boolean(
+    !isConvexId(effectiveProject) ||
+    !isConvexId(workspaceId) ||
     String(effectiveProject).startsWith("demo-") ||
     (workspaceId && demoStore.isDemoWorkspace(workspaceId))
   );
 
   // Query workflow statuses for the selected project to populate the status dropdown
-  const rawWorkflowData = useQuery(
+  const rawWorkflowData = useSafeQuery(
     api.workflows.getWorkflow,
-    !isDemo && effectiveProject ? { projectId: effectiveProject as Id<"projects"> } : "skip",
+    !isDemo && isConvexId(effectiveProject) ? { projectId: effectiveProject as Id<"projects"> } : "skip",
   );
-  const rawMembers = useQuery(
+  const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && workspaceId ? { workspaceId } : "skip",
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
   );
 
   const workflowData = isDemo ? demoStore.getWorkflow() : rawWorkflowData;

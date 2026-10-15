@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -72,15 +73,15 @@ export default function WorkflowPage() {
   useDemoStoreSubscriber();
   const wid = workspaceId as Id<"workspaces">;
 
-  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
-  const rawWorkspace = useQuery(
+  const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
-  const rawProjects = useQuery(
+  const rawProjects = useSafeQuery(
     api.projects.listProjects,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
@@ -99,15 +100,15 @@ export default function WorkflowPage() {
 
   const projectList = useMemo(() => projects ?? [], [projects]);
   const effectiveProjectId = selectedProjectId ?? projectList[0]?._id ?? "";
-  const queryArgs = !isDemo && effectiveProjectId
+  const queryArgs = !isDemo && isConvexId(effectiveProjectId)
     ? { projectId: effectiveProjectId as Id<"projects"> }
     : ("skip" as const);
 
-  const rawProject = useQuery(api.projects.getProject, queryArgs);
-  const rawWorkflowData = useQuery(api.workflows.getWorkflow, queryArgs);
-  const rawBoard = useQuery(api.issues.getBoard, queryArgs);
-  const rawSummary = useQuery(api.analytics.getProjectSummary, queryArgs);
-  const rawAutomations = useQuery(api.analytics.listAutomationRules, queryArgs);
+  const rawProject = useSafeQuery(api.projects.getProject, queryArgs);
+  const rawWorkflowData = useSafeQuery(api.workflows.getWorkflow, queryArgs);
+  const rawBoard = useSafeQuery(api.issues.getBoard, queryArgs);
+  const rawSummary = useSafeQuery(api.analytics.getProjectSummary, queryArgs);
+  const rawAutomations = useSafeQuery(api.analytics.listAutomationRules, queryArgs);
 
   const demoWorkflow = useMemo(() => {
     if (!isDemo) return null;

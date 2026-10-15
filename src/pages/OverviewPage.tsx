@@ -1,5 +1,5 @@
-import { useQuery } from "convex/react";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -60,8 +60,8 @@ export default function OverviewPage() {
   useDemoStoreSubscriber();
   const id = workspaceId as Id<"workspaces">;
   const { user } = useAuth();
-  const userId = user?._id || user?.email || "anonymous";
-  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+  const userId = user?._id || "anonymous";
+  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
   // Soft refresh listener when user clicks logo while already on workspace home
   const [, setRefreshCount] = useState(0);
@@ -79,17 +79,17 @@ export default function OverviewPage() {
     return () => window.removeEventListener("forge:soft-refresh", handleSoftRefresh);
   }, [workspaceId, isDemo]);
 
-  const rawWorkspace = useQuery(
+  const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
   );
-  const rawProjects = useQuery(
+  const rawProjects = useSafeQuery(
     api.projects.listProjects,
-    !isDemo && workspaceId ? { workspaceId: id } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
   );
-  const rawActivity = useQuery(
+  const rawActivity = useSafeQuery(
     api.analytics.listWorkspaceActivity,
-    !isDemo && workspaceId
+    !isDemo && isConvexId(workspaceId)
       ? {
           workspaceId: id,
           limit: 12,

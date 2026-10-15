@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router";
@@ -42,15 +43,15 @@ export default function ProjectSettings() {
   const pid = projectId as Id<"projects">;
   const navigate = useNavigate();
 
-  const isDemo = Boolean(projectId?.startsWith("demo-"));
+  const isDemo = Boolean(!isConvexId(projectId) || projectId?.startsWith("demo-"));
 
-  const rawProject = useQuery(
+  const rawProject = useSafeQuery(
     api.projects.getProject,
-    !isDemo && projectId ? { projectId: pid } : "skip"
+    !isDemo && isConvexId(projectId) ? { projectId: pid } : "skip"
   );
-  const rawMembers = useQuery(
+  const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && rawProject?.project?.workspaceId ? { workspaceId: rawProject.project.workspaceId } : "skip",
+    !isDemo && rawProject?.project && isConvexId(rawProject.project.workspaceId) ? { workspaceId: rawProject.project.workspaceId } : "skip",
   );
 
   const demoProject = useMemo(() => {

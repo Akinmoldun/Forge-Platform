@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
@@ -417,19 +418,22 @@ export function AppShell({
   const initialWsId = workspaceId || matchedWsId;
 
   const isDemoWs = Boolean(
+    (initialWsId && !isConvexId(initialWsId)) ||
+    (activeProjectId && !isConvexId(activeProjectId)) ||
+    (activeIssueId && !isConvexId(activeIssueId)) ||
     initialWsId?.startsWith("demo-") ||
     pathname.includes("/demo-") ||
     pathname.includes("demo-ws-") ||
     user?.isAnonymous
   );
 
-  const activeProjectQuery = useQuery(
+  const activeProjectQuery = useSafeQuery(
     api.projects.getProject,
-    !isDemoWs && !initialWsId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
+    !isDemoWs && !initialWsId && isConvexId(activeProjectId) ? { projectId: activeProjectId as Id<"projects"> } : "skip"
   );
-  const issueDetail = useQuery(
+  const issueDetail = useSafeQuery(
     api.issues.getIssue,
-    !isDemoWs && !initialWsId && activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
+    !isDemoWs && !initialWsId && isConvexId(activeIssueId) ? { issueId: activeIssueId as Id<"issues"> } : "skip"
   );
 
   const effectiveWorkspaceId =
@@ -439,21 +443,21 @@ export function AppShell({
     (isDemoWs ? "demo-ws-northstar" : undefined);
 
   // Queries
-  const rawMyWorkspaces = useQuery(
+  const rawMyWorkspaces = useSafeQuery(
     api.workspaces.listMyWorkspaces,
     !isDemoWs && user ? {} : "skip"
   );
-  const rawCurrentWorkspace = useQuery(
+  const rawCurrentWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemoWs && effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    !isDemoWs && isConvexId(effectiveWorkspaceId) ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
   );
-  const rawProjects = useQuery(
+  const rawProjects = useSafeQuery(
     api.projects.listProjects,
-    !isDemoWs && effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    !isDemoWs && isConvexId(effectiveWorkspaceId) ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
   );
-  const rawNotifications = useQuery(
+  const rawNotifications = useSafeQuery(
     api.analytics.listNotifications,
-    !isDemoWs && effectiveWorkspaceId ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    !isDemoWs && isConvexId(effectiveWorkspaceId) ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
   );
 
   const demoWsData = useMemo(() => {

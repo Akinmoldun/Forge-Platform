@@ -1,5 +1,6 @@
-// Notifications: unread highlighting, mark-one/mark-all-read, deep links.
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
+import { demoStore } from "@/data/in-memory-demo-store";
 import { api } from "@/convex/_generated/api";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -16,15 +17,20 @@ import { FadeIn } from "@/components/motion";
 
 export default function NotificationsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
   const id = workspaceId as Id<"workspaces"> | undefined;
-  const workspace = useQuery(
+
+  const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    id ? { workspaceId: id } : "skip",
+    !isDemo && isConvexId(id) ? { workspaceId: id! } : "skip",
   );
-  const notifications = useQuery(
+  const rawNotifications = useSafeQuery(
     api.analytics.listNotifications,
-    id ? { workspaceId: id } : "skip",
+    !isDemo && isConvexId(id) ? { workspaceId: id! } : "skip",
   );
+
+  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
+  const notifications = isDemo ? { notifications: [], unreadCount: 0 } : rawNotifications;
   const markRead = useMutation(api.analytics.markNotificationRead);
   const markAllRead = useMutation(api.analytics.markAllNotificationsRead);
   const navigate = useNavigate();

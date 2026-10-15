@@ -163,19 +163,56 @@ function generateInitialIssues(): DemoIssue[] {
     ],
   };
 
+  // Supplementary issue templates ensuring every project has 18+ issues across all statuses
+  const supplementaryIssues: Array<{
+    title: string;
+    desc: string;
+    priority: "urgent" | "high" | "medium" | "low";
+    statusIdx: number;
+    points: number;
+  }> = [
+    { title: "Define schema and interface boundaries", desc: "Formalize TypeScript domain contracts and integration invariants.", priority: "medium", statusIdx: 0, points: 3 },
+    { title: "Evaluate caching and memoization benchmarks", desc: "Audit rendering re-render hot spots and cache expensive calculations.", priority: "low", statusIdx: 0, points: 2 },
+    { title: "Draft developer ergonomics RFC", desc: "Collect team feedback on API signatures and state container ergonomics.", priority: "medium", statusIdx: 0, points: 5 },
+    { title: "Implement automated unit testing suite", desc: "Target 90%+ code coverage on business logic and validation rules.", priority: "high", statusIdx: 1, points: 5 },
+    { title: "Configure linter and static analysis rules", desc: "Enforce strict typing and prevent common concurrency pitfalls.", priority: "medium", statusIdx: 1, points: 3 },
+    { title: "Set up staging integration environment", desc: "Automate ephemeral branch deployments with isolated database tenants.", priority: "urgent", statusIdx: 1, points: 8 },
+    { title: "Streamline core service execution pipeline", desc: "Refactor core loop to reduce event loop blocking under peak throughput.", priority: "high", statusIdx: 2, points: 8 },
+    { title: "Add detailed observability spans and traces", desc: "Instrument OpenTelemetry tracing spans on all async operational boundaries.", priority: "medium", statusIdx: 2, points: 5 },
+    { title: "Refactor state synchronization listeners", desc: "Prevent duplicate event subscriptions during rapid UI route navigation.", priority: "high", statusIdx: 2, points: 5 },
+    { title: "Handle graceful network reconnection recovery", desc: "Buffer uncommitted mutations in local memory and flush with exponential backoff.", priority: "urgent", statusIdx: 2, points: 8 },
+    { title: "Review security invariants and access control", desc: "Verify multi-tenant boundary checks reject cross-workspace queries.", priority: "urgent", statusIdx: 3, points: 5 },
+    { title: "Performance audit on large dataset rendering", desc: "Profile virtualized list scroll performance with 1,000+ items.", priority: "medium", statusIdx: 3, points: 5 },
+    { title: "Address reviewer feedback on edge-case handling", desc: "Add defensive guards for malformed or incomplete payload inputs.", priority: "high", statusIdx: 4, points: 3 },
+    { title: "Initial system architecture baseline", desc: "Completed design document, data models, and team review.", priority: "high", statusIdx: 5, points: 8 },
+    { title: "Deploy initial v1 milestone to production", desc: "Zero downtime release deployed and verified against production telemetry.", priority: "medium", statusIdx: 5, points: 5 },
+    { title: "Refactor legacy helper utilities", desc: "Replaced obsolete utility wrappers with modern standard library calls.", priority: "low", statusIdx: 5, points: 2 },
+    { title: "Establish continuous deployment pipeline", desc: "Automate CI check gates, automated tests, and container image publishing.", priority: "high", statusIdx: 5, points: 5 },
+    { title: "Deprecated: legacy polling sync loop", desc: "Decommissioned in favor of reactive WebSocket event subscriptions.", priority: "low", statusIdx: 6, points: 1 },
+  ];
+
   for (const ws of DEMO_WORKSPACES) {
     for (const proj of ws.projects) {
-      const projIssues = sampleIssuesByProject[proj.key] || [
-        { title: `${proj.name} architecture baseline specification`, desc: "Define schema, components, and integration testing requirements.", priority: "high", statusIdx: 5, points: 5 },
-        { title: `Implement ${proj.name} core service worker`, desc: "Handle background tasks, caching, and state synchronization.", priority: "medium", statusIdx: 2, points: 5 },
-        { title: `Resolve ${proj.name} integration test flakiness`, desc: "Fix timing race condition in end-to-end testing matrix.", priority: "low", statusIdx: 1, points: 3 },
-      ];
+      const explicitIssues = sampleIssuesByProject[proj.key] || [];
+      const combinedIssues = [...explicitIssues];
 
-      projIssues.forEach((item, index) => {
+      // Pad with supplementary items until project reaches at least 18 issues across all statuses
+      for (const item of supplementaryIssues) {
+        if (combinedIssues.length >= 18) break;
+        combinedIssues.push({
+          title: `${item.title} (${proj.key})`,
+          desc: item.desc,
+          priority: item.priority,
+          statusIdx: item.statusIdx,
+          points: item.points,
+        });
+      }
+
+      combinedIssues.forEach((item, index) => {
         const status = DEMO_STATUSES[item.statusIdx] || DEMO_STATUSES[1];
         const teammate = ws.teammates[index % ws.teammates.length];
         const reporter = ws.teammates[(index + 1) % ws.teammates.length];
-        const daysAgo = Math.floor((index * 3) % 25);
+        const daysAgo = Math.floor((index * 2) % 25);
         const createdAt = NOW - daysAgo * DAY - (index * 4200000);
         const updatedAt = createdAt + 3600000 * 4;
 
@@ -227,33 +264,90 @@ function generateInitialIssues(): DemoIssue[] {
 
 function generateInitialActivities(): DemoActivityEvent[] {
   const events: DemoActivityEvent[] = [];
-  const ws = DEMO_WORKSPACES[0];
-  const teammates = ws.teammates;
 
-  const sampleEvents = [
-    { actor: teammates[0], eventType: "issue.status_changed", entityId: "demo-issue-mob-1", payload: { oldStatus: "Todo", newStatus: "In Progress", issueTitle: "Fix biometric authentication crash on Android 14", issueNumber: 1, projectKey: "MOB" }, daysAgo: 0.1 },
-    { actor: teammates[1], eventType: "issue.created", entityId: "demo-issue-bil-1", payload: { issueTitle: "Audit Stripe webhook signature verification against replay attacks", issueNumber: 1, projectKey: "BIL" }, daysAgo: 0.4 },
-    { actor: teammates[2], eventType: "issue.status_changed", entityId: "demo-issue-web-1", payload: { oldStatus: "Review", newStatus: "Done", issueTitle: "Keyboard shortcut navigation for rapid issue triage (J/K/C/X)", issueNumber: 1, projectKey: "WEB" }, daysAgo: 0.8 },
-    { actor: teammates[3], eventType: "issue.assigned", entityId: "demo-issue-plt-1", payload: { issueTitle: "Deploy Kubernetes cluster with edge routing and auth gateway", assigneeName: teammates[3].name, issueNumber: 1, projectKey: "PLT" }, daysAgo: 1.2 },
-    { actor: teammates[0], eventType: "workflow.transition_configured", entityId: "status-review", payload: { from: "In Progress", to: "Review", rule: "All checklist items completed" }, daysAgo: 2.1 },
-    { actor: teammates[4], eventType: "issue.comment_added", entityId: "demo-issue-mob-2", payload: { issueTitle: "Implement optimistic offline mutations queue", commentSnippet: "Offline sync logic passes all simulated airplane mode tests." }, daysAgo: 2.5 },
-  ];
+  for (const ws of DEMO_WORKSPACES) {
+    const teammates = ws.teammates;
+    const projects = ws.projects;
 
-  sampleEvents.forEach((se, idx) => {
-    events.push({
-      _id: `demo-activity-${idx + 1}`,
-      workspaceId: ws.id,
-      actorId: `demo-user-${se.actor.name.toLowerCase().replace(/\s+/g, "-")}`,
-      actorName: se.actor.name,
-      actorEmail: se.actor.email,
-      actorImage: undefined,
-      entityType: "issue",
-      entityId: se.entityId,
-      eventType: se.eventType,
-      payload: se.payload,
-      createdAt: Math.floor(NOW - se.daysAgo * DAY),
+    projects.forEach((proj, pIdx) => {
+      const pKey = proj.key.toLowerCase();
+      const pTeammate = teammates[pIdx % teammates.length];
+      const pReporter = teammates[(pIdx + 1) % teammates.length];
+
+      events.push(
+        {
+          _id: `demo-activity-${ws.id}-${proj.key}-1`,
+          workspaceId: ws.id,
+          actorId: `demo-user-${pTeammate.name.toLowerCase().replace(/\s+/g, "-")}`,
+          actorName: pTeammate.name,
+          actorEmail: pTeammate.email,
+          actorImage: undefined,
+          entityType: "issue",
+          entityId: `demo-issue-${pKey}-1`,
+          eventType: "issue.status_changed",
+          payload: {
+            oldStatus: "Todo",
+            newStatus: "In Progress",
+            issueTitle: `${proj.name} core service worker`,
+            issueNumber: 1,
+            projectKey: proj.key,
+          },
+          createdAt: Math.floor(NOW - (pIdx * 0.5 + 0.1) * DAY),
+        },
+        {
+          _id: `demo-activity-${ws.id}-${proj.key}-2`,
+          workspaceId: ws.id,
+          actorId: `demo-user-${pReporter.name.toLowerCase().replace(/\s+/g, "-")}`,
+          actorName: pReporter.name,
+          actorEmail: pReporter.email,
+          actorImage: undefined,
+          entityType: "issue",
+          entityId: `demo-issue-${pKey}-2`,
+          eventType: "issue.created",
+          payload: {
+            issueTitle: `${proj.name} architecture baseline specification`,
+            issueNumber: 2,
+            projectKey: proj.key,
+          },
+          createdAt: Math.floor(NOW - (pIdx * 0.5 + 0.4) * DAY),
+        },
+        {
+          _id: `demo-activity-${ws.id}-${proj.key}-3`,
+          workspaceId: ws.id,
+          actorId: `demo-user-${pTeammate.name.toLowerCase().replace(/\s+/g, "-")}`,
+          actorName: pTeammate.name,
+          actorEmail: pTeammate.email,
+          actorImage: undefined,
+          entityType: "issue",
+          entityId: `demo-issue-${pKey}-3`,
+          eventType: "issue.comment_added",
+          payload: {
+            issueTitle: `${proj.name} integration testing matrix`,
+            commentSnippet: "All unit tests and integration benchmarks pass staging validation.",
+          },
+          createdAt: Math.floor(NOW - (pIdx * 0.5 + 0.8) * DAY),
+        },
+        {
+          _id: `demo-activity-${ws.id}-${proj.key}-4`,
+          workspaceId: ws.id,
+          actorId: `demo-user-${pTeammate.name.toLowerCase().replace(/\s+/g, "-")}`,
+          actorName: pTeammate.name,
+          actorEmail: pTeammate.email,
+          actorImage: undefined,
+          entityType: "issue",
+          entityId: `demo-issue-${pKey}-4`,
+          eventType: "issue.assigned",
+          payload: {
+            issueTitle: `${proj.name} telemetry metrics exporter`,
+            assigneeName: pTeammate.name,
+            issueNumber: 4,
+            projectKey: proj.key,
+          },
+          createdAt: Math.floor(NOW - (pIdx * 0.5 + 1.2) * DAY),
+        }
+      );
     });
-  });
+  }
 
   return events;
 }
@@ -566,16 +660,21 @@ class InMemoryDemoStore {
 
   public listTeammates(workspaceId?: string | null) {
     const ws = DEMO_WORKSPACES.find((w) => w.id === workspaceId) || DEMO_WORKSPACES[0];
-    return ws.teammates.map((t, idx) => ({
-      _id: `demo-user-${t.name.toLowerCase().replace(/\s+/g, "-")}`,
-      name: t.name,
-      email: t.email,
-      role: t.role,
-      avatarKey: t.avatarKey,
-      jobTitle: t.jobTitle,
-      joinedAt: NOW - (30 - idx * 4) * DAY,
-      assignedIssueCount: this.issues.filter((i) => i.assignee?.name === t.name).length,
-    }));
+    return ws.teammates.map((t, idx) => {
+      const uId = `demo-user-${t.name.toLowerCase().replace(/\s+/g, "-")}`;
+      return {
+        _id: uId,
+        userId: uId,
+        membershipId: `demo-mem-${idx}-${uId}`,
+        name: t.name,
+        email: t.email,
+        role: t.role,
+        avatarKey: t.avatarKey,
+        jobTitle: t.jobTitle,
+        joinedAt: NOW - (30 - idx * 4) * DAY,
+        assignedIssueCount: this.issues.filter((i) => i.assignee?.name === t.name).length,
+      };
+    });
   }
 
   public listActivities(workspaceId?: string | null, limit = 20) {

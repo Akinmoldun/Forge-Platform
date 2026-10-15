@@ -1,4 +1,5 @@
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -79,37 +80,38 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   });
 
   const isDemo = Boolean(
+    !isConvexId(projectId) ||
     projectId?.startsWith("demo-") ||
     demoStore.isDemoWorkspace(projectId)
   );
 
-  const rawProject = useQuery(
+  const rawProject = useSafeQuery(
     api.projects.getProject,
-    !isDemo && projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
   );
-  const rawAllProjects = useQuery(
+  const rawAllProjects = useSafeQuery(
     api.projects.listProjects,
-    !isDemo && rawProject?.project?.workspaceId ? { workspaceId: rawProject.project.workspaceId } : "skip",
+    !isDemo && rawProject?.project && isConvexId(rawProject.project.workspaceId) ? { workspaceId: rawProject.project.workspaceId } : "skip",
   );
-  const rawMembers = useQuery(
+  const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && rawProject?.project?.workspaceId ? { workspaceId: rawProject.project.workspaceId } : "skip",
+    !isDemo && rawProject?.project && isConvexId(rawProject.project.workspaceId) ? { workspaceId: rawProject.project.workspaceId } : "skip",
   );
-  const rawBoard = useQuery(
+  const rawBoard = useSafeQuery(
     api.issues.getBoard,
-    !isDemo && projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
   );
-  const rawRisk = useQuery(
+  const rawRisk = useSafeQuery(
     api.analytics.getProjectRisk,
-    !isDemo && projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
   );
-  const rawSummary = useQuery(
+  const rawSummary = useSafeQuery(
     api.analytics.getProjectSummary,
-    !isDemo && projectId ? { projectId: projectId as never } : "skip"
+    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
   );
-  const rawProjectActivity = useQuery(
+  const rawProjectActivity = useSafeQuery(
     api.analytics.listProjectActivity,
-    !isDemo && projectId
+    !isDemo && isConvexId(projectId)
       ? {
           projectId: projectId as never,
           limit: 40,
@@ -199,9 +201,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     return () => clearTimeout(t);
   }, [search]);
 
-  const rawIssues = useQuery(
+  const rawIssues = useSafeQuery(
     api.issues.listIssues,
-    !isDemo && projectId
+    !isDemo && isConvexId(projectId)
       ? {
           projectId: projectId as never,
           search: debouncedSearch || undefined,

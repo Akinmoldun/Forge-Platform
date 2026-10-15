@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useConvex } from "convex/react";
+import { useMutation, useConvex } from "convex/react";
+import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router";
@@ -82,23 +83,23 @@ export default function WorkspaceSettings() {
   const navigate = useNavigate();
   const convex = useConvex();
 
-  const isDemo = demoStore.isDemoWorkspace(workspaceId);
+  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
-  const rawWorkspace = useQuery(
+  const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
-  const rawMembers = useQuery(
+  const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
-  const rawInvitations = useQuery(
+  const rawInvitations = useSafeQuery(
     api.workspaces.listInvitations,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
-  const rawLabels = useQuery(
+  const rawLabels = useSafeQuery(
     api.projects.listLabels,
-    !isDemo && workspaceId ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) ? { workspaceId: wid } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
