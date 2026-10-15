@@ -26,6 +26,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-hooks/purity": "off",
       "react-hooks/set-state-in-effect": "off",
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

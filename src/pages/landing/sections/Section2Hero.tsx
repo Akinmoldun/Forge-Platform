@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
 import { enableDemoMode } from '@/lib/demoMode';
 import { FocusPullHeading } from '../motion/FocusPullHeading';
 import { InkFillParagraph } from '../motion/InkFillParagraph';
@@ -193,9 +192,8 @@ const items = [
 ];
 
 export function Section2Hero() {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [_prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 

@@ -313,7 +313,7 @@ export function CreateIssueDialog({
     !isDemo && isConvexId(workspaceId) ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
   );
 
-  const workflowData = isDemo ? demoStore.getWorkflow() : rawWorkflowData;
+  const workflowData = isDemo ? demoStore.getWorkflow(effectiveProject) : rawWorkflowData;
   const statuses = workflowData?.statuses ?? [];
   const members = isDemo ? demoStore.listTeammates(workspaceId) : rawMembers;
 

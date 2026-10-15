@@ -729,18 +729,21 @@ class InMemoryDemoStore {
     };
   }
 
-  public getWorkflow(projectId: string) {
-    const statuses = this.statuses.get(projectId) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${projectId}` }));
+  public getWorkflow(projectId?: string) {
+    const pid = projectId ?? "demo-proj-core";
+    const statuses = this.statuses.get(pid) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${pid}` }));
     return {
-      workflow: { _id: `wf-${projectId}`, name: "Default Workflow", projectId },
+      workflow: { _id: `wf-${pid}`, name: "Default Workflow", projectId: pid },
       statuses,
-      transitions: [],
+      transitions: DEMO_TRANSITIONS,
+      automationRules: [],
     };
   }
 
-  public getActivity(workspaceId: string, limit = 50) {
+  public getActivity(workspaceId?: string, limit = 50) {
+    const wid = workspaceId ?? "demo-ws-northstar";
     return this.activities
-      .filter((a) => a.workspaceId === workspaceId)
+      .filter((a) => !workspaceId || a.workspaceId === wid)
       .slice(0, limit);
   }
 
@@ -904,6 +907,7 @@ class InMemoryDemoStore {
   }
 
   public createIssue(args: {
+    workspaceId?: string;
     projectId: string;
     title: string;
     description?: string;
@@ -913,9 +917,9 @@ class InMemoryDemoStore {
     estimatePoints?: number;
     dueDate?: number;
     labelIds?: string[];
-  }): { issueId: string } {
+  }): DemoIssue & { issueId: string } {
     const proj = this.projects.find((p) => p._id === args.projectId);
-    const workspaceId = proj ? proj.workspaceId : "demo-ws-northstar";
+    const workspaceId = args.workspaceId ?? (proj ? proj.workspaceId : "demo-ws-northstar");
     const existing = this.issues.filter((i) => i.projectId === args.projectId);
     const nextNumber = existing.reduce((max, i) => Math.max(max, i.number), 0) + 1;
     const now = Date.now();
@@ -944,7 +948,7 @@ class InMemoryDemoStore {
       proj.openIssueCount += 1;
     }
     this.notify();
-    return { issueId };
+    return { ...newIssue, issueId };
   }
 
   public updateIssue(issueId: string, patch: Partial<DemoIssue>) {

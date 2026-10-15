@@ -25,6 +25,7 @@ const navLinks: NavLinkItem[] = [
 
 export function Section1Nav() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { scrollTo } = useMotion();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');

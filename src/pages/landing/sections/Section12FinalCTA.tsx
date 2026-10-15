@@ -71,7 +71,6 @@ export function Section12FinalCTA() {
                 <button
                   type="button"
                   onClick={handleDemo}
-                  disabled={isLoading}
                   style={{
                     backgroundColor: '#0D0D0D',
                     color: '#FFFFFF',
@@ -101,11 +100,6 @@ export function Section12FinalCTA() {
                   View on GitHub
                 </a>
               </div>
-
-              {/* Inline error line if guest sign-in fails */}
-              {error && (
-                <p className="text-xs text-red-600 font-medium mt-2 mb-2">{error}</p>
-              )}
 
               {/* Light browser frame: white, 1px solid rgba(0,0,0,.08), radius 16px 16px 0 0, 36px top bar with 3 grey dots */}
               <div

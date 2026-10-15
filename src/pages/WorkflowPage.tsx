@@ -112,15 +112,15 @@ export default function WorkflowPage() {
 
   const demoWorkflow = useMemo(() => {
     if (!isDemo) return null;
-    return demoStore.getWorkflow();
-  }, [isDemo]);
+    return demoStore.getWorkflow(effectiveProjectId);
+  }, [isDemo, effectiveProjectId]);
 
   const demoBoard = useMemo(() => {
     if (!isDemo || !effectiveProjectId) return null;
     const projectIssues = demoStore.listIssues(effectiveProjectId);
     return {
       project: demoStore.getProject(effectiveProjectId)?.project,
-      workflow: demoStore.getWorkflow().workflow,
+      workflow: demoStore.getWorkflow(effectiveProjectId).workflow,
       columns: DEMO_STATUSES.map((status) => ({
         status,
         issues: projectIssues.filter((i) => i.statusId === status._id),
