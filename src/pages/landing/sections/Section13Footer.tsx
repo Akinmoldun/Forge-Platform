@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router';
+import { useAuth } from '@/hooks/use-auth';
 import { enableDemoMode } from '@/lib/demoMode';
 import { ArrowUpRight } from 'lucide-react';
 import { Reveal } from '../Reveal';
@@ -8,6 +9,7 @@ const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
 export function Section13Footer() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const handleDemo = () => {
     enableDemoMode();
@@ -16,6 +18,10 @@ export function Section13Footer() {
 
   const scrollToTop = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
+    if (isAuthenticated) {
+      navigate('/app');
+      return;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

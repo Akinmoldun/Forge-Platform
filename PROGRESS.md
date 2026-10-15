@@ -1,34 +1,52 @@
 # HOW TO RESUME
-If you are a new session, read this file, find the first unchecked item, and continue from there. Do not redo finished work.
+If you are a new session, read this file, find the first unchecked item, and continue from there. Do not redo finished work. Only change what the current task needs. Keep updating PROGRESS.md after every task.
 
 ---
 
-## TASK 1 (CRITICAL): Workspace creation crashes the page
-- [~] a) Update `listNotifications` in `src/convex/analytics.ts` to accept `workspaceId: v.id("workspaces")` and scope the query by that workspace AND the authenticated user (verify caller membership). Do not return another workspace's data.
-- [ ] b) Audit EVERY Convex query, mutation, and action against every place the frontend calls it. Fix every mismatch (missing args, extra args, wrong types). List each mismatch found below.
-- [ ] c) Check all functions touched in earlier data-isolation work (projects, issues, workflows, collaboration, analytics, workspaces).
-- [ ] d) Run TypeScript type check (`npx tsc -b`) and Convex codegen/deploy (`npx convex codegen`) to catch any remaining mismatches.
-
-### Audited Functions & Mismatches Found
-*(Documenting all checked Convex functions and frontend callers)*
-
----
-
-## TASK 2: Errors must not crash the whole page
-- [ ] Add error boundaries around each page section or widget so one failing query shows a small inline error with a working Retry button instead of crashing the whole page.
-- [ ] Make "Dismiss" actually close the error, and make "Try again" actually re-run the failed query / reload section.
-- [ ] Show friendly messages to users and keep technical details in the console only.
+## VERIFIED WORKING (Manual Testing by User)
+The following core capabilities have been manually tested and confirmed working by the user. Do NOT refactor or modify unless strictly required to fix the tasks below:
+- [x] Task 1: listNotifications / workspaceId crash is FIXED
+- [x] Create workspace
+- [x] Create project
+- [x] Create issue
+- [x] Board and status columns
+- [x] Analytics
+- [x] Activity
+- [x] Settings
+- [x] Invite member (invite record is created; email not sent because no email provider connected, which is expected)
+- [x] Sign out
 
 ---
 
-## TASK 3: "Get Started" goes to the wrong place
-- [ ] Fix routing for all "Get Started" buttons (hero, nav, pricing, footer, etc.) to go to the SIGN UP page (`/auth` or `/login` create account, including GitHub sign-up).
-- [ ] Ensure "Try Demo" remains a separate, clearly labeled option and is NEVER the default for Get Started.
-- [ ] Ensure "Sign In" goes cleanly to the sign-in page.
+## TASK A: Error popup when clicking the logo
+- [ ] A.1 Root cause identification & fix for logo link:
+  - Find what the logo links to and reproduce the error popup.
+  - Fix root cause: guard all queries against missing/undefined params (workspaceId/projectId/slug) and fix routes lacking params.
+  - Route logo to the right place: dashboard if logged in (`/app/workspaces/:workspaceId` or active workspace), landing page (`/`) if logged out.
+- [ ] A.2 Audit every nav link, sidebar item, and logo across all pages:
+  - Click & verify every nav link, sidebar item, and breadcrumb across Overview, Projects, Board, List, Workflow, Analytics, Teams, Activity, Notifications, Settings, and Profile.
+  - Log each verified/fixed item.
 
 ---
 
-## TASK 4: Verify end to end
-- [ ] Brand new account flow: Click Get Started -> Sign up with GitHub -> Create a workspace -> Confirm dashboard loads with NO errors in page or console.
-- [ ] Visit every page (projects, workflow, analytics, activity, people, inbox, settings) and confirm none throw errors.
-- [ ] Record results here.
+## TASK B: Performance Optimization ("Everything is too slow")
+- [ ] B.1 Landing page render & instant response:
+  - Landing page must render instantly without blocking on Convex/auth queries.
+  - Measure bundle size, blocking requests, fonts, and assets.
+  - Code-splitting and lazy-load heavy routes.
+- [ ] B.2 "Get Started" instant navigation:
+  - Navigate immediately to `/signup` with no awaiting auth state or data fetches before route change.
+- [ ] B.3 "Create account with GitHub" optimization:
+  - Remove unnecessary waits, eliminate redundant sequential calls, run independent calls in parallel.
+  - Show clear responsive progress state instead of hanging spinner.
+- [ ] B.4 Page transitions & query efficiency:
+  - Check for duplicate queries, queries that fetch too much, and excessive component re-renders.
+  - Measure and record before/after timings.
+
+---
+
+## TASK C: Final Verification
+- [ ] C.1 End-to-end fresh run:
+  - Landing page -> Get Started -> Sign up with GitHub -> Create workspace -> Create project -> Click logo and every nav item.
+  - Confirm 0 errors in page and browser console.
+- [ ] C.2 Final status update in PROGRESS.md.

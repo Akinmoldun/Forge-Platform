@@ -48,9 +48,18 @@ export default function ProjectsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const id = workspaceId as Id<"workspaces">;
 
-  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: id });
-  const projects = useQuery(api.projects.listProjects, { workspaceId: id });
-  const members = useQuery(api.workspaces.listMembers, { workspaceId: id });
+  const workspace = useQuery(
+    api.workspaces.getWorkspace,
+    id ? { workspaceId: id } : "skip",
+  );
+  const projects = useQuery(
+    api.projects.listProjects,
+    id ? { workspaceId: id } : "skip",
+  );
+  const members = useQuery(
+    api.workspaces.listMembers,
+    id ? { workspaceId: id } : "skip",
+  );
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");

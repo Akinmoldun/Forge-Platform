@@ -482,6 +482,18 @@ createRoot(document.getElementById("root")!).render(
                 element={<Navigate to="/app" replace />}
               />
               <Route
+                path="/app/workspaces"
+                element={<Navigate to="/app" replace />}
+              />
+              <Route
+                path="/app/projects"
+                element={<Navigate to="/app" replace />}
+              />
+              <Route
+                path="/app/issues"
+                element={<Navigate to="/app" replace />}
+              />
+              <Route
                 path="/app/settings/profile"
                 element={withConvexAuth(
                   <RequireAuth redirectImmediately>

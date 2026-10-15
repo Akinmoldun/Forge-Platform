@@ -4,6 +4,7 @@ import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { ForgeLogo } from '../ForgeLogo';
 import { useMotion } from '../motion/MotionProvider';
 import { MagneticButton } from '../motion/MagneticButton';
+import { useAuth } from '@/hooks/use-auth';
 
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
@@ -127,9 +128,13 @@ export function Section1Nav() {
     };
   }, [mobileMenuOpen]);
 
-  // Smooth scroll to top when clicking brand
+  // Smooth scroll to top when clicking brand (or go to dashboard if logged in)
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isAuthenticated) {
+      navigate('/app');
+      return;
+    }
     scrollTo(0, { offset: 0, duration: 1.4 });
     setMobileMenuOpen(false);
   };

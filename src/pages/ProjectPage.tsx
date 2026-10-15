@@ -70,7 +70,10 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   });
 
-  const project = useQuery(api.projects.getProject, { projectId: projectId as never });
+  const project = useQuery(
+    api.projects.getProject,
+    projectId ? { projectId: projectId as never } : "skip",
+  );
   const allProjects = useQuery(
     api.projects.listProjects,
     project ? { workspaceId: project.project.workspaceId } : "skip",
@@ -79,15 +82,22 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     api.workspaces.listMembers,
     project ? { workspaceId: project.project.workspaceId } : "skip",
   );
-  const board = useQuery(api.issues.getBoard, { projectId: projectId as never });
-  const risk = useQuery(api.analytics.getProjectRisk, { projectId: projectId as never });
-  const summary = useQuery(api.analytics.getProjectSummary, {
-    projectId: projectId as never,
-  });
-  const projectActivity = useQuery(api.analytics.listProjectActivity, {
-    projectId: projectId as never,
-    limit: 40,
-  });
+  const board = useQuery(
+    api.issues.getBoard,
+    projectId ? { projectId: projectId as never } : "skip",
+  );
+  const risk = useQuery(
+    api.analytics.getProjectRisk,
+    projectId ? { projectId: projectId as never } : "skip",
+  );
+  const summary = useQuery(
+    api.analytics.getProjectSummary,
+    projectId ? { projectId: projectId as never } : "skip",
+  );
+  const projectActivity = useQuery(
+    api.analytics.listProjectActivity,
+    projectId ? { projectId: projectId as never, limit: 40 } : "skip",
+  );
 
   const transitionIssue = useMutation(api.issues.transitionIssue);
 

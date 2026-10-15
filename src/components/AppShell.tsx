@@ -1,7 +1,7 @@
 import { useMutation, useConvex } from "convex/react";
 import { useSafeQuery } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -435,6 +435,23 @@ export function AppShell({
     api.issues.getIssue,
     activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
   );
+  const activeProjectDetail = useSafeQuery(
+    api.projects.getProject,
+    !workspaceId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
+  );
+
+  const effectiveWorkspaceId =
+    workspaceId ||
+    activeProjectDetail?.project?.workspaceId ||
+    issueDetail?.workspaceId;
+
+  // Logo destination: dashboard if logged in, landing page if logged out
+  const dashboardHref = useMemo(() => {
+    if (!user) return "/";
+    if (effectiveWorkspaceId) return `/app/workspaces/${effectiveWorkspaceId}`;
+    if (myWorkspaces && myWorkspaces.length > 0) return `/app/workspaces/${myWorkspaces[0]._id}`;
+    return "/app";
+  }, [user, effectiveWorkspaceId, myWorkspaces]);
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
@@ -620,7 +637,7 @@ export function AppShell({
         <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
           <div className="mx-auto flex h-14 w-full max-w-[1100px] items-center justify-between px-4 sm:px-6">
             <Link
-              to="/app"
+              to={dashboardHref}
               className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
               aria-label="Forge home"
             >
@@ -759,7 +776,7 @@ export function AppShell({
           {!collapsed ? (
             <>
               <Link
-                to="/app"
+                to={dashboardHref}
                 className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
                 aria-label="Forge home"
               >
@@ -855,7 +872,7 @@ export function AppShell({
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
-                to={workspaceId ? `/app/workspaces/${workspaceId}/notifications` : "/app"}
+                to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/notifications` : "/app"}
                 className={cn(
                   "flex h-8 w-full items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
                   collapsed ? "justify-center relative" : "justify-between",
@@ -918,7 +935,7 @@ export function AppShell({
             {!workspaceSectionCollapsed && (
               <nav aria-label="Workspace pages" className="space-y-0.5">
                 {WORKSPACE_NAV.map(({ label, segment, icon: Icon }) => {
-                  const to = workspaceId ? workspacePath(workspaceId, segment) : "/app";
+                  const to = effectiveWorkspaceId ? workspacePath(effectiveWorkspaceId, segment) : "/app";
                   const active = isNavActive(pathname, to, segment === "");
 
                   return (
@@ -1181,7 +1198,7 @@ export function AppShell({
                 {/* More row */}
                 {hasMoreProjects && !collapsed && (
                   <Link
-                    to={workspaceId ? `/app/workspaces/${workspaceId}/projects` : "/app"}
+                    to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/projects` : "/app"}
                     className="flex h-7 items-center px-2 text-[12px] font-medium text-[#575657] hover:text-[#0D0D0D]"
                   >
                     More projects ({(projects?.length ?? 0) - 6} more)...

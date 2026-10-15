@@ -60,9 +60,18 @@ import { toast } from "sonner";
 export default function IssuePage() {
   const { user } = useAuth();
   const { issueId } = useParams<{ issueId: string }>();
-  const detail = useQuery(api.issues.getIssue, { issueId: issueId as never });
-  const comments = useQuery(api.collaboration.listComments, { issueId: issueId as never });
-  const activity = useQuery(api.analytics.listIssueActivity, { issueId: issueId as never });
+  const detail = useQuery(
+    api.issues.getIssue,
+    issueId ? { issueId: issueId as never } : "skip",
+  );
+  const comments = useQuery(
+    api.collaboration.listComments,
+    issueId ? { issueId: issueId as never } : "skip",
+  );
+  const activity = useQuery(
+    api.analytics.listIssueActivity,
+    issueId ? { issueId: issueId as never } : "skip",
+  );
   const labels = useQuery(
     api.projects.listLabels,
     detail ? { workspaceId: detail.workspaceId } : "skip",

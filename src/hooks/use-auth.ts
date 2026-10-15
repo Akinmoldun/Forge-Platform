@@ -67,6 +67,7 @@ function useMockAuth() {
     isAuthenticated: false,
     isSessionPending: false,
     isSignedOut: true,
+    hasOAuthCode: false,
     user: null,
     signIn: async (_provider?: string, _params?: unknown) => ({
       signingIn: false,
