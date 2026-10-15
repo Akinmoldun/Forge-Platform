@@ -1408,7 +1408,7 @@ export function AppShell({
       <CommandPaletteDialog
         open={commandOpen}
         onOpenChange={setCommandOpen}
-        workspaceId={workspaceId}
+        workspaceId={effectiveWorkspaceId || workspaceId}
         projects={projects}
         onNewIssue={() => setNewIssueOpen(true)}
         onNewProject={() => setNewProjectOpen(true)}

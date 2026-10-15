@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
 import { FocusPullHeading } from '../motion/FocusPullHeading';
 import { InkFillParagraph } from '../motion/InkFillParagraph';
 import { MagneticButton } from '../motion/MagneticButton';
@@ -192,9 +191,7 @@ const items = [
 ];
 
 export function Section2Hero() {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [_prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -207,22 +204,14 @@ export function Section2Hero() {
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
-  const handleStart = async () => {
+  const handleStart = () => {
     setError(null);
-    setIsLoading(true);
     try {
-      if (!isAuthenticated) {
-        await Promise.race([
-          signIn('anonymous'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
-        ]).catch(() => {
-          // Demo requires no auth, proceed immediately
-        });
-      }
+      sessionStorage.setItem("forge_demo_mode", "true");
     } catch {
-      // Proceed to demo workspace
+      /* ignore */
     }
-    navigate('/app/workspaces/demo-ws-northstar');
+    navigate('/app');
   };
 
   const heroSectionRef = useRef<HTMLElement>(null);
@@ -302,7 +291,6 @@ export function Section2Hero() {
                 <button
                   type="button"
                   onClick={handleStart}
-                  disabled={isLoading}
                   style={{
                     backgroundColor: '#FFFFFF',
                     color: '#0D0D0D',
@@ -311,9 +299,9 @@ export function Section2Hero() {
                     border: '1px solid rgba(0, 0, 0, 0.12)',
                     boxShadow: 'none',
                   }}
-                  className="h-[48px] px-7 text-[15px] select-none min-h-[48px] inline-flex items-center justify-center font-medium transition-all cursor-pointer hover:bg-[#F6F6F7] disabled:opacity-60"
+                  className="h-[48px] px-7 text-[15px] select-none min-h-[48px] inline-flex items-center justify-center font-medium transition-all cursor-pointer hover:bg-[#F6F6F7]"
                 >
-                  {isLoading ? 'Starting demo...' : 'Try demo'}
+                  Try demo
                 </button>
               </div>
 

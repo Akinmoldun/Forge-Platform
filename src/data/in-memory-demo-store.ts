@@ -492,7 +492,15 @@ class InMemoryDemoStore {
 
   public listIssues(projectId?: string | null, workspaceId?: string | null) {
     if (projectId) {
-      return this.issues.filter((i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`);
+      const direct = this.issues.filter(
+        (i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`
+      );
+      if (direct.length > 0) return direct;
+      const matched = this.getProject(projectId)?.project?._id;
+      if (matched) {
+        return this.issues.filter((i) => i.projectId === matched);
+      }
+      return this.issues.slice(0, 18);
     }
     if (workspaceId) {
       return this.issues.filter((i) => i.workspaceId === workspaceId);
@@ -501,7 +509,10 @@ class InMemoryDemoStore {
   }
 
   public getIssue(issueId: string) {
-    const issue = this.issues.find((i) => i._id === issueId);
+    let issue = this.issues.find((i) => i._id === issueId);
+    if (!issue && (issueId === "demo-issue-1" || issueId.startsWith("demo-issue-") || issueId.includes("demo-"))) {
+      issue = this.issues[0];
+    }
     if (!issue) return null;
     const project = this.getProject(issue.projectId)?.project;
     return {
@@ -511,7 +522,31 @@ class InMemoryDemoStore {
         name: "Demo Project",
         key: "DEMO",
       },
+      role: "owner" as const,
       workspaceId: issue.workspaceId,
+      status: issue.status,
+      statuses: DEMO_STATUSES,
+      nextStatuses: DEMO_STATUSES.slice(1, 4).map((s) => ({
+        transitionId: `demo-trans-${s._id}`,
+        status: s,
+        requiresAssignee: false,
+        requiresComment: false,
+        requiresApproval: false,
+      })),
+      canWrite: true,
+      assignee: issue.assignee ? { name: issue.assignee.name, image: undefined } : null,
+      reporter: issue.reporter ? { name: issue.reporter.name, image: undefined } : null,
+      labels: (issue.labels || []).map((l, li) => ({
+        _id: l._id || `demo-lbl-${li}`,
+        name: l.name,
+        color: l.color,
+      })),
+      blockers: [],
+      unresolvedBlockerCount: 0,
+      blocks: [],
+      related: [],
+      currentCategory: issue.status.category,
+      transitions: DEMO_TRANSITIONS,
       comments: [
         {
           _id: "demo-comment-1",

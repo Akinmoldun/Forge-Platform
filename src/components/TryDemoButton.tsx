@@ -18,31 +18,18 @@ export function TryDemoButton({
   redirect = '/app/workspaces/demo-ws-northstar',
   onClick,
 }: TryDemoButtonProps) {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleClick = async () => {
+  const handleClick = () => {
     setError(null);
     if (onClick) onClick();
-
-    setLoading(true);
     try {
-      if (!isAuthenticated) {
-        await Promise.race([
-          signIn('anonymous'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
-        ]).catch(() => {
-          // Demo requires no auth, proceed immediately
-        });
-      }
+      sessionStorage.setItem("forge_demo_mode", "true");
     } catch {
-      // Proceed to demo workspace
-    } finally {
-      setLoading(false);
+      /* ignore */
     }
-    navigate(redirect);
+    navigate(redirect || '/app');
   };
 
   const baseStyles =

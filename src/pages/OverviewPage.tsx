@@ -136,11 +136,11 @@ export default function OverviewPage() {
   const realIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
     const currentUserId = user?._id;
-    // Show only open issues assigned to the user or unassigned
+    // Show only open issues assigned to the user, unassigned, or in demo mode
     const relevant = (projectIssues ?? []).filter(
       (i) =>
         isOpenIssue(i, i.status?.category) &&
-        ((currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
+        (isDemo || (currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
     );
     return relevant.map((i) => ({
       _id: i._id,
@@ -155,7 +155,7 @@ export default function OverviewPage() {
       assigneeId: i.assigneeId,
       completedAt: i.completedAt,
     }));
-  }, [projectIssues, projects, user]);
+  }, [projectIssues, projects, user, isDemo]);
 
   const allWorkspaceIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));

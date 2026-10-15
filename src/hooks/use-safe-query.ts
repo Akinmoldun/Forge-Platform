@@ -1,6 +1,7 @@
-import { useQuery } from "convex/react";
+import { useCallback, useMemo } from "react";
+import { useQuery, useMutation, useAction, useQueries } from "convex/react";
 import type { FunctionReference, FunctionReturnType, FunctionArgs } from "convex/server";
-import { demoStore } from "@/data/in-memory-demo-store";
+import { demoStore, DEMO_STATUSES } from "@/data/in-memory-demo-store";
 
 /**
  * Checks if a string ID belongs to in-memory demo data.
@@ -54,6 +55,8 @@ export function hasDemoArgument(args: unknown): boolean {
       } else if (isDemoId(val)) {
         return true;
       }
+    } else if (val && typeof val === "object" && !Array.isArray(val)) {
+      if (hasDemoArgument(val)) return true;
     }
   }
   return false;
@@ -72,4 +75,134 @@ export function useSafeQuery<Query extends FunctionReference<"query">>(
   const safeArgs = shouldSkip ? "skip" : args;
   const typedUseQuery = useQuery as (q: Query, a: FunctionArgs<Query> | "skip") => FunctionReturnType<Query> | undefined;
   return typedUseQuery(query, safeArgs);
+}
+
+/**
+ * Handle demo mutation safely within in-memory store without calling Convex backend.
+ */
+function handleDemoMutationInternal<Mutation extends FunctionReference<"mutation">>(
+  mutation: Mutation,
+  args: unknown,
+): FunctionReturnType<Mutation> {
+  const mutName = typeof mutation === "string" ? mutation : (mutation as unknown as { _functionName?: string })?._functionName || "";
+  const now = Date.now();
+  const a = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+
+  // Transition issue or update issue
+  if (mutName.includes("transitionIssue") || mutName.includes("updateIssue")) {
+    if (typeof a.issueId === "string") {
+      const updates: Record<string, unknown> = {};
+      if (typeof a.toStatusId === "string") updates.statusId = a.toStatusId;
+      if (typeof a.statusId === "string") updates.statusId = a.statusId;
+      if (typeof a.title === "string") updates.title = a.title;
+      if (typeof a.priority === "string") updates.priority = a.priority;
+      if (typeof a.assigneeId === "string") updates.assigneeId = a.assigneeId;
+      if (typeof a.estimatePoints === "number") updates.estimatePoints = a.estimatePoints;
+      demoStore.updateIssue(a.issueId, updates);
+    }
+    return { success: true } as FunctionReturnType<Mutation>;
+  }
+
+  // Create issue
+  if (mutName.includes("createIssue")) {
+    const created = demoStore.createIssue({
+      workspaceId: typeof a.workspaceId === "string" ? a.workspaceId : "demo-ws-northstar",
+      projectId: typeof a.projectId === "string" ? a.projectId : "demo-proj-mob",
+      title: typeof a.title === "string" ? a.title : "New Issue",
+      description: typeof a.description === "string" ? a.description : undefined,
+      priority: (a.priority === "urgent" || a.priority === "high" || a.priority === "low") ? a.priority : "medium",
+      statusId: typeof a.statusId === "string" ? a.statusId : DEMO_STATUSES[1]._id,
+      estimatePoints: typeof a.estimatePoints === "number" ? a.estimatePoints : undefined,
+    });
+    return { issueId: created._id, number: created.number } as FunctionReturnType<Mutation>;
+  }
+
+  // Add comment
+  if (mutName.includes("addComment")) {
+    return {
+      commentId: `demo-comment-${now}`,
+      createdAt: now,
+    } as FunctionReturnType<Mutation>;
+  }
+
+  // Projects
+  if (mutName.includes("createProject")) {
+    return { projectId: `demo-proj-${Date.now().toString(36)}` } as FunctionReturnType<Mutation>;
+  }
+  if (mutName.includes("updateProject") || mutName.includes("archiveProject")) {
+    return { success: true } as FunctionReturnType<Mutation>;
+  }
+
+  // Workspaces & members
+  if (mutName.includes("updateWorkspace") || mutName.includes("updateMemberRole")) {
+    return { success: true } as FunctionReturnType<Mutation>;
+  }
+
+  // Default safe stub for any other demo mutation
+  return { success: true } as FunctionReturnType<Mutation>;
+}
+
+/**
+ * Safe wrapper around Convex's useMutation.
+ * Automatically refuses demo IDs and routes mutations to in-memory demoStore.
+ */
+export function useSafeMutation<Mutation extends FunctionReference<"mutation">>(
+  mutation: Mutation,
+): (args?: FunctionArgs<Mutation>) => Promise<FunctionReturnType<Mutation>> {
+  const rawMutation = useMutation(mutation);
+  return useCallback(
+    async (args?: FunctionArgs<Mutation>) => {
+      if (hasDemoArgument(args)) {
+        return handleDemoMutationInternal(mutation, args);
+      }
+      return rawMutation(args as never);
+    },
+    [rawMutation, mutation],
+  );
+}
+
+/**
+ * Safe wrapper around Convex's useAction.
+ * Automatically refuses demo IDs and routes actions safely.
+ */
+export function useSafeAction<Action extends FunctionReference<"action">>(
+  action: Action,
+): (args?: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>> {
+  const rawAction = useAction(action);
+  return useCallback(
+    async (args?: FunctionArgs<Action>) => {
+      if (hasDemoArgument(args)) {
+        return { success: true, message: "Demo action handled safely locally" } as unknown as FunctionReturnType<Action>;
+      }
+      return rawAction(args as never);
+    },
+    [rawAction],
+  );
+}
+
+/** Wide query shape for useSafeQueries */
+export interface SafeQueryRequest {
+  query: FunctionReference<"query">;
+  args: Record<string, unknown> | "skip";
+}
+
+/**
+ * Safe wrapper around Convex's useQueries.
+ * Automatically filters out any query requests with demo IDs.
+ */
+export function useSafeQueries(
+  queryMap: Record<string, SafeQueryRequest>,
+): Record<string, unknown> {
+  const safeMap = useMemo(() => {
+    const next: Record<string, SafeQueryRequest> = {};
+    for (const [key, req] of Object.entries(queryMap)) {
+      if (!req || req.args === "skip" || hasDemoArgument(req.args)) {
+        continue;
+      }
+      next[key] = req;
+    }
+    return next;
+  }, [queryMap]);
+
+  return useQueries(safeMap as never) as Record<string, unknown>;
 }

@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useSafeQuery, useSafeMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
@@ -36,20 +36,19 @@ export default function AppHome() {
   const { user, isLoading } = useAuth();
   useDemoStoreSubscriber();
 
-  // Real accounts are non-anonymous (email OTP or GitHub OAuth).
-  // Guests, anonymous users, or unauthenticated users receive in-code demo workspaces.
+  const isDemoMode = typeof window !== 'undefined' && window.sessionStorage?.getItem("forge_demo_mode") === "true";
   const isRealUser = Boolean(user && !user.isAnonymous);
-  const isAnonymousGuest = !isLoading && !isRealUser;
+  const isAnonymousGuest = isDemoMode || (!isLoading && !isRealUser);
 
   // For real accounts, list Convex workspaces.
-  // For anonymous guest accounts, skip Convex query and serve in-code demo workspaces.
-  const rawWorkspaces = useQuery(
+  // For demo/guest mode, skip Convex query and serve in-code demo workspaces.
+  const rawWorkspaces = useSafeQuery(
     api.workspaces.listMyWorkspaces,
-    isRealUser ? {} : "skip"
+    isRealUser && !isDemoMode ? {} : "skip"
   );
-  const myInvitations = useQuery(
+  const myInvitations = useSafeQuery(
     api.workspaces.getMyInvitations,
-    isRealUser ? {} : "skip"
+    isRealUser && !isDemoMode ? {} : "skip"
   );
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
@@ -57,24 +56,25 @@ export default function AppHome() {
   const [creating, setCreating] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
-  const create = useMutation(api.workspaces.createWorkspace);
-  const acceptMyInvitation = useMutation(api.workspaces.acceptMyInvitation);
+  const create = useSafeMutation(api.workspaces.createWorkspace);
+  const acceptMyInvitation = useSafeMutation(api.workspaces.acceptMyInvitation);
 
-  // Safety timeout guard: ensures workspaces loading never hangs indefinitely
+  // Safety timeout guard (8s): ensures workspaces loading never hangs indefinitely
   useEffect(() => {
     const timer = setTimeout(() => {
       setTimedOut(true);
-    }, 6000);
+    }, 8000);
     return () => clearTimeout(timer);
   }, []);
 
   const demoWorkspaces = useMemo(() => demoStore.listWorkspaces(), []);
 
   const workspaces = useMemo(() => {
+    if (isDemoMode) return demoWorkspaces;
     if (isLoading) return undefined;
     if (isAnonymousGuest) return demoWorkspaces;
     return rawWorkspaces;
-  }, [isLoading, isAnonymousGuest, demoWorkspaces, rawWorkspaces]);
+  }, [isDemoMode, isLoading, isAnonymousGuest, demoWorkspaces, rawWorkspaces]);
 
   const handleResetDemo = () => {
     demoStore.resetDemo();

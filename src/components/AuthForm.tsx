@@ -9,9 +9,10 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
-  const { isLoading: authLoading, isAuthenticated, user, signIn } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, user, signIn, exchangeError } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const urlError = searchParams.get('error');
 
   const rawTarget =
     searchParams.get('returnTo') ||
@@ -34,7 +35,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGuestLoading, setIsGuestLoading] = useState(false);
+  const isGuestLoading = false;
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestError, setGuestError] = useState<string | null>(null);
@@ -256,42 +257,30 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     }, 12000);
 
     try {
-      const destination = safeRedirect || '/app';
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const destination = origin
+        ? `${origin}${safeRedirect.startsWith('/') ? safeRedirect : '/' + safeRedirect}`
+        : (safeRedirect || '/app');
       await signIn('github', { redirectTo: destination });
     } catch (err: unknown) {
       clearTimeout(safetyTimer);
       console.error('GitHub sign-in error:', err);
-      setGithubError("Couldn't sign in with GitHub, try again");
+      const msg = err instanceof Error ? err.message : String(err);
+      setGithubError(msg || "Couldn't sign in with GitHub, try again");
       setIsGitHubLoading(false);
     }
   };
 
-  const handleGuestSignIn = async () => {
-    if (isGuestLoading || isSubmitting || isGitHubLoading) return;
+  const handleGuestSignIn = () => {
     setGuestError(null);
     setError(null);
     setGithubError(null);
-
-    if (isAuthenticated) {
-      navigate(safeRedirect, { replace: true });
-      return;
-    }
-
-    setIsGuestLoading(true);
     try {
-      await withTimeout(signIn('anonymous'), 10000);
-      navigate(safeRedirect, { replace: true });
-    } catch (err: unknown) {
-      console.error('Guest sign-in error:', err);
-      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
-      if (msg.includes('rate') || msg.includes('too many')) {
-        setGuestError('Too many attempts, try again later');
-      } else {
-        setGuestError("We couldn't start the demo, try again");
-      }
-    } finally {
-      setIsGuestLoading(false);
+      sessionStorage.setItem("forge_demo_mode", "true");
+    } catch {
+      /* ignore storage errors */
     }
+    navigate("/app", { replace: true });
   };
 
   return (
@@ -351,13 +340,13 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               )}
             </button>
 
-            {githubError && (
+            {(githubError || exchangeError || (urlError ? `Sign-in failed: ${urlError}` : null)) && (
               <p
                 role="alert"
                 aria-live="polite"
                 className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
               >
-                {githubError}
+                {githubError || exchangeError || (urlError ? `Sign-in failed: ${urlError}` : null)}
               </p>
             )}
           </div>
@@ -501,6 +490,15 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
           <p className="mt-3 text-center text-[13px] text-[#575657] leading-relaxed">
             By continuing, you agree to the terms and privacy policy.
           </p>
+
+          {/* Development debug line */}
+          {typeof window !== 'undefined' && (
+            <div className="mt-4 pt-3 border-t border-black/[0.06] text-center">
+              <p className="font-mono text-[11px] text-[#575657]">
+                Origin: {window.location.origin}
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         /* STEP 2 OF THE FORM */

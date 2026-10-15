@@ -1,32 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
 import { Reveal } from '../Reveal';
 
 export function Section12FinalCTA() {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
 
-  const handleDemo = async () => {
-    setError(null);
-    setIsLoading(true);
+  const handleDemo = () => {
     try {
-      if (!isAuthenticated) {
-        await Promise.race([
-          signIn('anonymous'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
-        ]).catch(() => {
-          // Demo requires no auth, proceed immediately
-        });
-      }
+      sessionStorage.setItem("forge_demo_mode", "true");
     } catch {
-      // Proceed to demo workspace
+      /* ignore */
     }
-    navigate('/app/workspaces/demo-ws-northstar');
+    navigate('/app');
   };
 
   return (
@@ -114,14 +100,7 @@ export function Section12FinalCTA() {
                   }}
                   className="w-full sm:w-auto px-7 text-[15px] font-medium inline-flex items-center justify-center transition-all cursor-pointer select-none hover:bg-[#F6F6F7] disabled:opacity-60"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0 mr-2" />
-                      <span>Starting demo...</span>
-                    </>
-                  ) : (
-                    <span>Try demo</span>
-                  )}
+                  <span>Try demo</span>
                 </button>
 
                 <a
