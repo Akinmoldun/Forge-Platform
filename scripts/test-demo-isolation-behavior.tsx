@@ -231,7 +231,24 @@ if (!testDemoIdGuard || testConvexIdGuard) {
 console.log("\n--- CONVEX CALLS RECORDED DURING DEMO RENDERS ---");
 console.log(`Total calls intercepted: ${recordedCalls.length}`);
 for (const call of recordedCalls) {
-  console.log(`  - [${call.type.toUpperCase()}] ${call.name} ${JSON.stringify(call.args)}`);
+  let nameStr = "query";
+  try {
+    if (typeof call.name === "string") {
+      nameStr = call.name;
+    } else if (call.name && typeof call.name === "object") {
+      const anyName = call.name as Record<string, unknown>;
+      nameStr = String(anyName._name || anyName.name || "functionReference");
+    }
+  } catch {
+    nameStr = "functionReference";
+  }
+  let argsStr = "";
+  try {
+    argsStr = JSON.stringify(call.args);
+  } catch {
+    argsStr = "[unserializable args]";
+  }
+  console.log(`  - [${call.type.toUpperCase()}] ${nameStr} ${argsStr}`);
 }
 
 console.log("\n--- VIOLATION CHECKS ---");

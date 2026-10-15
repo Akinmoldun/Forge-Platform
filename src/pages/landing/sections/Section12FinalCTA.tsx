@@ -1,19 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
 import { enableDemoMode } from '@/lib/demoMode';
-import { Loader2 } from 'lucide-react';
 import { Reveal } from '../Reveal';
 
 export function Section12FinalCTA() {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
 
   const handleDemo = () => {
-    setError(null);
     enableDemoMode();
     navigate('/app');
   };
@@ -87,14 +81,7 @@ export function Section12FinalCTA() {
                   }}
                   className="w-full sm:w-auto px-7 text-[15px] font-medium inline-flex items-center justify-center transition-all cursor-pointer select-none hover:bg-black border border-[#0D0D0D]"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0 mr-2" />
-                      <span>Starting...</span>
-                    </>
-                  ) : (
-                    <span>Try demo</span>
-                  )}
+                  <span>Try demo</span>
                 </button>
 
                 <a

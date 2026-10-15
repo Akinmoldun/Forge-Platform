@@ -1,8 +1,5 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
 import { enableDemoMode } from '@/lib/demoMode';
-import { Loader2 } from 'lucide-react';
 
 export interface TryDemoButtonProps {
   variant?: 'primary' | 'secondary' | 'white' | 'outline-white' | 'outline' | 'link' | 'none';
@@ -19,22 +16,9 @@ export function TryDemoButton({
   redirect = '/app',
   onClick,
 }: TryDemoButtonProps) {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const withTimeout = <T,>(promise: Promise<T> | Promise<unknown>, ms = 10000): Promise<T> => {
-    return Promise.race([
-      promise as Promise<T>,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out')), ms),
-      ),
-    ]);
-  };
 
   const handleClick = () => {
-    setError(null);
     if (onClick) onClick();
     enableDemoMode();
     navigate(redirect);
@@ -69,28 +53,10 @@ export function TryDemoButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={loading}
-        aria-busy={loading}
         className={`${baseStyles} ${variantStyles} ${className}`.trim()}
       >
-        {loading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-            <span>Starting demo...</span>
-          </>
-        ) : (
-          children || 'Try the demo'
-        )}
+        {children || 'Try the demo'}
       </button>
-      {error && (
-        <p
-          role="alert"
-          aria-live="polite"
-          className="mt-1.5 text-[13px] text-[#B3261E] text-center font-medium max-w-xs"
-        >
-          {error}
-        </p>
-      )}
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useConvex } from "convex/react";
 import { useSafeQuery, useSafeMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
@@ -36,7 +35,9 @@ import { toast } from "sonner";
 
 export default function AppHome() {
   const { user } = useAuth();
-  const convex = useConvex();
+  const isRealUser = Boolean(user && !user.isAnonymous);
+  void isRealUser;
+  void isDemoMode();
   const workspaces = useSafeQuery(api.workspaces.listMyWorkspaces, {});
   const myInvitations = useSafeQuery(api.workspaces.getMyInvitations, {});
   const navigate = useNavigate();

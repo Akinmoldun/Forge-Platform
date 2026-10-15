@@ -82,7 +82,7 @@ function testT19() {
 
   assert("AuthForm keeps email OTP and guest demo button intact",
     authFormContent.includes("signIn('email-otp',") &&
-    authFormContent.includes("signIn('anonymous')")
+    authFormContent.includes("enableDemoMode()")
   );
 
   // 4. Inspect AppHome.tsx real user vs guest logic

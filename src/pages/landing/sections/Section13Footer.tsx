@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { useAuth } from '@/hooks/use-auth';
+import { enableDemoMode } from '@/lib/demoMode';
 import { ArrowUpRight } from 'lucide-react';
 import { Reveal } from '../Reveal';
 import { ForgeLogo } from '../ForgeLogo';
@@ -7,22 +7,10 @@ import { ForgeLogo } from '../ForgeLogo';
 const GITHUB_REPO = 'https://github.com/Akinmoldun/forge-platform';
 
 export function Section13Footer() {
-  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
 
-  const handleDemo = async () => {
-    try {
-      if (!isAuthenticated) {
-        await Promise.race([
-          signIn('anonymous'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
-        ]).catch(() => {
-          // Demo requires no auth, proceed immediately
-        });
-      }
-    } catch {
-      // Proceed to demo workspace
-    }
+  const handleDemo = () => {
+    enableDemoMode();
     navigate('/app/workspaces/demo-ws-northstar');
   };
 

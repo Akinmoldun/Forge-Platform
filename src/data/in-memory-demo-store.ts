@@ -1,8 +1,5 @@
-/**
- * Fully synchronous in-memory demo store populated at startup from static in-code data.
- * Does NOT touch Convex database or require any network connectivity.
- * Supports reactive subscriptions so UI updates immediately when issues/projects are modified.
- */
+import { useState, useEffect } from "react";
+
 
 export interface DemoUser {
   _id: string;
@@ -19,6 +16,10 @@ export interface DemoWorkspace {
   role: "owner" | "admin" | "member" | "viewer";
   createdAt: number;
   ownerId: string;
+  iconKey?: string;
+  iconColor?: string;
+  description?: string;
+  icon?: string;
 }
 
 export interface DemoProject {
@@ -64,6 +65,8 @@ export interface DemoIssue {
   createdAt: number;
   updatedAt: number;
   archivedAt?: number;
+  startedAt?: number;
+  completedAt?: number;
 }
 
 export interface DemoLabel {
@@ -437,8 +440,6 @@ class InMemoryDemoStore {
       "demo-stat-canc",
       "demo-stat-todo",
     ];
-
-    let issueNumber = 1;
     for (const project of this.projects) {
       const titles = issueTemplates[project.key] ?? issueTemplates.WEB;
       for (let i = 0; i < titles.length; i++) {
@@ -534,16 +535,28 @@ class InMemoryDemoStore {
     return [...this.workspaces];
   }
 
-  public getWorkspace(workspaceId: string): { workspace: DemoWorkspace; role: string; myRole: string } | null {
+  public listWorkspaces(): DemoWorkspace[] {
+    return this.getWorkspaces();
+  }
+
+  public isDemoWorkspace(workspaceId?: string | null): boolean {
+    if (!workspaceId) return true;
+    if (workspaceId.startsWith("demo-")) return true;
+    return this.workspaces.some((w) => w._id === workspaceId);
+  }
+
+  public getWorkspace(workspaceId?: string): { workspace: DemoWorkspace; role: string; myRole: string } | null {
+    if (!workspaceId) return null;
     const ws = this.workspaces.find((w) => w._id === workspaceId);
     if (!ws) return null;
     return { workspace: ws, role: ws.role, myRole: ws.role };
   }
 
-  public getMembers(workspaceId: string) {
+  public getMembers(workspaceId?: string) {
+    const wid = workspaceId ?? "demo-ws-northstar";
     return this.users.map((u) => ({
-      _id: `demo-mem-${workspaceId}-${u._id}`,
-      workspaceId,
+      _id: `demo-mem-${wid}-${u._id}`,
+      workspaceId: wid,
       userId: u._id,
       name: u.name,
       email: u.email,
@@ -552,8 +565,26 @@ class InMemoryDemoStore {
     }));
   }
 
-  public getProjects(workspaceId: string): DemoProject[] {
-    return this.projects.filter((p) => p.workspaceId === workspaceId && p.status !== "archived");
+  public listTeammates(workspaceId?: string) {
+    return this.getMembers(workspaceId);
+  }
+
+  public getProjects(workspaceId?: string): DemoProject[] {
+    const wid = workspaceId ?? "demo-ws-northstar";
+    return this.projects.filter((p) => p.workspaceId === wid && p.status !== "archived");
+  }
+
+  public listProjects(workspaceId?: string): DemoProject[] {
+    return this.getProjects(workspaceId);
+  }
+
+  public listActivities(workspaceId?: string, limit = 50) {
+    return this.getActivity(workspaceId, limit);
+  }
+
+  public listIssues(projectId?: string) {
+    if (!projectId) return this.issues;
+    return this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
   }
 
   public getProject(projectId: string) {
@@ -968,3 +999,12 @@ class InMemoryDemoStore {
 }
 
 export const demoStore = new InMemoryDemoStore();
+
+export const DEMO_TRANSITIONS: unknown[] = [];
+
+export function useDemoStoreSubscriber() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    return demoStore.subscribe(() => setTick((t) => t + 1));
+  }, []);
+}

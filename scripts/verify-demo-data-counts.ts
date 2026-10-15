@@ -37,7 +37,10 @@ for (const ws of workspaces) {
       statusCounts[status.name] = 0;
     }
     for (const issue of issues) {
-      const sName = issue.status.name || "Unknown";
+      const sName =
+        (issue as any).status?.name ||
+        DEMO_STATUSES.find((s) => s._id === issue.statusId)?.name ||
+        "Unknown";
       statusCounts[sName] = (statusCounts[sName] || 0) + 1;
     }
     console.log(`    Status breakdown:`);

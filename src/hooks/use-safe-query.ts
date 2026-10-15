@@ -6,9 +6,12 @@ import {
 } from "convex/react";
 import { getFunctionName as convexGetFunctionName, type FunctionReference } from "convex/server";
 import { useState, useEffect } from "react";
-import { containsDemoId } from "@/lib/idValidation";
+import { containsDemoId, isConvexId, isDemoId } from "@/lib/idValidation";
 import { isDemoMode } from "@/lib/demoMode";
 import { demoStore } from "@/data/in-memory-demo-store";
+
+export { isConvexId, isDemoId, containsDemoId };
+export const hasDemoArgument = containsDemoId;
 
 // Helper to extract function name from Convex FunctionReference or string representation
 function getFunctionName(query: unknown): string {

@@ -2,7 +2,10 @@ import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 
-const isConvexConfigured = Boolean(import.meta.env.VITE_CONVEX_URL);
+const isConvexConfigured = Boolean(
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_CONVEX_URL) ||
+    process.env.VITE_CONVEX_URL,
+);
 
 export interface ForgeUser {
   _id: string;
