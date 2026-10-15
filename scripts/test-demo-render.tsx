@@ -1,3 +1,4 @@
+import "./setup-test-env";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
 import { MemoryRouter, Routes, Route } from "react-router";

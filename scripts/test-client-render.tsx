@@ -27,6 +27,8 @@ class MockIntersectionObserver {
 (globalThis as any).sessionStorage = window.sessionStorage;
 
 import React from "react";
+(globalThis as any).React = React;
+(window as any).React = React;
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Routes, Route } from "react-router";
 import { ConvexReactClient } from "convex/react";
@@ -40,7 +42,16 @@ const convex = new ConvexReactClient("https://fabulous-falcon-123.convex.cloud")
 
 const container = window.document.createElement("div");
 window.document.body.appendChild(container);
-const root = createRoot(container as any);
+const root = createRoot(container as any, {
+  onUncaughtError(error, errorInfo) {
+    console.error("REACT UNCAUGHT ERROR:", error);
+    console.error("REACT COMPONENT STACK:", errorInfo.componentStack);
+  },
+  onCaughtError(error, errorInfo) {
+    console.error("REACT CAUGHT ERROR:", error);
+    console.error("REACT COMPONENT STACK:", errorInfo.componentStack);
+  },
+});
 
 console.log("Mounting OverviewPage in DOM...");
 let caughtError: any = null;

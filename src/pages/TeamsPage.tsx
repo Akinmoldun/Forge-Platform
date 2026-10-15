@@ -426,7 +426,7 @@ export default function TeamsPage() {
                       const pct = (open / maxOpen) * 100;
                       return (
                         <tr
-                          key={m.membershipId}
+                          key={m.membershipId || m.userId}
                           className="cursor-pointer transition-colors hover:bg-secondary/50"
                           onClick={() => setSelectedId(m.userId)}
                         >

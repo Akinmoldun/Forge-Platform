@@ -6,7 +6,7 @@ import {
   useConvex as useConvexReal,
 } from "convex/react";
 import { getFunctionName as convexGetFunctionName, type FunctionReference } from "convex/server";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { containsDemoId, isConvexId, isDemoId } from "@/lib/idValidation";
 import { isDemoMode } from "@/lib/demoMode";
 import { demoStore } from "@/data/in-memory-demo-store";
@@ -252,21 +252,31 @@ function useMockQuery<Query extends FunctionReference<"query">>(
   return demoData as Query["_returnType"];
 }
 
+const STATIC_EMPTY_CONVEX_MAP: Record<string, any> = Object.freeze({});
+
 // Real Convex useQueries with demo routing
 function useRealSafeQueries<
   Queries extends Record<string, { query: FunctionReference<"query">; args: Record<string, any> }>,
 >(queryMap: Queries): Record<keyof Queries, any> {
   const isDemo = isDemoMode();
-  const convexMap: Record<string, { query: FunctionReference<"query">; args: Record<string, any> }> = {};
-  const demoKeys: string[] = [];
-
-  for (const [key, req] of Object.entries(queryMap)) {
-    if (isDemo || containsDemoId(req.args)) {
-      demoKeys.push(key);
-    } else {
-      convexMap[key] = req;
+  const { convexMap, demoKeys } = useMemo(() => {
+    if (isDemo) {
+      return { convexMap: STATIC_EMPTY_CONVEX_MAP, demoKeys: Object.keys(queryMap) };
     }
-  }
+    const map: Record<string, { query: FunctionReference<"query">; args: Record<string, any> }> = {};
+    const dKeys: string[] = [];
+    for (const [key, req] of Object.entries(queryMap)) {
+      if (containsDemoId(req.args)) {
+        dKeys.push(key);
+      } else {
+        map[key] = req;
+      }
+    }
+    return {
+      convexMap: Object.keys(map).length === 0 ? STATIC_EMPTY_CONVEX_MAP : map,
+      demoKeys: dKeys,
+    };
+  }, [queryMap, isDemo]);
 
   const convexResults = useConvexQueries(convexMap as any);
 

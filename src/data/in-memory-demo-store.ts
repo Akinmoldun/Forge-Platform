@@ -560,6 +560,7 @@ class InMemoryDemoStore {
     const wid = workspaceId ?? "demo-ws-northstar";
     return this.users.map((u) => ({
       _id: `demo-mem-${wid}-${u._id}`,
+      membershipId: `demo-mem-${wid}-${u._id}`,
       workspaceId: wid,
       userId: u._id,
       name: u.name,
