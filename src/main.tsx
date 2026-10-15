@@ -18,7 +18,6 @@ import "./index.css";
 const HomePage = safeLazy(() => import("./pages/HomePage"));
 
 /** Safe lazy loader that auto-retries failed dynamic imports (e.g. dev server restarts) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safeLazy<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
 ) {

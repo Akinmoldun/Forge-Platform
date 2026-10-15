@@ -47,19 +47,19 @@ const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 export default function ProjectsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
-  const id = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
+  const id = workspaceId as Id<"workspaces">;
 
   const workspace = useQuery(
     api.workspaces.getWorkspace,
-    id ? { workspaceId: id } : "skip",
+    isValidWsId ? { workspaceId: id } : "skip",
   );
   const projects = useQuery(
     api.projects.listProjects,
-    id ? { workspaceId: id } : "skip",
+    isValidWsId ? { workspaceId: id } : "skip",
   );
   const members = useQuery(
     api.workspaces.listMembers,
-    id ? { workspaceId: id } : "skip",
+    isValidWsId ? { workspaceId: id } : "skip",
   );
 
   const [search, setSearch] = useState("");

@@ -63,21 +63,21 @@ export default function AnalyticsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   useDemoStoreSubscriber();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
-  const wid = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
+  const wid = workspaceId as Id<"workspaces">;
 
   const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
   const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
   const rawProjects = useSafeQuery(
     api.projects.listProjects,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
   const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;

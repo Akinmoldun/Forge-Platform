@@ -50,6 +50,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { resetGuestDemo } from "@/lib/guestDemo";
+import { isDemoMode } from "@/lib/demoMode";
+import { isDemoId } from "@/lib/idValidation";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
@@ -411,21 +413,34 @@ export function AppShell({
   // Current active project or issue if on project/issue page
   const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
   const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
+  const isValidActiveIssueId = Boolean(
+    activeIssueId && activeIssueId !== "undefined" && activeIssueId !== "null"
+  );
+  const isValidActiveProjectId = Boolean(
+    activeProjectId && activeProjectId !== "undefined" && activeProjectId !== "null"
+  );
+
   const issueDetail = useSafeQuery(
     api.issues.getIssue,
-    activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
+    isValidActiveIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
   );
   const activeProjectDetail = useSafeQuery(
     api.projects.getProject,
-    !propWorkspaceId && activeProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
+    !propWorkspaceId && isValidActiveProjectId ? { projectId: activeProjectId as Id<"projects"> } : "skip"
   );
 
-  const effectiveWorkspaceId =
+  const rawWsId =
     propWorkspaceId ||
     activeProjectDetail?.project?.workspaceId ||
     issueDetail?.workspaceId;
 
+  const effectiveWorkspaceId =
+    rawWsId && rawWsId !== "undefined" && rawWsId !== "null" ? rawWsId : undefined;
+
   const workspaceId = effectiveWorkspaceId;
+  const isValidWsId = Boolean(
+    workspaceId && workspaceId !== "undefined" && workspaceId !== "null"
+  );
 
   // Queries (safe for both real Convex IDs and demo IDs)
   // Always load user's workspaces when authenticated or in demo mode so workspace switcher & logo routing work everywhere
@@ -435,15 +450,15 @@ export function AppShell({
   );
   const currentWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
+    isValidWsId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
   const projects = useSafeQuery(
     api.projects.listProjects,
-    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
+    isValidWsId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
   const notifications = useSafeQuery(
     api.analytics.listNotifications,
-    isInsideWorkspace && workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
+    isInsideWorkspace && isValidWsId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
 
   const unreadCount = notifications?.unreadCount ?? 0;
@@ -464,8 +479,8 @@ export function AppShell({
     const isDemo = isDemoMode();
     if (!user && !isDemo) return "/";
 
-    if (workspaceId) {
-      return `/app/workspaces/${workspaceId}`;
+    if (effectiveWorkspaceId) {
+      return `/app/workspaces/${effectiveWorkspaceId}`;
     }
     if (isDemo) {
       return "/app/workspaces/demo-ws-northstar";
@@ -473,7 +488,7 @@ export function AppShell({
 
     try {
       const lastWs = localStorage.getItem("forge_last_active_workspace");
-      if (lastWs && myWorkspaces?.some((w) => w._id === lastWs)) {
+      if (lastWs && lastWs !== "undefined" && lastWs !== "null" && myWorkspaces?.some((w) => w._id === lastWs)) {
         return `/app/workspaces/${lastWs}`;
       }
     } catch {
@@ -485,7 +500,14 @@ export function AppShell({
     }
 
     return "/app";
-  }, [user, workspaceId, myWorkspaces]);
+  }, [user, effectiveWorkspaceId, myWorkspaces]);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (pathname === dashboardHref) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    }
+  };
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
@@ -672,6 +694,7 @@ export function AppShell({
           <div className="mx-auto flex h-14 w-full max-w-[1100px] items-center justify-between px-4 sm:px-6">
             <Link
               to={dashboardHref}
+              onClick={handleLogoClick}
               className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
               aria-label="Forge home"
             >
@@ -811,6 +834,7 @@ export function AppShell({
             <>
               <Link
                 to={dashboardHref}
+                onClick={handleLogoClick}
                 className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
                 aria-label="Forge home"
               >

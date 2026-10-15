@@ -90,19 +90,19 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   );
   const board = useQuery(
     api.issues.getBoard,
-    projectId ? { projectId: projectId as never } : "skip",
+    isValidProjectId ? { projectId: projectId as never } : "skip",
   );
   const risk = useQuery(
     api.analytics.getProjectRisk,
-    projectId ? { projectId: projectId as never } : "skip",
+    isValidProjectId ? { projectId: projectId as never } : "skip",
   );
   const summary = useQuery(
     api.analytics.getProjectSummary,
-    projectId ? { projectId: projectId as never } : "skip",
+    isValidProjectId ? { projectId: projectId as never } : "skip",
   );
   const projectActivity = useQuery(
     api.analytics.listProjectActivity,
-    projectId ? { projectId: projectId as never, limit: 40 } : "skip",
+    isValidProjectId ? { projectId: projectId as never, limit: 40 } : "skip",
   );
 
   const transitionIssue = useMutation(api.issues.transitionIssue);

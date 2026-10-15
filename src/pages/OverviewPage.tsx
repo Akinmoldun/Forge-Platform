@@ -55,21 +55,21 @@ import {
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
-  const id = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
+  const id = workspaceId as Id<"workspaces">;
   const { user } = useAuth();
   const userId = user?._id || user?.email || "anonymous";
 
   const workspace = useQuery(
     api.workspaces.getWorkspace,
-    id ? { workspaceId: id } : "skip",
+    isValidWsId ? { workspaceId: id } : "skip",
   );
   const projects = useQuery(
     api.projects.listProjects,
-    id ? { workspaceId: id } : "skip",
+    isValidWsId ? { workspaceId: id } : "skip",
   );
   const activity = useQuery(
     api.analytics.listWorkspaceActivity,
-    id ? { workspaceId: id, limit: 12 } : "skip",
+    isValidWsId ? { workspaceId: id, limit: 12 } : "skip",
   );
 
   const projectIds = useMemo(

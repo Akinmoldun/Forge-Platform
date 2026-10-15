@@ -126,17 +126,17 @@ export default function ActivityPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   useDemoStoreSubscriber();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
-  const wid = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
+  const wid = workspaceId as Id<"workspaces">;
 
   const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
 
   const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
   const rawActivity = useSafeQuery(
     api.analytics.listWorkspaceActivity,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid, limit: 200 } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid, limit: 200 } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;

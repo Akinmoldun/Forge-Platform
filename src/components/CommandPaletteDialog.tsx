@@ -132,10 +132,10 @@ export function CommandPaletteDialog({
     run();
   };
 
-  // Query workspace issues for live search (safe in demo and real workspaces)
+  const isValidWs = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
   const workspaceIssues = useSafeQuery(
     api.issues.listWorkspaceIssues,
-    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
+    isValidWs ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
   );
 
   const allIssues = useMemo(() => {

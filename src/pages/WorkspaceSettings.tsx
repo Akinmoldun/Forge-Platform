@@ -80,7 +80,7 @@ export default function WorkspaceSettings() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   useDemoStoreSubscriber();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
-  const wid = isValidWsId ? (workspaceId as Id<"workspaces">) : undefined;
+  const wid = workspaceId as Id<"workspaces">;
   const navigate = useNavigate();
   const convex = useConvex();
 
@@ -88,19 +88,19 @@ export default function WorkspaceSettings() {
 
   const rawWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
   const rawMembers = useSafeQuery(
     api.workspaces.listMembers,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
   const rawInvitations = useSafeQuery(
     api.workspaces.listInvitations,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
   const rawLabels = useSafeQuery(
     api.projects.listLabels,
-    !isDemo && isConvexId(workspaceId) && wid ? { workspaceId: wid } : "skip"
+    !isDemo && isConvexId(workspaceId) && isValidWsId ? { workspaceId: wid } : "skip"
   );
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;

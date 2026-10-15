@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import { geoOrthographic, geoPath, geoGraticule10 } from 'd3-geo';
 import { feature } from 'topojson-client';
 import landTopo from 'world-atlas/land-110m.json';
 
-const land = feature(landTopo as any, (landTopo as any).objects.land);
+const land = feature(landTopo as never, (landTopo as never as { objects: { land: never } }).objects.land);
 const grat = geoGraticule10();
 const SPHERE = { type: 'Sphere' } as const;
 const CITIES: [number, number][] = [

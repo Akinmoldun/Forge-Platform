@@ -2,7 +2,7 @@ import { useSafeQuery as useQuery, useSafeMutation as useMutation } from "@/hook
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, Navigate } from "react-router";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -60,17 +60,18 @@ import { toast } from "sonner";
 export default function IssuePage() {
   const { user } = useAuth();
   const { issueId } = useParams<{ issueId: string }>();
+  const isValidIssueId = Boolean(issueId && issueId !== "undefined" && issueId !== "null");
   const detail = useQuery(
     api.issues.getIssue,
-    issueId ? { issueId: issueId as never } : "skip",
+    isValidIssueId ? { issueId: issueId as never } : "skip",
   );
   const comments = useQuery(
     api.collaboration.listComments,
-    issueId ? { issueId: issueId as never } : "skip",
+    isValidIssueId ? { issueId: issueId as never } : "skip",
   );
   const activity = useQuery(
     api.analytics.listIssueActivity,
-    issueId ? { issueId: issueId as never } : "skip",
+    isValidIssueId ? { issueId: issueId as never } : "skip",
   );
   const labels = useQuery(
     api.projects.listLabels,
@@ -124,6 +125,10 @@ export default function IssuePage() {
       return posA - posB;
     });
   }, [detail]);
+
+  if (!isValidIssueId) {
+    return <Navigate to="/app" replace />;
+  }
 
   if (detail === null) {
     return (
