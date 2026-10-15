@@ -1,9 +1,10 @@
+import { useConvex } from "convex/react";
 import { useSafeQuery, useSafeMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
-import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+import { isDemoMode } from "@/lib/demoMode";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,59 +29,37 @@ import {
   Building2,
   Mail,
   Loader2,
-  RotateCcw,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AppHome() {
-  const { user, isLoading } = useAuth();
-  useDemoStoreSubscriber();
-
-  const isDemoMode = typeof window !== 'undefined' && window.sessionStorage?.getItem("forge_demo_mode") === "true";
-  const isRealUser = Boolean(user && !user.isAnonymous);
-  const isAnonymousGuest = isDemoMode || (!isLoading && !isRealUser);
-
-  // For real accounts, list Convex workspaces.
-  // For demo/guest mode, skip Convex query and serve in-code demo workspaces.
-  const rawWorkspaces = useSafeQuery(
-    api.workspaces.listMyWorkspaces,
-    isRealUser && !isDemoMode ? {} : "skip"
-  );
-  const myInvitations = useSafeQuery(
-    api.workspaces.getMyInvitations,
-    isRealUser && !isDemoMode ? {} : "skip"
-  );
+  const { user } = useAuth();
+  const convex = useConvex();
+  const workspaces = useSafeQuery(api.workspaces.listMyWorkspaces, {});
+  const myInvitations = useSafeQuery(api.workspaces.getMyInvitations, {});
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [timedOut, setTimedOut] = useState(false);
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+
   const create = useSafeMutation(api.workspaces.createWorkspace);
   const acceptMyInvitation = useSafeMutation(api.workspaces.acceptMyInvitation);
 
-  // Safety timeout guard (8s): ensures workspaces loading never hangs indefinitely
+  // 8-second max wait timer for workspace listing
   useEffect(() => {
+    if (workspaces !== undefined) {
+      setLoadTimedOut(false);
+      return;
+    }
     const timer = setTimeout(() => {
-      setTimedOut(true);
+      setLoadTimedOut(true);
     }, 8000);
     return () => clearTimeout(timer);
-  }, []);
-
-  const demoWorkspaces = useMemo(() => demoStore.listWorkspaces(), []);
-
-  const workspaces = useMemo(() => {
-    if (isDemoMode) return demoWorkspaces;
-    if (isLoading) return undefined;
-    if (isAnonymousGuest) return demoWorkspaces;
-    return rawWorkspaces;
-  }, [isDemoMode, isLoading, isAnonymousGuest, demoWorkspaces, rawWorkspaces]);
-
-  const handleResetDemo = () => {
-    demoStore.resetDemo();
-    toast.success("Demo reset fresh");
-  };
-
+  }, [workspaces]);
 
   const nameError =
     name.trim().length > 0 && name.trim().length < 2
@@ -120,30 +99,6 @@ export default function AppHome() {
     }
   };
 
-  // If query timed out and workspaces still haven't loaded, show clear error with Retry
-  if (timedOut && workspaces === undefined) {
-    return (
-      <AppShell>
-        <div className="mx-auto max-w-[600px] flex flex-col items-center justify-center py-24 text-center">
-          <div className="size-12 rounded-2xl bg-[#B3261E]/10 border border-[#B3261E]/20 text-[#B3261E] flex items-center justify-center mb-4">
-            <Building2 className="size-6" />
-          </div>
-          <h2 className="text-[18px] font-medium text-[#0D0D0D]">Workspaces took too long to load</h2>
-          <p className="mt-1.5 text-[13px] text-[#575657] max-w-sm">
-            We couldn't load your workspaces. Please try refreshing.
-          </p>
-          <div className="mt-5 flex gap-3">
-            <Button
-              onClick={() => window.location.reload()}
-              className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-5 text-[13px]"
-            >
-              <RotateCcw className="size-3.5 mr-1.5" /> Retry
-            </Button>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
 
 
   return (
@@ -160,22 +115,12 @@ export default function AppHome() {
                 Each workspace is an isolated tenant with its own members, projects, and workflows.
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {isAnonymousGuest && (
-                <Button
-                  variant="outline"
-                  onClick={handleResetDemo}
-                  className="rounded-full h-9 px-3.5 text-[13px] border-border text-[#575657] hover:text-[#0D0D0D]"
-                >
-                  <RotateCcw className="size-3.5 mr-1.5" /> Reset demo
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+                  <Plus className="size-4 mr-1" /> New workspace
                 </Button>
-              )}
-              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogTrigger asChild>
-                  <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
-                    <Plus className="size-4 mr-1" /> New workspace
-                  </Button>
-                </DialogTrigger>
+              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Create a workspace</DialogTitle>
@@ -227,7 +172,6 @@ export default function AppHome() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            </div>
           </div>
         </FadeIn>
 
@@ -263,7 +207,7 @@ export default function AppHome() {
                         <Loader2 className="size-3.5 animate-spin mr-1.5" /> Accepting…
                       </>
                     ) : (
-                      "Accept"
+                      "Accept invitation"
                     )}
                   </Button>
                 </div>
@@ -274,7 +218,28 @@ export default function AppHome() {
 
         {/* Workspaces Grid */}
         <div className="mt-6">
-          {workspaces === undefined ? (
+          {loadTimedOut && workspaces === undefined ? (
+            <div className="flex flex-col items-center justify-center rounded-[16px] border border-destructive/30 bg-white p-8 text-center">
+              <div className="flex size-11 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-3">
+                <AlertCircle className="size-5" />
+              </div>
+              <h3 className="text-[15px] font-[500] text-[#0D0D0D]">Workspaces took too long to load</h3>
+              <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
+                We couldn't load your workspaces within 8 seconds. Please check your connection and retry.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 rounded-full"
+                onClick={() => {
+                  setLoadTimedOut(false);
+                  window.location.reload();
+                }}
+              >
+                <RefreshCw className="size-3.5 mr-1.5" /> Retry
+              </Button>
+            </div>
+          ) : workspaces === undefined ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="h-44 rounded-[16px] border border-border bg-white p-5 animate-pulse flex flex-col justify-between">
                 <div className="size-10 rounded-xl bg-[#F1F1F3]" />
@@ -357,6 +322,7 @@ export default function AppHome() {
                   </StaggerItem>
                 );
               })}
+
             </Stagger>
           )}
         </div>

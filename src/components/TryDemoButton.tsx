@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
+import { enableDemoMode } from '@/lib/demoMode';
 import { Loader2 } from 'lucide-react';
 
 export interface TryDemoButtonProps {
@@ -15,21 +16,28 @@ export function TryDemoButton({
   variant = 'primary',
   children,
   className = '',
-  redirect = '/app/workspaces/demo-ws-northstar',
+  redirect = '/app',
   onClick,
 }: TryDemoButtonProps) {
+  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const withTimeout = <T,>(promise: Promise<T> | Promise<unknown>, ms = 10000): Promise<T> => {
+    return Promise.race([
+      promise as Promise<T>,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out')), ms),
+      ),
+    ]);
+  };
 
   const handleClick = () => {
     setError(null);
     if (onClick) onClick();
-    try {
-      sessionStorage.setItem("forge_demo_mode", "true");
-    } catch {
-      /* ignore */
-    }
-    navigate(redirect || '/app');
+    enableDemoMode();
+    navigate(redirect);
   };
 
   const baseStyles =

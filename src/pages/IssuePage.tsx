@@ -1,5 +1,4 @@
-import { useMutation } from "convex/react";
-import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
+import { useSafeQuery as useQuery, useSafeMutation as useMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState, useMemo } from "react";
@@ -44,7 +43,6 @@ import {
   formatDate,
   PRIORITIES,
 } from "@/components/forge";
-import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
@@ -59,53 +57,20 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { demoStore, useDemoStoreSubscriber, DEMO_LABELS } from "@/data/in-memory-demo-store";
-
 export default function IssuePage() {
   const { user } = useAuth();
-  useDemoStoreSubscriber();
   const { issueId } = useParams<{ issueId: string }>();
-
-  const isDemo = Boolean(!isConvexId(issueId) || issueId?.startsWith("demo-"));
-
-  const rawDetail = useSafeQuery(
-    api.issues.getIssue,
-    !isDemo && isConvexId(issueId) ? { issueId: issueId as never } : "skip"
-  );
-  const rawComments = useSafeQuery(
-    api.collaboration.listComments,
-    !isDemo && isConvexId(issueId) ? { issueId: issueId as never } : "skip"
-  );
-  const rawActivity = useSafeQuery(
-    api.analytics.listIssueActivity,
-    !isDemo && isConvexId(issueId) ? { issueId: issueId as never } : "skip"
-  );
-
-  const demoIssueData = useMemo(() => {
-    if (!isDemo || !issueId) return null;
-    return demoStore.getIssue(issueId);
-  }, [isDemo, issueId]);
-
-  const detail = isDemo ? (demoIssueData as unknown as typeof rawDetail) : rawDetail;
-  const comments = isDemo ? (demoIssueData?.comments as unknown as typeof rawComments) : rawComments;
-  const activity = isDemo ? (demoIssueData?.activities as unknown as typeof rawActivity) : rawActivity;
-
-  const rawLabels = useSafeQuery(
+  const detail = useQuery(api.issues.getIssue, { issueId: issueId as never });
+  const comments = useQuery(api.collaboration.listComments, { issueId: issueId as never });
+  const activity = useQuery(api.analytics.listIssueActivity, { issueId: issueId as never });
+  const labels = useQuery(
     api.projects.listLabels,
-    !isDemo && detail && isConvexId(detail.workspaceId) ? { workspaceId: detail.workspaceId } : "skip",
+    detail ? { workspaceId: detail.workspaceId } : "skip",
   );
-  const rawMembers = useSafeQuery(
+  const members = useQuery(
     api.workspaces.listMembers,
-    !isDemo && detail && isConvexId(detail.workspaceId) ? { workspaceId: detail.workspaceId } : "skip",
+    detail ? { workspaceId: detail.workspaceId } : "skip",
   );
-
-  const labels = isDemo
-    ? (DEMO_LABELS.map((l, i) => ({ _id: `demo-lbl-${i}`, name: l.name, color: l.color })) as unknown as typeof rawLabels)
-    : rawLabels;
-  const members = isDemo
-    ? (demoStore.listTeammates(detail?.workspaceId) as unknown as typeof rawMembers)
-    : rawMembers;
-
 
   const updateIssue = useMutation(api.issues.updateIssue);
   const transitionIssue = useMutation(api.issues.transitionIssue);
@@ -126,9 +91,9 @@ export default function IssuePage() {
   const [addingComment, setAddingComment] = useState(false);
   const [addingDep, setAddingDep] = useState(false);
 
-  const projectIssues = useSafeQuery(
+  const projectIssues = useQuery(
     api.issues.listIssues,
-    !isDemo && depOpen && detail && isConvexId(detail.project._id) ? { projectId: detail.project._id, pageSize: 100 } : "skip",
+    depOpen && detail ? { projectId: detail.project._id, pageSize: 100 } : "skip",
   );
 
   const sortedStatuses = useMemo(() => {
@@ -364,8 +329,7 @@ export default function IssuePage() {
             </div>
 
             {/* Dependencies */}
-            <SectionErrorBoundary name="Issue dependencies">
-              <section className="mt-8">
+            <section className="mt-8">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <GitBranch className="size-4" /> Dependencies
@@ -469,10 +433,8 @@ export default function IssuePage() {
                 </div>
               )}
             </section>
-          </SectionErrorBoundary>
 
-          {/* Comments */}
-          <SectionErrorBoundary name="Issue comments">
+            {/* Comments */}
             <section className="mt-8">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                 <MessageSquare className="size-4" /> Comments ({comments?.length ?? 0})
@@ -524,10 +486,8 @@ export default function IssuePage() {
                 )}
               </div>
             </section>
-          </SectionErrorBoundary>
 
-          {/* Activity */}
-          <SectionErrorBoundary name="Issue activity history">
+            {/* Activity */}
             <section className="mt-8">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
                 <History className="size-4" /> Activity
@@ -556,12 +516,10 @@ export default function IssuePage() {
                 </div>
               )}
             </section>
-          </SectionErrorBoundary>
-        </div>
+          </div>
 
           {/* Sidebar */}
-          <SectionErrorBoundary name="Issue sidebar">
-            <aside className="space-y-5">
+          <aside className="space-y-5">
             {/* Status */}
             <div>
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">Status</p>
@@ -808,8 +766,7 @@ export default function IssuePage() {
               </p>
             )}
           </aside>
-        </SectionErrorBoundary>
-      </div>
+        </div>
       </div>
 
       {/* Required-comment transition dialog */}

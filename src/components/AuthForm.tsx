@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
+import { enableDemoMode } from '@/lib/demoMode';
 import { Loader2, User } from 'lucide-react';
 
 interface AuthFormProps {
@@ -9,10 +10,9 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
-  const { isLoading: authLoading, isAuthenticated, user, signIn, exchangeError } = useAuth();
+  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const urlError = searchParams.get('error');
 
   const rawTarget =
     searchParams.get('returnTo') ||
@@ -35,7 +35,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isGuestLoading = false;
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestError, setGuestError] = useState<string | null>(null);
@@ -45,12 +45,21 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const codeInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // If already signed in with a real account (non-anonymous), redirect to app home
+  // Capture real OAuth errors from URL query parameters (e.g. from GitHub redirect failure)
   useEffect(() => {
-    if (!authLoading && isAuthenticated && !user?.isAnonymous) {
+    const oauthError = searchParams.get('error_description') || searchParams.get('error');
+    if (oauthError) {
+      console.error('[OAuth] GitHub authentication error from redirect:', oauthError);
+      setGithubError(`GitHub authentication failed: ${oauthError}`);
+    }
+  }, [searchParams]);
+
+  // If already signed in, redirect immediately to app home
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
       navigate(safeRedirect, { replace: true });
     }
-  }, [authLoading, isAuthenticated, user, navigate, safeRedirect]);
+  }, [authLoading, isAuthenticated, navigate, safeRedirect]);
 
   // Escape key returns to step 1 from step 2, focus moves to code input on step 2
   useEffect(() => {
@@ -252,35 +261,30 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     setGuestError(null);
     setIsGitHubLoading(true);
 
-    const safetyTimer = setTimeout(() => {
-      setIsGitHubLoading(false);
-    }, 12000);
-
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const destination = origin
-        ? `${origin}${safeRedirect.startsWith('/') ? safeRedirect : '/' + safeRedirect}`
-        : (safeRedirect || '/app');
+      const destination = typeof window !== 'undefined' && window.location.origin
+        ? `${window.location.origin}${safeRedirect.startsWith('/') ? safeRedirect : '/' + safeRedirect}`
+        : safeRedirect;
       await signIn('github', { redirectTo: destination });
     } catch (err: unknown) {
-      clearTimeout(safetyTimer);
       console.error('GitHub sign-in error:', err);
-      const msg = err instanceof Error ? err.message : String(err);
-      setGithubError(msg || "Couldn't sign in with GitHub, try again");
+      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      if (msg.includes('not configured') || msg.includes('missing auth_github')) {
+        setGithubError("GitHub sign-in is not yet configured on Convex Cloud. Set AUTH_GITHUB_ID & AUTH_GITHUB_SECRET and deploy.");
+      } else {
+        setGithubError("Couldn't sign in with GitHub, try again");
+      }
       setIsGitHubLoading(false);
     }
   };
 
   const handleGuestSignIn = () => {
+    if (isSubmitting || isGitHubLoading) return;
     setGuestError(null);
     setError(null);
     setGithubError(null);
-    try {
-      sessionStorage.setItem("forge_demo_mode", "true");
-    } catch {
-      /* ignore storage errors */
-    }
-    navigate("/app", { replace: true });
+    enableDemoMode();
+    navigate(safeRedirect || '/app', { replace: true });
   };
 
   return (
@@ -320,7 +324,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               {isGitHubLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
-                  <span>Continue with GitHub</span>
+                  <span>Connecting to GitHub...</span>
                 </>
               ) : (
                 <>
@@ -340,13 +344,13 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               )}
             </button>
 
-            {(githubError || exchangeError || (urlError ? `Sign-in failed: ${urlError}` : null)) && (
+            {githubError && (
               <p
                 role="alert"
                 aria-live="polite"
                 className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
               >
-                {githubError || exchangeError || (urlError ? `Sign-in failed: ${urlError}` : null)}
+                {githubError}
               </p>
             )}
           </div>
@@ -490,15 +494,6 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
           <p className="mt-3 text-center text-[13px] text-[#575657] leading-relaxed">
             By continuing, you agree to the terms and privacy policy.
           </p>
-
-          {/* Development debug line */}
-          {typeof window !== 'undefined' && (
-            <div className="mt-4 pt-3 border-t border-black/[0.06] text-center">
-              <p className="font-mono text-[11px] text-[#575657]">
-                Origin: {window.location.origin}
-              </p>
-            </div>
-          )}
         </div>
       ) : (
         /* STEP 2 OF THE FORM */

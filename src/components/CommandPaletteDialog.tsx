@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
-import { demoStore } from "@/data/in-memory-demo-store";
+import { useSafeQuery } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Command as CommandPrimitive } from "cmdk";
@@ -133,28 +132,15 @@ export function CommandPaletteDialog({
     run();
   };
 
-  const isDemo = Boolean(workspaceId && !isConvexId(workspaceId));
-
-  // Query workspace issues for live search (safely skipped in demo or invalid IDs)
+  // Query workspace issues for live search (safe in demo and real workspaces)
   const workspaceIssues = useSafeQuery(
     api.issues.listWorkspaceIssues,
-    !isDemo && workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
+    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
   );
 
   const allIssues = useMemo(() => {
-    if (isDemo && workspaceId) {
-      return (demoStore.listIssues(null, workspaceId) as unknown as Array<{
-        _id: Id<"issues">;
-        number: number;
-        title: string;
-        projectId: Id<"projects">;
-        projectKey?: string;
-        status?: { name?: string; category?: string };
-        priority?: string;
-      }>) ?? [];
-    }
     return workspaceIssues?.issues ?? [];
-  }, [isDemo, workspaceId, workspaceIssues]);
+  }, [workspaceIssues]);
 
   // Pages definition (7 standard pages)
   const pages = useMemo(() => {

@@ -1,5 +1,5 @@
-import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useSafeQuery as useQuery } from "@/hooks/use-safe-query";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/forge";
 import { StatusIllustration } from "@/components/Illustrations";
-import { SectionErrorBoundary, WidgetErrorBoundary } from "@/components/SectionErrorBoundary";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useProjectRisks,
@@ -53,59 +52,23 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
-
 export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  useDemoStoreSubscriber();
   const id = workspaceId as Id<"workspaces">;
   const { user } = useAuth();
-  const userId = user?._id || "anonymous";
-  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
+  const userId = user?._id || user?.email || "anonymous";
 
-  // Soft refresh listener when user clicks logo while already on workspace home
-  const [, setRefreshCount] = useState(0);
-  useEffect(() => {
-    const handleSoftRefresh = (e: Event) => {
-      const custom = e as CustomEvent<{ workspaceId?: string }>;
-      if (!custom.detail?.workspaceId || custom.detail.workspaceId === workspaceId) {
-        setRefreshCount((c) => c + 1);
-        if (isDemo) {
-          demoStore.notify();
-        }
-      }
-    };
-    window.addEventListener("forge:soft-refresh", handleSoftRefresh);
-    return () => window.removeEventListener("forge:soft-refresh", handleSoftRefresh);
-  }, [workspaceId, isDemo]);
-
-  const rawWorkspace = useSafeQuery(
-    api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
-  );
-  const rawProjects = useSafeQuery(
-    api.projects.listProjects,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
-  );
-  const rawActivity = useSafeQuery(
-    api.analytics.listWorkspaceActivity,
-    !isDemo && isConvexId(workspaceId)
-      ? {
-          workspaceId: id,
-          limit: 12,
-        }
-      : "skip"
-  );
-
-  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
-  const projects = isDemo ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects) : rawProjects;
-  const activity = isDemo ? (demoStore.listActivities(workspaceId, 12) as unknown as typeof rawActivity) : rawActivity;
+  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: id });
+  const projects = useQuery(api.projects.listProjects, { workspaceId: id });
+  const activity = useQuery(api.analytics.listWorkspaceActivity, {
+    workspaceId: id,
+    limit: 12,
+  });
 
   const projectIds = useMemo(
     () => (projects ?? []).map((p) => p._id) as Id<"projects">[],
     [projects],
   );
-
   const { entries: summaryEntries, loading: summariesLoading } = useProjectSummaries(projectIds);
   const { entries: riskEntries, loading: risksLoading } = useProjectRisks(projectIds);
   const { issues: projectIssues, loading: issuesLoading } = useProjectIssues(projectIds);
@@ -136,11 +99,11 @@ export default function OverviewPage() {
   const realIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
     const currentUserId = user?._id;
-    // Show only open issues assigned to the user, unassigned, or in demo mode
+    // Show only open issues assigned to the user or unassigned
     const relevant = (projectIssues ?? []).filter(
       (i) =>
         isOpenIssue(i, i.status?.category) &&
-        (isDemo || (currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
+        ((currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
     );
     return relevant.map((i) => ({
       _id: i._id,
@@ -155,7 +118,7 @@ export default function OverviewPage() {
       assigneeId: i.assigneeId,
       completedAt: i.completedAt,
     }));
-  }, [projectIssues, projects, user, isDemo]);
+  }, [projectIssues, projects, user]);
 
   const allWorkspaceIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
@@ -266,10 +229,9 @@ export default function OverviewPage() {
   const projectList = projects ?? [];
 
   const renderWidgetItem = (item: WidgetItem) => {
-    let content: React.ReactNode;
     switch (item.id) {
       case "quick_actions":
-        content = (
+        return (
           <QuickActionsWidget
             workspaceId={id}
             workspaceName={workspace.workspace.name}
@@ -277,9 +239,8 @@ export default function OverviewPage() {
             projectList={projectList}
           />
         );
-        break;
       case "my_open_issues":
-        content = (
+        return (
           <MyOpenIssuesWidget
             workspaceId={id}
             issues={realIssues}
@@ -287,24 +248,21 @@ export default function OverviewPage() {
             projectList={projectList}
           />
         );
-        break;
       case "recent_activity":
-        content = (
+        return (
           <RecentActivityWidget
             workspaceId={id}
             activity={activity ?? []}
           />
         );
-        break;
       case "status_distribution":
-        content = (
+        return (
           <StatusDistributionWidget
             rollup={realRollup}
           />
         );
-        break;
       case "priority_breakdown":
-        content = (
+        return (
           <PriorityBreakdownWidget
             rollup={realRollup}
             issues={allWorkspaceIssues}
@@ -312,9 +270,8 @@ export default function OverviewPage() {
             projectList={projectList}
           />
         );
-        break;
       case "project_health":
-        content = (
+        return (
           <ProjectHealthWidget
             workspaceId={id}
             projectList={projectList}
@@ -322,16 +279,9 @@ export default function OverviewPage() {
             canWrite={canWrite}
           />
         );
-        break;
       default:
-        content = <div>{item.title}</div>;
+        return <div>{item.title}</div>;
     }
-
-    return (
-      <WidgetErrorBoundary name={item.title}>
-        {content}
-      </WidgetErrorBoundary>
-    );
   };
 
   // Checklist state for new workspaces
@@ -432,68 +382,65 @@ export default function OverviewPage() {
 
 
         {/* Today strip with 3 compact cards */}
-        <SectionErrorBoundary name="Today's highlights">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Link
-              to={issuesTargetLink}
-              className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium text-[#575657]">Assigned to you</span>
-                <StatusIllustration category="active" size={14} />
-              </div>
-              <div className="mt-3 flex items-baseline justify-between">
-                <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
-                  {assignedToUserIssues.length}
-                </span>
-                <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
-                  View work →
-                </span>
-              </div>
-            </Link>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Link
+            to={issuesTargetLink}
+            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium text-[#575657]">Assigned to you</span>
+              <StatusIllustration category="active" size={14} />
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                {assignedToUserIssues.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                View work →
+              </span>
+            </div>
+          </Link>
 
-            <Link
-              to={issuesTargetLink}
-              className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium text-[#575657]">Due this week</span>
-                <Clock className="size-3.5 text-[#575657]" />
-              </div>
-              <div className="mt-3 flex items-baseline justify-between">
-                <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
-                  {dueThisWeekIssues.length}
-                </span>
-                <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
-                  Check dates →
-                </span>
-              </div>
-            </Link>
+          <Link
+            to={issuesTargetLink}
+            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium text-[#575657]">Due this week</span>
+              <Clock className="size-3.5 text-[#575657]" />
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                {dueThisWeekIssues.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                Check dates →
+              </span>
+            </div>
+          </Link>
 
-            <Link
-              to={issuesTargetLink}
-              className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium text-[#575657]">Needs your review</span>
-                <StatusIllustration category="review" size={14} />
-              </div>
-              <div className="mt-3 flex items-baseline justify-between">
-                <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
-                  {needsReviewIssues.length}
-                </span>
-                <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
-                  Review queue →
-                </span>
-              </div>
-            </Link>
-          </div>
-        </SectionErrorBoundary>
+          <Link
+            to={issuesTargetLink}
+            className="flex flex-col justify-between rounded-[16px] border border-border bg-white p-4 transition-all hover:border-[#0D0D0D]/40"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium text-[#575657]">Needs your review</span>
+              <StatusIllustration category="review" size={14} />
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl font-semibold tracking-tight text-[#0D0D0D]">
+                {needsReviewIssues.length}
+              </span>
+              <span className="text-[11px] font-medium text-[#575657] hover:text-[#0D0D0D]">
+                Review queue →
+              </span>
+            </div>
+          </Link>
+        </div>
 
         {/* 1. Get started checklist card (visible when workspace is new / steps incomplete) */}
         {showChecklist && (
-          <SectionErrorBoundary name="Getting started checklist">
-            <div className="rounded-[16px] border border-border bg-white p-5">
+          <div className="rounded-[16px] border border-border bg-white p-5">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-[15px] font-[500] text-[#0D0D0D]">Get started with your workspace</h2>
@@ -618,11 +565,9 @@ export default function OverviewPage() {
               </div>
             </div>
           </div>
-        </SectionErrorBoundary>
-      )}
+        )}
 
-      {/* 2. Overview clickable summary metrics */}
-      <SectionErrorBoundary name="Summary metrics">
+        {/* 2. Overview clickable summary metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Link
             to={issuesTargetLink}
@@ -686,7 +631,6 @@ export default function OverviewPage() {
             <p className="mt-0.5 text-[11px] text-[#575657]">Finished work items</p>
           </Link>
         </div>
-      </SectionErrorBoundary>
 
         <div className="w-full">
           <DraggableWidgetGrid

@@ -1,208 +1,257 @@
-import { useCallback, useMemo } from "react";
-import { useQuery, useMutation, useAction, useQueries } from "convex/react";
-import type { FunctionReference, FunctionReturnType, FunctionArgs } from "convex/server";
-import { demoStore, DEMO_STATUSES } from "@/data/in-memory-demo-store";
+import {
+  useQuery as useConvexQuery,
+  useQueries,
+  useMutation as useConvexMutation,
+  useAction as useConvexAction,
+} from "convex/react";
+import { getFunctionName as convexGetFunctionName, type FunctionReference } from "convex/server";
+import { useState, useEffect } from "react";
+import { containsDemoId } from "@/lib/idValidation";
+import { isDemoMode } from "@/lib/demoMode";
+import { demoStore } from "@/data/in-memory-demo-store";
 
-/**
- * Checks if a string ID belongs to in-memory demo data.
- */
-export function isDemoId(id?: unknown): boolean {
-  if (!id || typeof id !== "string") return false;
-  if (
-    id.startsWith("demo-") ||
-    id.startsWith("demo_") ||
-    id.includes("demo-ws") ||
-    id.includes("demo-proj") ||
-    id.includes("demo-issue")
-  ) {
-    return true;
+// Helper to extract function name from Convex FunctionReference or string representation
+function getFunctionName(query: unknown): string {
+  if (!query) return "";
+  if (typeof query === "string") return query;
+  try {
+    return convexGetFunctionName(query as any);
+  } catch {
+    const anyQuery = query as Record<string, unknown>;
+    if (typeof anyQuery._name === "string") return anyQuery._name;
+    if (typeof anyQuery.name === "string") return anyQuery.name;
+    return String(query);
   }
-  if (demoStore.isDemoWorkspace(id)) return true;
-  if (demoStore.getProject(id) !== null) return true;
-  if (demoStore.getIssue(id) !== null) return true;
-  return false;
 }
 
 /**
- * Checks if a value is a valid Convex document ID.
- * Demo IDs (demo-*, demoStore IDs) and invalid non-Convex strings return false.
+ * Maps a Convex query to demoStore data when args contain a demo ID or in demo mode.
  */
-export function isConvexId(id?: unknown): boolean {
-  if (!id || typeof id !== "string") return false;
-  if (isDemoId(id)) return false;
-  // Convex IDs are alphanumeric base32 strings without hyphens, spaces, or slashes
-  if (id.includes("-") || id.includes(" ") || id.includes("/")) return false;
-  // Convex IDs are at least 10 characters (typically 32 base32 chars)
-  return id.length >= 10;
-}
+function resolveDemoQueryData(queryName: string, args: Record<string, any>) {
+  const name = queryName.toLowerCase();
 
-/**
- * Checks if any argument object contains a demo ID or an invalid ID for an ID parameter.
- */
-export function hasDemoArgument(args: unknown): boolean {
-  if (!args || typeof args !== "object") return false;
-  const obj = args as Record<string, unknown>;
-  for (const [key, val] of Object.entries(obj)) {
-    if (typeof val === "string") {
-      if (
-        key.endsWith("Id") ||
-        key === "id" ||
-        key === "workspace" ||
-        key === "project" ||
-        key === "issue"
-      ) {
-        if (!isConvexId(val)) return true;
-      } else if (isDemoId(val)) {
-        return true;
-      }
-    } else if (val && typeof val === "object" && !Array.isArray(val)) {
-      if (hasDemoArgument(val)) return true;
-    }
+  // Workspaces
+  if (name.includes("getworkspace")) {
+    const wsId = args?.workspaceId;
+    return demoStore.getWorkspace(wsId);
   }
-  return false;
-}
-
-/**
- * Safe wrapper around Convex's useQuery.
- * Automatically passes "skip" whenever any ID argument is a demo ID or invalid ID,
- * preventing ArgumentValidationError from reaching the Convex backend or crashing the React tree.
- */
-export function useSafeQuery<Query extends FunctionReference<"query">>(
-  query: Query,
-  args: FunctionArgs<Query> | "skip",
-): FunctionReturnType<Query> | undefined {
-  const shouldSkip = args === "skip" || hasDemoArgument(args);
-  const safeArgs = shouldSkip ? "skip" : args;
-  const typedUseQuery = useQuery as (q: Query, a: FunctionArgs<Query> | "skip") => FunctionReturnType<Query> | undefined;
-  return typedUseQuery(query, safeArgs);
-}
-
-/**
- * Handle demo mutation safely within in-memory store without calling Convex backend.
- */
-function handleDemoMutationInternal<Mutation extends FunctionReference<"mutation">>(
-  mutation: Mutation,
-  args: unknown,
-): FunctionReturnType<Mutation> {
-  const mutName = typeof mutation === "string" ? mutation : (mutation as unknown as { _functionName?: string })?._functionName || "";
-  const now = Date.now();
-  const a = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
-
-  // Transition issue or update issue
-  if (mutName.includes("transitionIssue") || mutName.includes("updateIssue")) {
-    if (typeof a.issueId === "string") {
-      const updates: Record<string, unknown> = {};
-      if (typeof a.toStatusId === "string") updates.statusId = a.toStatusId;
-      if (typeof a.statusId === "string") updates.statusId = a.statusId;
-      if (typeof a.title === "string") updates.title = a.title;
-      if (typeof a.priority === "string") updates.priority = a.priority;
-      if (typeof a.assigneeId === "string") updates.assigneeId = a.assigneeId;
-      if (typeof a.estimatePoints === "number") updates.estimatePoints = a.estimatePoints;
-      demoStore.updateIssue(a.issueId, updates);
-    }
-    return { success: true } as FunctionReturnType<Mutation>;
+  if (name.includes("listmyworkspaces")) {
+    return demoStore.getWorkspaces();
   }
-
-  // Create issue
-  if (mutName.includes("createIssue")) {
-    const created = demoStore.createIssue({
-      workspaceId: typeof a.workspaceId === "string" ? a.workspaceId : "demo-ws-northstar",
-      projectId: typeof a.projectId === "string" ? a.projectId : "demo-proj-mob",
-      title: typeof a.title === "string" ? a.title : "New Issue",
-      description: typeof a.description === "string" ? a.description : undefined,
-      priority: (a.priority === "urgent" || a.priority === "high" || a.priority === "low") ? a.priority : "medium",
-      statusId: typeof a.statusId === "string" ? a.statusId : DEMO_STATUSES[1]._id,
-      estimatePoints: typeof a.estimatePoints === "number" ? a.estimatePoints : undefined,
-    });
-    return { issueId: created._id, number: created.number } as FunctionReturnType<Mutation>;
+  if (name.includes("listmembers")) {
+    return demoStore.getMembers(args?.workspaceId);
   }
-
-  // Add comment
-  if (mutName.includes("addComment")) {
-    return {
-      commentId: `demo-comment-${now}`,
-      createdAt: now,
-    } as FunctionReturnType<Mutation>;
+  if (name.includes("getmyinvitations") || name.includes("listinvitations")) {
+    return [];
   }
 
   // Projects
-  if (mutName.includes("createProject")) {
-    return { projectId: `demo-proj-${Date.now().toString(36)}` } as FunctionReturnType<Mutation>;
+  if (name.includes("listprojects")) {
+    return demoStore.getProjects(args?.workspaceId);
   }
-  if (mutName.includes("updateProject") || mutName.includes("archiveProject")) {
-    return { success: true } as FunctionReturnType<Mutation>;
+  if (name.includes("getproject") && !name.includes("summary") && !name.includes("risk") && !name.includes("activity")) {
+    return demoStore.getProject(args?.projectId);
   }
-
-  // Workspaces & members
-  if (mutName.includes("updateWorkspace") || mutName.includes("updateMemberRole")) {
-    return { success: true } as FunctionReturnType<Mutation>;
+  if (name.includes("listlabels")) {
+    return demoStore.getProjectLabels(args?.workspaceId);
   }
 
-  // Default safe stub for any other demo mutation
-  return { success: true } as FunctionReturnType<Mutation>;
+  // Issues & Boards
+  if (name.includes("listworkspaceissues")) {
+    return demoStore.getWorkspaceIssues(args?.workspaceId);
+  }
+  if (name.includes("getboard")) {
+    return demoStore.getBoard(args?.projectId);
+  }
+  if (name.includes("listissues")) {
+    return demoStore.getIssues(args?.projectId, args);
+  }
+  if (name.includes("getissue") && !name.includes("activity") && !name.includes("workspace")) {
+    return demoStore.getIssue(args?.issueId);
+  }
+  if (name.includes("getblockedissues")) {
+    return [];
+  }
+
+  // Workflows
+  if (name.includes("getworkflow")) {
+    return demoStore.getWorkflow(args?.projectId);
+  }
+
+  // Analytics & Activity
+  if (name.includes("getprojectsummary")) {
+    return demoStore.getProjectSummary(args?.projectId);
+  }
+  if (name.includes("getprojectrisk")) {
+    return demoStore.getProjectRisk(args?.projectId);
+  }
+  if (name.includes("listprojectactivity")) {
+    return demoStore.getProjectActivity(args?.projectId, args?.limit);
+  }
+  if (name.includes("listworkspaceactivity")) {
+    return demoStore.getActivity(args?.workspaceId, args?.limit);
+  }
+  if (name.includes("listissueactivity")) {
+    return [];
+  }
+  if (name.includes("listnotifications")) {
+    return demoStore.getNotifications(args?.workspaceId);
+  }
+  if (name.includes("listautomationrules")) {
+    return [];
+  }
+
+  // Collaboration
+  if (name.includes("listcomments")) {
+    const issue = demoStore.getIssue(args?.issueId);
+    return issue?.comments ?? [];
+  }
+  if (name.includes("listdependencies")) {
+    return [];
+  }
+
+  return undefined;
 }
 
 /**
- * Safe wrapper around Convex's useMutation.
- * Automatically refuses demo IDs and routes mutations to in-memory demoStore.
+ * Safe wrapper around Convex useQuery that prevents any demo ID from ever being dispatched to Convex.
+ * Automatically routes demo queries to the in-memory demoStore with live reactive updates.
+ */
+export function useSafeQuery<Query extends FunctionReference<"query">>(
+  query: Query,
+  args: Query["_args"] | "skip",
+): Query["_returnType"] | undefined {
+  const isSkipped = args === "skip";
+  const isDemo = !isSkipped && (containsDemoId(args) || (isDemoMode() && (!args || Object.keys(args).length === 0)));
+
+  // Force "skip" to Convex if args contain a demo ID or in demo mode
+  const convexArgs = isSkipped || isDemo ? "skip" : args;
+  const convexResult = useConvexQuery(query, convexArgs as any);
+
+  // Subscribe to demoStore for reactive updates when in demo mode
+  const [, setVersion] = useState(0);
+  useEffect(() => {
+    if (!isDemo) return;
+    return demoStore.subscribe(() => setVersion((v) => v + 1));
+  }, [isDemo]);
+
+  if (isSkipped) {
+    return undefined;
+  }
+
+  if (isDemo) {
+    const qName = getFunctionName(query);
+    const demoData = resolveDemoQueryData(qName, (args ?? {}) as Record<string, any>);
+    return demoData as Query["_returnType"];
+  }
+
+  return convexResult;
+}
+
+/**
+ * Safe wrapper around Convex useQueries that prevents any demo queries from reaching Convex.
+ */
+export function useSafeQueries<
+  Queries extends Record<string, { query: FunctionReference<"query">; args: Record<string, any> }>,
+>(queryMap: Queries): Record<keyof Queries, any> {
+  const isDemo = isDemoMode();
+  const convexMap: Record<string, { query: FunctionReference<"query">; args: Record<string, any> }> = {};
+  const demoKeys: string[] = [];
+
+  for (const [key, req] of Object.entries(queryMap)) {
+    if (isDemo || containsDemoId(req.args)) {
+      demoKeys.push(key);
+    } else {
+      convexMap[key] = req;
+    }
+  }
+
+  // Only pass non-demo queries to Convex
+  const convexResults = useQueries(convexMap as any);
+
+  // Subscribe to demoStore for reactive updates if any demo queries exist
+  const [, setVersion] = useState(0);
+  useEffect(() => {
+    if (demoKeys.length === 0) return;
+    return demoStore.subscribe(() => setVersion((v) => v + 1));
+  }, [demoKeys.length]);
+
+  const finalResult: Record<string, any> = {};
+  for (const [key, req] of Object.entries(queryMap)) {
+    if (demoKeys.includes(key)) {
+      const qName = getFunctionName(req.query);
+      finalResult[key] = resolveDemoQueryData(qName, req.args);
+    } else {
+      finalResult[key] = (convexResults as any)[key];
+    }
+  }
+
+  return finalResult as Record<keyof Queries, any>;
+}
+
+/**
+ * Safe wrapper around Convex useMutation that routes demo operations to demoStore without network calls.
  */
 export function useSafeMutation<Mutation extends FunctionReference<"mutation">>(
   mutation: Mutation,
-): (args?: FunctionArgs<Mutation>) => Promise<FunctionReturnType<Mutation>> {
-  const rawMutation = useMutation(mutation);
-  return useCallback(
-    async (args?: FunctionArgs<Mutation>) => {
-      if (hasDemoArgument(args)) {
-        return handleDemoMutationInternal(mutation, args);
+): (args: Mutation["_args"]) => Promise<Mutation["_returnType"]> {
+  const realMutation = useConvexMutation(mutation);
+
+  return async (args: Mutation["_args"]): Promise<Mutation["_returnType"]> => {
+    const isDemo = containsDemoId(args) || isDemoMode();
+    if (isDemo) {
+      const qName = getFunctionName(mutation).toLowerCase();
+      const anyArgs = (args ?? {}) as Record<string, any>;
+
+      if (qName.includes("createissue")) {
+        return demoStore.createIssue(anyArgs as any) as any;
       }
-      return rawMutation(args as never);
-    },
-    [rawMutation, mutation],
-  );
+      if (qName.includes("updateissue")) {
+        demoStore.updateIssue(anyArgs.issueId, anyArgs);
+        return { ok: true } as any;
+      }
+      if (qName.includes("transitionissue")) {
+        demoStore.transitionIssue(anyArgs.issueId, anyArgs.statusId);
+        return { ok: true } as any;
+      }
+      if (qName.includes("deleteissue")) {
+        demoStore.deleteIssue(anyArgs.issueId);
+        return { ok: true } as any;
+      }
+      if (qName.includes("createproject")) {
+        return demoStore.createProject(anyArgs as any) as any;
+      }
+      if (qName.includes("updateproject")) {
+        demoStore.updateProject(anyArgs.projectId, anyArgs);
+        return { ok: true } as any;
+      }
+      if (qName.includes("comment")) {
+        return { ok: true } as any;
+      }
+      if (qName.includes("notification")) {
+        return { ok: true } as any;
+      }
+      // General demo mutation fallback
+      return { ok: true } as any;
+    }
+
+    return await realMutation(args as any);
+  };
 }
 
 /**
- * Safe wrapper around Convex's useAction.
- * Automatically refuses demo IDs and routes actions safely.
+ * Safe wrapper around Convex useAction that protects against demo actions without network calls.
  */
 export function useSafeAction<Action extends FunctionReference<"action">>(
   action: Action,
-): (args?: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>> {
-  const rawAction = useAction(action);
-  return useCallback(
-    async (args?: FunctionArgs<Action>) => {
-      if (hasDemoArgument(args)) {
-        return { success: true, message: "Demo action handled safely locally" } as unknown as FunctionReturnType<Action>;
-      }
-      return rawAction(args as never);
-    },
-    [rawAction],
-  );
-}
+): (args: Action["_args"]) => Promise<Action["_returnType"]> {
+  const realAction = useConvexAction(action);
 
-/** Wide query shape for useSafeQueries */
-export interface SafeQueryRequest {
-  query: FunctionReference<"query">;
-  args: Record<string, unknown> | "skip";
-}
-
-/**
- * Safe wrapper around Convex's useQueries.
- * Automatically filters out any query requests with demo IDs.
- */
-export function useSafeQueries(
-  queryMap: Record<string, SafeQueryRequest>,
-): Record<string, unknown> {
-  const safeMap = useMemo(() => {
-    const next: Record<string, SafeQueryRequest> = {};
-    for (const [key, req] of Object.entries(queryMap)) {
-      if (!req || req.args === "skip" || hasDemoArgument(req.args)) {
-        continue;
-      }
-      next[key] = req;
+  return async (args: Action["_args"]): Promise<Action["_returnType"]> => {
+    const isDemo = containsDemoId(args) || isDemoMode();
+    if (isDemo) {
+      return { ok: true, success: true } as any;
     }
-    return next;
-  }, [queryMap]);
-
-  return useQueries(safeMap as never) as Record<string, unknown>;
+    return await realAction(args as any);
+  };
 }

@@ -53,6 +53,11 @@ export default function LoginPage({ redirectAfterAuth = '/app' }: LoginPageProps
         {/* Form centered, max-width 380px, padding 24px under 900px */}
         <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 min-[900px]:px-0 min-[900px]:py-0">
           <AuthForm mode="login" redirectAfterAuth={redirectAfterAuth} />
+          {import.meta.env.DEV && (
+            <div className="mt-4 p-2 rounded bg-black/[0.04] text-center font-mono text-[11px] text-[#575657]">
+              Origin: {typeof window !== "undefined" ? window.location.origin : ""}
+            </div>
+          )}
         </div>
 
         {/* Bottom edge spacer */}

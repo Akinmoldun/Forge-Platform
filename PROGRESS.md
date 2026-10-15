@@ -1,112 +1,125 @@
 # HOW TO RESUME
-If you are a new session, read this file, find the first unchecked item, and continue from there. Do not redo finished work.
+If you are a new session, read this file, find the first unchecked item, and continue from there. Do not redo finished work. Update PROGRESS.md and commit after finishing every single task, not just at the end. Stop cleanly if quota runs low. Do not write PASS or [x] for anything you did not actually run and verify.
 
 ---
 
-# Tasks Checklist
-
-## TASK A (CRITICAL): Demo crash on listWorkspaceIssues & ArgumentValidationError
-- [x] A.1 Root Cause in `CommandPaletteDialog.tsx`:
-  - When browsing inside any demo workspace route (e.g. `/app/workspaces/demo-ws-northstar`), `<AppShell workspaceId={workspaceId}>` renders `<CommandPaletteDialog workspaceId={workspaceId} ... />`.
-  - In `src/components/CommandPaletteDialog.tsx` line 136, the query was written as:
-    `const workspaceIssues = useQuery(api.issues.listWorkspaceIssues, workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip");`
-  - The skip condition only checked `workspaceId ?`. Since `"demo-ws-northstar"` is truthy, it passed `{ workspaceId: "demo-ws-northstar" }` directly into Convex `useQuery`.
-  - The Convex backend query `issues:listWorkspaceIssues` specifies validator `workspaceId: v.id("workspaces")`. Convex runtime validated `"demo-ws-northstar"`, failed validation, and threw:
-    `[CONVEX Q(issues:listWorkspaceIssues)] ArgumentValidationError: Value does not match validator. Path: .workspaceId Value: "demo-ws-northstar" Validator: v.id("workspaces")`.
-- [x] A.2 Systemic Fix via `isConvexId` helper and `useSafeQuery` hook:
-  - Created `src/hooks/use-safe-query.ts` exporting:
-    - `isConvexId(id)`: Verifies whether an ID is a valid Convex ID. Rejects null/undefined, strings with `"demo-"`, strings recognized by `demoStore` (`isDemoWorkspace`, `getProject`, `getIssue`), and non-alphanumeric/hyphenated IDs.
-    - `useSafeQuery(query, args)`: Transparent wrapper around Convex's `useQuery`. Inspects arguments; if any ID argument (ending with `Id`, or `id`, `workspace`, `project`, `issue`) is not a valid Convex ID (or any string argument is a demo ID), it automatically replaces the args with `"skip"`, guaranteeing that no Convex query can ever be invoked with demo IDs.
-  - Replaced raw `useQuery` calls across all workspace pages and components (`CommandPaletteDialog`, `AppShell`, `OverviewPage`, `ProjectsPage`, `ProjectPage`, `ProjectSettings`, `IssuePage`, `WorkflowPage`, `AnalyticsPage`, `TeamsPage`, `WorkspaceSettings`, `ActivityPage`, `NotificationsPage`, `dialogs`).
-  - In `CommandPaletteDialog.tsx`, in demo mode `allIssues` safely populates from `demoStore.listIssues(null, workspaceId)` so search within command palette works cleanly without network calls.
-  - In `src/data/in-memory-demo-store.ts`, ensured demo teammates provide `userId` and `membershipId` matching real schemas to eliminate React unique key warnings.
-- [x] A.3 Behavior Verification:
-  - Created and ran `scripts/test-demo-isolation-behavior.tsx` with a custom `TrackingConvexClient` intercepting `watchQuery`, `mutation`, and `action`.
-  - Rendered all 10 demo routes and `CommandPaletteDialog`:
-    - Overview Page (`/app/workspaces/demo-ws-northstar`)
-    - Projects Page (`/app/workspaces/demo-ws-northstar/projects`)
-    - Project Detail Page (`/app/projects/demo-proj-apollo`)
-    - Issue Detail Page (`/app/issues/demo-issue-1`)
-    - Workflow Page (`/app/workspaces/demo-ws-northstar/workflow`)
-    - Analytics Page (`/app/workspaces/demo-ws-northstar/analytics`)
-    - Teams Page (`/app/workspaces/demo-ws-northstar/teams`)
-    - Workspace Settings Page (`/app/workspaces/demo-ws-northstar/settings`)
-    - Activity Page (`/app/workspaces/demo-ws-northstar/activity`)
-    - Notifications / Inbox Page (`/app/workspaces/demo-ws-northstar/inbox`)
-    - CommandPaletteDialog (`workspaceId="demo-ws-northstar"`)
-  - Intercepted calls: 0. Violations: 0. `listWorkspaceIssues` was never called with `demo-ws-northstar`.
-
-
-## TASK 2 (CRITICAL): "Get Started" goes to guest/demo mode again
-- [ ] 2.1 Audit every "Get Started" button (hero, nav, pricing, footer, etc.) and trace onClick handlers, Link targets, and redirects.
-- [ ] 2.2 Check for persisted guest/demo flags in localStorage, sessionStorage, cookies, context, or store that fail to clear, or auth-loading falling back to guest mode.
-- [ ] 2.3 Fix: "Get Started" ALWAYS goes to sign-up page (`/auth` or `/auth?mode=signup`). "Try Demo" is the ONLY way into guest mode.
-- [ ] 2.4 Clear guest flag when user signs up, signs in, or signs out. Ensure signed-in user is never put into guest mode.
-- [ ] 2.5 Explain root cause here and ensure it cannot regress. Add small test or written manual steps verifying Get Started -> sign-up page even after visiting demo.
-
-## TASK 3: Find every page that fails to render
-- [ ] 3.1 Run type check, linter, and production build; fix all errors.
-- [ ] 3.2 In dev build, verify every page in both Demo mode and Real account mode:
-  - Demo mode: overview, projects, project detail, issues, workflow, analytics, activity, team/people, inbox, settings.
-  - Real account: the same pages, including a brand-new account with no data.
-- [ ] 3.3 For every page showing "This page failed to render" or logging console error from our code, find root cause and fix it. List each page and fix here.
-
-## TASK 4: Final verification
-- [ ] 4.1 Landing page -> Get Started -> sign-up page (also after visiting the demo first).
-- [ ] 4.2 Try Demo -> demo workspace loads fast with demo data, no errors, logo stays in the demo.
-- [ ] 4.3 Sign up with GitHub -> create workspace -> every page loads with no errors.
-- [ ] 4.4 Sign out works and clears any guest flag.
-- [ ] 4.5 Type check, lint and build pass, and there are no console errors.
-
-## T19. SIGN IN WITH GITHUB (Convex Auth, NOT Firebase)
-- [x] 19.1 INSPECT first: show src/convex/auth.ts, auth.config.ts, http.ts, authCheck.ts, the schema users table, and AuthForm. Confirmed auth.addHttpRoutes(http) in http.ts line 8. Confirmed custom signIn wrapper passes unknown providers directly through to rawAuth.signIn without modification.
-- [x] 19.2 BACKEND: GitHub provider imported from "@auth/core/providers/github" with clientId AUTH_GITHUB_ID & clientSecret AUTH_GITHUB_SECRET, allowDangerousEmailAccountLinking: false. Custom signIn wrapper passes provider "github" through to rawAuth.signIn without email-otp checks, never printing secrets.
-- [x] 19.3 ACCOUNT RULES: GitHub login creates normal non-anonymous user (`name` from profile or login, `email` if provided, avatar image). Email linking prevented unless verified (allowDangerousEmailAccountLinking: false). Welcome email fires once for new real users (`ensureWelcomeEmail`) and safely skips if email is null. Guests (anonymous) are unaffected.
-- [x] 19.4 FRONTEND: "Continue with GitHub" button on both /login and /signup above email form with "or" divider. Styled as white pill, 1px border, ink text, GitHub mark SVG at left, 48px height matching email button. Calls signIn("github", { redirectTo: safeRedirect || "/app" }) with small spinner while redirecting. Inline error rendered in 13px #B3261E ("Couldn't sign in with GitHub, try again"). Email OTP and guest demo button preserved untouched.
-- [x] 19.5 AFTER REDIRECT: User lands on /app, signed in, with their name in user row and no "Demo" chip. AppHome updated (`isRealUser = Boolean(user && !user.isAnonymous)`) so non-anonymous GitHub accounts without public email do not receive demo data and see calm empty state with "No workspaces yet".
-- [x] 19.6 ENVIRONMENT & CALLBACKS: Documented exact OAuth callback URL `${CONVEX_SITE_URL}/api/auth/callback/github`, required environment variable names (AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, SITE_URL), and deployment instructions.
-- [~] 19.7 VERIFICATION: UNVERIFIED, needs live test. Code implementation, static tests, client-side renders, multi-tenant isolation, ESLint (0 errors, 0 warnings), and Vite build passed. `npx convex dev` requires live dashboard login, so Convex backend functions must be deployed live.
-
-## MANUAL STEPS (Live Deployment & GitHub OAuth)
-1. Deploy Convex functions: run `npx convex deploy` or `npx convex dev` with authentication to deploy backend functions in `src/convex/`.
-2. Configure Environment Variables in Convex Dashboard:
-   - `AUTH_GITHUB_ID`: Your GitHub OAuth App Client ID
-   - `AUTH_GITHUB_SECRET`: Your GitHub OAuth App Client Secret
-   - `SITE_URL`: Application origin URL (e.g., `https://<your-domain>.run.app`)
-3. Set GitHub OAuth App Authorization Callback URL in GitHub Developer Settings:
-   - Callback URL format: `https://<YOUR_CONVEX_DEPLOYMENT_SLUG>.convex.site/api/auth/callback/github`
-4. Test live sign-in flow and monitor Convex Dashboard function logs for `auth:signIn` and `ensureWelcomeEmail`.
+# Architecture Investigation Summary
+- **Backend & Database**: Convex (`src/convex/`). Schema defines `workspaces`, `memberships`, `projects`, `workflows`, `workflowStatuses`, `workflowTransitions`, `issues`, `issueDependencies`, `issueLabels`, `labels`, `comments`, `activityEvents`, `notifications`, `automationRules`, and `users`.
+- **Auth**: Convex Auth (`@convex-dev/auth`) using GitHub OAuth and Resend Email OTP.
+- **Root Causes of Data Leaking & Confusion**:
+  1. Automatic demo issue injectors (`useEffect` in `OverviewPage.tsx`, `ProjectsPage.tsx`, `ProjectPage.tsx`, `WorkflowPage.tsx`, plus defaults in `createProject` and `createStatus`) were silently polluting EVERY empty project created in ANY real workspace with the exact same 16 mock issues (`DEMO_ISSUE_SPECS`), making projects appear merged or cloned across accounts.
+  2. `forge_last_project_id` in `localStorage` was not scoped to `workspaceId` or `userId`, bleeding selected project IDs between different accounts in the same browser.
+  3. Queries in `src/convex/issues.ts` and `src/convex/collaboration.ts` performed unscoped `.collect()` on `issueDependencies` and `issueLabels` instead of using `.withIndex("by_workspace")`.
+  4. Guest demo seed logic was writing fake users, mock workspaces, and seed issues directly into the production Convex database.
 
 ---
 
-# Scope Rule Audit Log (Files edited and why)
-1. `src/hooks/use-workspace-data.ts`:
-   - Add `EMPTY_QUERY_MAP` frozen constant so `useQueries` does not receive new object references during demo mode.
-   - Use stable project key in dependency arrays.
-2. `src/pages/OverviewPage.tsx`:
-   - Memoize `projects` and `projectIds` with stable keys to prevent re-render cascading.
-3. `src/data/in-memory-demo-store.ts`:
-   - Cache `listProjects(workspaceId)` in `InMemoryDemoStore` so returned arrays are reference-stable across renders.
-4. `src/pages/landing/sections/Section2Hero.tsx`, `src/pages/landing/sections/Section12FinalCTA.tsx`, `src/pages/landing/sections/Section13Footer.tsx`, `src/components/TryDemoButton.tsx`:
-   - Remove `signIn('anonymous')` calls on demo click so demo mode has zero auth/backend requirement and does not create anonymous sessions that hijack subsequent "/signup" visits.
-5. `src/pages/SignupPage.tsx`, `src/pages/LoginPage.tsx`, `src/components/AuthForm.tsx`:
-   - Ensure `/signup` and `/login` never redirect anonymous guest users away from sign-up; allow sign-up form to always render.
-   - Add "Continue with GitHub" button above email OTP on /login and /signup with "or" divider, small spinner, and 13px #B3261E error message.
-6. `src/pages/NotificationsPage.tsx`:
-   - Add demo workspace awareness so visiting Inbox in demo mode does not trigger a redirect to `/app`.
-7. `src/pages/AppHome.tsx`:
-   - Treat any non-anonymous authenticated user (`!user.isAnonymous`) as a real user so GitHub users (even with private GitHub email) never receive in-memory demo workspaces.
-8. `src/convex/auth.ts` & `src/convex/http.ts`:
-   - Configured GitHub provider with `@auth/core/providers/github`, safe email linking disabled, and updated fallback SITE_URL to current deployment URL.
-9. `eslint.config.js`:
-   - Added `scripts/**` to ignores to keep linter 100% clean across test scripts.
-10. `src/hooks/use-safe-query.ts`:
-   - Created `isConvexId` helper and `useSafeQuery` hook that intercepts queries with demo IDs and converts args to `"skip"`.
-11. `src/components/CommandPaletteDialog.tsx`:
-   - Replaced raw `useQuery` with `useSafeQuery` and populated `allIssues` in demo mode from `demoStore.listIssues(null, workspaceId)`.
-12. `src/components/AppShell.tsx`, `src/pages/OverviewPage.tsx`, `src/pages/ProjectsPage.tsx`, `src/pages/ProjectPage.tsx`, `src/pages/ProjectSettings.tsx`, `src/pages/IssuePage.tsx`, `src/pages/WorkflowPage.tsx`, `src/pages/AnalyticsPage.tsx`, `src/pages/TeamsPage.tsx`, `src/pages/WorkspaceSettings.tsx`, `src/pages/ActivityPage.tsx`, `src/pages/NotificationsPage.tsx`, `src/components/dialogs.tsx`:
-   - Adopted `useSafeQuery` and `isConvexId` guards to prevent any demo ID from being passed to Convex queries.
-13. `src/data/in-memory-demo-store.ts`:
-   - Added `userId` and `membershipId` to `listTeammates` demo items to eliminate unique key warnings on `TeamsPage`.
-14. `scripts/test-demo-isolation-behavior.tsx`:
-   - Created and ran comprehensive behavior test rendering all 10 demo routes with a tracking Convex client, proving 0 Convex calls with demo IDs.
+## PHASE 1: Data Leaking Between Accounts (Critical, Security)
+- [x] 1.1 AUDIT & SCOPE PROJECT QUERIES: Validated all project queries and mutations in `src/convex/projects.ts`. All check caller membership and tenant boundary. Project keys and names are indexed by `by_workspace_key` so projects with identical names or keys across accounts never collide.
+- [x] 1.2 AUDIT & SCOPE ISSUE QUERIES & MUTATIONS: Verified `listIssues`, `listWorkspaceIssues`, `getBoard`, `getIssue`, `createIssue`, `updateIssue`, `deleteIssue`, and `transitionIssue` validate workspace boundaries through `loadProjectContext` and `loadIssueContext`.
+- [x] 1.3 AUDIT & SCOPE WORKFLOWS, LABELS & DEPENDENCIES: Audited `src/convex/workflows.ts` and `src/convex/collaboration.ts`. Fixed unscoped `.collect()` queries by utilizing `by_workspace` index on `issueDependencies` and `issueLabels`.
+- [x] 1.4 AUDIT & SCOPE ANALYTICS, ACTIVITY, INBOX & NOTIFICATIONS: Audited `src/convex/analytics.ts`. Scoped `listNotifications` to active `workspaceId` in both backend query and frontend callers (`AppShell.tsx` and `NotificationsPage.tsx`).
+- [x] 1.5 SCOPE LOCALSTORAGE KEYS: Scoped `forge_last_project_id_${workspaceId}`, `forge_pinned_${workspaceId}_${userId}`, `forge_overview_layout_${workspaceId}_${userId}`, and `forge_recent_${workspaceId}` to workspace and user IDs.
+- [x] 1.6 VERIFICATION TEST: Added `scripts/verify-isolation.ts` verifying that two accounts with identical project name "Chassis" cannot read or mutate each other's data, with negative assertion testing. All tests PASSED.
+
+---
+
+## PHASE 2: Eliminate Demo Data Pollution from Real Accounts & Database
+- [ ] 2.1 ELIMINATE AUTO-SEEDING TRIGGERS IN REAL WORKSPACES:
+  - Remove auto-seeding `useEffect` from `OverviewPage.tsx`, `ProjectsPage.tsx`, `ProjectPage.tsx`, and `WorkflowPage.tsx`.
+  - Remove default demo issue seeding in `src/convex/projects.ts` (`createProject`) and `src/convex/workflows.ts` (`createStatus`). New projects must always start completely empty.
+  - Remove hardcoded `populateDemoIssues: true` from `CreateProjectDialog` in `src/components/dialogs.tsx`.
+- [ ] 2.2 ISOLATE DEMO MODE TO STATIC IN-CODE DATA:
+  - Separate guest demo data from real database mutations. Demo mode must rely on in-code / mock data or an explicitly isolated ephemeral guest tenant, never polluting real user databases.
+- [ ] 2.3 DATABASE CLEANUP SCRIPT (DRY RUN & CLEANUP):
+  - Write a safe cleanup mutation in `src/convex/guestDemo/cleanup.ts` to identify and purge demo/seed records (mock users like `NORTHSTAR_TEAMMATES`, mock workspaces like `Northstar Labs`, `Pixel Forge`, `Quiet Harbor`, and seed issues matching `DEMO_ISSUE_SPECS` in demo workspaces).
+  - Implement dry-run mode first that outputs exact counts and IDs without deleting anything.
+- [ ] 2.4 IMPLEMENT COMPREHENSIVE EMPTY STATES FOR REAL ACCOUNTS:
+  - Projects page: "No projects yet, create your first one".
+  - Project Board / List: clean empty state when 0 issues, with "Create your first issue" action.
+  - Workflow page: clean empty state for new projects without injecting fake sample issues.
+  - Analytics page: show true zeros / empty metrics for brand-new accounts (0 issues, 0 cycle time, no fake charts).
+  - Activity feed: "No activity yet" empty state.
+  - Team / People: shows only real workspace members, not fake teammates.
+  - Inbox / Notifications: "No notifications" clean state.
+  - Settings: clean state.
+
+---
+
+## PHASE 3: Performance Optimization & Instant Navigation
+- [ ] 3.1 OPTIMIZE DATABASE INDEXING & QUERY RETRIEVAL:
+  - Replace all unscoped `.collect()` calls with indexed queries using `by_workspace` or `by_project` on `issueDependencies`, `issueLabels`, and `comments`.
+  - Avoid redundant queries and sequential waterfalls across `use-workspace-data.ts`.
+- [ ] 3.2 INSTANT NAVIGATION & SKELETONS:
+  - Ensure every page transition (Projects, Workflow, Analytics, Team, Activity, Settings, People, Inbox) renders skeletons immediately without layout jumps or perceived delays.
+- [ ] 3.3 OPTIMISTIC UI FOR MUTATIONS:
+  - Implement optimistic UI updates for issue status dragging, issue creation, and project actions so operations feel instantaneous.
+- [ ] 3.4 GITHUB INTEGRATION & AUTH LOADING OPTIMIZATION:
+  - Optimize GitHub OAuth connect spinner and auth initialization to prevent prolonged hanging.
+
+---
+
+## PHASE 4: Demo Crash Elimination & In-Memory Demo Isolation (TASK 1, 2, 3)
+
+### Root Cause of `listWorkspaceIssues` Demo Crash
+In `src/components/CommandPaletteDialog.tsx`:
+```tsx
+const workspaceIssues = useQuery(
+  api.issues.listWorkspaceIssues,
+  workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip",
+);
+```
+When viewing a demo workspace or when `AppShell.tsx` falls back to `effectiveWorkspaceId = "demo-ws-northstar"`, `workspaceId` evaluates to `"demo-ws-northstar"`. The query's ternary condition `workspaceId ? ... : "skip"` is truthy, so `{ workspaceId: "demo-ws-northstar" }` was dispatched directly to Convex.
+Because Convex validates table IDs strictly via `v.id("workspaces")`, any non-Convex ID string (such as `"demo-ws-northstar"`) fails validation, immediately throwing:
+`[CONVEX Q(issues:listWorkspaceIssues)] ArgumentValidationError: Path: .workspaceId Value: "demo-ws-northstar" Validator: v.id("workspaces")`.
+The exact same vulnerability affects any component calling `useQuery` or `useMutation` with demo IDs (`demo-ws-*`, `demo-proj-*`, `demo-issue-*`).
+
+### Tasks Checklist
+- [ ] T1.1 ROOT CAUSE AUDIT & ISCONVEXID HELPER:
+  - Create helper `isConvexId(id)` and `isDemoId(id)` in `src/lib/idValidation.ts` to strictly distinguish real Convex IDs from mock/demo IDs.
+  - Create `useSafeQuery` and `useSafeMutation` wrappers that automatically intercept any query/mutation having a demo ID argument, passing `"skip"` to the Convex server so the backend never receives a demo ID.
+  - In demo mode, route query data and mutations directly to/from `demoStore`.
+- [ ] T1.2 SWAP RAW USEQUERY & MUTATIONS FOR SAFE QUERY HOOK:
+  - Replace raw `useQuery` in `CommandPaletteDialog.tsx`, `AppShell.tsx`, `OverviewPage.tsx`, `ProjectsPage.tsx`, `ProjectPage.tsx`, `IssuePage.tsx`, `WorkflowPage.tsx`, `AnalyticsPage.tsx`, `ActivityPage.tsx`, `TeamsPage.tsx`, `NotificationsPage.tsx`, and `WorkspaceSettings.tsx` to use `useSafeQuery` and `useSafeMutation`.
+- [ ] T1.3 BEHAVIOR TEST FOR ALL DEMO ROUTES & COMMAND PALETTE:
+  - Write and execute a real behavior test rendering every demo route (overview, projects, project detail, issue detail, workflow, analytics, activity, team, inbox, notifications, settings, command palette opened) with a mock Convex client that records every query/mutation and FAILS if any receives an ID starting with `demo-`.
+- [ ] T1.4 DIRECT URL & LOGO NAVIGATION TESTING:
+  - Verify navigating to demo workspace by direct URL and clicking the logo.
+- [ ] T2.1 SYNCHRONOUS IN-MEMORY DEMO STORE (`src/data/in-memory-demo-store.ts`):
+  - Implement fully synchronous in-memory store populated at startup from static in-code data.
+  - Include 2+ workspaces (`Demo: Northstar Labs`, `Demo: Pixel Forge`), 3+ projects each (e.g. `MOB`, `BIL`, `WEB`, `GAM`, `ART`, `NET`), 15+ issues per project across all 6 status categories, team members, labels, and activity events.
+  - Add test script printing exact counts of workspaces, projects, and issues per status.
+- [ ] T3.1 ELIMINATE BACKEND CALLS FOR "TRY DEMO":
+  - Remove `signIn("anonymous")` from `TryDemoButton.tsx`, `AuthForm.tsx`, `Section2Hero.tsx`, and `Section12FinalCTA.tsx`.
+  - Demo mode is activated purely via client-side flag (`sessionStorage` and in-memory `isDemoMode()`) and navigates directly to `/app` instantly with 0ms waiting and zero network calls.
+- [ ] T3.2 TIME-BOUNDED LOADING STATES (MAX 8 SECONDS):
+  - Ensure all loading/preparing workspace spinners across landing page, demo, and sign-in have an 8-second timeout with an error message and Retry button.
+- [ ] T4.1 GITHUB OAUTH REDIRECT LOOP FIX:
+  - Protect `RequireAuth.tsx`, `use-auth.ts`, `LoginPage.tsx`, and `AppHome.tsx` during OAuth code exchange when `?code=...` is in URL so the user is never prematurely redirected to `/auth` or `/login`.
+  - Ensure exactly one `ConvexAuthProvider` wraps all routes.
+  - Display visible error text on sign-in page if OAuth exchange fails and log to console.
+  - Show small debug line in development on sign-in page with `window.location.origin` to verify against `SITE_URL`.
+  - Ensure `redirectTo` uses `window.location.origin` or relative path.
+- [ ] T4.2 GITHUB SIGN-IN MARKED UNVERIFIED:
+  - Keep GitHub sign-in marked UNVERIFIED until user confirms in the live app.
+
+---
+
+## MANUAL STEPS FOR USER
+a) `src/convex` changes are NOT live until deployed (run `npx convex deploy`, or check the Convex dashboard for a recent deployment). The agent cannot deploy automatically because the terminal is not authenticated to Convex Cloud.
+b) Convex environment variables to set in Convex Dashboard:
+   - `SITE_URL` = `https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app` (no trailing slash)
+   - `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` (from your GitHub OAuth App)
+   - `JWT_PRIVATE_KEY` and `JWKS` must exist (Convex Auth requires them; Convex generates them on `npx convex auth init`)
+c) The GitHub OAuth App callback URL must be:
+   `https://ideal-corgi-476.convex.site/api/auth/callback/github` (it must end in `.convex.site`, not the app URL). The Homepage URL is `https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app`.
+d) Test only on `https://ais-pre-lsnyhyto7sq5wqscif2zwe-431374427708.us-east1.run.app` in an incognito window. The dev URL is a different origin, and OAuth state is origin-scoped.
+e) If GitHub sign-in still fails, copy the red error from Convex dashboard > Logs and the failed `/api/auth/` request from the browser Network tab.
+*GitHub sign-in status:* **UNVERIFIED (Pending live testing by user)**
+
+---
+
+## PHASE 5: Final Validation & Commit Pass
+- [ ] 5.1 Run full build (`npx tsc -b && npm run build`) and ESLint validation (`npm run lint`).
+- [ ] 5.2 Commit after each task with clean commit messages.
+

@@ -11,7 +11,7 @@
  * in src/convex and are the only place that cast is needed.
  */
 import { useMemo } from "react";
-import { useQueries } from "convex/react";
+import { useSafeQueries as useQueries } from "@/hooks/use-safe-query";
 import type { FunctionReference } from "convex/server";
 import type { Value } from "convex/values";
 import { api } from "@/convex/_generated/api";

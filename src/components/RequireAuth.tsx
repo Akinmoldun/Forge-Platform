@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,15 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Lock, AlertCircle, RotateCcw } from "lucide-react";
-import type { ReactNode } from "react";
+import { isDemoMode } from "@/lib/demoMode";
+import { AlertCircle, Loader2, Lock, RefreshCw } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
 /**
  * Wraps a route that requires a signed-in user.
- *
- * During OAuth code exchanges, it ensures no premature redirects bounce the user
- * back to the sign-in page. Enforces a maximum 8-second wait for any loading state.
+ * Allows instant bypass for demoMode visitors.
+ * Protects against redirects while an OAuth code exchange is in progress.
+ * Enforces an 8-second maximum wait timeout on loading states.
  */
 export function RequireAuth({
   children,
@@ -33,59 +33,58 @@ export function RequireAuth({
   /** Skip the explanation and go straight to `/auth`. */
   redirectImmediately?: boolean;
 }) {
-  const { isSessionPending, isSignedOut, isExchangingCode, exchangeError } = useAuth();
+  const { isSessionPending, isSignedOut, hasOAuthCode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
   const [timedOut, setTimedOut] = useState(false);
 
-  // 8-second safety timeout: nothing may spin forever
+  // 8-second timeout for loading / session pending / code exchange
   useEffect(() => {
-    if (!isSessionPending) return;
+    if (!isSessionPending && !hasOAuthCode) {
+      setTimedOut(false);
+      return;
+    }
     const timer = setTimeout(() => {
       setTimedOut(true);
     }, 8000);
     return () => clearTimeout(timer);
-  }, [isSessionPending]);
+  }, [isSessionPending, hasOAuthCode]);
 
-  // In-code demo workspaces have no auth requirement: allow demo routes immediately
-  if (
-    location.pathname.includes("/demo-") ||
-    location.pathname.includes("demo-ws-")
-  ) {
+  // Demo mode visitors are allowed to view workspaces and pages instantly
+  if (isDemoMode()) {
     return <>{children}</>;
   }
 
-  // If code exchange timed out or failed, show clear error state with Retry button
-  if (timedOut && isSessionPending) {
+  // If loading or OAuth exchange timed out after 8s, show error state with retry
+  if (timedOut) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-[#B3261E]/10 text-[#B3261E]">
-                <AlertCircle className="size-6" />
-              </div>
+        <Card className="w-full max-w-md border-destructive/40 text-center">
+          <CardHeader>
+            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <AlertCircle className="size-6" />
             </div>
-            <CardTitle className="text-xl">Authentication took too long</CardTitle>
+            <CardTitle className="text-lg">Authentication timed out</CardTitle>
             <CardDescription>
-              {exchangeError || "The session exchange did not complete within 8 seconds. Please try signing in again."}
+              We couldn't verify your session within 8 seconds. Please check your connection or sign in again.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex flex-col gap-2">
             <Button
-              className="w-full bg-[#0D0D0D] hover:bg-black text-white rounded-full h-10"
+              className="w-full"
               onClick={() => {
-                try {
-                  sessionStorage.removeItem("convex_oauth_exchanging");
-                } catch {
-                  /* ignore */
-                }
-                navigate("/login");
+                setTimedOut(false);
+                window.location.reload();
               }}
             >
-              <RotateCcw className="size-4 mr-2" />
-              Back to sign-in
+              <RefreshCw className="size-4 mr-2" /> Retry
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/login")}
+            >
+              Return to Sign In
             </Button>
           </CardFooter>
         </Card>
@@ -93,20 +92,22 @@ export function RequireAuth({
     );
   }
 
-  // Still resolving, or actively exchanging OAuth code: show calm spinner
-  if (isSessionPending || isExchangingCode || location.search.includes("code=")) {
+  // Still resolving auth or exchanging OAuth code: show spinner
+  if (isSessionPending || hasOAuthCode) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        <p className="mt-3 text-sm text-[#575657]">Completing sign-in...</p>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-6 text-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground mb-3" />
+        <p className="text-sm font-medium text-muted-foreground">
+          {hasOAuthCode ? "Signing you in with GitHub..." : "Loading session..."}
+        </p>
       </main>
     );
   }
 
-  // Protection stays: a sign-out that has been confirmed lands on /login or shows card
+  // Confirmed signed out
   if (isSignedOut) {
     const returnTo = `${location.pathname}${location.search}`;
-    const signInHref = `/login?returnTo=${encodeURIComponent(returnTo)}`;
+    const signInHref = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
 
     if (redirectImmediately) {
       return <Navigate to={signInHref} replace />;
@@ -128,12 +129,12 @@ export function RequireAuth({
             You'll come straight back to this page once you're signed in.
           </CardContent>
           <CardFooter className="flex flex-col gap-2">
-            <Button className="w-full rounded-full" onClick={() => navigate(signInHref)}>
+            <Button className="w-full" onClick={() => navigate(signInHref)}>
               Sign in
             </Button>
             <Button
               variant="ghost"
-              className="w-full rounded-full"
+              className="w-full"
               onClick={() => navigate("/")}
             >
               Back to home
@@ -144,5 +145,5 @@ export function RequireAuth({
     );
   }
 
-  return <>{children}</>;
+  return children;
 }

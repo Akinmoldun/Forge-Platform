@@ -1,7 +1,7 @@
-import { useMutation } from "convex/react";
-import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
+import { useQuery, useMutation, useConvex } from "convex/react";
+import { useSafeQuery, useSafeMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useNavigationType } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -49,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
+import { resetGuestDemo } from "@/lib/guestDemo";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { ForgeLogo } from "./ForgeLogo";
@@ -59,7 +59,6 @@ import { CommandPaletteDialog } from "./CommandPaletteDialog";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { InviteMembersDialog } from "./InviteMembersDialog";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
-import { SectionErrorBoundary } from "./SectionErrorBoundary";
 
 /** Primary workspace navigation rows. */
 const WORKSPACE_NAV = [
@@ -307,6 +306,7 @@ function AccountMenu({
 // ---------------------------------------------------------------------------
 function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
   const { user } = useAuth();
+  const convex = useConvex();
   const navigate = useNavigate();
   const [resetting, setResetting] = useState(false);
   const [hidden, setHidden] = useState<boolean>(() => {
@@ -323,9 +323,9 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
     if (resetting) return;
     setResetting(true);
     try {
-      demoStore.resetDemo();
+      const res = await resetGuestDemo(convex, workspaceId || "");
       toast.success("Demo reset fresh");
-      navigate(`/app/workspaces/${workspaceId || "demo-ws-northstar"}`);
+      navigate(`/app/workspaces/${res.workspaceId}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to reset demo");
     } finally {
@@ -404,116 +404,37 @@ export function AppShell({
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  useDemoStoreSubscriber();
 
   // If outside workspace
   const isInsideWorkspace = isWorkspaceRoute(pathname);
 
-  // Current active project or issue if on project/issue page
-  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
-  const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
-
-  // 1. Resolve workspace ID candidate from route or props
-  const matchedWsId = pathname.match(/^\/app\/workspaces\/([^/]+)/)?.[1];
-  const initialWsId = workspaceId || matchedWsId;
-
-  const isDemoWs = Boolean(
-    (initialWsId && !isConvexId(initialWsId)) ||
-    (activeProjectId && !isConvexId(activeProjectId)) ||
-    (activeIssueId && !isConvexId(activeIssueId)) ||
-    initialWsId?.startsWith("demo-") ||
-    pathname.includes("/demo-") ||
-    pathname.includes("demo-ws-") ||
-    user?.isAnonymous
-  );
-
-  const activeProjectQuery = useSafeQuery(
-    api.projects.getProject,
-    !isDemoWs && !initialWsId && isConvexId(activeProjectId) ? { projectId: activeProjectId as Id<"projects"> } : "skip"
-  );
-  const issueDetail = useSafeQuery(
-    api.issues.getIssue,
-    !isDemoWs && !initialWsId && isConvexId(activeIssueId) ? { issueId: activeIssueId as Id<"issues"> } : "skip"
-  );
-
-  const effectiveWorkspaceId =
-    initialWsId ||
-    activeProjectQuery?.project?.workspaceId ||
-    issueDetail?.workspaceId ||
-    (isDemoWs ? "demo-ws-northstar" : undefined);
-
-  // Queries
-  const rawMyWorkspaces = useSafeQuery(
+  // Queries (safe for both real Convex IDs and demo IDs)
+  const myWorkspaces = useSafeQuery(
     api.workspaces.listMyWorkspaces,
-    !isDemoWs && user ? {} : "skip"
+    isInsideWorkspace ? {} : "skip"
   );
-  const rawCurrentWorkspace = useSafeQuery(
+  const currentWorkspace = useSafeQuery(
     api.workspaces.getWorkspace,
-    !isDemoWs && isConvexId(effectiveWorkspaceId) ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
-  const rawProjects = useSafeQuery(
+  const projects = useSafeQuery(
     api.projects.listProjects,
-    !isDemoWs && isConvexId(effectiveWorkspaceId) ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
-  const rawNotifications = useSafeQuery(
+  const notifications = useSafeQuery(
     api.analytics.listNotifications,
-    !isDemoWs && isConvexId(effectiveWorkspaceId) ? { workspaceId: effectiveWorkspaceId as Id<"workspaces"> } : "skip"
+    isInsideWorkspace && workspaceId ? { workspaceId: workspaceId as Id<"workspaces"> } : "skip"
   );
-
-  const demoWsData = useMemo(() => {
-    if (!isDemoWs) return null;
-    return {
-      workspace: demoStore.getWorkspace(effectiveWorkspaceId),
-      projects: demoStore.listProjects(effectiveWorkspaceId),
-      workspaces: demoStore.listWorkspaces(),
-    };
-  }, [isDemoWs, effectiveWorkspaceId]);
-
-  const currentWorkspace = isDemoWs ? demoWsData?.workspace : rawCurrentWorkspace;
-  const projects = isDemoWs ? (demoWsData?.projects as unknown as typeof rawProjects) : rawProjects;
-  const myWorkspaces = isDemoWs ? (demoWsData?.workspaces as unknown as typeof rawMyWorkspaces) : rawMyWorkspaces;
-  const notifications = isDemoWs ? { notifications: [], unreadCount: 0 } : rawNotifications;
 
   const unreadCount = notifications?.unreadCount ?? 0;
 
-  // Logo click handler:
-  // - Inside ANY workspace (guest/demo or real): keeps user in CURRENT workspace and resets to home view with soft refresh
-  // - Never leaves workspace, never goes to marketing page, never logs out
-  // - In demo/guest mode, stays in demo workspace
-  const handleLogoClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      if (effectiveWorkspaceId) {
-        const homePath = `/app/workspaces/${effectiveWorkspaceId}`;
-        const isAlreadyHome =
-          pathname === homePath || pathname === `${homePath}/overview`;
-
-        if (isAlreadyHome) {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          window.dispatchEvent(
-            new CustomEvent("forge:soft-refresh", {
-              detail: { workspaceId: effectiveWorkspaceId },
-            })
-          );
-        } else {
-          navigate(homePath);
-        }
-        return;
-      }
-
-      if (user && !user.isAnonymous) {
-        if (myWorkspaces && myWorkspaces.length > 0) {
-          navigate(`/app/workspaces/${myWorkspaces[0]._id}`);
-        } else {
-          navigate("/app");
-        }
-      } else {
-        navigate("/app/workspaces/demo-ws-northstar");
-      }
-    },
-    [effectiveWorkspaceId, pathname, navigate, user, myWorkspaces]
+  // Current active project or issue if on project/issue page
+  const activeProjectId = pathname.match(/^\/app\/projects\/([^/]+)/)?.[1];
+  const activeIssueId = pathname.match(/^\/app\/issues\/([^/]+)/)?.[1];
+  const issueDetail = useSafeQuery(
+    api.issues.getIssue,
+    activeIssueId ? { issueId: activeIssueId as Id<"issues"> } : "skip"
   );
-
 
   const activeProject =
     projects?.find((p) => p._id === activeProjectId) ||
@@ -698,18 +619,16 @@ export function AppShell({
         {/* 56px Top bar outside workspace */}
         <header className="sticky top-0 z-40 h-[56px] border-b border-border bg-white flex items-center">
           <div className="mx-auto flex h-14 w-full max-w-[1100px] items-center justify-between px-4 sm:px-6">
-            <button
-              type="button"
-              onClick={handleLogoClick}
-              className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2 cursor-pointer text-left"
+            <Link
+              to="/app"
+              className="flex shrink-0 items-center gap-2.5 rounded-full py-1 outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2"
               aria-label="Forge home"
             >
               <ForgeLogo className="size-6 text-[#0D0D0D]" />
               <span className="text-[16px] font-semibold tracking-tight text-[#0D0D0D] select-none">
                 Forge
               </span>
-            </button>
-
+            </Link>
 
             <div className="flex shrink-0 items-center">
               <AccountMenu onOpenShortcuts={() => setShortcutsOpen(true)} />
@@ -719,9 +638,7 @@ export function AppShell({
 
         <main className="flex-1">
           <FadeIn key={pathname} className="mx-auto w-full max-w-[1100px] px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8">
-            <SectionErrorBoundary name="page content" variant="page">
-              {children}
-            </SectionErrorBoundary>
+            {children}
           </FadeIn>
         </main>
 
@@ -841,18 +758,16 @@ export function AppShell({
         <div className="flex h-12 items-center justify-between px-3 border-b border-border/40 shrink-0">
           {!collapsed ? (
             <>
-              <button
-                type="button"
-                onClick={handleLogoClick}
-                className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85 cursor-pointer text-left"
+              <Link
+                to="/app"
+                className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
                 aria-label="Forge home"
               >
                 <ForgeLogo className="size-5 text-[#0D0D0D]" />
                 <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
                   Forge
                 </span>
-              </button>
-
+              </Link>
 
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1364,9 +1279,7 @@ export function AppShell({
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8 sm:py-8">
             <FadeIn key={pathname}>
-              <SectionErrorBoundary name="page content" variant="page">
-                {children}
-              </SectionErrorBoundary>
+              {children}
             </FadeIn>
           </div>
         </main>
@@ -1408,7 +1321,7 @@ export function AppShell({
       <CommandPaletteDialog
         open={commandOpen}
         onOpenChange={setCommandOpen}
-        workspaceId={effectiveWorkspaceId || workspaceId}
+        workspaceId={workspaceId}
         projects={projects}
         onNewIssue={() => setNewIssueOpen(true)}
         onNewProject={() => setNewProjectOpen(true)}

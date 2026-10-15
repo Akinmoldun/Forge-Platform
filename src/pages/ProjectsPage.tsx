@@ -1,4 +1,4 @@
-import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
+import { useSafeQuery as useQuery } from "@/hooks/use-safe-query";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -25,7 +25,6 @@ import {
   EmptyIllustration,
 } from "@/components/Illustrations";
 import { EmptyState, RiskBadge, timeAgo } from "@/components/forge";
-import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { ProjectsSkeleton } from "@/components/Skeletons";
 import { useProjectRisks } from "@/hooks/use-workspace-data";
 import {
@@ -34,8 +33,6 @@ import {
   FolderKanban,
   Timer,
 } from "lucide-react";
-
-import { demoStore, useDemoStoreSubscriber } from "@/data/in-memory-demo-store";
 
 type StatusFilter = "all" | "planning" | "active" | "paused" | "completed";
 
@@ -49,29 +46,11 @@ const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 
 export default function ProjectsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  useDemoStoreSubscriber();
   const id = workspaceId as Id<"workspaces">;
 
-  const isDemo = Boolean(!isConvexId(workspaceId) || demoStore.isDemoWorkspace(workspaceId));
-
-  const rawWorkspace = useSafeQuery(
-    api.workspaces.getWorkspace,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
-  );
-  const rawProjects = useSafeQuery(
-    api.projects.listProjects,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
-  );
-  const rawMembers = useSafeQuery(
-    api.workspaces.listMembers,
-    !isDemo && isConvexId(workspaceId) ? { workspaceId: id } : "skip"
-  );
-
-  const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
-  const projects = isDemo ? (demoStore.listProjects(workspaceId) as unknown as typeof rawProjects) : rawProjects;
-  const members = isDemo ? (demoStore.listTeammates(workspaceId) as unknown as typeof rawMembers) : rawMembers;
-
-
+  const workspace = useQuery(api.workspaces.getWorkspace, { workspaceId: id });
+  const projects = useQuery(api.projects.listProjects, { workspaceId: id });
+  const members = useQuery(api.workspaces.listMembers, { workspaceId: id });
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -165,24 +144,22 @@ export default function ProjectsPage() {
           <ProjectsSkeleton />
         ) : (
           <>
-            <SectionErrorBoundary name="Project metrics">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Projects" value={totals.count} icon={<FolderKanban className="size-3.5" />} />
-                <StatCard label="Open issues" value={totals.open} />
-                <StatCard
-                  label="Overdue"
-                  value={totals.overdue}
-                  tone={totals.overdue > 0 ? "danger" : "positive"}
-                  icon={<AlertTriangle className="size-3.5" />}
-                />
-                <StatCard
-                  label="Blocked"
-                  value={totals.blocked}
-                  tone={totals.blocked > 0 ? "warning" : "positive"}
-                  icon={<CircleSlash className="size-3.5" />}
-                />
-              </div>
-            </SectionErrorBoundary>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard label="Projects" value={totals.count} icon={<FolderKanban className="size-3.5" />} />
+              <StatCard label="Open issues" value={totals.open} />
+              <StatCard
+                label="Overdue"
+                value={totals.overdue}
+                tone={totals.overdue > 0 ? "danger" : "positive"}
+                icon={<AlertTriangle className="size-3.5" />}
+              />
+              <StatCard
+                label="Blocked"
+                value={totals.blocked}
+                tone={totals.blocked > 0 ? "warning" : "positive"}
+                icon={<CircleSlash className="size-3.5" />}
+              />
+            </div>
 
             <FilterBar>
               <SearchInput
@@ -212,8 +189,7 @@ export default function ProjectsPage() {
               </span>
             </FilterBar>
 
-            <SectionErrorBoundary name="Projects list">
-              <Panel flush>
+            <Panel flush>
               {(projects ?? []).length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 text-center">
                   <EmptyIllustration type="no-projects" size={64} className="mb-3" />
@@ -428,8 +404,7 @@ export default function ProjectsPage() {
                 </>
               )}
             </Panel>
-          </SectionErrorBoundary>
-        </>
+          </>
         )}
       </PageStack>
     </AppShell>

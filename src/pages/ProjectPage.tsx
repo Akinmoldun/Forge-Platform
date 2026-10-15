@@ -1,7 +1,6 @@
-import { useMutation } from "convex/react";
-import { useSafeQuery, isConvexId } from "@/hooks/use-safe-query";
+import { useSafeQuery as useQuery, useSafeMutation as useMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
@@ -17,7 +16,6 @@ import {
   AvatarIllustration,
   PriorityGlyph,
   StatusPill,
-  EmptyIllustration,
 } from "@/components/Illustrations";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,30 +41,23 @@ import {
   ListTableSkeleton,
   ProjectAnalyticsSkeleton,
 } from "@/components/Skeletons";
-import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { AnimatedNumber } from "@/components/motion";
 import {
   Plus,
   Search,
   TrendingUp,
+  ArrowUpDown,
   Activity as ActivityIcon,
   Lock,
   X,
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  demoStore,
-  useDemoStoreSubscriber,
-  DEMO_STATUSES,
-  DEMO_TRANSITIONS,
-} from "@/data/in-memory-demo-store";
 
 type ViewMode = "board" | "list";
 
 export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" }) {
   const { user } = useAuth();
-  useDemoStoreSubscriber();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,88 +70,28 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   });
 
-  const isDemo = Boolean(
-    !isConvexId(projectId) ||
-    projectId?.startsWith("demo-") ||
-    demoStore.isDemoWorkspace(projectId)
-  );
-
-  const rawProject = useSafeQuery(
-    api.projects.getProject,
-    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
-  );
-  const rawAllProjects = useSafeQuery(
+  const project = useQuery(api.projects.getProject, { projectId: projectId as never });
+  const allProjects = useQuery(
     api.projects.listProjects,
-    !isDemo && rawProject?.project && isConvexId(rawProject.project.workspaceId) ? { workspaceId: rawProject.project.workspaceId } : "skip",
+    project ? { workspaceId: project.project.workspaceId } : "skip",
   );
-  const rawMembers = useSafeQuery(
+  const members = useQuery(
     api.workspaces.listMembers,
-    !isDemo && rawProject?.project && isConvexId(rawProject.project.workspaceId) ? { workspaceId: rawProject.project.workspaceId } : "skip",
+    project ? { workspaceId: project.project.workspaceId } : "skip",
   );
-  const rawBoard = useSafeQuery(
-    api.issues.getBoard,
-    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
-  );
-  const rawRisk = useSafeQuery(
-    api.analytics.getProjectRisk,
-    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
-  );
-  const rawSummary = useSafeQuery(
-    api.analytics.getProjectSummary,
-    !isDemo && isConvexId(projectId) ? { projectId: projectId as never } : "skip"
-  );
-  const rawProjectActivity = useSafeQuery(
-    api.analytics.listProjectActivity,
-    !isDemo && isConvexId(projectId)
-      ? {
-          projectId: projectId as never,
-          limit: 40,
-        }
-      : "skip"
-  );
-
-  const demoProjData = useMemo(() => {
-    if (!isDemo || !projectId) return null;
-    return demoStore.getProject(projectId);
-  }, [isDemo, projectId]);
-
-  const project = isDemo ? (demoProjData as unknown as typeof rawProject) : rawProject;
-  const allProjects = isDemo
-    ? (demoStore.listProjects(demoProjData?.project.workspaceId) as unknown as typeof rawAllProjects)
-    : rawAllProjects;
-  const members = isDemo
-    ? (demoStore.listTeammates(demoProjData?.project.workspaceId) as unknown as typeof rawMembers)
-    : rawMembers;
-
-  const demoBoard = useMemo(() => {
-    if (!isDemo || !projectId) return null;
-    const projectIssues = demoStore.listIssues(projectId);
-    return {
-      project: demoProjData?.project,
-      workflow: demoStore.getWorkflow().workflow,
-      columns: DEMO_STATUSES.map((status) => ({
-        status,
-        issues: projectIssues.filter((i) => i.statusId === status._id),
-      })),
-      transitions: DEMO_TRANSITIONS,
-    };
-  }, [isDemo, projectId, demoProjData]);
-
-  const board = isDemo ? (demoBoard as unknown as typeof rawBoard) : rawBoard;
-  const risk = isDemo ? (demoStore.getProjectRisk(projectId!) as unknown as typeof rawRisk) : rawRisk;
-  const summary = isDemo ? (demoStore.getProjectSummary(projectId!) as unknown as typeof rawSummary) : rawSummary;
-  const projectActivity = isDemo
-    ? (demoStore.listActivities(demoProjData?.project.workspaceId) as unknown as typeof rawProjectActivity)
-    : rawProjectActivity;
+  const board = useQuery(api.issues.getBoard, { projectId: projectId as never });
+  const risk = useQuery(api.analytics.getProjectRisk, { projectId: projectId as never });
+  const summary = useQuery(api.analytics.getProjectSummary, {
+    projectId: projectId as never,
+  });
+  const projectActivity = useQuery(api.analytics.listProjectActivity, {
+    projectId: projectId as never,
+    limit: 40,
+  });
 
   const transitionIssue = useMutation(api.issues.transitionIssue);
 
   const handleStatusChange = async (issueId: string, toStatusId: string) => {
-    if (isDemo) {
-      demoStore.updateIssue(issueId, { statusId: toStatusId });
-      toast.success("Status updated");
-      return;
-    }
     const toStatusName =
       board?.columns.find((c) => c.status._id === toStatusId)?.status.name || "the next status";
     try {
@@ -185,7 +116,6 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     }
   };
 
-
   const [colIssueDialogOpen, setColIssueDialogOpen] = useState(false);
   const [colStatusId, setColStatusId] = useState<string>("");
 
@@ -201,52 +131,21 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
     return () => clearTimeout(t);
   }, [search]);
 
-  const rawIssues = useSafeQuery(
-    api.issues.listIssues,
-    !isDemo && isConvexId(projectId)
-      ? {
-          projectId: projectId as never,
-          search: debouncedSearch || undefined,
-          priority:
-            priorityFilter !== "all"
-              ? (priorityFilter as "urgent" | "high" | "medium" | "low" | "none")
-              : undefined,
-          assigneeId:
-            assigneeFilter === "all"
-              ? undefined
-              : assigneeFilter === "unassigned"
-                ? ("unassigned" as const)
-                : (assigneeFilter as never),
-          pageSize: 50,
-        }
-      : "skip"
-  );
-
-  const demoIssues = useMemo(() => {
-    if (!isDemo || !projectId) return null;
-    let list = demoStore.listIssues(projectId);
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      list = list.filter(
-        (i) =>
-          i.title.toLowerCase().includes(q) ||
-          i.description.toLowerCase().includes(q)
-      );
-    }
-    if (priorityFilter !== "all") {
-      list = list.filter((i) => i.priority === priorityFilter);
-    }
-    return {
-      issues: list,
-      total: list.length,
-      page: 1,
-      pageSize: 50,
-      totalPages: 1,
-    };
-  }, [isDemo, projectId, debouncedSearch, priorityFilter]);
-
-  const issues = isDemo ? (demoIssues as unknown as typeof rawIssues) : rawIssues;
-
+  const issues = useQuery(api.issues.listIssues, {
+    projectId: projectId as never,
+    search: debouncedSearch || undefined,
+    priority:
+      priorityFilter !== "all"
+        ? (priorityFilter as "urgent" | "high" | "medium" | "low" | "none")
+        : undefined,
+    assigneeId:
+      assigneeFilter === "all"
+        ? undefined
+        : assigneeFilter === "unassigned"
+          ? ("unassigned" as const)
+          : (assigneeFilter as never),
+    pageSize: 50,
+  });
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -455,62 +354,55 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
         {/* Content container with exact 24px space from tab row */}
         <div className="pt-6">
           {tab === "analytics" ? (
-            <SectionErrorBoundary name="Project analytics">
-              <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
-            </SectionErrorBoundary>
+            <AnalyticsTab summary={summary} risk={risk} key={String(summary === undefined)} />
           ) : tab === "activity" ? (
-            <SectionErrorBoundary name="Project activity">
-              <ActivityTab activity={projectActivity} keyName={project.project.key} />
-            </SectionErrorBoundary>
+            <ActivityTab activity={projectActivity} keyName={project.project.key} />
           ) : view === "board" ? (
-            <SectionErrorBoundary name="Project board">
-              <div className="space-y-3">
-                {showTip && (
-                  <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
-                    <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          sessionStorage.setItem("forge_dismiss_backlog_tip", "true");
-                        } catch {
-                          /* ignore */
-                        }
-                        setShowTip(false);
-                      }}
-                      className="size-5 flex items-center justify-center rounded text-[#575657] hover:text-[#0D0D0D] transition-colors"
-                      aria-label="Dismiss tip"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                )}
-                <BoardView
-                  board={board}
-                  keyName={project.project.key}
-                  canWrite={canWrite}
-                  searchQuery={debouncedSearch}
-                  priorityFilter={priorityFilter}
-                  assigneeFilter={assigneeFilter}
-                  onStatusChange={handleStatusChange}
-                  onIssueClick={(id) => navigate(`/app/issues/${id}`)}
-                  onNewIssueInStatus={(statusId) => {
-                    setColStatusId(statusId);
-                    setColIssueDialogOpen(true);
+            <div className="space-y-3">
+
+            {showTip && (
+              <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
+                <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem("forge_dismiss_backlog_tip", "true");
+                    } catch {
+                      /* ignore */
+                    }
+                    setShowTip(false);
                   }}
-                />
+                  className="size-5 flex items-center justify-center rounded text-[#575657] hover:text-[#0D0D0D] transition-colors"
+                  aria-label="Dismiss tip"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
-            </SectionErrorBoundary>
-          ) : (
-            <SectionErrorBoundary name="Project list">
-              <ListView
-                issues={issues}
-                keyName={project.project.key}
-                memberName={memberName}
-                onIssueClick={(id) => navigate(`/app/issues/${id}`)}
-              />
-            </SectionErrorBoundary>
-          )}
+            )}
+            <BoardView
+              board={board}
+              keyName={project.project.key}
+              canWrite={canWrite}
+              searchQuery={debouncedSearch}
+              priorityFilter={priorityFilter}
+              assigneeFilter={assigneeFilter}
+              onStatusChange={handleStatusChange}
+              onIssueClick={(id) => navigate(`/app/issues/${id}`)}
+              onNewIssueInStatus={(statusId) => {
+                setColStatusId(statusId);
+                setColIssueDialogOpen(true);
+              }}
+            />
+          </div>
+        ) : (
+          <ListView
+            issues={issues}
+            keyName={project.project.key}
+            memberName={memberName}
+            onIssueClick={(id) => navigate(`/app/issues/${id}`)}
+          />
+        )}
         </div>
       </div>
 
@@ -592,19 +484,16 @@ function AnalyticsTab({
   const overduePct = summary.openCount > 0 ? Math.round((summary.overdueCount / summary.openCount) * 100) : 0;
 
   // Throughput: 8 weeks total and max calculation
-  const throughputList = Array.isArray(summary.throughput) ? summary.throughput : [];
-  const totalCompleted8Weeks = throughputList.reduce((sum, t) => sum + (t?.count || 0), 0) || summary.completedCount;
-  const maxThroughput = Math.max(1, ...throughputList.map((t) => t?.count || 0));
+  const totalCompleted8Weeks = summary.throughput.reduce((sum, t) => sum + t.count, 0) || summary.completedCount;
+  const maxThroughput = Math.max(1, ...summary.throughput.map((t) => t.count));
 
   // Workload: sorted top 6 by open issues, expandable
-  const workloadList = Array.isArray(summary.workload) ? summary.workload : [];
-  const sortedWorkload = [...workloadList].sort((a, b) => b.openIssues - a.openIssues);
+  const sortedWorkload = [...summary.workload].sort((a, b) => b.openIssues - a.openIssues);
   const visibleWorkload = showAllMembers ? sortedWorkload : sortedWorkload.slice(0, 6);
   const maxLoad = Math.max(1, sortedWorkload[0]?.openIssues ?? 1);
 
   // Highest point factor gets the rose highlight
-  const riskFactorsList = Array.isArray(risk?.factors) ? risk.factors : [];
-  const maxFactorPoints = Math.max(0, ...riskFactorsList.map((f) => f.points));
+  const maxFactorPoints = Math.max(0, ...(risk?.factors.map((f) => f.points) ?? [0]));
 
   return (
     <div className="space-y-6">
@@ -950,7 +839,7 @@ function AnalyticsTab({
             {/* Status list */}
             <div className="space-y-3">
               <p className="text-xs font-medium text-[#575657] pb-0.5">Status</p>
-              {(Array.isArray(summary.byStatus) ? summary.byStatus : []).map((s) => {
+              {summary.byStatus.map((s) => {
                 const norm = s.statusName.toLowerCase();
                 const tint =
                   (s.color && s.color !== "#8b8b93" ? s.color : undefined) ||
@@ -995,7 +884,7 @@ function AnalyticsTab({
             {/* Priority list */}
             <div className="space-y-3">
               <p className="text-xs font-medium text-[#575657] pb-0.5">Priority</p>
-              {(Array.isArray(summary.byPriority) ? summary.byPriority : []).map((p) => {
+              {summary.byPriority.map((p) => {
                 const priorityColor =
                   p.priority === "urgent" ? "#D78FC6"
                   : p.priority === "high" ? "#D6C6A1"
@@ -1142,37 +1031,9 @@ function BoardView({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [columnLimit, setColumnLimit] = useState<Record<string, number>>({});
   const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
-  const [optimisticMoves, setOptimisticMoves] = useState<Record<string, string>>({});
 
   if (!board) return <BoardSkeleton />;
   const now = Date.now();
-
-  const allIssuesList = board.columns.flatMap((c) =>
-    c.issues.map((i) => ({ ...i, originalStatusId: c.status._id }))
-  );
-
-  const totalBoardIssues = allIssuesList.length;
-  if (totalBoardIssues === 0 && !searchQuery && priorityFilter === "all" && assigneeFilter === "all") {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-center rounded-[12px] border border-dashed border-border bg-[#FAFAFA]">
-        <EmptyIllustration type="no-issues" size={64} className="mb-3" />
-        <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No issues yet</h3>
-        <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
-          Get started by creating the first issue for this project.
-        </p>
-        {canWrite && (
-          <Button
-            size="sm"
-            onClick={() => onNewIssueInStatus?.(board.columns[0]?.status._id ?? "")}
-            className="mt-4 rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
-          >
-            <Plus className="size-4 mr-1.5" />
-            Create first issue
-          </Button>
-        )}
-      </div>
-    );
-  }
 
   return (
     <DragScroll fadeColor="from-[#FBFBFC]" className="pb-6 pt-1">
@@ -1186,15 +1047,8 @@ function BoardView({
             statusNameLower.includes("changes requested") ||
             statusNameLower.includes("cancelled");
 
-          // Resolve issues belonging to this column, taking optimistic moves into account
-          const colIssues = allIssuesList.filter((i) => {
-            const movedTo = optimisticMoves[i._id];
-            if (movedTo) return movedTo === col.status._id;
-            return i.originalStatusId === col.status._id;
-          });
-
           // Filter column issues by search, priority, assignee
-          const filteredIssues = colIssues.filter((i) => {
+          const filteredIssues = col.issues.filter((i) => {
             if (
               priorityFilter &&
               priorityFilter !== "all" &&
@@ -1275,17 +1129,7 @@ function BoardView({
                 try {
                   const { issueId, statusId } = JSON.parse(raw);
                   if (!issueId || statusId === col.status._id) return;
-                  // Optimistically move card instantly
-                  setOptimisticMoves((prev) => ({ ...prev, [issueId]: col.status._id }));
-                  try {
-                    await onStatusChange(issueId, col.status._id);
-                  } finally {
-                    setOptimisticMoves((prev) => {
-                      const next = { ...prev };
-                      delete next[issueId];
-                      return next;
-                    });
-                  }
+                  await onStatusChange(issueId, col.status._id);
                 } catch {
                   // ignore parse errors
                 }
@@ -1458,13 +1302,11 @@ function ListView({
   if (!issues) return <ListTableSkeleton />;
   if (issues.issues.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center rounded-[12px] border border-dashed border-border bg-[#FAFAFA]">
-        <EmptyIllustration type="no-issues" size={64} className="mb-3" />
-        <h3 className="text-[15px] font-[600] text-[#0D0D0D]">No issues yet</h3>
-        <p className="mt-1 text-[13px] text-[#575657] max-w-sm">
-          Create the first issue for this project to start tracking work.
-        </p>
-      </div>
+      <EmptyState
+        icon={<ArrowUpDown className="size-5" />}
+        title="No issues match"
+        description="Try clearing filters, or create the first issue for this project."
+      />
     );
   }
   return (

@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useAuth } from '@/hooks/use-auth';
+import { enableDemoMode } from '@/lib/demoMode';
 import { FocusPullHeading } from '../motion/FocusPullHeading';
 import { InkFillParagraph } from '../motion/InkFillParagraph';
 import { MagneticButton } from '../motion/MagneticButton';
@@ -191,7 +193,9 @@ const items = [
 ];
 
 export function Section2Hero() {
+  const { isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [_prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -206,11 +210,7 @@ export function Section2Hero() {
 
   const handleStart = () => {
     setError(null);
-    try {
-      sessionStorage.setItem("forge_demo_mode", "true");
-    } catch {
-      /* ignore */
-    }
+    enableDemoMode();
     navigate('/app');
   };
 
@@ -278,35 +278,17 @@ export function Section2Hero() {
               Projects, custom workflows, issue dependencies and explainable risk scoring in one multi-tenant workspace.
             </InkFillParagraph>
 
-            {/* CTAs: Primary "Get Started" to /signup + Separate "Try demo" */}
-            <div className="flex flex-col items-center justify-center gap-3">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <MagneticButton
-                  onClick={() => navigate('/signup')}
-                  className="landing-btn-primary h-[48px] px-8 text-[15px] select-none min-h-[48px] rounded-full inline-flex items-center justify-center font-medium transition-all cursor-pointer bg-[#0D0D0D] text-white hover:bg-black"
-                >
-                  Get Started
-                </MagneticButton>
-
-                <button
-                  type="button"
-                  onClick={handleStart}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    color: '#0D0D0D',
-                    borderRadius: '9999px',
-                    height: '48px',
-                    border: '1px solid rgba(0, 0, 0, 0.12)',
-                    boxShadow: 'none',
-                  }}
-                  className="h-[48px] px-7 text-[15px] select-none min-h-[48px] inline-flex items-center justify-center font-medium transition-all cursor-pointer hover:bg-[#F6F6F7]"
-                >
-                  Try demo
-                </button>
-              </div>
-
+            {/* One button: Try demo with Magnetic Button */}
+            <div className="flex flex-col items-center justify-center">
+              <MagneticButton
+                onClick={handleStart}
+                disabled={isLoading}
+                className="landing-btn-primary h-[48px] px-8 text-[15px] select-none min-h-[48px] rounded-full inline-flex items-center justify-center font-medium transition-all cursor-pointer"
+              >
+                {isLoading ? 'Starting...' : 'Try demo'}
+              </MagneticButton>
               {error && (
-                <p className="text-xs text-red-600 mt-1">{error}</p>
+                <p className="text-xs text-red-600 mt-2">{error}</p>
               )}
             </div>
           </div>

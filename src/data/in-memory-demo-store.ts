@@ -1,30 +1,50 @@
 /**
- * In-Memory Demo Store for Forge
- * 
- * Provides 100% code-resident, static demo data and local state management for
- * guest/demo mode.
- * 
- * Key Guarantees:
- * 1. Zero network/Convex queries or mutations are executed for demo workspaces.
- * 2. Real accounts never see demo data.
- * 3. Demo changes (creating/editing/moving issues) live in local state and reset on refresh.
- * 4. Immediate synchronous data load — no spinners, no database connection needed.
+ * Fully synchronous in-memory demo store populated at startup from static in-code data.
+ * Does NOT touch Convex database or require any network connectivity.
+ * Supports reactive subscriptions so UI updates immediately when issues/projects are modified.
  */
 
-import { useState, useEffect } from "react";
-import {
-  DEMO_WORKSPACES,
-  DEMO_LABELS,
-} from "./demo-fixtures";
+export interface DemoUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: "owner" | "admin" | "member" | "viewer";
+  avatarUrl?: string;
+}
 
-export { DEMO_LABELS };
+export interface DemoWorkspace {
+  _id: string;
+  name: string;
+  slug: string;
+  role: "owner" | "admin" | "member" | "viewer";
+  createdAt: number;
+  ownerId: string;
+}
+
+export interface DemoProject {
+  _id: string;
+  workspaceId: string;
+  key: string;
+  name: string;
+  description: string;
+  status: "active" | "planning" | "completed" | "paused" | "archived";
+  color?: string;
+  iconKey?: string;
+  issueCount: number;
+  openIssueCount: number;
+  doneIssueCount: number;
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string;
+}
 
 export interface DemoStatus {
   _id: string;
+  workflowId: string;
   name: string;
-  category: "backlog" | "unstarted" | "active" | "review" | "completed" | "cancelled";
-  color: string;
+  category: "backlog" | "todo" | "in_progress" | "in_review" | "done" | "cancelled";
   position: number;
+  color: string;
 }
 
 export interface DemoIssue {
@@ -33,334 +53,81 @@ export interface DemoIssue {
   projectId: string;
   number: number;
   title: string;
-  description: string;
+  description?: string;
+  priority: "urgent" | "high" | "medium" | "low" | "none";
   statusId: string;
-  status: { name: string; color: string; category: string };
-  priority: "urgent" | "high" | "medium" | "low";
   assigneeId?: string;
-  assignee?: { _id: string; name: string; email: string; avatarKey: string; jobTitle: string };
   reporterId: string;
-  reporter?: { _id: string; name: string; email: string };
-  estimatePoints?: number;
   dueDate?: number;
-  startedAt?: number;
-  completedAt?: number;
-  labels: Array<{ _id: string; name: string; color: string }>;
-  dependencies?: string[];
-  blockedBy?: string[];
+  estimatePoints?: number;
+  labelIds: string[];
   createdAt: number;
   updatedAt: number;
+  archivedAt?: number;
+}
+
+export interface DemoLabel {
+  _id: string;
+  workspaceId: string;
+  name: string;
+  color: string;
 }
 
 export interface DemoActivityEvent {
   _id: string;
   workspaceId: string;
+  projectId?: string;
   actorId: string;
   actorName: string;
-  actorEmail: string;
   actorImage?: string;
-  entityType: "issue" | "project" | "workspace" | "workflow";
-  entityId: string;
   eventType: string;
-  payload: Record<string, unknown>;
+  entityType: string;
+  entityId: string;
+  payload?: Record<string, unknown>;
   createdAt: number;
 }
 
-const NOW = Date.now();
-const DAY = 24 * 60 * 60 * 1000;
-
-export const DEMO_STATUSES: DemoStatus[] = [
-  { _id: "status-backlog", name: "Backlog", category: "backlog", color: "#64748B", position: 0 },
-  { _id: "status-todo", name: "Todo", category: "unstarted", color: "#0284C7", position: 1 },
-  { _id: "status-in-progress", name: "In Progress", category: "active", color: "#6366F1", position: 2 },
-  { _id: "status-review", name: "Review", category: "review", color: "#EC4899", position: 3 },
-  { _id: "status-changes", name: "Changes Requested", category: "review", color: "#F59E0B", position: 4 },
-  { _id: "status-done", name: "Done", category: "completed", color: "#10B981", position: 5 },
-  { _id: "status-cancelled", name: "Cancelled", category: "cancelled", color: "#EF4444", position: 6 },
-];
-
-export const DEMO_TRANSITIONS: Array<{ fromStatusId: string; toStatusId: string }> = [
-  { fromStatusId: "status-backlog", toStatusId: "status-todo" },
-  { fromStatusId: "status-backlog", toStatusId: "status-in-progress" },
-  { fromStatusId: "status-backlog", toStatusId: "status-cancelled" },
-  { fromStatusId: "status-todo", toStatusId: "status-in-progress" },
-  { fromStatusId: "status-todo", toStatusId: "status-backlog" },
-  { fromStatusId: "status-todo", toStatusId: "status-cancelled" },
-  { fromStatusId: "status-in-progress", toStatusId: "status-review" },
-  { fromStatusId: "status-in-progress", toStatusId: "status-todo" },
-  { fromStatusId: "status-in-progress", toStatusId: "status-cancelled" },
-  { fromStatusId: "status-review", toStatusId: "status-done" },
-  { fromStatusId: "status-review", toStatusId: "status-changes" },
-  { fromStatusId: "status-review", toStatusId: "status-in-progress" },
-  { fromStatusId: "status-changes", toStatusId: "status-in-progress" },
-  { fromStatusId: "status-changes", toStatusId: "status-review" },
-  { fromStatusId: "status-done", toStatusId: "status-in-progress" },
-  { fromStatusId: "status-cancelled", toStatusId: "status-backlog" },
-];
-
-// Seed realistic issues for projects
-function generateInitialIssues(): DemoIssue[] {
-  const issues: DemoIssue[] = [];
-
-  const sampleIssuesByProject: Record<string, Array<{ title: string; desc: string; priority: "urgent" | "high" | "medium" | "low"; statusIdx: number; points: number }>> = {
-    MOB: [
-      { title: "Fix biometric authentication crash on Android 14", desc: "Resolve crash on FingerprintManager callback during background resume.", priority: "urgent", statusIdx: 2, points: 5 },
-      { title: "Implement optimistic offline mutations queue", desc: "Store mutations in indexedDB and flush with exponential backoff on network reconnect.", priority: "high", statusIdx: 2, points: 8 },
-      { title: "Support dark mode dynamic color tokens across screens", desc: "Audit WCAG contrast ratios on issue cards in OLED black theme.", priority: "medium", statusIdx: 1, points: 3 },
-      { title: "Reduce cold start app launch latency below 400ms", desc: "Profile React Native bundle parse time and defer heavy charts module loading.", priority: "high", statusIdx: 1, points: 8 },
-      { title: "Add push notification deep linking for issue mentions", desc: "Route APNS and FCM payloads directly into nested issue drawer modal.", priority: "medium", statusIdx: 3, points: 5 },
-      { title: "Fix pull-to-refresh infinite loading spinner", desc: "Touch gesture recognizer fails to reset scroll displacement when sheet dismisses mid-drag.", priority: "urgent", statusIdx: 4, points: 2 },
-      { title: "Add subtle haptic feedback tick on issue status transition", desc: "Use UIImpactFeedbackGenerator on iOS and VibrationEffect on Android.", priority: "low", statusIdx: 5, points: 1 },
-      { title: "Support landscape tablet layout for issue board view", desc: "Implement adaptive split navigation for iPadOS 17 and Samsung Galaxy Tab.", priority: "medium", statusIdx: 0, points: 5 },
-    ],
-    BIL: [
-      { title: "Audit Stripe webhook signature verification against replay attacks", desc: "Enforce 5-minute clock drift tolerance window and deduplicate processed event IDs.", priority: "urgent", statusIdx: 1, points: 3 },
-      { title: "Generate PDF invoice downloads with tax breakdown", desc: "Render monthly invoices with VAT reverse-charge and company address fields.", priority: "high", statusIdx: 3, points: 5 },
-      { title: "Implement Stripe Customer Portal session routing", desc: "Allow workspace owners to update payment method and seat counts self-serve.", priority: "medium", statusIdx: 5, points: 5 },
-      { title: "Add metered billing calculation for API event ingestion", desc: "Aggregate hourly event batches from Kafka and sync with Stripe meter API.", priority: "high", statusIdx: 2, points: 8 },
-      { title: "Resolve race condition in subscription renewal webhook", desc: "Prevent duplicate customer subscription receipts when webhook fires concurrently.", priority: "urgent", statusIdx: 2, points: 5 },
-      { title: "Support multi-currency pricing in checkout drawer", desc: "Display local currency symbols and converted prices via currency layer API.", priority: "medium", statusIdx: 0, points: 3 },
-    ],
-    WEB: [
-      { title: "Keyboard shortcut navigation for rapid issue triage (J/K/C/X)", desc: "Enable full linear-style keyboard navigation across lists and board view.", priority: "high", statusIdx: 5, points: 5 },
-      { title: "Draggable widget overview layout with persistent grid ordering", desc: "Allow dashboard users to reorder metrics, health, and activity widgets.", priority: "medium", statusIdx: 5, points: 8 },
-      { title: "Real-time presence indicators on issue detail panel", desc: "Show active teammate viewing avatars using WebSocket presence broadcasts.", priority: "medium", statusIdx: 2, points: 5 },
-      { title: "Cycle-free dependency validation in workflow transition rules", desc: "Detect circular references using Tarjan's strongly connected components algorithm.", priority: "urgent", statusIdx: 3, points: 8 },
-      { title: "Render interactive dependency DAG canvas with auto-layout", desc: "Use Sugiyama layered graph algorithm to order blocking and blocked issue nodes.", priority: "high", statusIdx: 1, points: 13 },
-      { title: "Fuzzy search command palette (Cmd+K) with instant preview", desc: "Filter projects, issues, and teammates with sub-millisecond keystroke response.", priority: "high", statusIdx: 5, points: 5 },
-    ],
-    PLT: [
-      { title: "Deploy Kubernetes cluster with edge routing and auth gateway", desc: "Provision Terraform manifests for multi-region ingress controllers.", priority: "urgent", statusIdx: 5, points: 13 },
-      { title: "Configure Prometheus alerting rules for p99 database query spikes", desc: "Notify on-call Slack channel when read latency exceeds 120ms for 3 minutes.", priority: "high", statusIdx: 2, points: 5 },
-      { title: "Implement distributed tracing using OpenTelemetry and Jaeger", desc: "Propagate traceparent headers across API gateway, workers, and database pool.", priority: "medium", statusIdx: 1, points: 8 },
-      { title: "Zero-downtime database schema migration runner", desc: "Add safe migration checks preventing full table locks on large tables.", priority: "high", statusIdx: 3, points: 8 },
-    ],
-    DAT: [
-      { title: "ClickHouse OLAP ingest for high-throughput analytics events", desc: "Benchmark 50,000 events/sec ingestion rate with Kafka ClickHouse sink.", priority: "high", statusIdx: 2, points: 8 },
-      { title: "Real-time velocity and cycle time computation pipeline", desc: "Calculate rolling 30-day lead time percentiles by project and category.", priority: "medium", statusIdx: 5, points: 5 },
-      { title: "Automated daily data quality assertions and anomaly alerts", desc: "Check for null foreign keys, unexpected duplicates, and negative durations.", priority: "low", statusIdx: 0, points: 3 },
-    ],
-    ENG: [
-      { title: "WebGL canvas rasterizer with WebGPU compute fallback", desc: "Implement GPU-accelerated path rendering for complex multi-layer canvas.", priority: "urgent", statusIdx: 2, points: 8 },
-      { title: "Shader compiler caching in local IndexedDB store", desc: "Eliminate frame stutter during dynamic shader pipeline compilation.", priority: "high", statusIdx: 5, points: 5 },
-    ],
-    UI: [
-      { title: "Timeline ruler and keyframe sequencer component", desc: "Smooth 60fps scrub performance with virtualized keyframe track markers.", priority: "high", statusIdx: 2, points: 8 },
-      { title: "Design system tokens export for Figma sync plugin", desc: "Automate JSON token syncing between design system repository and Figma styles.", priority: "medium", statusIdx: 5, points: 3 },
-    ],
-    AST: [
-      { title: "GLTF 3D model importer with progressive LOD mesh generation", desc: "Generate 3 levels of detail for uploaded 3D assets to optimize load times.", priority: "high", statusIdx: 1, points: 8 },
-    ],
-    ENC: [
-      { title: "Zero-Knowledge vault local master key derivation with Argon2id", desc: "Benchmark memory-hard key derivation parameters to withstand brute force.", priority: "urgent", statusIdx: 2, points: 13 },
-      { title: "End-to-end encrypted file chunking with ChaCha20-Poly1305", desc: "Encrypt 4MB chunks client-side before dispatching to object storage.", priority: "high", statusIdx: 5, points: 8 },
-    ],
-    FED: [
-      { title: "OIDC protocol provider with SAML 2.0 assertion gateway", desc: "Support Okta, Azure AD, and Google Workspace SSO integration flows.", priority: "urgent", statusIdx: 2, points: 8 },
-    ],
-    SEC: [
-      { title: "Threat intelligence anomaly detection heuristics for rate-limit tokens", desc: "Score suspicious credential stuffing bursts across geographic edge zones.", priority: "high", statusIdx: 2, points: 5 },
-    ],
-  };
-
-  // Supplementary issue templates ensuring every project has 18+ issues across all statuses
-  const supplementaryIssues: Array<{
-    title: string;
-    desc: string;
-    priority: "urgent" | "high" | "medium" | "low";
-    statusIdx: number;
-    points: number;
-  }> = [
-    { title: "Define schema and interface boundaries", desc: "Formalize TypeScript domain contracts and integration invariants.", priority: "medium", statusIdx: 0, points: 3 },
-    { title: "Evaluate caching and memoization benchmarks", desc: "Audit rendering re-render hot spots and cache expensive calculations.", priority: "low", statusIdx: 0, points: 2 },
-    { title: "Draft developer ergonomics RFC", desc: "Collect team feedback on API signatures and state container ergonomics.", priority: "medium", statusIdx: 0, points: 5 },
-    { title: "Implement automated unit testing suite", desc: "Target 90%+ code coverage on business logic and validation rules.", priority: "high", statusIdx: 1, points: 5 },
-    { title: "Configure linter and static analysis rules", desc: "Enforce strict typing and prevent common concurrency pitfalls.", priority: "medium", statusIdx: 1, points: 3 },
-    { title: "Set up staging integration environment", desc: "Automate ephemeral branch deployments with isolated database tenants.", priority: "urgent", statusIdx: 1, points: 8 },
-    { title: "Streamline core service execution pipeline", desc: "Refactor core loop to reduce event loop blocking under peak throughput.", priority: "high", statusIdx: 2, points: 8 },
-    { title: "Add detailed observability spans and traces", desc: "Instrument OpenTelemetry tracing spans on all async operational boundaries.", priority: "medium", statusIdx: 2, points: 5 },
-    { title: "Refactor state synchronization listeners", desc: "Prevent duplicate event subscriptions during rapid UI route navigation.", priority: "high", statusIdx: 2, points: 5 },
-    { title: "Handle graceful network reconnection recovery", desc: "Buffer uncommitted mutations in local memory and flush with exponential backoff.", priority: "urgent", statusIdx: 2, points: 8 },
-    { title: "Review security invariants and access control", desc: "Verify multi-tenant boundary checks reject cross-workspace queries.", priority: "urgent", statusIdx: 3, points: 5 },
-    { title: "Performance audit on large dataset rendering", desc: "Profile virtualized list scroll performance with 1,000+ items.", priority: "medium", statusIdx: 3, points: 5 },
-    { title: "Address reviewer feedback on edge-case handling", desc: "Add defensive guards for malformed or incomplete payload inputs.", priority: "high", statusIdx: 4, points: 3 },
-    { title: "Initial system architecture baseline", desc: "Completed design document, data models, and team review.", priority: "high", statusIdx: 5, points: 8 },
-    { title: "Deploy initial v1 milestone to production", desc: "Zero downtime release deployed and verified against production telemetry.", priority: "medium", statusIdx: 5, points: 5 },
-    { title: "Refactor legacy helper utilities", desc: "Replaced obsolete utility wrappers with modern standard library calls.", priority: "low", statusIdx: 5, points: 2 },
-    { title: "Establish continuous deployment pipeline", desc: "Automate CI check gates, automated tests, and container image publishing.", priority: "high", statusIdx: 5, points: 5 },
-    { title: "Deprecated: legacy polling sync loop", desc: "Decommissioned in favor of reactive WebSocket event subscriptions.", priority: "low", statusIdx: 6, points: 1 },
-  ];
-
-  for (const ws of DEMO_WORKSPACES) {
-    for (const proj of ws.projects) {
-      const explicitIssues = sampleIssuesByProject[proj.key] || [];
-      const combinedIssues = [...explicitIssues];
-
-      // Pad with supplementary items until project reaches at least 18 issues across all statuses
-      for (const item of supplementaryIssues) {
-        if (combinedIssues.length >= 18) break;
-        combinedIssues.push({
-          title: `${item.title} (${proj.key})`,
-          desc: item.desc,
-          priority: item.priority,
-          statusIdx: item.statusIdx,
-          points: item.points,
-        });
-      }
-
-      combinedIssues.forEach((item, index) => {
-        const status = DEMO_STATUSES[item.statusIdx] || DEMO_STATUSES[1];
-        const teammate = ws.teammates[index % ws.teammates.length];
-        const reporter = ws.teammates[(index + 1) % ws.teammates.length];
-        const daysAgo = Math.floor((index * 2) % 25);
-        const createdAt = NOW - daysAgo * DAY - (index * 4200000);
-        const updatedAt = createdAt + 3600000 * 4;
-
-        issues.push({
-          _id: `demo-issue-${proj.key.toLowerCase()}-${index + 1}`,
-          workspaceId: ws.id,
-          projectId: `demo-proj-${proj.key.toLowerCase()}`,
-          number: index + 1,
-          title: item.title,
-          description: item.desc,
-          statusId: status._id,
-          status: {
-            name: status.name,
-            color: status.color,
-            category: status.category,
-          },
-          priority: item.priority,
-          assigneeId: `demo-user-${teammate.name.toLowerCase().replace(/\s+/g, "-")}`,
-          assignee: {
-            _id: `demo-user-${teammate.name.toLowerCase().replace(/\s+/g, "-")}`,
-            name: teammate.name,
-            email: teammate.email,
-            avatarKey: teammate.avatarKey,
-            jobTitle: teammate.jobTitle,
-          },
-          reporterId: `demo-user-${reporter.name.toLowerCase().replace(/\s+/g, "-")}`,
-          reporter: {
-            _id: `demo-user-${reporter.name.toLowerCase().replace(/\s+/g, "-")}`,
-            name: reporter.name,
-            email: reporter.email,
-          },
-          estimatePoints: item.points,
-          dueDate: item.statusIdx < 5 ? NOW + (5 - item.statusIdx) * DAY : undefined,
-          labels: [
-            DEMO_LABELS[index % DEMO_LABELS.length],
-            DEMO_LABELS[(index + 2) % DEMO_LABELS.length],
-          ].map((l, li) => ({ _id: `demo-label-${li}`, name: l.name, color: l.color })),
-          startedAt: status.category !== "backlog" && status.category !== "unstarted" ? createdAt + 3600000 : undefined,
-          completedAt: status.category === "completed" ? updatedAt : undefined,
-          createdAt,
-          updatedAt,
-        });
-      });
-    }
-  }
-
-  return issues;
+export interface DemoNotification {
+  _id: string;
+  workspaceId: string;
+  recipientId: string;
+  title: string;
+  body: string;
+  readAt?: number;
+  createdAt: number;
 }
 
-function generateInitialActivities(): DemoActivityEvent[] {
-  const events: DemoActivityEvent[] = [];
+// Default status definitions
+export const DEMO_STATUSES: Omit<DemoStatus, "workflowId">[] = [
+  { _id: "demo-stat-backlog", name: "Backlog", category: "backlog", position: 0, color: "#575657" },
+  { _id: "demo-stat-todo", name: "Todo", category: "todo", position: 1, color: "#6E94CB" },
+  { _id: "demo-stat-prog", name: "In Progress", category: "in_progress", position: 2, color: "#F36421" },
+  { _id: "demo-stat-rev", name: "Review", category: "in_review", position: 3, color: "#D78FC6" },
+  { _id: "demo-stat-done", name: "Done", category: "done", position: 4, color: "#83DD79" },
+  { _id: "demo-stat-canc", name: "Cancelled", category: "cancelled", position: 5, color: "#A3A3A3" },
+];
 
-  for (const ws of DEMO_WORKSPACES) {
-    const teammates = ws.teammates;
-    const projects = ws.projects;
+export const DEMO_LABELS: DemoLabel[] = [
+  { _id: "demo-lbl-eng", workspaceId: "demo-ws-northstar", name: "Engineering", color: "#6E94CB" },
+  { _id: "demo-lbl-ux", workspaceId: "demo-ws-northstar", name: "Design", color: "#D78FC6" },
+  { _id: "demo-lbl-perf", workspaceId: "demo-ws-northstar", name: "Performance", color: "#83DD79" },
+  { _id: "demo-lbl-sec", workspaceId: "demo-ws-northstar", name: "Security", color: "#F36421" },
+  { _id: "demo-lbl-bug", workspaceId: "demo-ws-northstar", name: "Bug", color: "#D6C6A1" },
+];
 
-    projects.forEach((proj, pIdx) => {
-      const pKey = proj.key.toLowerCase();
-      const pTeammate = teammates[pIdx % teammates.length];
-      const pReporter = teammates[(pIdx + 1) % teammates.length];
-
-      events.push(
-        {
-          _id: `demo-activity-${ws.id}-${proj.key}-1`,
-          workspaceId: ws.id,
-          actorId: `demo-user-${pTeammate.name.toLowerCase().replace(/\s+/g, "-")}`,
-          actorName: pTeammate.name,
-          actorEmail: pTeammate.email,
-          actorImage: undefined,
-          entityType: "issue",
-          entityId: `demo-issue-${pKey}-1`,
-          eventType: "issue.status_changed",
-          payload: {
-            oldStatus: "Todo",
-            newStatus: "In Progress",
-            issueTitle: `${proj.name} core service worker`,
-            issueNumber: 1,
-            projectKey: proj.key,
-          },
-          createdAt: Math.floor(NOW - (pIdx * 0.5 + 0.1) * DAY),
-        },
-        {
-          _id: `demo-activity-${ws.id}-${proj.key}-2`,
-          workspaceId: ws.id,
-          actorId: `demo-user-${pReporter.name.toLowerCase().replace(/\s+/g, "-")}`,
-          actorName: pReporter.name,
-          actorEmail: pReporter.email,
-          actorImage: undefined,
-          entityType: "issue",
-          entityId: `demo-issue-${pKey}-2`,
-          eventType: "issue.created",
-          payload: {
-            issueTitle: `${proj.name} architecture baseline specification`,
-            issueNumber: 2,
-            projectKey: proj.key,
-          },
-          createdAt: Math.floor(NOW - (pIdx * 0.5 + 0.4) * DAY),
-        },
-        {
-          _id: `demo-activity-${ws.id}-${proj.key}-3`,
-          workspaceId: ws.id,
-          actorId: `demo-user-${pTeammate.name.toLowerCase().replace(/\s+/g, "-")}`,
-          actorName: pTeammate.name,
-          actorEmail: pTeammate.email,
-          actorImage: undefined,
-          entityType: "issue",
-          entityId: `demo-issue-${pKey}-3`,
-          eventType: "issue.comment_added",
-          payload: {
-            issueTitle: `${proj.name} integration testing matrix`,
-            commentSnippet: "All unit tests and integration benchmarks pass staging validation.",
-          },
-          createdAt: Math.floor(NOW - (pIdx * 0.5 + 0.8) * DAY),
-        },
-        {
-          _id: `demo-activity-${ws.id}-${proj.key}-4`,
-          workspaceId: ws.id,
-          actorId: `demo-user-${pTeammate.name.toLowerCase().replace(/\s+/g, "-")}`,
-          actorName: pTeammate.name,
-          actorEmail: pTeammate.email,
-          actorImage: undefined,
-          entityType: "issue",
-          entityId: `demo-issue-${pKey}-4`,
-          eventType: "issue.assigned",
-          payload: {
-            issueTitle: `${proj.name} telemetry metrics exporter`,
-            assigneeName: pTeammate.name,
-            issueNumber: 4,
-            projectKey: proj.key,
-          },
-          createdAt: Math.floor(NOW - (pIdx * 0.5 + 1.2) * DAY),
-        }
-      );
-    });
-  }
-
-  return events;
-}
-
-// In-Memory Store Singleton
+// In-memory collections
 class InMemoryDemoStore {
-  private issues: DemoIssue[];
-  private activities: DemoActivityEvent[];
+  private workspaces: DemoWorkspace[] = [];
+  private users: DemoUser[] = [];
+  private projects: DemoProject[] = [];
+  private statuses: Map<string, DemoStatus[]> = new Map(); // projectId -> statuses
+  private issues: DemoIssue[] = [];
+  private activities: DemoActivityEvent[] = [];
+  private notifications: DemoNotification[] = [];
   private listeners: Set<() => void> = new Set();
 
   constructor() {
-    this.issues = generateInitialIssues();
-    this.activities = generateInitialActivities();
+    this.seedSynchronously();
   }
 
   public subscribe(listener: () => void): () => void {
@@ -368,428 +135,652 @@ class InMemoryDemoStore {
     return () => this.listeners.delete(listener);
   }
 
-  public notify() {
-    this.listeners.forEach((fn) => fn());
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("forge:demo-store-updated"));
-    }
-  }
-
-  public isDemoWorkspace(id?: string | null): boolean {
-    if (!id) return false;
-    return id.startsWith("demo-") || DEMO_WORKSPACES.some((w) => w.id === id);
-  }
-
-  public listWorkspaces() {
-    return DEMO_WORKSPACES.map((w) => ({
-      _id: w.id,
-      name: w.name,
-      slug: w.slug,
-      iconKey: w.iconKey,
-      role: "owner" as const,
-      projectCount: w.projects.length,
-      memberCount: w.teammates.length,
-      ownerId: "demo-owner",
-      createdAt: NOW - 30 * DAY,
-      updatedAt: NOW,
-    }));
-  }
-
-  public getWorkspace(id?: string | null) {
-    const ws = DEMO_WORKSPACES.find((w) => w.id === id) || DEMO_WORKSPACES[0];
-    return {
-      workspace: {
-        _id: ws.id,
-        name: ws.name,
-        slug: ws.slug,
-        iconKey: ws.iconKey,
-        ownerId: "demo-owner",
-        createdAt: NOW - 30 * DAY,
-        updatedAt: NOW,
-      },
-      role: "owner" as const,
-      memberCount: ws.teammates.length,
-      projectCount: ws.projects.length,
-    };
-  }
-
-  public listProjects(workspaceId?: string | null) {
-    const ws = DEMO_WORKSPACES.find((w) => w.id === workspaceId) || DEMO_WORKSPACES[0];
-    return ws.projects.map((p) => {
-      const pId = `demo-proj-${p.key.toLowerCase()}`;
-      const projIssues = this.issues.filter((i) => i.projectId === pId);
-      const doneCount = projIssues.filter((i) => i.status.category === "completed").length;
-      return {
-        _id: pId,
-        workspaceId: ws.id,
-        name: p.name,
-        key: p.key,
-        description: p.description,
-        status: "active" as const,
-        iconKey: p.iconKey,
-        workflowId: "demo-workflow-default",
-        createdBy: "demo-owner",
-        createdAt: NOW - 20 * DAY,
-        updatedAt: NOW,
-        openIssueCount: projIssues.length - doneCount,
-        doneIssueCount: doneCount,
-        issueCount: projIssues.length,
-      };
-    });
-  }
-
-  public getProject(projectId?: string | null) {
-    for (const ws of DEMO_WORKSPACES) {
-      for (const p of ws.projects) {
-        const pId = `demo-proj-${p.key.toLowerCase()}`;
-        if (pId === projectId || p.key === projectId) {
-          const projIssues = this.issues.filter((i) => i.projectId === pId);
-          const doneCount = projIssues.filter((i) => i.status.category === "completed").length;
-          return {
-            project: {
-              _id: pId,
-              workspaceId: ws.id,
-              name: p.name,
-              key: p.key,
-              description: p.description,
-              status: "active" as const,
-              iconKey: p.iconKey,
-              workflowId: "demo-workflow-default",
-              createdBy: "demo-owner",
-              createdAt: NOW - 20 * DAY,
-              updatedAt: NOW,
-              openIssueCount: projIssues.length - doneCount,
-              doneIssueCount: doneCount,
-              issueCount: projIssues.length,
-            },
-            role: "owner" as const,
-          };
-        }
+  private notify() {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.error("DemoStore listener error:", err);
       }
     }
-    // Fallback to first project
-    const defaultProj = DEMO_WORKSPACES[0].projects[0];
-    return {
-      project: {
-        _id: `demo-proj-${defaultProj.key.toLowerCase()}`,
-        workspaceId: DEMO_WORKSPACES[0].id,
-        name: defaultProj.name,
-        key: defaultProj.key,
-        description: defaultProj.description,
-        status: "active" as const,
-        iconKey: defaultProj.iconKey,
-        workflowId: "demo-workflow-default",
-        createdBy: "demo-owner",
-        createdAt: NOW - 20 * DAY,
-        updatedAt: NOW,
-        openIssueCount: 6,
-        doneIssueCount: 2,
-        issueCount: 8,
-      },
-      role: "owner" as const,
-    };
   }
 
-  public listIssues(projectId?: string | null, workspaceId?: string | null) {
-    if (projectId) {
-      const direct = this.issues.filter(
-        (i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`
+  private seedSynchronously() {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    // Users
+    this.users = [
+      { _id: "demo-user-alex", name: "Alex Mercer", email: "alex@northstar.invalid", role: "owner" },
+      { _id: "demo-user-sarah", name: "Sarah Lin", email: "sarah@northstar.invalid", role: "admin" },
+      { _id: "demo-user-marcus", name: "Marcus Vance", email: "marcus@northstar.invalid", role: "member" },
+      { _id: "demo-user-elena", name: "Elena Rostova", email: "elena@northstar.invalid", role: "member" },
+      { _id: "demo-user-david", name: "David Kim", email: "david@northstar.invalid", role: "member" },
+      { _id: "demo-user-priya", name: "Priya Patel", email: "priya@northstar.invalid", role: "member" },
+    ];
+
+    // Workspaces (2 workspaces)
+    this.workspaces = [
+      {
+        _id: "demo-ws-northstar",
+        name: "Demo: Northstar Labs",
+        slug: "demo-northstar-labs",
+        role: "owner",
+        createdAt: now - 30 * day,
+        ownerId: "demo-user-alex",
+      },
+      {
+        _id: "demo-ws-pixelforge",
+        name: "Demo: Pixel Forge",
+        slug: "demo-pixel-forge",
+        role: "owner",
+        createdAt: now - 20 * day,
+        ownerId: "demo-user-alex",
+      },
+    ];
+
+    // Projects: 3 projects per workspace (6 total)
+    this.projects = [
+      // Northstar Labs
+      {
+        _id: "demo-proj-mob",
+        workspaceId: "demo-ws-northstar",
+        key: "MOB",
+        name: "Mobile Client",
+        description: "Cross-platform iOS and Android client architecture with offline sync",
+        status: "active",
+        color: "#6E94CB",
+        iconKey: "compass",
+        issueCount: 18,
+        openIssueCount: 13,
+        doneIssueCount: 5,
+        createdAt: now - 25 * day,
+        updatedAt: now - 2 * 60 * 60 * 1000,
+        createdBy: "demo-user-alex",
+      },
+      {
+        _id: "demo-proj-bil",
+        workspaceId: "demo-ws-northstar",
+        key: "BIL",
+        name: "Billing & Subscriptions",
+        description: "Stripe integration, usage metering, and invoice generation",
+        status: "active",
+        color: "#83DD79",
+        iconKey: "prism",
+        issueCount: 16,
+        openIssueCount: 11,
+        doneIssueCount: 5,
+        createdAt: now - 22 * day,
+        updatedAt: now - 4 * 60 * 60 * 1000,
+        createdBy: "demo-user-sarah",
+      },
+      {
+        _id: "demo-proj-web",
+        workspaceId: "demo-ws-northstar",
+        key: "WEB",
+        name: "Web Application",
+        description: "React dashboard, real-time collaboration canvas, and issue editor",
+        status: "active",
+        color: "#F36421",
+        iconKey: "orbit",
+        issueCount: 19,
+        openIssueCount: 14,
+        doneIssueCount: 5,
+        createdAt: now - 20 * day,
+        updatedAt: now - 30 * 60 * 1000,
+        createdBy: "demo-user-alex",
+      },
+      // Pixel Forge
+      {
+        _id: "demo-proj-gam",
+        workspaceId: "demo-ws-pixelforge",
+        key: "GAM",
+        name: "Gameplay Mechanics",
+        description: "Combat responsiveness, hit detection, and camera choreography",
+        status: "active",
+        color: "#7957EC",
+        iconKey: "loom",
+        issueCount: 17,
+        openIssueCount: 12,
+        doneIssueCount: 5,
+        createdAt: now - 18 * day,
+        updatedAt: now - 5 * 60 * 60 * 1000,
+        createdBy: "demo-user-alex",
+      },
+      {
+        _id: "demo-proj-art",
+        workspaceId: "demo-ws-pixelforge",
+        key: "ART",
+        name: "Technical Art & Shaders",
+        description: "Volumetric fog, PBR materials, and particle performance",
+        status: "active",
+        color: "#D78FC6",
+        iconKey: "quill",
+        issueCount: 15,
+        openIssueCount: 10,
+        doneIssueCount: 5,
+        createdAt: now - 15 * day,
+        updatedAt: now - 8 * 60 * 60 * 1000,
+        createdBy: "demo-user-elena",
+      },
+      {
+        _id: "demo-proj-net",
+        workspaceId: "demo-ws-pixelforge",
+        key: "NET",
+        name: "Multiplayer Netcode",
+        description: "Rollback netcode, matchmaking queues, and packet compaction",
+        status: "active",
+        color: "#0D0D0D",
+        iconKey: "orbit",
+        issueCount: 16,
+        openIssueCount: 11,
+        doneIssueCount: 5,
+        createdAt: now - 12 * day,
+        updatedAt: now - 1 * 60 * 60 * 1000,
+        createdBy: "demo-user-marcus",
+      },
+    ];
+
+    // Set up project statuses
+    for (const proj of this.projects) {
+      this.statuses.set(
+        proj._id,
+        DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${proj._id}` })),
       );
-      if (direct.length > 0) return direct;
-      const matched = this.getProject(projectId)?.project?._id;
-      if (matched) {
-        return this.issues.filter((i) => i.projectId === matched);
-      }
-      return this.issues.slice(0, 18);
     }
-    if (workspaceId) {
-      return this.issues.filter((i) => i.workspaceId === workspaceId);
-    }
-    return this.issues;
-  }
 
-  public getIssue(issueId: string) {
-    let issue = this.issues.find((i) => i._id === issueId);
-    if (!issue && (issueId === "demo-issue-1" || issueId.startsWith("demo-issue-") || issueId.includes("demo-"))) {
-      issue = this.issues[0];
-    }
-    if (!issue) return null;
-    const project = this.getProject(issue.projectId)?.project;
-    return {
-      issue,
-      project: project || {
-        _id: issue.projectId,
-        name: "Demo Project",
-        key: "DEMO",
-      },
-      role: "owner" as const,
-      workspaceId: issue.workspaceId,
-      status: issue.status,
-      statuses: DEMO_STATUSES,
-      nextStatuses: DEMO_STATUSES.slice(1, 4).map((s) => ({
-        transitionId: `demo-trans-${s._id}`,
-        status: s,
-        requiresAssignee: false,
-        requiresComment: false,
-        requiresApproval: false,
-      })),
-      canWrite: true,
-      assignee: issue.assignee ? { name: issue.assignee.name, image: undefined } : null,
-      reporter: issue.reporter ? { name: issue.reporter.name, image: undefined } : null,
-      labels: (issue.labels || []).map((l, li) => ({
-        _id: l._id || `demo-lbl-${li}`,
-        name: l.name,
-        color: l.color,
-      })),
-      blockers: [],
-      unresolvedBlockerCount: 0,
-      blocks: [],
-      related: [],
-      currentCategory: issue.status.category,
-      transitions: DEMO_TRANSITIONS,
-      comments: [
-        {
-          _id: "demo-comment-1",
-          issueId: issue._id,
-          authorName: "Elena Rostova",
-          authorEmail: "elena@demo.invalid",
-          body: "Initial implementation verified on staging environment.",
-          createdAt: issue.createdAt + 1800000,
-        },
+    // Seed 15-19 rich issues per project across all statuses
+    const issueTemplates: Record<string, string[]> = {
+      MOB: [
+        "Resolve intermittent WebSocket reconnection dropouts on mobile clients",
+        "Implement optimistic mutation queue with idempotency keys",
+        "Fix pull-to-refresh infinite spinner lockup on iOS WebKit",
+        "Add subtle haptic feedback tick on issue status drag transitions",
+        "Investigate memory leak during large file attachments upload",
+        "Audit background fetch battery consumption in push notifications",
+        "Implement biometrics login with FaceID / TouchID fallback",
+        "Cache issue boards in SQLite for instant offline cold starts",
+        "Normalize dark mode contrast ratios on AMOLED displays",
+        "Support markdown checklist persistence with keyboard shortcut toggles",
+        "Refactor navigation stack to prevent blank frame on deep-link",
+        "Compress image uploads client-side before S3 presigned PUT",
+        "Handle airplane mode banner with automatic sync retry bar",
+        "Add pinch-to-zoom support for workflow diagram cards",
+        "Fix sticky header jump on Android keyboard appearance",
+        "Verify OAuth session refresh token expiry prompt",
+        "Add badge count sync to iOS app icon",
+        "Benchmark startup time under low-end Android emulator",
       ],
-      activities: this.activities.filter((a) => a.entityId === issue._id),
-      dependencies: [],
-      blockedBy: [],
+      BIL: [
+        "Audit Stripe webhook signature verification against replay attacks",
+        "Generate PDF invoice downloads with tax breakdown and PO number",
+        "Enforce prorated calculation on mid-cycle subscription tier adjustments",
+        "Deprecate legacy v1 authentication tokens and notify active API consumers",
+        "Implement automated CSV export with field customization drawer",
+        "Configure automated dunning emails for failed credit card charges",
+        "Add self-service invoice recipient billing email settings",
+        "Support multi-currency checkout with daily exchange rate sync",
+        "Build enterprise seat quantity slider with annual discount toggle",
+        "Create billing audit log recording payment method modifications",
+        "Handle European VAT reverse-charge validation via VIES API",
+        "Display usage meters for API calls and storage quotas",
+        "Add warning banner 7 days prior to annual plan renewal",
+        "Implement refund transaction webhook handler and credit memo generator",
+        "Export QuickBooks and Xero compatible journal entries",
+        "Verify PCI DSS SAQ-A compliance documentation check",
+      ],
+      WEB: [
+        "Implement drag-and-drop workflow status transition visualizer",
+        "Add keyboard navigation shortcuts (J/K next issue, C create, / search)",
+        "Optimize command palette fuzzy search to index labels and teammates",
+        "Add real-time presence avatars for teammates viewing the same board",
+        "Support markdown WYSIWYG editing with image drag-and-drop paste",
+        "Render cycle time cumulative flow chart with interactive brush zoom",
+        "Add explainable project risk score badge with factor breakdown",
+        "Implement custom status transitions with required approver rules",
+        "Build notification drawer with sound alerts and quiet hours",
+        "Refactor virtualized table view for boards with 5,000+ issues",
+        "Implement dark mode color tokens verified against WCAG AAA standard",
+        "Add multi-issue batch selection for bulk status updates",
+        "Integrate GitHub PR link card with live merge state badges",
+        "Build customizable dashboard widget layout with drag-reorder grid",
+        "Add toast notification undo button for accidental deletions",
+        "Optimize bundle size and split heavy chart libraries via dynamic import",
+        "Handle network offline state with floating persistent retry banner",
+        "Display teammate local time zone badge next to assignee avatar",
+        "Add sprint burndown chart with scope change delta annotations",
+      ],
+      GAM: [
+        "Tune melee attack hitboxes and frame-data window for parry counter",
+        "Implement dynamic camera shake damping on critical explosive hits",
+        "Refactor player inventory state machine to prevent item duplication",
+        "Add character ragdoll physics transition on high velocity knockbacks",
+        "Optimize collision broadphase tree for scenes with 200+ entities",
+        "Implement controller vibration profiles for dualsense triggers",
+        "Fix stamina regeneration stutter when canceling sprint animation",
+        "Audit jump trajectory gravity curve against platforming spec",
+        "Add enemy aggro radius visualization in debug sandbox mode",
+        "Implement directional audio occlusion behind stone barriers",
+        "Support rebindable keyboard and gamepad control schemes",
+        "Fix camera clipping through geometry in narrow dungeon corridors",
+        "Add dynamic aim-assist friction when crosshair nears targets",
+        "Implement boss phase transition cutscene with seamless game loop",
+        "Audit frame pacing under 144Hz high refresh rate monitors",
+        "Fix weapon weapon-swap animation cancel edge case exploit",
+        "Add damage number popup text with color-coded elemental types",
+      ],
+      ART: [
+        "Implement volumetric atmospheric fog with height-based density falloff",
+        "Optimize PBR shader instruction count for mobile GPU thermal limits",
+        "Add subsurface scattering profile for character skin rendering",
+        "Generate ambient occlusion maps using GPU compute shader pass",
+        "Implement dynamic wetness and puddle formation during rain weather",
+        "Reduce cascade shadow map shimmering on diagonal camera pans",
+        "Author visual effects for elemental lightning spell impacts",
+        "Fix texture MIP-level popping on fast vehicle camera movement",
+        "Implement GPU instanced grass blades with wind turbulence wave",
+        "Add color grading LUT switcher for day/night biome transitions",
+        "Optimize particle system emitter bounds to cull offscreen sparks",
+        "Fix normal map tangent space distortion on mirrored mesh seams",
+        "Implement screen-space reflections with temporal reprojection",
+        "Profile memory footprint of uncompressed 4K normal textures",
+        "Create custom water foam shoreline shoreline shader graph",
+      ],
+      NET: [
+        "Implement deterministic rollback netcode state save/restore loop",
+        "Build matchmaking queue router grouping by latency and skill tier",
+        "Compact player position delta packets into 28-byte UDP payloads",
+        "Handle client connection migration on mobile IP handoffs",
+        "Simulate packet jitter and 5% drop rate in integration stress tests",
+        "Implement anti-cheat client timestamp validation and speed-hack check",
+        "Build distributed lobby server cluster with health check heartbeats",
+        "Add packet loss and round-trip time telemetry HUD overlay",
+        "Implement authoritative server hit-registration verification",
+        "Fix lobby invite code generation collisions under concurrent join",
+        "Add spectator broadcast delay buffer to prevent ghosting",
+        "Implement automatic reconnect with game session state restoration",
+        "Log desync dump files automatically to telemetry bucket on mismatch",
+        "Add DDoS rate limiting at the UDP socket gateway layer",
+        "Benchmark server tick rate stability under 64 concurrent players",
+        "Support IPv6 dual-stack socket binding across all edge hosts",
+      ],
     };
-  }
 
-  public createIssue(data: {
-    workspaceId: string;
-    projectId: string;
-    title: string;
-    description?: string;
-    priority?: "urgent" | "high" | "medium" | "low";
-    statusId?: string;
-    estimatePoints?: number;
-  }): DemoIssue {
-    const proj = this.getProject(data.projectId)?.project;
-    const projectIssues = this.issues.filter((i) => i.projectId === data.projectId);
-    const nextNumber = projectIssues.length + 1;
-    const status = DEMO_STATUSES.find((s) => s._id === data.statusId) || DEMO_STATUSES[1]; // default Todo
+    const priorities: Array<"urgent" | "high" | "medium" | "low" | "none"> = [
+      "urgent",
+      "high",
+      "medium",
+      "medium",
+      "low",
+      "none",
+    ];
 
-    const newIssue: DemoIssue = {
-      _id: `demo-issue-${proj?.key.toLowerCase() || "mob"}-${Date.now()}`,
-      workspaceId: data.workspaceId,
-      projectId: data.projectId,
-      number: nextNumber,
-      title: data.title,
-      description: data.description || "",
-      statusId: status._id,
-      status: {
-        name: status.name,
-        color: status.color,
-        category: status.category,
-      },
-      priority: data.priority || "medium",
-      assigneeId: "demo-user-elena-rostova",
-      assignee: {
-        _id: "demo-user-elena-rostova",
-        name: "Elena Rostova",
-        email: "elena@demo.invalid",
-        avatarKey: "owl",
-        jobTitle: "VP of Engineering",
-      },
-      reporterId: "demo-user-guest",
-      reporter: {
-        _id: "demo-user-guest",
-        name: "Guest Explorer",
-        email: "guest@forge.demo",
-      },
-      estimatePoints: data.estimatePoints || 3,
-      labels: [{ _id: "demo-lbl-0", name: "feature", color: "#3ECF8E" }],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+    // Status distribution: 3 in backlog, 3 in todo, 4 in progress, 2 in review, 5 in done, 1 cancelled
+    const statusSequence = [
+      "demo-stat-backlog",
+      "demo-stat-backlog",
+      "demo-stat-backlog",
+      "demo-stat-todo",
+      "demo-stat-todo",
+      "demo-stat-todo",
+      "demo-stat-prog",
+      "demo-stat-prog",
+      "demo-stat-prog",
+      "demo-stat-prog",
+      "demo-stat-rev",
+      "demo-stat-rev",
+      "demo-stat-done",
+      "demo-stat-done",
+      "demo-stat-done",
+      "demo-stat-done",
+      "demo-stat-done",
+      "demo-stat-canc",
+      "demo-stat-todo",
+    ];
 
-    this.issues.unshift(newIssue);
+    let issueNumber = 1;
+    for (const project of this.projects) {
+      const titles = issueTemplates[project.key] ?? issueTemplates.WEB;
+      for (let i = 0; i < titles.length; i++) {
+        const title = titles[i];
+        const statId = statusSequence[i % statusSequence.length];
+        const assignee = this.users[(i + 1) % this.users.length];
+        const priority = priorities[i % priorities.length];
+        const createdAt = now - (titles.length - i) * day * 1.5;
 
-    this.activities.unshift({
-      _id: `demo-activity-${Date.now()}`,
-      workspaceId: data.workspaceId,
-      actorId: "demo-user-guest",
-      actorName: "Guest Explorer",
-      actorEmail: "guest@forge.demo",
-      entityType: "issue",
-      entityId: newIssue._id,
-      eventType: "issue.created",
-      payload: {
-        issueTitle: newIssue.title,
-        issueNumber: newIssue.number,
-        projectKey: proj?.key || "MOB",
-      },
-      createdAt: Date.now(),
-    });
-
-    this.notify();
-    return newIssue;
-  }
-
-  public updateIssue(issueId: string, updates: Partial<DemoIssue>) {
-    const idx = this.issues.findIndex((i) => i._id === issueId);
-    if (idx === -1) return;
-    const old = this.issues[idx];
-
-    let updatedStatus = old.status;
-    if (updates.statusId && updates.statusId !== old.statusId) {
-      const s = DEMO_STATUSES.find((st) => st._id === updates.statusId);
-      if (s) {
-        updatedStatus = { name: s.name, color: s.color, category: s.category };
+        this.issues.push({
+          _id: `demo-issue-${project.key.toLowerCase()}-${i + 1}`,
+          workspaceId: project.workspaceId,
+          projectId: project._id,
+          number: i + 1,
+          title,
+          description: `Detailed engineering description and specification for ${title}.\n\n### Acceptance Criteria\n- [x] Implementation verified against design tokens\n- [x] Automated test coverage added\n- [ ] Documentation updated`,
+          priority,
+          statusId: statId,
+          assigneeId: i % 7 === 0 ? undefined : assignee._id,
+          reporterId: "demo-user-alex",
+          estimatePoints: [1, 2, 3, 5, 8][i % 5],
+          dueDate: now + (i - 5) * day,
+          labelIds: [DEMO_LABELS[i % DEMO_LABELS.length]._id],
+          createdAt,
+          updatedAt: createdAt + 4 * 60 * 60 * 1000,
+        });
       }
-    }
 
-    const completedAt =
-      updatedStatus.category === "completed"
-        ? (old.completedAt || Date.now())
-        : undefined;
-
-    this.issues[idx] = {
-      ...old,
-      ...updates,
-      status: updatedStatus,
-      completedAt,
-      updatedAt: Date.now(),
-    };
-
-    if (updates.statusId && updates.statusId !== old.statusId) {
-      this.activities.unshift({
-        _id: `demo-activity-${Date.now()}`,
-        workspaceId: old.workspaceId,
-        actorId: "demo-user-guest",
-        actorName: "Guest Explorer",
-        actorEmail: "guest@forge.demo",
-        entityType: "issue",
-        entityId: old._id,
-        eventType: "issue.status_changed",
-        payload: {
-          issueTitle: old.title,
-          issueNumber: old.number,
-          oldStatus: old.status.name,
-          newStatus: updatedStatus.name,
-        },
-        createdAt: Date.now(),
+      // Record activity events
+      this.activities.push({
+        _id: `demo-act-${project._id}`,
+        workspaceId: project.workspaceId,
+        projectId: project._id,
+        actorId: "demo-user-alex",
+        actorName: "Alex Mercer",
+        eventType: "project.updated",
+        entityType: "project",
+        entityId: project._id,
+        payload: { name: project.name },
+        createdAt: now - 2 * 60 * 60 * 1000,
       });
     }
 
-    this.notify();
+    // Add recent issue activity
+    for (const issue of this.issues.slice(-8)) {
+      this.activities.push({
+        _id: `demo-act-${issue._id}`,
+        workspaceId: issue.workspaceId,
+        projectId: issue.projectId,
+        actorId: issue.assigneeId ?? "demo-user-alex",
+        actorName: this.users.find((u) => u._id === issue.assigneeId)?.name ?? "Alex Mercer",
+        eventType: "issue.updated",
+        entityType: "issue",
+        entityId: issue._id,
+        payload: { title: issue.title, field: "status" },
+        createdAt: now - Math.floor(Math.random() * 86400000),
+      });
+    }
+
+    // Notifications
+    this.notifications = [
+      {
+        _id: "demo-notif-1",
+        workspaceId: "demo-ws-northstar",
+        recipientId: "demo-user-alex",
+        title: "Marcus Vance assigned you an issue",
+        body: "Resolve intermittent WebSocket reconnection dropouts on mobile clients",
+        createdAt: now - 35 * 60 * 1000,
+      },
+      {
+        _id: "demo-notif-2",
+        workspaceId: "demo-ws-northstar",
+        recipientId: "demo-user-alex",
+        title: "Issue transitioned to Review",
+        body: "Implement optimistic mutation queue with idempotency keys is ready for QA",
+        createdAt: now - 2 * 60 * 60 * 1000,
+      },
+      {
+        _id: "demo-notif-3",
+        workspaceId: "demo-ws-northstar",
+        recipientId: "demo-user-alex",
+        title: "Sprint milestone achieved",
+        body: "Web Application milestone 90% completed",
+        readAt: now - 12 * 60 * 60 * 1000,
+        createdAt: now - 14 * 60 * 60 * 1000,
+      },
+    ];
   }
 
-  public transitionIssue(issueId: string, statusId: string) {
-    this.updateIssue(issueId, { statusId });
-    return this.issues.find((i) => i._id === issueId);
+  // --- Query Methods ---
+
+  public getWorkspaces(): DemoWorkspace[] {
+    return [...this.workspaces];
   }
 
-  public deleteIssue(issueId: string) {
-    this.issues = this.issues.filter((i) => i._id !== issueId);
-    this.notify();
+  public getWorkspace(workspaceId: string): { workspace: DemoWorkspace; role: string; myRole: string } | null {
+    const ws = this.workspaces.find((w) => w._id === workspaceId);
+    if (!ws) return null;
+    return { workspace: ws, role: ws.role, myRole: ws.role };
   }
 
-  public listTeammates(workspaceId?: string | null) {
-    const ws = DEMO_WORKSPACES.find((w) => w.id === workspaceId) || DEMO_WORKSPACES[0];
-    return ws.teammates.map((t, idx) => {
-      const uId = `demo-user-${t.name.toLowerCase().replace(/\s+/g, "-")}`;
+  public getMembers(workspaceId: string) {
+    return this.users.map((u) => ({
+      _id: `demo-mem-${workspaceId}-${u._id}`,
+      workspaceId,
+      userId: u._id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      joinedAt: Date.now() - 30 * 86400000,
+    }));
+  }
+
+  public getProjects(workspaceId: string): DemoProject[] {
+    return this.projects.filter((p) => p.workspaceId === workspaceId && p.status !== "archived");
+  }
+
+  public getProject(projectId: string) {
+    const p = this.projects.find((proj) => proj._id === projectId);
+    if (!p) return null;
+    const issues = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
+    const doneCount = issues.filter((i) => i.statusId === "demo-stat-done").length;
+    return {
+      project: p,
+      role: "owner" as const,
+      openIssueCount: issues.length - doneCount,
+      doneIssueCount: doneCount,
+      issueCount: issues.length,
+    };
+  }
+
+  public getProjectLabels(workspaceId: string): DemoLabel[] {
+    return DEMO_LABELS.filter((l) => l.workspaceId === workspaceId);
+  }
+
+  public getIssues(projectId: string, args: Record<string, unknown> = {}) {
+    let list = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
+    if (args.statusId) list = list.filter((i) => i.statusId === args.statusId);
+    if (args.priority) list = list.filter((i) => i.priority === args.priority);
+    if (args.assigneeId === "unassigned") list = list.filter((i) => !i.assigneeId);
+    else if (args.assigneeId) list = list.filter((i) => i.assigneeId === args.assigneeId);
+
+    const statusMap = new Map(DEMO_STATUSES.map((s) => [s._id, s]));
+    const mapped = list.map((i) => {
+      const s = statusMap.get(i.statusId);
       return {
-        _id: uId,
-        userId: uId,
-        membershipId: `demo-mem-${idx}-${uId}`,
-        name: t.name,
-        email: t.email,
-        role: t.role,
-        avatarKey: t.avatarKey,
-        jobTitle: t.jobTitle,
-        joinedAt: NOW - (30 - idx * 4) * DAY,
-        assignedIssueCount: this.issues.filter((i) => i.assignee?.name === t.name).length,
+        ...i,
+        status: s ? { name: s.name, color: s.color, category: s.category } : { name: "Todo", color: "#6E94CB", category: "todo" },
       };
     });
+
+    return {
+      issues: mapped,
+      total: mapped.length,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    };
   }
 
-  public listActivities(workspaceId?: string | null, limit = 20) {
-    const wsId = workspaceId || DEMO_WORKSPACES[0].id;
-    return this.activities.filter((a) => a.workspaceId === wsId).slice(0, limit);
+  public getWorkspaceIssues(workspaceId: string) {
+    const issues = this.issues.filter((i) => i.workspaceId === workspaceId && !i.archivedAt);
+    const projectMap = new Map(this.projects.map((p) => [p._id, p]));
+    const statusMap = new Map(DEMO_STATUSES.map((s) => [s._id, s]));
+
+    return {
+      issues: issues.map((i) => {
+        const p = projectMap.get(i.projectId);
+        const s = statusMap.get(i.statusId);
+        return {
+          ...i,
+          projectKey: p?.key ?? "PRJ",
+          projectName: p?.name ?? "Project",
+          statusName: s?.name ?? "Backlog",
+          statusCategory: s?.category ?? "backlog",
+          statusColor: s?.color ?? "#575657",
+        };
+      }),
+      total: issues.length,
+    };
+  }
+
+  public getBoard(projectId: string) {
+    const p = this.projects.find((proj) => proj._id === projectId);
+    const statuses = this.statuses.get(projectId) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${projectId}` }));
+    const issues = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
+
+    const userMap = new Map(this.users.map((u) => [u._id, u]));
+    const labelMap = new Map(DEMO_LABELS.map((l) => [l._id, l]));
+
+    const columns = statuses.map((status) => ({
+      status,
+      issues: issues
+        .filter((i) => i.statusId === status._id)
+        .map((i) => {
+          const assignee = i.assigneeId ? userMap.get(i.assigneeId) : null;
+          return {
+            _id: i._id,
+            number: i.number,
+            title: i.title,
+            priority: i.priority,
+            assigneeId: i.assigneeId,
+            assigneeName: assignee?.name ?? null,
+            assigneeImage: assignee?.avatarUrl,
+            dueDate: i.dueDate,
+            isBlocked: false,
+            labels: i.labelIds.map((lid) => labelMap.get(lid)).filter(Boolean) as DemoLabel[],
+          };
+        }),
+      isUnsorted: false,
+    }));
+
+    return {
+      project: p,
+      statuses,
+      issues: issues.map((i) => ({
+        ...i,
+        status: statuses.find((s) => s._id === i.statusId),
+      })),
+      labels: DEMO_LABELS.filter((l) => l.workspaceId === p?.workspaceId),
+      members: this.users.map((u) => ({
+        userId: u._id,
+        name: u.name,
+        email: u.email,
+        image: u.avatarUrl,
+      })),
+      workflow: { _id: `wf-${projectId}`, name: "Default Workflow", projectId },
+      totalCount: issues.length,
+      columns,
+    };
+  }
+
+  public getIssue(issueId: string) {
+    const issue = this.issues.find((i) => i._id === issueId);
+    if (!issue) return null;
+    const project = this.projects.find((p) => p._id === issue.projectId);
+    const statuses = this.statuses.get(issue.projectId) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${issue.projectId}` }));
+    return {
+      issue,
+      project: project ?? { _id: issue.projectId, name: "Project", key: "PRJ", color: "#6E94CB" },
+      statuses,
+      role: "owner" as const,
+      workspaceId: issue.workspaceId,
+      assignee: this.users.find((u) => u._id === issue.assigneeId),
+      reporter: this.users.find((u) => u._id === issue.reporterId),
+      labels: DEMO_LABELS.filter((l) => issue.labelIds.includes(l._id)),
+      dependencies: [],
+      comments: [
+        {
+          _id: "demo-com-1",
+          authorId: "demo-user-alex",
+          authorName: "Alex Mercer",
+          body: "Validated the initial repro steps. Working on patch now.",
+          createdAt: Date.now() - 3600000,
+        },
+      ],
+    };
+  }
+
+  public getWorkflow(projectId: string) {
+    const statuses = this.statuses.get(projectId) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${projectId}` }));
+    return {
+      workflow: { _id: `wf-${projectId}`, name: "Default Workflow", projectId },
+      statuses,
+      transitions: [],
+    };
+  }
+
+  public getActivity(workspaceId: string, limit = 50) {
+    return this.activities
+      .filter((a) => a.workspaceId === workspaceId)
+      .slice(0, limit);
+  }
+
+  public getProjectActivity(projectId: string, limit = 50) {
+    return this.activities
+      .filter((a) => a.projectId === projectId || (!a.projectId && a.workspaceId === "demo-ws-northstar"))
+      .slice(0, limit);
+  }
+
+  public getNotifications(workspaceId?: string) {
+    const list = workspaceId
+      ? this.notifications.filter((n) => n.workspaceId === workspaceId)
+      : this.notifications;
+    return {
+      notifications: list,
+      unreadCount: list.filter((n) => !n.readAt).length,
+    };
   }
 
   public getProjectSummary(projectId: string) {
-    const issues = this.issues.filter(
-      (i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`
-    );
-    const completed = issues.filter((i) => i.status.category === "completed");
-    const open = issues.filter(
-      (i) => i.status.category !== "completed" && i.status.category !== "cancelled"
-    );
+    const issues = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
+    const p = this.projects.find((proj) => proj._id === projectId);
+    const statuses = this.statuses.get(projectId) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${projectId}` }));
+    const done = issues.filter((i) => i.statusId === "demo-stat-done" || i.statusId === "demo-stat-canc");
+    const open = issues.filter((i) => i.statusId !== "demo-stat-done" && i.statusId !== "demo-stat-canc");
     const now = Date.now();
     const overdue = open.filter((i) => i.dueDate && i.dueDate < now);
     const unassigned = open.filter((i) => !i.assigneeId);
+    const completedThisWeek = done.filter((i) => (i.completedAt ?? i.updatedAt) >= now - 7 * 86400000);
 
-    // Throughput across 8 weeks (W-7 to W-0)
-    const throughput: Array<{ label: string; count: number }> = [];
-    for (let w = 7; w >= 0; w--) {
-      const end = now - w * 7 * 24 * 60 * 60 * 1000;
-      const start = end - 7 * 24 * 60 * 60 * 1000;
-      const count = completed.filter((i) => {
-        const t = i.completedAt || i.updatedAt;
-        return t > start && t <= end;
-      }).length;
-      throughput.push({ label: `W-${w}`, count });
-    }
-    if (completed.length > 0 && throughput.every((t) => t.count === 0)) {
-      const chunk = Math.max(1, Math.floor(completed.length / 8));
-      for (let w = 0; w < 8; w++) {
-        throughput[w].count = w === 7 ? completed.length - chunk * 7 : chunk;
-      }
-    }
+    const throughput = [
+      { label: "W-7", count: 2 },
+      { label: "W-6", count: 3 },
+      { label: "W-5", count: 2 },
+      { label: "W-4", count: 4 },
+      { label: "W-3", count: 3 },
+      { label: "W-2", count: 5 },
+      { label: "W-1", count: 4 },
+      { label: "W-0", count: Math.max(1, completedThisWeek.length) },
+    ];
 
-    // Priorities
-    const byPriority = (["urgent", "high", "medium", "low", "none"] as const).map((p) => ({
-      priority: p,
-      count: open.filter((i) => i.priority === p).length,
+    const byPriority = (["urgent", "high", "medium", "low", "none"] as const).map((pr) => ({
+      priority: pr,
+      count: open.filter((i) => i.priority === pr).length,
     }));
 
-    // Status distribution
-    const byStatus = DEMO_STATUSES.map((s) => ({
+    const byStatus = statuses.map((s) => ({
       statusName: s.name,
       category: s.category,
       color: s.color,
-      count: issues.filter((i) => i.statusId === s._id || i.status.name === s.name).length,
+      count: issues.filter((i) => i.statusId === s._id).length,
     }));
 
-    // Workload by team member
-    const memberMap = new Map<string, { userId: string; name: string; openIssues: number; overdue: number }>();
-    for (const issue of open) {
-      const uId = issue.assigneeId || "unassigned";
-      const uName = issue.assignee?.name || "Unassigned";
-      const existing = memberMap.get(uId) || {
-        userId: uId,
-        name: uName,
-        openIssues: 0,
-        overdue: 0,
-      };
-      existing.openIssues += 1;
-      if (issue.dueDate && issue.dueDate < now) {
-        existing.overdue += 1;
-      }
-      memberMap.set(uId, existing);
-    }
-    const workload = [...memberMap.values()].sort((a, b) => b.openIssues - a.openIssues);
+    const workload = this.users.map((u) => ({
+      userId: u._id,
+      name: u.name,
+      openIssues: open.filter((i) => i.assigneeId === u._id).length,
+      overdue: overdue.filter((i) => i.assigneeId === u._id).length,
+    })).sort((a, b) => b.openIssues - a.openIssues);
 
     return {
+      project: p,
       total: issues.length,
       openCount: open.length,
-      completedCount: completed.length,
-      completedThisWeek: Math.min(completed.length, 3),
+      completedCount: done.length,
+      completedThisWeek: completedThisWeek.length,
       overdueCount: overdue.length,
       unassignedCount: unassigned.length,
-      avgCycleDays: completed.length > 0 ? 3.4 : null,
-      medianCycleDays: completed.length > 0 ? 3.0 : null,
-      avgReviewWaitDays: completed.length > 0 ? 1.2 : null,
+      avgCycleDays: 3.4,
+      medianCycleDays: 3.0,
+      avgReviewWaitDays: 0.8,
       throughput,
       byPriority,
       byStatus,
@@ -799,97 +790,181 @@ class InMemoryDemoStore {
   }
 
   public getProjectRisk(projectId: string) {
-    const issues = this.issues.filter(
-      (i) => i.projectId === projectId || i.projectId === `demo-proj-${projectId.toLowerCase()}`
-    );
-    const open = issues.filter(
-      (i) => i.status.category !== "completed" && i.status.category !== "cancelled"
-    );
-    const urgentCount = open.filter((i) => i.priority === "urgent" || i.priority === "high").length;
-    const now = Date.now();
-    const overdueCount = open.filter((i) => i.dueDate && i.dueDate < now).length;
-    const blockedCount = 0;
-    const staleCount = 0;
+    const issues = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
+    const overdue = issues.filter((i) => i.statusId !== "demo-stat-done" && i.dueDate && i.dueDate < Date.now());
+    const highOpen = issues.filter((i) => i.statusId !== "demo-stat-done" && (i.priority === "urgent" || i.priority === "high"));
 
-    let score = 0;
-    const factors: Array<{ label: string; detail: string; points: number }> = [];
-
-    if (urgentCount > 0) {
-      const pts = Math.min(25, urgentCount * 5);
-      score += pts;
-      factors.push({
-        label: "High-priority backlog",
-        detail: `${urgentCount} urgent/high open issue${urgentCount > 1 ? "s" : ""}`,
-        points: pts,
-      });
+    const factors = [
+      { label: "Healthy velocity", detail: "Sprint throughput is on track across milestones", points: 5 },
+      { label: "High-priority items", detail: `${highOpen.length} urgent/high issues in progress`, points: Math.min(15, highOpen.length * 3) },
+    ];
+    if (overdue.length > 0) {
+      factors.push({ label: "Overdue items", detail: `${overdue.length} items past scheduled deadline`, points: overdue.length * 5 });
     }
 
-    if (overdueCount > 0) {
-      const pts = Math.min(25, overdueCount * 5);
-      score += pts;
-      factors.push({
-        label: "Overdue issues",
-        detail: `${overdueCount} open issue${overdueCount > 1 ? "s" : ""} past target date`,
-        points: pts,
-      });
-    }
-
-    if (factors.length === 0) {
-      factors.push({
-        label: "On track",
-        detail: "No active risk factors detected",
-        points: 0,
-      });
-    }
-
-    const level = score >= 60 ? "critical" : score >= 35 ? "high" : score >= 15 ? "medium" : "low";
+    const score = 15 + Math.min(20, highOpen.length * 2) + Math.min(25, overdue.length * 5);
+    const level = score >= 60 ? "critical" : score >= 35 ? "high" : score >= 20 ? "medium" : "low";
 
     return {
       score,
       level,
       factors,
-      blockedCount,
-      overdueCount,
-      staleCount,
-      highPriorityOpenCount: urgentCount,
+      blockedCount: 0,
+      overdueCount: overdue.length,
+      staleCount: 0,
+      highPriorityOpenCount: highOpen.length,
       hasData: issues.length > 0,
     };
   }
 
-  public getWorkflow() {
+  public getStats() {
+    const issuesPerStatus: Record<string, number> = {};
+    for (const stat of DEMO_STATUSES) {
+      issuesPerStatus[stat.name] = this.issues.filter((i) => i.statusId === stat._id).length;
+    }
     return {
-      workflow: {
-        _id: "demo-workflow-default",
-        name: "Standard Engineering Workflow",
-        isDefault: true,
-      },
-      statuses: DEMO_STATUSES,
-      transitions: DEMO_TRANSITIONS,
-      automationRules: [
-        {
-          _id: "demo-rule-1",
-          name: "Auto-transition to Review on PR link",
-          trigger: "pr_opened",
-          action: "set_status_review",
-          enabled: true,
-        },
-      ],
+      workspacesCount: this.workspaces.length,
+      projectsCount: this.projects.length,
+      issuesCount: this.issues.length,
+      issuesPerStatus,
+      usersCount: this.users.length,
     };
   }
 
-  public resetDemo() {
-    this.issues = generateInitialIssues();
-    this.activities = generateInitialActivities();
+  // --- Mutation Methods ---
+
+  public createProject(args: {
+    workspaceId: string;
+    name: string;
+    key: string;
+    description?: string;
+  }): { projectId: string } {
+    const now = Date.now();
+    const projectId = `demo-proj-${Date.now()}`;
+    const newProj: DemoProject = {
+      _id: projectId,
+      workspaceId: args.workspaceId,
+      key: args.key.toUpperCase(),
+      name: args.name,
+      description: args.description ?? "",
+      status: "active",
+      issueCount: 0,
+      openIssueCount: 0,
+      doneIssueCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: "demo-user-alex",
+    };
+    this.projects.push(newProj);
+    this.statuses.set(
+      projectId,
+      DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${projectId}` })),
+    );
     this.notify();
+    return { projectId };
+  }
+
+  public updateProject(projectId: string, patch: Partial<DemoProject>) {
+    const proj = this.projects.find((p) => p._id === projectId);
+    if (proj) {
+      Object.assign(proj, patch, { updatedAt: Date.now() });
+      this.notify();
+    }
+  }
+
+  public createIssue(args: {
+    projectId: string;
+    title: string;
+    description?: string;
+    priority?: "urgent" | "high" | "medium" | "low" | "none";
+    statusId?: string;
+    assigneeId?: string;
+    estimatePoints?: number;
+    dueDate?: number;
+    labelIds?: string[];
+  }): { issueId: string } {
+    const proj = this.projects.find((p) => p._id === args.projectId);
+    const workspaceId = proj ? proj.workspaceId : "demo-ws-northstar";
+    const existing = this.issues.filter((i) => i.projectId === args.projectId);
+    const nextNumber = existing.reduce((max, i) => Math.max(max, i.number), 0) + 1;
+    const now = Date.now();
+
+    const issueId = `demo-issue-${Date.now()}`;
+    const newIssue: DemoIssue = {
+      _id: issueId,
+      workspaceId,
+      projectId: args.projectId,
+      number: nextNumber,
+      title: args.title,
+      description: args.description,
+      priority: args.priority ?? "medium",
+      statusId: args.statusId ?? "demo-stat-todo",
+      assigneeId: args.assigneeId,
+      reporterId: "demo-user-alex",
+      estimatePoints: args.estimatePoints,
+      dueDate: args.dueDate,
+      labelIds: args.labelIds ?? [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.issues.unshift(newIssue);
+    if (proj) {
+      proj.issueCount += 1;
+      proj.openIssueCount += 1;
+    }
+    this.notify();
+    return { issueId };
+  }
+
+  public updateIssue(issueId: string, patch: Partial<DemoIssue>) {
+    const issue = this.issues.find((i) => i._id === issueId);
+    if (issue) {
+      Object.assign(issue, patch, { updatedAt: Date.now() });
+      this.notify();
+    }
+  }
+
+  public transitionIssue(issueId: string, statusId: string) {
+    const issue = this.issues.find((i) => i._id === issueId);
+    if (issue) {
+      issue.statusId = statusId;
+      issue.updatedAt = Date.now();
+      const proj = this.projects.find((p) => p._id === issue.projectId);
+      if (proj) {
+        const issues = this.issues.filter((i) => i.projectId === proj._id && !i.archivedAt);
+        const done = issues.filter((i) => i.statusId === "demo-stat-done").length;
+        proj.doneIssueCount = done;
+        proj.openIssueCount = issues.length - done;
+      }
+      this.notify();
+    }
+  }
+
+  public deleteIssue(issueId: string) {
+    const idx = this.issues.findIndex((i) => i._id === issueId);
+    if (idx !== -1) {
+      const issue = this.issues[idx];
+      this.issues.splice(idx, 1);
+      const proj = this.projects.find((p) => p._id === issue.projectId);
+      if (proj) {
+        proj.issueCount = Math.max(0, proj.issueCount - 1);
+        if (issue.statusId === "demo-stat-done") {
+          proj.doneIssueCount = Math.max(0, proj.doneIssueCount - 1);
+        } else {
+          proj.openIssueCount = Math.max(0, proj.openIssueCount - 1);
+        }
+      }
+      this.notify();
+    }
+  }
+
+  public hasId(id: string): boolean {
+    if (id.startsWith("demo-")) return true;
+    if (this.workspaces.some((w) => w._id === id)) return true;
+    if (this.projects.some((p) => p._id === id)) return true;
+    if (this.issues.some((i) => i._id === id)) return true;
+    return false;
   }
 }
 
 export const demoStore = new InMemoryDemoStore();
-
-/** React Hook for components observing demo store updates */
-export function useDemoStoreSubscriber() {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    return demoStore.subscribe(() => setTick((t) => t + 1));
-  }, []);
-}
