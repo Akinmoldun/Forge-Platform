@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
-import { enableDemoMode } from '@/lib/demoMode';
-import { Loader2, User } from 'lucide-react';
+import { enableDemoMode, disableDemoMode } from '@/lib/demoMode';
+import { isConvexConfigured } from '@/hooks/use-safe-query';
+import { Loader2, User, Info } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'login' | 'signup';
@@ -115,9 +116,16 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       return;
     }
 
-    setIsSubmitting(true);
+    disableDemoMode();
     setError(null);
     setGithubError(null);
+
+    if (!isConvexConfigured) {
+      setError("Email OTP sign-in requires a connected Convex deployment. Use 'Try demo as guest' to test Forge.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const formData = new FormData();
@@ -131,7 +139,8 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       const dataStr = (err as { data?: unknown })?.data
         ? String((err as { data?: unknown }).data)
         : '';
-      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      const msg = rawMsg.toLowerCase();
       const combined = `${dataStr.toLowerCase()} ${msg}`;
 
       if (
@@ -159,7 +168,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
       } else {
-        setError("We couldn't send the code, try again");
+        setError(rawMsg || "We couldn't send the code, try again");
       }
     } finally {
       setIsSubmitting(false);
@@ -176,6 +185,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       return;
     }
 
+    disableDemoMode();
     setIsSubmitting(true);
     setError(null);
 
@@ -188,14 +198,17 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
       console.error('Verify OTP error:', err);
-      const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      const msg = rawMsg.toLowerCase();
 
       if (msg.includes('expired')) {
         setError('That code has expired');
       } else if (msg.includes('rate') || msg.includes('too many')) {
         setError('Too many attempts, try again later');
-      } else {
+      } else if (msg.includes('invalid') || msg.includes('incorrect') || msg.includes('wrong')) {
         setError('That code is incorrect');
+      } else {
+        setError(rawMsg || 'That code is incorrect');
       }
       setCode('');
     } finally {
@@ -218,7 +231,8 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       const dataStr = (err as { data?: unknown })?.data
         ? String((err as { data?: unknown }).data)
         : '';
-      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      const msg = rawMsg.toLowerCase();
       const combined = `${dataStr.toLowerCase()} ${msg}`;
       if (
         combined.includes("email isn't set up yet") ||
@@ -232,7 +246,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
       } else {
-        setError("We couldn't send the code, try again");
+        setError(rawMsg || "We couldn't send the code, try again");
       }
     } finally {
       setIsSubmitting(false);
@@ -256,9 +270,16 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
 
   const handleGitHubSignIn = async () => {
     if (isGitHubLoading || isSubmitting || isGuestLoading) return;
+    disableDemoMode();
     setGithubError(null);
     setError(null);
     setGuestError(null);
+
+    if (!isConvexConfigured) {
+      setGithubError("GitHub sign-in requires a connected Convex deployment with AUTH_GITHUB_ID & AUTH_GITHUB_SECRET configured. Use 'Try demo as guest' to test Forge.");
+      return;
+    }
+
     setIsGitHubLoading(true);
 
     try {
@@ -268,11 +289,12 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       await signIn('github', { redirectTo: destination });
     } catch (err: unknown) {
       console.error('GitHub sign-in error:', err);
-      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+      const realMsg = err instanceof Error ? err.message : String(err);
+      const msg = realMsg.toLowerCase();
       if (msg.includes('not configured') || msg.includes('missing auth_github')) {
         setGithubError("GitHub sign-in is not yet configured on Convex Cloud. Set AUTH_GITHUB_ID & AUTH_GITHUB_SECRET and deploy.");
       } else {
-        setGithubError("Couldn't sign in with GitHub, try again");
+        setGithubError(realMsg || "Couldn't sign in with GitHub, try again");
       }
       setIsGitHubLoading(false);
     }
@@ -312,6 +334,26 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               : "No password. We'll email you a one-time code."}
           </p>
 
+          {/* Friendly preview notice when Convex is not configured */}
+          {!isConvexConfigured && (
+            <div className="mt-5 rounded-[12px] border border-amber-200 bg-amber-50/90 p-3.5 text-left">
+              <div className="flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div className="text-[13px] text-amber-900 leading-relaxed">
+                  <span className="font-semibold">Preview environment:</span> Real accounts require a connected Convex backend. You can explore all Forge workspaces and features right now with{" "}
+                  <button
+                    type="button"
+                    onClick={handleGuestSignIn}
+                    className="font-semibold underline hover:text-black cursor-pointer"
+                  >
+                    Try demo as guest
+                  </button>
+                  .
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Continue with GitHub Button */}
           <div className="mt-8">
             <button
@@ -345,13 +387,20 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             </button>
 
             {githubError && (
-              <p
-                role="alert"
-                aria-live="polite"
-                className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
-              >
-                {githubError}
-              </p>
+              <>
+                <p
+                  role="alert"
+                  aria-live="polite"
+                  className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
+                >
+                  {githubError}
+                </p>
+                {Boolean(import.meta.env?.DEV) && (
+                  <p className="mt-1 font-mono text-[11px] text-[#575657] text-center">
+                    Origin: {typeof window !== "undefined" ? window.location.origin : ""}
+                  </p>
+                )}
+              </>
             )}
           </div>
 

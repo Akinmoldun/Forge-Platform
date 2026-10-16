@@ -34,13 +34,19 @@ import {
 import { toast } from "sonner";
 
 export default function AppHome() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading, hasOAuthCode } = useAuth();
+  const navigate = useNavigate();
   const isRealUser = Boolean(user && !user.isAnonymous);
-  void isRealUser;
-  void isDemoMode();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !hasOAuthCode && !isDemoMode()) {
+      navigate("/login", { replace: true });
+    }
+  }, [isLoading, isAuthenticated, hasOAuthCode, navigate]);
+
   const workspaces = useSafeQuery(api.workspaces.listMyWorkspaces, {});
   const myInvitations = useSafeQuery(api.workspaces.getMyInvitations, {});
-  const navigate = useNavigate();
+
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -274,7 +280,9 @@ export default function AppHome() {
               </div>
               <h3 className="text-[16px] font-[500] text-[#0D0D0D]">No workspaces yet</h3>
               <p className="mt-1 max-w-sm text-[13px] leading-5 text-[#575657]">
-                Create your first workspace to start managing projects and issues.
+                {isRealUser
+                  ? "Welcome to Forge! Create your first workspace to start managing projects and issues."
+                  : "Create your first workspace to start managing projects and issues."}
               </p>
               <div className="mt-4">
                 <Button

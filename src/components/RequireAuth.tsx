@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -9,28 +8,23 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { isDemoMode } from "@/lib/demoMode";
-import { AlertCircle, Loader2, Lock, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 
 /**
  * Wraps a route that requires a signed-in user.
- * Allows instant bypass for demoMode visitors.
+ * Allows instant bypass ONLY for explicit demoMode visitors.
  * Protects against redirects while an OAuth code exchange is in progress.
  * Enforces an 8-second maximum wait timeout on loading states.
  */
 export function RequireAuth({
   children,
-  title = "Sign in to continue",
-  description = "This page is only available to signed-in users.",
   redirectImmediately = false,
 }: {
   children: ReactNode;
-  /** Headline on the blocked screen. */
   title?: string;
-  /** Says what the visitor gets by signing in. */
   description?: string;
-  /** Skip the explanation and go straight to `/auth`. */
   redirectImmediately?: boolean;
 }) {
   const { isSessionPending, isSignedOut, hasOAuthCode } = useAuth();
@@ -50,7 +44,7 @@ export function RequireAuth({
     return () => clearTimeout(timer);
   }, [isSessionPending, hasOAuthCode]);
 
-  // Demo mode visitors are allowed to view workspaces and pages instantly
+  // Demo mode visitors are allowed to view workspaces and pages instantly ONLY IF explicit demo mode is set
   if (isDemoMode()) {
     return <>{children}</>;
   }
@@ -92,59 +86,24 @@ export function RequireAuth({
     );
   }
 
-  // Still resolving auth or exchanging OAuth code: show spinner
+  // 4. While a ?code=... exchange is in progress (isLoading false but isAuthenticated still false),
+  // no redirect or fallback to guest may happen. Show a silent skeleton, not the word "Loading".
   if (isSessionPending || hasOAuthCode) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-6 text-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground mb-3" />
-        {hasOAuthCode && (
-          <p className="text-sm font-medium text-muted-foreground">
-            Signing you in with GitHub...
-          </p>
-        )}
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#FBFBFC] p-6">
+        <div className="size-8 rounded-full border-2 border-border border-t-[#0D0D0D] animate-spin" />
       </main>
     );
   }
 
-  // Confirmed signed out
+  // Confirmed signed out without demo mode -> must redirect to /login
   if (isSignedOut) {
     const returnTo = `${location.pathname}${location.search}`;
-    const signInHref = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
+    const signInHref = `/login?returnTo=${encodeURIComponent(returnTo)}`;
 
-    if (redirectImmediately) {
+    if (redirectImmediately || isSignedOut) {
       return <Navigate to={signInHref} replace />;
     }
-
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-                <Lock className="size-5 text-muted-foreground" />
-              </div>
-            </div>
-            <CardTitle className="text-xl">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center text-sm text-muted-foreground">
-            You'll come straight back to this page once you're signed in.
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button className="w-full" onClick={() => navigate(signInHref)}>
-              Sign in
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => navigate("/")}
-            >
-              Back to home
-            </Button>
-          </CardFooter>
-        </Card>
-      </main>
-    );
   }
 
   return children;

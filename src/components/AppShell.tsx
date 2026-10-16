@@ -136,8 +136,8 @@ function AccountMenu({
     }
   }, [user, ensureWelcomeEmail]);
 
-  const isGuest = Boolean(user?.isAnonymous);
-  const displayName = user?.name?.trim() || user?.email?.trim() || (isGuest ? "Guest" : "User");
+  const isGuest = Boolean(user?.isAnonymous || isDemoMode());
+  const displayName = isGuest ? "Guest" : (user?.name?.trim() || user?.email?.trim() || "User");
 
   const handleSaveName = async () => {
     if (!nameValue.trim() || saving) return;
@@ -185,9 +185,11 @@ function AccountMenu({
                   </span>
                 )}
               </div>
-              <p className="truncate text-[11px] text-[#575657]">
-                {isGuest ? "Guest demo" : user?.email ?? "Signed in"}
-              </p>
+              {!isGuest && user?.email && (
+                <p className="truncate text-[11px] text-[#575657]">
+                  {user.email}
+                </p>
+              )}
             </div>
           )}
         </button>
@@ -239,7 +241,7 @@ function AccountMenu({
                 <p className="truncate text-[13px] font-medium text-[#0D0D0D]">
                   {displayName}
                 </p>
-                {user?.email && user?.email !== displayName && (
+                {!isGuest && user?.email && user?.email !== displayName && (
                   <p className="truncate text-[11px] text-[#575657]">{user.email}</p>
                 )}
               </div>
@@ -291,7 +293,7 @@ function AccountMenu({
         <DropdownMenuItem
           onClick={async () => {
             await signOut();
-            navigate("/");
+            navigate("/login");
           }}
           className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#B3261E] hover:bg-[#B3261E]/10 cursor-pointer"
         >

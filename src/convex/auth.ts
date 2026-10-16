@@ -35,7 +35,8 @@ const rawAuth = convexAuth({
       if (target.startsWith("http://") || target.startsWith("https://")) {
         return target;
       }
-      const baseUrl = (process.env.SITE_URL || "https://ais-pre-f5hmg3ing2g2i47qpg6u2d-379843806320.europe-west1.run.app").replace(/\/+$/, "");
+      const siteUrl = process.env.SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+      const baseUrl = (siteUrl || "https://ais-pre-f5hmg3ing2g2i47qpg6u2d-379843806320.europe-west1.run.app").replace(/\/+$/, "");
       const cleanPath = target.startsWith("/") ? target : `/${target}`;
       return `${baseUrl}${cleanPath}`;
     },

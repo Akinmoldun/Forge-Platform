@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 
-
 export interface DemoUser {
   _id: string;
   name: string;
-  email: string;
+  email?: string;
   role: "owner" | "admin" | "member" | "viewer";
   avatarUrl?: string;
 }
@@ -20,6 +19,8 @@ export interface DemoWorkspace {
   iconColor?: string;
   description?: string;
   icon?: string;
+  memberCount?: number;
+  projectCount?: number;
 }
 
 export interface DemoProject {
@@ -67,6 +68,7 @@ export interface DemoIssue {
   archivedAt?: number;
   startedAt?: number;
   completedAt?: number;
+  isBlocked?: boolean;
 }
 
 export interface DemoLabel {
@@ -100,14 +102,23 @@ export interface DemoNotification {
   createdAt: number;
 }
 
+export interface DemoInvitation {
+  _id: string;
+  workspaceId: string;
+  email: string;
+  role: "admin" | "member" | "viewer";
+  createdAt: number;
+  expiresAt: number;
+}
+
 // Default status definitions
 export const DEMO_STATUSES: Omit<DemoStatus, "workflowId">[] = [
   { _id: "demo-stat-backlog", name: "Backlog", category: "backlog", position: 0, color: "#575657" },
   { _id: "demo-stat-todo", name: "Todo", category: "todo", position: 1, color: "#6E94CB" },
-  { _id: "demo-stat-prog", name: "In Progress", category: "in_progress", position: 2, color: "#F36421" },
+  { _id: "demo-stat-prog", name: "In Progress", category: "in_progress", position: 2, color: "#7957EC" },
   { _id: "demo-stat-rev", name: "Review", category: "in_review", position: 3, color: "#D78FC6" },
   { _id: "demo-stat-done", name: "Done", category: "done", position: 4, color: "#83DD79" },
-  { _id: "demo-stat-canc", name: "Cancelled", category: "cancelled", position: 5, color: "#A3A3A3" },
+  { _id: "demo-stat-canc", name: "Cancelled", category: "cancelled", position: 5, color: "#E5857F" },
 ];
 
 export const DEMO_LABELS: DemoLabel[] = [
@@ -123,10 +134,11 @@ class InMemoryDemoStore {
   private workspaces: DemoWorkspace[] = [];
   private users: DemoUser[] = [];
   private projects: DemoProject[] = [];
-  private statuses: Map<string, DemoStatus[]> = new Map(); // projectId -> statuses
+  private statuses: Map<string, DemoStatus[]> = new Map();
   private issues: DemoIssue[] = [];
   private activities: DemoActivityEvent[] = [];
   private notifications: DemoNotification[] = [];
+  private invitations: DemoInvitation[] = [];
   private listeners: Set<() => void> = new Set();
 
   constructor() {
@@ -148,37 +160,108 @@ class InMemoryDemoStore {
     }
   }
 
+  public isDemoWorkspace(id?: string): boolean {
+    if (!id) return false;
+    return id.startsWith("demo-ws") || this.workspaces.some((w) => w._id === id);
+  }
+
   private seedSynchronously() {
     const now = Date.now();
-    const day = 24 * 60 * 60 * 1000;
+    const DAY = 24 * 60 * 60 * 1000;
 
-    // Users
+    // Users: current user is Guest with NO email; teammates keep their full profiles
     this.users = [
-      { _id: "demo-user-alex", name: "Alex Mercer", email: "alex@northstar.invalid", role: "owner" },
-      { _id: "demo-user-sarah", name: "Sarah Lin", email: "sarah@northstar.invalid", role: "admin" },
-      { _id: "demo-user-marcus", name: "Marcus Vance", email: "marcus@northstar.invalid", role: "member" },
-      { _id: "demo-user-elena", name: "Elena Rostova", email: "elena@northstar.invalid", role: "member" },
-      { _id: "demo-user-david", name: "David Kim", email: "david@northstar.invalid", role: "member" },
-      { _id: "demo-user-priya", name: "Priya Patel", email: "priya@northstar.invalid", role: "member" },
+      { _id: "demo-user-alex", name: "Guest", role: "owner" },
+      { _id: "demo-user-sarah", name: "Sarah Lin", email: "sarah@northstar.team", role: "admin" },
+      { _id: "demo-user-marcus", name: "Marcus Vance", email: "marcus@northstar.team", role: "member" },
+      { _id: "demo-user-elena", name: "Elena Rostova", email: "elena@northstar.team", role: "member" },
+      { _id: "demo-user-david", name: "David Kim", email: "david@northstar.team", role: "member" },
+      { _id: "demo-user-priya", name: "Priya Patel", email: "priya@northstar.team", role: "member" },
     ];
 
-    // Workspaces (2 workspaces)
+    // Workspaces (active team workspaces with no "guest workspace" labels)
     this.workspaces = [
       {
         _id: "demo-ws-northstar",
-        name: "Demo: Northstar Labs",
+        name: "Northstar Labs",
         slug: "demo-northstar-labs",
         role: "owner",
-        createdAt: now - 30 * day,
+        createdAt: now - 240 * DAY,
         ownerId: "demo-user-alex",
+        memberCount: 6,
+        projectCount: 3,
       },
       {
         _id: "demo-ws-pixelforge",
-        name: "Demo: Pixel Forge",
+        name: "Pixel Forge",
         slug: "demo-pixel-forge",
         role: "owner",
-        createdAt: now - 20 * day,
+        createdAt: now - 210 * DAY,
         ownerId: "demo-user-alex",
+        memberCount: 6,
+        projectCount: 3,
+      },
+    ];
+
+    // Pending Invitations (3-4 pending per workspace)
+    this.invitations = [
+      // Northstar Labs
+      {
+        _id: "demo-inv-ns-1",
+        workspaceId: "demo-ws-northstar",
+        email: "jordan.taylor@northstar.team",
+        role: "member",
+        createdAt: now - 3 * DAY,
+        expiresAt: now + 4 * DAY,
+      },
+      {
+        _id: "demo-inv-ns-2",
+        workspaceId: "demo-ws-northstar",
+        email: "maya.chen@acme-engineering.dev",
+        role: "admin",
+        createdAt: now - 2 * DAY,
+        expiresAt: now + 5 * DAY,
+      },
+      {
+        _id: "demo-inv-ns-3",
+        workspaceId: "demo-ws-northstar",
+        email: "sam.williams@cloudinfra.net",
+        role: "member",
+        createdAt: now - 1 * DAY,
+        expiresAt: now + 6 * DAY,
+      },
+      {
+        _id: "demo-inv-ns-4",
+        workspaceId: "demo-ws-northstar",
+        email: "zoe.martinez@productdesign.io",
+        role: "viewer",
+        createdAt: now - 4 * DAY,
+        expiresAt: now + 3 * DAY,
+      },
+      // Pixel Forge
+      {
+        _id: "demo-inv-pf-1",
+        workspaceId: "demo-ws-pixelforge",
+        email: "kai.tanaka@indiegame.studio",
+        role: "member",
+        createdAt: now - 2 * DAY,
+        expiresAt: now + 5 * DAY,
+      },
+      {
+        _id: "demo-inv-pf-2",
+        workspaceId: "demo-ws-pixelforge",
+        email: "lucas.silva@netcode.systems",
+        role: "admin",
+        createdAt: now - 3 * DAY,
+        expiresAt: now + 4 * DAY,
+      },
+      {
+        _id: "demo-inv-pf-3",
+        workspaceId: "demo-ws-pixelforge",
+        email: "aisha.khan@renderlab.art",
+        role: "viewer",
+        createdAt: now - 1 * DAY,
+        expiresAt: now + 6 * DAY,
       },
     ];
 
@@ -194,11 +277,11 @@ class InMemoryDemoStore {
         status: "active",
         color: "#6E94CB",
         iconKey: "compass",
-        issueCount: 18,
-        openIssueCount: 13,
-        doneIssueCount: 5,
-        createdAt: now - 25 * day,
-        updatedAt: now - 2 * 60 * 60 * 1000,
+        issueCount: 22,
+        openIssueCount: 14,
+        doneIssueCount: 8,
+        createdAt: now - 230 * DAY,
+        updatedAt: now - 2 * 3600000,
         createdBy: "demo-user-alex",
       },
       {
@@ -210,11 +293,11 @@ class InMemoryDemoStore {
         status: "active",
         color: "#83DD79",
         iconKey: "prism",
-        issueCount: 16,
-        openIssueCount: 11,
-        doneIssueCount: 5,
-        createdAt: now - 22 * day,
-        updatedAt: now - 4 * 60 * 60 * 1000,
+        issueCount: 20,
+        openIssueCount: 12,
+        doneIssueCount: 8,
+        createdAt: now - 220 * DAY,
+        updatedAt: now - 4 * 3600000,
         createdBy: "demo-user-sarah",
       },
       {
@@ -226,10 +309,10 @@ class InMemoryDemoStore {
         status: "active",
         color: "#F36421",
         iconKey: "orbit",
-        issueCount: 19,
-        openIssueCount: 14,
-        doneIssueCount: 5,
-        createdAt: now - 20 * day,
+        issueCount: 23,
+        openIssueCount: 15,
+        doneIssueCount: 8,
+        createdAt: now - 240 * DAY,
         updatedAt: now - 30 * 60 * 1000,
         createdBy: "demo-user-alex",
       },
@@ -243,11 +326,11 @@ class InMemoryDemoStore {
         status: "active",
         color: "#7957EC",
         iconKey: "loom",
-        issueCount: 17,
-        openIssueCount: 12,
-        doneIssueCount: 5,
-        createdAt: now - 18 * day,
-        updatedAt: now - 5 * 60 * 60 * 1000,
+        issueCount: 21,
+        openIssueCount: 13,
+        doneIssueCount: 8,
+        createdAt: now - 200 * DAY,
+        updatedAt: now - 5 * 3600000,
         createdBy: "demo-user-alex",
       },
       {
@@ -259,11 +342,11 @@ class InMemoryDemoStore {
         status: "active",
         color: "#D78FC6",
         iconKey: "quill",
-        issueCount: 15,
-        openIssueCount: 10,
-        doneIssueCount: 5,
-        createdAt: now - 15 * day,
-        updatedAt: now - 8 * 60 * 60 * 1000,
+        issueCount: 19,
+        openIssueCount: 11,
+        doneIssueCount: 8,
+        createdAt: now - 190 * DAY,
+        updatedAt: now - 8 * 3600000,
         createdBy: "demo-user-elena",
       },
       {
@@ -275,16 +358,16 @@ class InMemoryDemoStore {
         status: "active",
         color: "#0D0D0D",
         iconKey: "orbit",
-        issueCount: 16,
-        openIssueCount: 11,
-        doneIssueCount: 5,
-        createdAt: now - 12 * day,
-        updatedAt: now - 1 * 60 * 60 * 1000,
+        issueCount: 20,
+        openIssueCount: 12,
+        doneIssueCount: 8,
+        createdAt: now - 210 * DAY,
+        updatedAt: now - 1 * 3600000,
         createdBy: "demo-user-marcus",
       },
     ];
 
-    // Set up project statuses
+    // Statuses
     for (const proj of this.projects) {
       this.statuses.set(
         proj._id,
@@ -292,7 +375,7 @@ class InMemoryDemoStore {
       );
     }
 
-    // Seed 15-19 rich issues per project across all statuses
+    // 20-23 templates per project across 8 months
     const issueTemplates: Record<string, string[]> = {
       MOB: [
         "Resolve intermittent WebSocket reconnection dropouts on mobile clients",
@@ -313,6 +396,10 @@ class InMemoryDemoStore {
         "Verify OAuth session refresh token expiry prompt",
         "Add badge count sync to iOS app icon",
         "Benchmark startup time under low-end Android emulator",
+        "Implement automated push token rotation on user re-authentication",
+        "Tune gesture velocity curves for horizontal board swimlanes",
+        "Add localized date formatting for Korean and German locales",
+        "Optimize touch event propagation on card drag handlers",
       ],
       BIL: [
         "Audit Stripe webhook signature verification against replay attacks",
@@ -331,6 +418,10 @@ class InMemoryDemoStore {
         "Implement refund transaction webhook handler and credit memo generator",
         "Export QuickBooks and Xero compatible journal entries",
         "Verify PCI DSS SAQ-A compliance documentation check",
+        "Add discount code redemption field on checkout modal",
+        "Enforce rate limits on high-frequency billing ledger exports",
+        "Implement automated account credit balances application logic",
+        "Support ACH bank transfer payment gateway for enterprise tiers",
       ],
       WEB: [
         "Implement drag-and-drop workflow status transition visualizer",
@@ -352,6 +443,10 @@ class InMemoryDemoStore {
         "Handle network offline state with floating persistent retry banner",
         "Display teammate local time zone badge next to assignee avatar",
         "Add sprint burndown chart with scope change delta annotations",
+        "Support live cursor position interpolation across WebSocket cluster",
+        "Implement keyboard accessible modal focus traps and ARIA labels",
+        "Audit hydration mismatch errors during fast page transitions",
+        "Add automated browser screenshot diff testing to CI pipeline",
       ],
       GAM: [
         "Tune melee attack hitboxes and frame-data window for parry counter",
@@ -371,6 +466,10 @@ class InMemoryDemoStore {
         "Audit frame pacing under 144Hz high refresh rate monitors",
         "Fix weapon weapon-swap animation cancel edge case exploit",
         "Add damage number popup text with color-coded elemental types",
+        "Benchmark garbage collection pauses under intense bullet hell sequences",
+        "Implement procedural footstep surface sound tag router",
+        "Add field-of-view slider and ultrawide 21:9 aspect ratio support",
+        "Tune enemy AI flank maneuvering behavior in open arenas",
       ],
       ART: [
         "Implement volumetric atmospheric fog with height-based density falloff",
@@ -387,7 +486,11 @@ class InMemoryDemoStore {
         "Fix normal map tangent space distortion on mirrored mesh seams",
         "Implement screen-space reflections with temporal reprojection",
         "Profile memory footprint of uncompressed 4K normal textures",
-        "Create custom water foam shoreline shoreline shader graph",
+        "Create custom water foam shoreline shader graph",
+        "Add dynamic cloth simulation vertex shader for hero capes",
+        "Tune light probe grid placement in indoor modular interiors",
+        "Implement depth-of-field bokeh blur for cinematic dialogue shots",
+        "Optimize LOD cross-fade transitions on distant foliage assets",
       ],
       NET: [
         "Implement deterministic rollback netcode state save/restore loop",
@@ -406,6 +509,10 @@ class InMemoryDemoStore {
         "Add DDoS rate limiting at the UDP socket gateway layer",
         "Benchmark server tick rate stability under 64 concurrent players",
         "Support IPv6 dual-stack socket binding across all edge hosts",
+        "Profile serialization overhead of complex player inventory payloads",
+        "Implement regional server ping selector in settings menu",
+        "Add delta compression for spectator replay stream recordings",
+        "Tune heartbeat interval and client timeout disconnect threshold",
       ],
     };
 
@@ -413,89 +520,264 @@ class InMemoryDemoStore {
       "urgent",
       "high",
       "medium",
-      "medium",
       "low",
-      "none",
+      "medium",
+      "high",
     ];
 
-    // Status distribution: 3 in backlog, 3 in todo, 4 in progress, 2 in review, 5 in done, 1 cancelled
-    const statusSequence = [
-      "demo-stat-backlog",
-      "demo-stat-backlog",
-      "demo-stat-backlog",
-      "demo-stat-todo",
-      "demo-stat-todo",
-      "demo-stat-todo",
-      "demo-stat-prog",
-      "demo-stat-prog",
-      "demo-stat-prog",
-      "demo-stat-prog",
-      "demo-stat-rev",
-      "demo-stat-rev",
-      "demo-stat-done",
-      "demo-stat-done",
-      "demo-stat-done",
-      "demo-stat-done",
-      "demo-stat-done",
-      "demo-stat-canc",
-      "demo-stat-todo",
-    ];
+    // Status sequence per project:
+    // Index 0..2: backlog
+    // Index 3..6: todo
+    // Index 7..10: in_progress
+    // Index 11..13: in_review
+    // Index 14..21: done (spanning 8 months of historical completion)
+    // Index 22: cancelled
+    const completionDaysAgo = [2, 6, 14, 25, 45, 75, 120, 180, 220];
+
     for (const project of this.projects) {
       const titles = issueTemplates[project.key] ?? issueTemplates.WEB;
-      for (let i = 0; i < titles.length; i++) {
+      const count = titles.length;
+
+      for (let i = 0; i < count; i++) {
         const title = titles[i];
-        const statId = statusSequence[i % statusSequence.length];
-        const assignee = this.users[(i + 1) % this.users.length];
+        let statusId = "demo-stat-prog";
+        let startedAt: number | undefined;
+        let completedAt: number | undefined;
+        let dueDate: number | undefined;
+        let isBlocked = false;
+
+        // Spread issues across statuses
+        if (i < 3) {
+          statusId = "demo-stat-backlog";
+        } else if (i < 7) {
+          statusId = "demo-stat-todo";
+          // Make 1 overdue, 1 due this week, 1 future
+          if (i === 3) dueDate = now - 3 * DAY; // Overdue
+          else if (i === 4) dueDate = now + 4 * DAY; // Due this week
+          else dueDate = now + 18 * DAY;
+          if (i === 5) isBlocked = true; // Blocked issue
+        } else if (i < 11) {
+          statusId = "demo-stat-prog";
+          startedAt = now - (i * 2 + 1) * DAY;
+          if (i === 7) dueDate = now - 2 * DAY; // Overdue
+          else if (i === 8) dueDate = now + 5 * DAY; // Due this week
+          if (i === 9) isBlocked = true; // Blocked
+        } else if (i < 14) {
+          statusId = "demo-stat-rev";
+          startedAt = now - (i * 3 + 4) * DAY;
+          dueDate = now + 6 * DAY;
+        } else if (i < 14 + completionDaysAgo.length) {
+          statusId = "demo-stat-done";
+          const doneDaysAgo = completionDaysAgo[i - 14] ?? (i * 10);
+          completedAt = now - doneDaysAgo * DAY;
+          const cycleDurationDays = 3 + (i % 5);
+          startedAt = completedAt - cycleDurationDays * DAY;
+        } else {
+          statusId = "demo-stat-canc";
+          completedAt = now - 60 * DAY;
+        }
+
+        const createdAt = startedAt ? startedAt - 3 * DAY : now - (count - i + 5) * DAY * 4;
+        const updatedAt = completedAt ?? (startedAt ? startedAt + 2 * DAY : createdAt + DAY);
+
+        // Assignees: ensure "Guest" (demo-user-alex) gets at least 7 open issues across the workspace
+        let assigneeId: string | undefined;
+        if (i % 6 === 0) {
+          assigneeId = undefined; // unassigned
+        } else if (i % 3 === 0) {
+          assigneeId = "demo-user-alex"; // Guest
+        } else {
+          assigneeId = this.users[(i + 1) % this.users.length]._id;
+        }
+
         const priority = priorities[i % priorities.length];
-        const createdAt = now - (titles.length - i) * day * 1.5;
+        const issueId = `demo-issue-${project.key.toLowerCase()}-${i + 1}`;
 
         this.issues.push({
-          _id: `demo-issue-${project.key.toLowerCase()}-${i + 1}`,
+          _id: issueId,
           workspaceId: project.workspaceId,
           projectId: project._id,
           number: i + 1,
           title,
           description: `Detailed engineering description and specification for ${title}.\n\n### Acceptance Criteria\n- [x] Implementation verified against design tokens\n- [x] Automated test coverage added\n- [ ] Documentation updated`,
           priority,
-          statusId: statId,
-          assigneeId: i % 7 === 0 ? undefined : assignee._id,
+          statusId,
+          assigneeId,
           reporterId: "demo-user-alex",
           estimatePoints: [1, 2, 3, 5, 8][i % 5],
-          dueDate: now + (i - 5) * day,
+          dueDate,
           labelIds: [DEMO_LABELS[i % DEMO_LABELS.length]._id],
           createdAt,
-          updatedAt: createdAt + 4 * 60 * 60 * 1000,
+          updatedAt,
+          startedAt,
+          completedAt,
+          isBlocked,
         });
+
+        // Add rich comments to several issues
+        if (i % 2 === 0) {
+          const author = this.users[(i + 2) % this.users.length];
+          (this.issues[this.issues.length - 1] as any).comments = [
+            {
+              _id: `demo-comm-${issueId}-1`,
+              issueId,
+              authorId: author._id,
+              authorName: author.name,
+              body: `Repro confirmed on staging. Root cause identified in the state reconciliation loop.`,
+              createdAt: updatedAt - 4 * 3600000,
+            },
+            {
+              _id: `demo-comm-${issueId}-2`,
+              issueId,
+              authorId: "demo-user-alex",
+              authorName: "Guest",
+              body: `PR opened with unit tests. Review appreciated.`,
+              createdAt: updatedAt - 1 * 3600000,
+            },
+          ];
+        }
       }
 
-      // Record activity events
+      // Update project counts
+      const pIssues = this.issues.filter((i) => i.projectId === project._id);
+      const doneCount = pIssues.filter((i) => i.statusId === "demo-stat-done" || i.statusId === "demo-stat-canc").length;
+      project.issueCount = pIssues.length;
+      project.doneIssueCount = doneCount;
+      project.openIssueCount = pIssues.length - doneCount;
+    }
+
+    // Generate comprehensive activity events across the past 8 months (~240 days)
+    // Spread across today, 7d, 30d, 90d, 180d, and all-time
+    const activityIntervals = [
+      // Today (< 24h): 7 events
+      { hoursAgo: 0.5, eventType: "issue.commented", action: "commented on", pKey: "MOB", num: 1 },
+      { hoursAgo: 2, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "MOB", num: 12 },
+      { hoursAgo: 4, eventType: "issue.assigned", pKey: "BIL", num: 3, assignee: "Sarah Lin" },
+      { hoursAgo: 7, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "WEB", num: 14 },
+      { hoursAgo: 11, eventType: "issue.created", pKey: "MOB", num: 2 },
+      { hoursAgo: 16, eventType: "issue.status_changed", from: "Todo", to: "In Progress", pKey: "BIL", num: 7 },
+      { hoursAgo: 20, eventType: "issue.commented", pKey: "WEB", num: 5 },
+
+      // Last 7 days: 10 events
+      { hoursAgo: 28, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "MOB", num: 11 },
+      { hoursAgo: 36, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "MOB", num: 15 },
+      { hoursAgo: 50, eventType: "issue.commented", pKey: "BIL", num: 8 },
+      { hoursAgo: 65, eventType: "issue.assigned", pKey: "WEB", num: 9, assignee: "Marcus Vance" },
+      { hoursAgo: 85, eventType: "issue.status_changed", from: "Todo", to: "In Progress", pKey: "WEB", num: 10 },
+      { hoursAgo: 100, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "BIL", num: 13 },
+      { hoursAgo: 115, eventType: "issue.created", pKey: "BIL", num: 4 },
+      { hoursAgo: 130, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "BIL", num: 16 },
+      { hoursAgo: 145, eventType: "issue.commented", pKey: "MOB", num: 8 },
+      { hoursAgo: 160, eventType: "issue.assigned", pKey: "MOB", num: 4, assignee: "Elena Rostova" },
+
+      // Last 30 days: 15 events
+      { hoursAgo: 200, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "MOB", num: 16 },
+      { hoursAgo: 240, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "MOB", num: 16 },
+      { hoursAgo: 290, eventType: "issue.status_changed", from: "Todo", to: "In Progress", pKey: "BIL", num: 9 },
+      { hoursAgo: 330, eventType: "issue.commented", pKey: "WEB", num: 12 },
+      { hoursAgo: 370, eventType: "issue.assigned", pKey: "BIL", num: 11, assignee: "David Kim" },
+      { hoursAgo: 420, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "BIL", num: 17 },
+      { hoursAgo: 460, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "BIL", num: 17 },
+      { hoursAgo: 500, eventType: "issue.created", pKey: "WEB", num: 6 },
+      { hoursAgo: 540, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "WEB", num: 17 },
+      { hoursAgo: 580, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "WEB", num: 17 },
+      { hoursAgo: 610, eventType: "issue.commented", pKey: "MOB", num: 6 },
+      { hoursAgo: 640, eventType: "issue.assigned", pKey: "WEB", num: 13, assignee: "Priya Patel" },
+      { hoursAgo: 670, eventType: "issue.status_changed", from: "Todo", to: "In Progress", pKey: "MOB", num: 10 },
+      { hoursAgo: 700, eventType: "project.updated", pKey: "MOB" },
+      { hoursAgo: 715, eventType: "issue.created", pKey: "BIL", num: 5 },
+
+      // Last 90 days: 14 events
+      { hoursAgo: 800, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "WEB", num: 18 },
+      { hoursAgo: 850, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "WEB", num: 18 },
+      { hoursAgo: 950, eventType: "issue.commented", pKey: "MOB", num: 15 },
+      { hoursAgo: 1050, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "BIL", num: 18 },
+      { hoursAgo: 1100, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "BIL", num: 18 },
+      { hoursAgo: 1200, eventType: "issue.created", pKey: "MOB", num: 9 },
+      { hoursAgo: 1350, eventType: "issue.assigned", pKey: "BIL", num: 14, assignee: "Sarah Lin" },
+      { hoursAgo: 1500, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "MOB", num: 17 },
+      { hoursAgo: 1560, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "MOB", num: 17 },
+      { hoursAgo: 1680, eventType: "issue.commented", pKey: "WEB", num: 16 },
+      { hoursAgo: 1800, eventType: "issue.created", pKey: "BIL", num: 10 },
+      { hoursAgo: 1920, eventType: "issue.status_changed", from: "Todo", to: "In Progress", pKey: "WEB", num: 15 },
+      { hoursAgo: 2040, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "BIL", num: 19 },
+      { hoursAgo: 2100, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "BIL", num: 19 },
+
+      // All Time (90-240 days): 12 events
+      { hoursAgo: 2400, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "WEB", num: 19 },
+      { hoursAgo: 2500, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "WEB", num: 19 },
+      { hoursAgo: 2800, eventType: "issue.created", pKey: "MOB", num: 14 },
+      { hoursAgo: 3200, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "MOB", num: 18 },
+      { hoursAgo: 3300, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "MOB", num: 18 },
+      { hoursAgo: 3800, eventType: "issue.commented", pKey: "BIL", num: 15 },
+      { hoursAgo: 4200, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "WEB", num: 20 },
+      { hoursAgo: 4300, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "WEB", num: 20 },
+      { hoursAgo: 4800, eventType: "issue.created", pKey: "BIL", num: 12 },
+      { hoursAgo: 5100, eventType: "issue.status_changed", from: "In Progress", to: "Review", pKey: "MOB", num: 19 },
+      { hoursAgo: 5200, eventType: "issue.status_changed", from: "Review", to: "Done", pKey: "MOB", num: 19 },
+      { hoursAgo: 5600, eventType: "project.created", pKey: "MOB" },
+    ];
+
+    // Build activities for Northstar Labs
+    let actIndex = 1;
+    for (const item of activityIntervals) {
+      const actor = this.users[actIndex % this.users.length];
+      const p = this.projects.find((proj) => proj.key === item.pKey) ?? this.projects[0];
+      const issueId = `demo-issue-${p.key.toLowerCase()}-${item.num ?? 1}`;
+      const issue = this.issues.find((i) => i._id === issueId);
+      const createdAt = now - item.hoursAgo * 3600000;
+
       this.activities.push({
-        _id: `demo-act-${project._id}`,
-        workspaceId: project.workspaceId,
-        projectId: project._id,
-        actorId: "demo-user-alex",
-        actorName: "Alex Mercer",
-        eventType: "project.updated",
-        entityType: "project",
-        entityId: project._id,
-        payload: { name: project.name },
-        createdAt: now - 2 * 60 * 60 * 1000,
+        _id: `demo-act-ns-${actIndex++}`,
+        workspaceId: "demo-ws-northstar",
+        projectId: p._id,
+        actorId: actor._id,
+        actorName: actor.name,
+        eventType: item.eventType,
+        entityType: item.eventType.startsWith("project.") ? "project" : "issue",
+        entityId: item.eventType.startsWith("project.") ? p._id : issueId,
+        payload: {
+          key: `${p.key}-${item.num ?? 1}`,
+          issueKey: `${p.key}-${item.num ?? 1}`,
+          title: issue?.title ?? "Issue title",
+          from: item.from,
+          to: item.to,
+          assigneeName: item.assignee,
+          name: p.name,
+        },
+        createdAt,
       });
     }
 
-    // Add recent issue activity
-    for (const issue of this.issues.slice(-8)) {
+    // Build symmetrical activity events for Pixel Forge (GAM, ART, NET)
+    const pfKeyMap: Record<string, string> = { MOB: "GAM", BIL: "ART", WEB: "NET" };
+    for (const item of activityIntervals) {
+      const actor = this.users[(actIndex + 1) % this.users.length];
+      const mappedKey = pfKeyMap[item.pKey] ?? "GAM";
+      const p = this.projects.find((proj) => proj.key === mappedKey) ?? this.projects[3];
+      const issueId = `demo-issue-${p.key.toLowerCase()}-${item.num ?? 1}`;
+      const issue = this.issues.find((i) => i._id === issueId);
+      const createdAt = now - item.hoursAgo * 3600000;
+
       this.activities.push({
-        _id: `demo-act-${issue._id}`,
-        workspaceId: issue.workspaceId,
-        projectId: issue.projectId,
-        actorId: issue.assigneeId ?? "demo-user-alex",
-        actorName: this.users.find((u) => u._id === issue.assigneeId)?.name ?? "Alex Mercer",
-        eventType: "issue.updated",
-        entityType: "issue",
-        entityId: issue._id,
-        payload: { title: issue.title, field: "status" },
-        createdAt: now - Math.floor(Math.random() * 86400000),
+        _id: `demo-act-pf-${actIndex++}`,
+        workspaceId: "demo-ws-pixelforge",
+        projectId: p._id,
+        actorId: actor._id,
+        actorName: actor.name,
+        eventType: item.eventType,
+        entityType: item.eventType.startsWith("project.") ? "project" : "issue",
+        entityId: item.eventType.startsWith("project.") ? p._id : issueId,
+        payload: {
+          key: `${p.key}-${item.num ?? 1}`,
+          issueKey: `${p.key}-${item.num ?? 1}`,
+          title: issue?.title ?? "Issue title",
+          from: item.from,
+          to: item.to,
+          assigneeName: item.assignee,
+          name: p.name,
+        },
+        createdAt,
       });
     }
 
@@ -515,45 +797,43 @@ class InMemoryDemoStore {
         recipientId: "demo-user-alex",
         title: "Issue transitioned to Review",
         body: "Implement optimistic mutation queue with idempotency keys is ready for QA",
-        createdAt: now - 2 * 60 * 60 * 1000,
+        createdAt: now - 2 * 3600000,
       },
       {
         _id: "demo-notif-3",
         workspaceId: "demo-ws-northstar",
         recipientId: "demo-user-alex",
-        title: "Sprint milestone achieved",
-        body: "Web Application milestone 90% completed",
-        readAt: now - 12 * 60 * 60 * 1000,
-        createdAt: now - 14 * 60 * 60 * 1000,
+        title: "Sarah Lin commented on MOB-1",
+        body: "Repro confirmed on staging. Root cause identified in the state reconciliation loop.",
+        createdAt: now - 5 * 3600000,
+      },
+      {
+        _id: "demo-notif-4",
+        workspaceId: "demo-ws-pixelforge",
+        recipientId: "demo-user-alex",
+        title: "Elena Rostova assigned you an issue",
+        body: "Tune melee attack hitboxes and frame-data window for parry counter",
+        createdAt: now - 45 * 60 * 1000,
       },
     ];
   }
 
-  // --- Query Methods ---
+  // --- Public Read Queries ---
 
-  public getWorkspaces(): (DemoWorkspace & { projectCount: number; memberCount: number })[] {
-    return this.workspaces.map((w) => ({
-      ...w,
-      projectCount: this.projects.filter((p) => p.workspaceId === w._id && p.status !== "archived").length,
-      memberCount: this.users.length,
-    }));
+  public getWorkspaces(): DemoWorkspace[] {
+    return this.workspaces;
   }
 
-  public listWorkspaces(): (DemoWorkspace & { projectCount: number; memberCount: number })[] {
-    return this.getWorkspaces();
+  public listWorkspaces(): DemoWorkspace[] {
+    return this.workspaces;
   }
 
-  public isDemoWorkspace(workspaceId?: string | null): boolean {
-    if (!workspaceId) return true;
-    if (workspaceId.startsWith("demo-")) return true;
-    return this.workspaces.some((w) => w._id === workspaceId);
-  }
-
-  public getWorkspace(workspaceId?: string): { workspace: DemoWorkspace; role: string; myRole: string } | null {
+  public getWorkspace(workspaceId?: string): { workspace: DemoWorkspace; role: string; myRole: string; projectCount: number; memberCount: number } | null {
     if (!workspaceId) return null;
     const ws = this.workspaces.find((w) => w._id === workspaceId);
     if (!ws) return null;
-    return { workspace: ws, role: ws.role, myRole: ws.role };
+    const pCount = this.projects.filter((p) => p.workspaceId === ws._id).length;
+    return { workspace: ws, role: ws.role, myRole: ws.role, projectCount: pCount, memberCount: ws.memberCount ?? 6 };
   }
 
   public getMembers(workspaceId?: string) {
@@ -566,12 +846,22 @@ class InMemoryDemoStore {
       name: u.name,
       email: u.email,
       role: u.role,
-      joinedAt: Date.now() - 30 * 86400000,
+      joinedAt: Date.now() - 180 * 86400000,
     }));
   }
 
   public listTeammates(workspaceId?: string) {
     return this.getMembers(workspaceId);
+  }
+
+  public getInvitations(workspaceId?: string) {
+    const wid = workspaceId ?? "demo-ws-northstar";
+    return this.invitations.filter((inv) => !workspaceId || inv.workspaceId === wid);
+  }
+
+  public revokeInvitation(workspaceId: string, invitationId: string) {
+    this.invitations = this.invitations.filter((inv) => inv._id !== invitationId);
+    this.notify();
   }
 
   public getProjects(workspaceId?: string): DemoProject[] {
@@ -589,14 +879,23 @@ class InMemoryDemoStore {
 
   public listIssues(projectId?: string) {
     if (!projectId) return this.issues;
-    return this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
+    const statusMap = new Map(DEMO_STATUSES.map((s) => [s._id, s]));
+    return this.issues
+      .filter((i) => i.projectId === projectId && !i.archivedAt)
+      .map((i) => {
+        const s = statusMap.get(i.statusId);
+        return {
+          ...i,
+          status: s ? { name: s.name, color: s.color, category: s.category } : { name: "Todo", color: "#6E94CB", category: "todo" },
+        };
+      });
   }
 
   public getProject(projectId: string) {
     const p = this.projects.find((proj) => proj._id === projectId);
     if (!p) return null;
     const issues = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
-    const doneCount = issues.filter((i) => i.statusId === "demo-stat-done").length;
+    const doneCount = issues.filter((i) => i.statusId === "demo-stat-done" || i.statusId === "demo-stat-canc").length;
     return {
       project: p,
       role: "owner" as const,
@@ -616,6 +915,10 @@ class InMemoryDemoStore {
     if (args.priority) list = list.filter((i) => i.priority === args.priority);
     if (args.assigneeId === "unassigned") list = list.filter((i) => !i.assigneeId);
     else if (args.assigneeId) list = list.filter((i) => i.assigneeId === args.assigneeId);
+    if (args.search && typeof args.search === "string") {
+      const q = args.search.toLowerCase();
+      list = list.filter((i) => i.title.toLowerCase().includes(q) || String(i.number).includes(q));
+    }
 
     const statusMap = new Map(DEMO_STATUSES.map((s) => [s._id, s]));
     const mapped = list.map((i) => {
@@ -680,7 +983,7 @@ class InMemoryDemoStore {
             assigneeName: assignee?.name ?? null,
             assigneeImage: assignee?.avatarUrl,
             dueDate: i.dueDate,
-            isBlocked: false,
+            isBlocked: i.isBlocked ?? false,
             labels: i.labelIds.map((lid) => labelMap.get(lid)).filter(Boolean) as DemoLabel[],
           };
         }),
@@ -722,11 +1025,11 @@ class InMemoryDemoStore {
       reporter: this.users.find((u) => u._id === issue.reporterId),
       labels: DEMO_LABELS.filter((l) => issue.labelIds.includes(l._id)),
       dependencies: [],
-      comments: [
+      comments: (issue as any).comments ?? [
         {
           _id: "demo-com-1",
           authorId: "demo-user-alex",
-          authorName: "Alex Mercer",
+          authorName: "Guest",
           body: "Validated the initial repro steps. Working on patch now.",
           createdAt: Date.now() - 3600000,
         },
@@ -735,7 +1038,7 @@ class InMemoryDemoStore {
   }
 
   public getWorkflow(projectId?: string) {
-    const pid = projectId ?? "demo-proj-core";
+    const pid = projectId ?? "demo-proj-mob";
     const statuses = this.statuses.get(pid) ?? DEMO_STATUSES.map((s) => ({ ...s, workflowId: `wf-${pid}` }));
     return {
       workflow: { _id: `wf-${pid}`, name: "Default Workflow", projectId: pid },
@@ -832,6 +1135,7 @@ class InMemoryDemoStore {
     const issues = this.issues.filter((i) => i.projectId === projectId && !i.archivedAt);
     const overdue = issues.filter((i) => i.statusId !== "demo-stat-done" && i.dueDate && i.dueDate < Date.now());
     const highOpen = issues.filter((i) => i.statusId !== "demo-stat-done" && (i.priority === "urgent" || i.priority === "high"));
+    const blocked = issues.filter((i) => i.isBlocked && i.statusId !== "demo-stat-done");
 
     const factors = [
       { label: "Healthy velocity", detail: "Sprint throughput is on track across milestones", points: 5 },
@@ -839,6 +1143,9 @@ class InMemoryDemoStore {
     ];
     if (overdue.length > 0) {
       factors.push({ label: "Overdue items", detail: `${overdue.length} items past scheduled deadline`, points: overdue.length * 5 });
+    }
+    if (blocked.length > 0) {
+      factors.push({ label: "Blocked dependencies", detail: `${blocked.length} issues awaiting upstream blockers`, points: blocked.length * 4 });
     }
 
     const score = 15 + Math.min(20, highOpen.length * 2) + Math.min(25, overdue.length * 5);
@@ -848,7 +1155,7 @@ class InMemoryDemoStore {
       score,
       level,
       factors,
-      blockedCount: 0,
+      blockedCount: blocked.length,
       overdueCount: overdue.length,
       staleCount: 0,
       highPriorityOpenCount: highOpen.length,
@@ -867,6 +1174,8 @@ class InMemoryDemoStore {
       issuesCount: this.issues.length,
       issuesPerStatus,
       usersCount: this.users.length,
+      invitationsCount: this.invitations.length,
+      activitiesCount: this.activities.length,
     };
   }
 
@@ -904,49 +1213,49 @@ class InMemoryDemoStore {
   }
 
   public updateProject(projectId: string, patch: Partial<DemoProject>) {
-    const proj = this.projects.find((p) => p._id === projectId);
-    if (proj) {
-      Object.assign(proj, patch, { updatedAt: Date.now() });
+    const p = this.projects.find((proj) => proj._id === projectId);
+    if (p) {
+      Object.assign(p, patch, { updatedAt: Date.now() });
       this.notify();
     }
   }
 
   public createIssue(args: {
-    workspaceId?: string;
+    workspaceId: string;
     projectId: string;
     title: string;
     description?: string;
-    priority?: "urgent" | "high" | "medium" | "low" | "none";
+    priority?: DemoIssue["priority"];
     statusId?: string;
     assigneeId?: string;
-    estimatePoints?: number;
     dueDate?: number;
+    estimatePoints?: number;
     labelIds?: string[];
   }): DemoIssue & { issueId: string } {
-    const proj = this.projects.find((p) => p._id === args.projectId);
-    const workspaceId = args.workspaceId ?? (proj ? proj.workspaceId : "demo-ws-northstar");
-    const existing = this.issues.filter((i) => i.projectId === args.projectId);
-    const nextNumber = existing.reduce((max, i) => Math.max(max, i.number), 0) + 1;
     const now = Date.now();
+    const proj = this.projects.find((p) => p._id === args.projectId);
+    const existingForProj = this.issues.filter((i) => i.projectId === args.projectId);
+    const nextNumber = existingForProj.length + 1;
+    const issueId = `demo-issue-${proj?.key.toLowerCase() ?? "prj"}-${nextNumber}`;
 
-    const issueId = `demo-issue-${Date.now()}`;
     const newIssue: DemoIssue = {
       _id: issueId,
-      workspaceId,
+      workspaceId: args.workspaceId,
       projectId: args.projectId,
       number: nextNumber,
       title: args.title,
-      description: args.description,
+      description: args.description ?? "",
       priority: args.priority ?? "medium",
-      statusId: args.statusId ?? "demo-stat-todo",
+      statusId: args.statusId ?? "demo-stat-backlog",
       assigneeId: args.assigneeId,
       reporterId: "demo-user-alex",
-      estimatePoints: args.estimatePoints,
       dueDate: args.dueDate,
+      estimatePoints: args.estimatePoints,
       labelIds: args.labelIds ?? [],
       createdAt: now,
       updatedAt: now,
     };
+
     this.issues.unshift(newIssue);
     if (proj) {
       proj.issueCount += 1;
@@ -969,10 +1278,16 @@ class InMemoryDemoStore {
     if (issue) {
       issue.statusId = statusId;
       issue.updatedAt = Date.now();
+      if (statusId === "demo-stat-prog" && !issue.startedAt) {
+        issue.startedAt = Date.now();
+      }
+      if (statusId === "demo-stat-done" && !issue.completedAt) {
+        issue.completedAt = Date.now();
+      }
       const proj = this.projects.find((p) => p._id === issue.projectId);
       if (proj) {
         const issues = this.issues.filter((i) => i.projectId === proj._id && !i.archivedAt);
-        const done = issues.filter((i) => i.statusId === "demo-stat-done").length;
+        const done = issues.filter((i) => i.statusId === "demo-stat-done" || i.statusId === "demo-stat-canc").length;
         proj.doneIssueCount = done;
         proj.openIssueCount = issues.length - done;
       }
@@ -1065,7 +1380,7 @@ class InMemoryDemoStore {
         _id: `demo-comm-${Date.now()}`,
         issueId: args.issueId,
         authorId: "demo-user-alex",
-        authorName: "Alex Mercer",
+        authorName: "Guest",
         body: args.body,
         createdAt: Date.now(),
       };
@@ -1083,6 +1398,7 @@ class InMemoryDemoStore {
     this.issues = [];
     this.activities = [];
     this.notifications = [];
+    this.invitations = [];
     this.seedSynchronously();
     this.notify();
   }

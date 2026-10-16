@@ -43,10 +43,10 @@ function resolveDemoQueryData(queryName: string, args: Record<string, any>) {
   if (name.includes("currentuser")) {
     return {
       _id: "demo-user-alex",
-      name: "Alex Mercer",
-      email: "alex@northstar.invalid",
+      name: "Guest",
+      email: undefined,
       role: "owner",
-      isAnonymous: false,
+      isAnonymous: true,
     };
   }
 
@@ -61,8 +61,11 @@ function resolveDemoQueryData(queryName: string, args: Record<string, any>) {
   if (name.includes("listmembers")) {
     return demoStore.getMembers(args?.workspaceId);
   }
-  if (name.includes("getmyinvitations") || name.includes("listinvitations")) {
+  if (name.includes("getmyinvitations")) {
     return [];
+  }
+  if (name.includes("listinvitations")) {
+    return demoStore.getInvitations(args?.workspaceId);
   }
 
   // Projects
@@ -183,20 +186,23 @@ function executeDemoMutation(qName: string, anyArgs: Record<string, any>) {
   if (qName.includes("updatedisplayname") || qName.includes("updateprofile")) {
     return { ok: true };
   }
+  if (qName.includes("revokeinvitation")) {
+    demoStore.revokeInvitation(anyArgs.workspaceId, anyArgs.invitationId);
+    return { ok: true };
+  }
+  if (qName.includes("resendinvitation")) {
+    return { ok: true };
+  }
   return { ok: true };
 }
 
 function hasInvalidIdArg(args: unknown): boolean {
   if (!args || args === "skip" || typeof args !== "object") return false;
   for (const [key, val] of Object.entries(args as Record<string, unknown>)) {
-    if (key.toLowerCase().endsWith("id")) {
-      if (
-        val === undefined ||
-        val === null ||
-        val === "" ||
-        val === "undefined" ||
-        val === "null"
-      ) {
+    const isIdParam = key === "workspaceId" || key === "projectId" || key === "issueId" || key.endsWith("Id") || key === "id";
+    if (isIdParam) {
+      // String literal representations of empty/missing values from broken route params
+      if (val === "" || val === "undefined" || val === "null" || val === undefined || val === null) {
         return true;
       }
     }

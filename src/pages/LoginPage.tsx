@@ -1,14 +1,29 @@
+import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
 import { AuthForm } from '@/components/AuthForm';
 import { AuthDecorativePanel } from '@/components/AuthDecorativePanel';
+import { disableDemoMode } from '@/lib/demoMode';
 
 interface LoginPageProps {
   redirectAfterAuth?: string;
 }
 
 export default function LoginPage({ redirectAfterAuth = '/app' }: LoginPageProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, hasOAuthCode } = useAuth();
+
+  useEffect(() => {
+    disableDemoMode();
+  }, []);
+
+  // While an OAuth code exchange is in progress, do not show login form or redirect
+  if (hasOAuthCode) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#FBFBFC] p-6">
+        <div className="size-8 rounded-full border-2 border-border border-t-[#0D0D0D] animate-spin" />
+      </main>
+    );
+  }
 
   // If already signed in with a real account (non-anonymous), redirect to app
   if (isAuthenticated && !user?.isAnonymous) {
@@ -53,7 +68,7 @@ export default function LoginPage({ redirectAfterAuth = '/app' }: LoginPageProps
         {/* Form centered, max-width 380px, padding 24px under 900px */}
         <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 min-[900px]:px-0 min-[900px]:py-0">
           <AuthForm mode="login" redirectAfterAuth={redirectAfterAuth} />
-          {import.meta.env.DEV && (
+          {Boolean(import.meta.env?.DEV) && (
             <div className="mt-4 p-2 rounded bg-black/[0.04] text-center font-mono text-[11px] text-[#575657]">
               Origin: {typeof window !== "undefined" ? window.location.origin : ""}
             </div>

@@ -2,6 +2,8 @@ import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useSafeQuery } from "@/hooks/use-safe-query";
+import { disableDemoMode, isDemoMode } from "@/lib/demoMode";
+import { useState } from "react";
 
 const isConvexConfigured = Boolean(
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_CONVEX_URL) ||
@@ -25,16 +27,20 @@ function useConvexAuthReal() {
   const user = rawUser ?? null;
 
   const signIn = async (provider: string, args?: unknown) => {
+    disableDemoMode();
     return await rawSignIn(provider, args as never);
   };
 
   const signOut = async () => {
-    // Clear any local temporary auth markers
+    disableDemoMode();
     try {
       localStorage.removeItem("forge_auth_provider");
       localStorage.removeItem("forge_auth_name");
       localStorage.removeItem("forge_auth_email");
       sessionStorage.removeItem("forge_preview_otp_email");
+      sessionStorage.removeItem("forge_demo_mode");
+      sessionStorage.removeItem("forge_hide_demo_session");
+      sessionStorage.setItem("forge_signed_out", "true");
     } catch {
       // Ignore storage errors in restricted contexts
     }
@@ -61,14 +67,12 @@ function useConvexAuthReal() {
   };
 }
 
-import { useState } from "react";
-
 const DEMO_USER: ForgeUser = {
   _id: "demo-user-alex",
   _creationTime: Date.now(),
-  name: "Alex Mercer",
-  email: "alex@northstar.invalid",
-  isAnonymous: false,
+  name: "Guest",
+  email: undefined,
+  isAnonymous: true,
 };
 
 function useMockAuth() {
@@ -77,10 +81,13 @@ function useMockAuth() {
       if (typeof sessionStorage !== "undefined" && sessionStorage.getItem("forge_signed_out") === "true") {
         return null;
       }
+      if (isDemoMode()) {
+        return DEMO_USER;
+      }
     } catch {
       // ignore
     }
-    return DEMO_USER;
+    return null;
   });
 
   const isAuthenticated = Boolean(currentUser);
@@ -94,6 +101,7 @@ function useMockAuth() {
     hasOAuthCode: false,
     user: currentUser,
     signIn: async (_provider?: string, _params?: unknown) => {
+      disableDemoMode();
       try {
         sessionStorage.removeItem("forge_signed_out");
       } catch {
@@ -106,8 +114,11 @@ function useMockAuth() {
       };
     },
     signOut: async () => {
+      disableDemoMode();
       try {
         sessionStorage.setItem("forge_signed_out", "true");
+        sessionStorage.removeItem("forge_demo_mode");
+        sessionStorage.removeItem("forge_hide_demo_session");
       } catch {
         // ignore
       }

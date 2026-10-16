@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { PageHeader, PageStack } from "@/components/app-ui";
 import { OverviewSkeleton } from "@/components/Skeletons";
+import { EmptyState } from "@/components/forge";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import {
@@ -15,9 +16,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EmptyState } from "@/components/forge";
 import { StatusIllustration } from "@/components/Illustrations";
 import { useAuth } from "@/hooks/use-auth";
+import { isDemoMode } from "@/lib/demoMode";
+import { isConvexId } from "@/hooks/use-safe-query";
 import {
   useProjectRisks,
   useProjectSummaries,
@@ -58,6 +60,7 @@ export default function OverviewPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const isValidWsId = Boolean(workspaceId && workspaceId !== "undefined" && workspaceId !== "null");
   const id = workspaceId as Id<"workspaces">;
+  const isDemo = Boolean(isDemoMode() || (workspaceId && !isConvexId(workspaceId)));
   const { user } = useAuth();
   const userId = user?._id || user?.email || "anonymous";
 
@@ -108,11 +111,11 @@ export default function OverviewPage() {
   const realIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
     const currentUserId = user?._id;
-    // Show only open issues assigned to the user or unassigned
+    // Show open issues assigned to the user or unassigned, and in demo mode include open issues so 7 are displayed
     const relevant = (projectIssues ?? []).filter(
       (i) =>
         isOpenIssue(i, i.status?.category) &&
-        ((currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
+        (isDemo || (currentUserId && i.assigneeId === currentUserId) || !i.assigneeId),
     );
     return relevant.map((i) => ({
       _id: i._id,
@@ -127,7 +130,7 @@ export default function OverviewPage() {
       assigneeId: i.assigneeId,
       completedAt: i.completedAt,
     }));
-  }, [projectIssues, projects, user]);
+  }, [projectIssues, projects, user, isDemo]);
 
   const allWorkspaceIssues: OverviewIssueItem[] = useMemo(() => {
     const projectKeyMap = new Map<string, string>((projects ?? []).map((p) => [p._id, p.key]));
@@ -330,8 +333,8 @@ export default function OverviewPage() {
   // Checklist state for new workspaces
   const hasProject = projectList.length > 0;
   const hasIssue = realRollup.open + realRollup.completed > 0;
-  const hasTeammate = (workspace.memberCount ?? 1) > 1;
-  const showChecklist = !hasProject || !hasIssue || !hasTeammate;
+  const hasTeammate = (workspace?.memberCount ?? 1) > 1;
+  const showChecklist = !isDemo && (!hasProject || !hasIssue || !hasTeammate);
 
   // User greeting based on local time
   const isGuestOrAnonymous = Boolean(user?.isAnonymous || !user?.name?.trim());
@@ -611,67 +614,93 @@ export default function OverviewPage() {
         )}
 
         {/* 2. Overview clickable summary metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <Link
             to={issuesTargetLink}
-            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+            className="group flex flex-col justify-between h-full rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
           >
-            <div className="flex items-center justify-between text-[12px] text-[#575657]">
-              <span>Open issues</span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            <div>
+              <div className="flex items-center justify-between text-[12px] text-[#575657]">
+                <span>Open issues</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+                {projectList.length > 0 ? projectList.reduce((s, p) => s + p.openIssueCount, 0) : realRollup.open}
+              </div>
             </div>
-            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
-              {projectList.length > 0 ? projectList.reduce((s, p) => s + p.openIssueCount, 0) : realRollup.open}
-            </div>
-            <p className="mt-0.5 text-[11px] text-[#575657]">Across {projectList.length} projects</p>
+            <p className="mt-2 text-[11px] text-[#575657]">Across {projectList.length} projects</p>
           </Link>
 
           <Link
             to={issuesTargetLink}
-            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+            className="group flex flex-col justify-between h-full rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
           >
-            <div className="flex items-center justify-between text-[12px] text-[#575657]">
-              <span className="flex items-center gap-1.5">
-                <AlertCircle className="size-3 text-[#B3261E]" /> Blocked
-              </span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            <div>
+              <div className="flex items-center justify-between text-[12px] text-[#575657]">
+                <span className="flex items-center gap-1.5">
+                  <StatusIllustration category="review" size={13} /> In review
+                </span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+                {needsReviewIssues.length}
+              </div>
             </div>
-            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
-              {realRollup.blocked}
-            </div>
-            <p className="mt-0.5 text-[11px] text-[#575657]">Unresolved dependencies</p>
+            <p className="mt-2 text-[11px] text-[#575657]">Awaiting QA / review</p>
           </Link>
 
           <Link
             to={issuesTargetLink}
-            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+            className="group flex flex-col justify-between h-full rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
           >
-            <div className="flex items-center justify-between text-[12px] text-[#575657]">
-              <span className="flex items-center gap-1.5">
-                <Clock className="size-3 text-[#D6C6A1]" /> Overdue
-              </span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            <div>
+              <div className="flex items-center justify-between text-[12px] text-[#575657]">
+                <span className="flex items-center gap-1.5">
+                  <AlertCircle className="size-3 text-[#B3261E]" /> Blocked
+                </span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+                {realRollup.blocked}
+              </div>
             </div>
-            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
-              {realRollup.overdue}
-            </div>
-            <p className="mt-0.5 text-[11px] text-[#575657]">Past target date</p>
+            <p className="mt-2 text-[11px] text-[#575657]">Unresolved dependencies</p>
           </Link>
 
           <Link
             to={issuesTargetLink}
-            className="group rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+            className="group flex flex-col justify-between h-full rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
           >
-            <div className="flex items-center justify-between text-[12px] text-[#575657]">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="size-3 text-[#83DD79]" /> Completed
-              </span>
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            <div>
+              <div className="flex items-center justify-between text-[12px] text-[#575657]">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="size-3 text-[#D6C6A1]" /> Overdue
+                </span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+                {realRollup.overdue}
+              </div>
             </div>
-            <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
-              {projectList.length > 0 ? projectList.reduce((s, p) => s + p.doneIssueCount, 0) : realRollup.completed}
+            <p className="mt-2 text-[11px] text-[#575657]">Past target date</p>
+          </Link>
+
+          <Link
+            to={issuesTargetLink}
+            className="group flex flex-col justify-between h-full rounded-[16px] border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(13,13,13,0.2)]"
+          >
+            <div>
+              <div className="flex items-center justify-between text-[12px] text-[#575657]">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle className="size-3 text-[#83DD79]" /> Completed
+                </span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+              <div className="mt-2 text-[26px] font-semibold tracking-tight text-[#0D0D0D] tabular-nums">
+                {projectList.length > 0 ? projectList.reduce((s, p) => s + p.doneIssueCount, 0) : realRollup.completed}
+              </div>
             </div>
-            <p className="mt-0.5 text-[11px] text-[#575657]">Finished work items</p>
+            <p className="mt-2 text-[11px] text-[#575657]">Finished work items</p>
           </Link>
         </div>
 

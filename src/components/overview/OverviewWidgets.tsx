@@ -257,7 +257,7 @@ export function MyOpenIssuesWidget({
   const openIssues = issues.filter((i) =>
     isOpenIssue(i, i.statusCategory),
   );
-  const rows = openIssues.slice(0, 5);
+  const rows = openIssues.slice(0, 7);
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -318,7 +318,7 @@ export function RecentActivityWidget({
   workspaceId: string;
   activity: OverviewDataProps["activity"];
 }) {
-  const events = activity.slice(0, 5);
+  const events = activity.slice(0, 7);
 
   return (
     <div className="flex flex-col gap-2.5">

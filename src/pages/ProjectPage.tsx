@@ -1,7 +1,8 @@
 import { useSafeQuery as useQuery, useSafeMutation as useMutation } from "@/hooks/use-safe-query";
 import { api } from "@/convex/_generated/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { isDemoMode } from "@/lib/demoMode";
 import {
   Card,
   CardContent,
@@ -72,6 +73,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   });
 
   const isValidProjectId = Boolean(projectId && projectId !== "undefined" && projectId !== "null");
+  const isDemo = Boolean(isDemoMode() || (projectId && projectId.startsWith("demo-")));
 
   const project = useQuery(
     api.projects.getProject,
@@ -158,16 +160,48 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
             priorityFilter !== "all"
               ? (priorityFilter as "urgent" | "high" | "medium" | "low" | "none")
               : undefined,
-          assigneeId:
-            assigneeFilter === "all"
-              ? undefined
-              : assigneeFilter === "unassigned"
-                ? ("unassigned" as const)
-                : (assigneeFilter as never),
+          ...(assigneeFilter === "all"
+            ? {}
+            : {
+                assigneeId:
+                  assigneeFilter === "unassigned"
+                    ? ("unassigned" as const)
+                    : (assigneeFilter as never),
+              }),
           pageSize: 50,
         }
       : "skip",
   );
+
+  const fallbackIssues = useMemo(() => {
+    if (!board) return undefined;
+    const all = board.columns.flatMap((col) =>
+      col.issues.map((i) => ({
+        ...i,
+        updatedAt: (i as any).updatedAt ?? (i as any)._creationTime ?? Date.now(),
+        status: { name: col.status.name, color: col.status.color, category: col.status.category },
+      }))
+    );
+    let filtered = all;
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      filtered = filtered.filter(
+        (i) => i.title.toLowerCase().includes(q) || String(i.number).includes(q)
+      );
+    }
+    if (priorityFilter && priorityFilter !== "all") {
+      filtered = filtered.filter((i) => i.priority === priorityFilter);
+    }
+    if (assigneeFilter && assigneeFilter !== "all") {
+      filtered = filtered.filter((i) =>
+        assigneeFilter === "unassigned" ? !i.assigneeId : i.assigneeId === assigneeFilter
+      );
+    }
+    return {
+      issues: filtered,
+      total: filtered.length,
+    };
+  }, [board, debouncedSearch, priorityFilter, assigneeFilter]);
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -417,7 +451,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           ) : view === "board" ? (
             <div className="space-y-3">
 
-            {showTip && (
+            {!isDemo && showTip && (
               <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border/80 bg-[#FBFBFC] px-3.5 py-2 text-[12px] text-[#575657]">
                 <span>New issues start in Backlog. Drag a card to move it to the next stage.</span>
                 <button
@@ -454,7 +488,7 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
           </div>
         ) : (
           <ListView
-            issues={issues}
+            issues={issues ?? fallbackIssues}
             keyName={project.project.key}
             memberName={memberName}
             onIssueClick={(id) => navigate(`/app/issues/${id}`)}

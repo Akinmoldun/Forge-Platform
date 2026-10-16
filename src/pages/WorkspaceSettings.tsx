@@ -105,7 +105,7 @@ export default function WorkspaceSettings() {
 
   const workspace = isDemo ? demoStore.getWorkspace(workspaceId) : rawWorkspace;
   const members = isDemo ? (demoStore.listTeammates(workspaceId) as unknown as typeof rawMembers) : rawMembers;
-  const invitations = isDemo ? [] : rawInvitations;
+  const invitations = isDemo ? (demoStore.getInvitations(workspaceId) as unknown as typeof rawInvitations) : rawInvitations;
   const labels = isDemo
     ? (DEMO_LABELS.map((l, i) => ({
         _id: `demo-label-${i}`,
