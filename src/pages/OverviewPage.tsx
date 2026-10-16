@@ -214,6 +214,10 @@ export default function OverviewPage() {
 
   const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(loading, 8000);
 
+  useEffect(() => {
+    console.debug(`[Forge Page] OverviewPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (workspaceId=${workspaceId})`);
+  }, [isDemo, workspaceId]);
+
   if (!isValidWsId) {
     return <Navigate to="/app" replace />;
   }
@@ -221,13 +225,13 @@ export default function OverviewPage() {
   if (loadTimedOut && loading) {
     return (
       <AppShell workspaceId={workspaceId}>
-        <div className="py-12">
+        <PageStack>
           <LoadingTimeoutState
             title="Overview took too long to load"
             description="We couldn't load your workspace overview within 8 seconds. Please check your connection and retry."
             onRetry={retryLoading}
           />
-        </div>
+        </PageStack>
       </AppShell>
     );
   }
@@ -248,20 +252,6 @@ export default function OverviewPage() {
     );
   }
 
-  if (loadTimedOut && loading) {
-    return (
-      <AppShell workspaceId={workspaceId}>
-        <PageStack>
-          <LoadingTimeoutState
-            title="Overview took too long to load"
-            description="We couldn't load your workspace dashboard within 8 seconds. Please check your connection and retry."
-            onRetry={retryLoading}
-          />
-        </PageStack>
-      </AppShell>
-    );
-  }
-
   if (loading) {
     return (
       <AppShell workspaceId={workspaceId}>
@@ -273,10 +263,6 @@ export default function OverviewPage() {
   }
 
   const projectList = projects ?? [];
-
-  useEffect(() => {
-    console.debug(`[Forge Page] OverviewPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (workspaceId=${workspaceId})`);
-  }, [isDemo, workspaceId]);
 
   const renderWidgetItem = (item: WidgetItem) => {
     switch (item.id) {
