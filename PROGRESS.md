@@ -2,7 +2,7 @@
 If you are a new session, read this file, find the first unchecked item, and continue from there. Do not redo finished work. Only change what the current task needs. Update this file after EVERY task with real evidence (command output or actual code diff). Never mark [x] without showing real proof. For live-app tests only the user can do, mark "UNVERIFIED, needs user test".
 
 ---
-
+The user already committed and pushed the half-finished Task 5 changes. Run git log -3 and git show HEAD to see them, and review that commit instead of looking for uncommitted changes
 ## Task 0: Reset the progress files, then delete approved files
 - [x] Delete approved files (`sst-env.d.ts`, `attached_assets/`, `bun.lock`, `bun.lockb`, `PROGRESS_ARCHIVE.md`, `app/applet/PROGRESS.md`, `.agents/`). Check `grep -rn "attached_assets\|sst-env" src tsconfig*.json package.json vite.config.ts` (0 matches). Replace PROGRESS.md with fresh task list.
   - *Proof*:
