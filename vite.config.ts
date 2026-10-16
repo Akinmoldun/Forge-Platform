@@ -122,12 +122,6 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     allowedHosts: true,
-    watch: {
-      // Replit and Bun keep large package/browser caches in the workspace root.
-      // They are not app source and can overwhelm Vite's recursive file watcher.
-      ignored: ["**/.cache/**", "**/.config/**"],
-    },
-    // Freebuff requires HMR disabled; keep hmr:false (no overlay override).
     hmr: false,
   },
 });

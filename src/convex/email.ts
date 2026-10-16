@@ -145,7 +145,7 @@ export async function sendEmailDirect({
   }
 
   if (configured === "log") {
-    // DEV ONLY, remove before launch
+    // DEV ONLY: Off by default. Must NEVER be set in production.
     if (process.env.ALLOW_DEV_OTP_LOG === "true") {
       console.log(`[email:log] OTP Code: ${text} | To: ${maskEmail(to)}`);
     } else {

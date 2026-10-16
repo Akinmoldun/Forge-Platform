@@ -4,6 +4,15 @@
  * Forge logo as clean text, one styled button each.
  */
 
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function baseLayout({
   title,
   contentHtml,
@@ -17,12 +26,13 @@ function baseLayout({
   buttonUrl: string;
   subtext?: string;
 }): string {
+  const safeTitle = escapeHtml(title);
   return `<!doctype html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>${title}</title>
+    <title>${safeTitle}</title>
   </head>
   <body style="margin:0;padding:0;background-color:#FBFBFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0D0D0D;-webkit-font-smoothing:antialiased;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FBFBFC;padding:32px 16px;">
@@ -39,7 +49,7 @@ function baseLayout({
             <tr>
               <td style="padding:28px 32px 20px;">
                 <h1 style="margin:0 0 16px;font-size:19px;line-height:1.35;color:#0D0D0D;font-weight:600;letter-spacing:-0.01em;">
-                  ${title}
+                  ${safeTitle}
                 </h1>
                 <div style="font-size:14px;line-height:1.6;color:#575657;">
                   ${contentHtml}

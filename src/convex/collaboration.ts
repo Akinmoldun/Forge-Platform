@@ -231,6 +231,44 @@ export const listDependencies = query({
   },
 });
 
+/**
+ * Pure depth-first cycle check over a directed dependency graph.
+ * Returns true if adding edge `blockingId -> blockedId` would introduce a cycle.
+ */
+export function detectCircularDependency(
+  existingEdges: Array<{ blockingId: string; blockedId: string }>,
+  newEdge: { blockingId: string; blockedId: string },
+  maxDepth = 50,
+): boolean {
+  if (newEdge.blockingId === newEdge.blockedId) return true;
+
+  const adj = new Map<string, string[]>();
+  for (const edge of existingEdges) {
+    const list = adj.get(edge.blockingId) || [];
+    list.push(edge.blockedId);
+    adj.set(edge.blockingId, list);
+  }
+
+  const stack: Array<{ id: string; depth: number }> = [{ id: newEdge.blockedId, depth: 0 }];
+  const visited = new Set<string>();
+
+  while (stack.length > 0) {
+    const { id, depth } = stack.pop()!;
+    if (depth > maxDepth) return true;
+    if (id === newEdge.blockingId) return true;
+    if (visited.has(id)) continue;
+    visited.add(id);
+
+    const neighbors = adj.get(id) || [];
+    for (const next of neighbors) {
+      if (next === newEdge.blockingId) return true;
+      stack.push({ id: next, depth: depth + 1 });
+    }
+  }
+
+  return false;
+}
+
 /** Depth-first cycle check over the "blocks" graph. */
 async function wouldCreateCycle(
   ctx: MutationCtx,
@@ -238,21 +276,18 @@ async function wouldCreateCycle(
   blockingId: Id<"issues">,
   blockedId: Id<"issues">,
 ): Promise<boolean> {
-  const MAX_DEPTH = 50;
-  const stack: Array<{ id: Id<"issues">; depth: number }> = [{ id: blockingId, depth: 0 }];
-  while (stack.length > 0) {
-    const { id, depth } = stack.pop()!;
-    if (depth > MAX_DEPTH) return true; // treat as cycle to be safe
-    const outgoing = await ctx.db
-      .query("issueDependencies")
-      .withIndex("by_blocking", (q) => q.eq("blockingIssueId", id))
-      .collect();
-    for (const edge of outgoing.filter((e) => e.dependencyType === "blocks")) {
-      if (edge.blockedIssueId === blockedId) return true;
-      stack.push({ id: edge.blockedIssueId, depth: depth + 1 });
-    }
-  }
-  return false;
+  const edges = await ctx.db
+    .query("issueDependencies")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+    .collect();
+  const blockingEdges = edges
+    .filter((e) => e.dependencyType === "blocks")
+    .map((e) => ({ blockingId: e.blockingIssueId, blockedId: e.blockedIssueId }));
+
+  return detectCircularDependency(blockingEdges, {
+    blockingId,
+    blockedId,
+  });
 }
 
 export const addDependency = mutation({

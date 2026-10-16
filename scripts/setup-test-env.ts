@@ -2,6 +2,12 @@ import React from "react";
 
 (globalThis as any).React = React;
 
+const envUrl = process.env.CONVEX_SITE_URL || process.env.VITE_CONVEX_URL || process.env.SITE_URL;
+if (!envUrl) {
+  console.error("Missing required environment variable: CONVEX_SITE_URL, VITE_CONVEX_URL, or SITE_URL");
+  process.exit(1);
+}
+
 if (typeof globalThis.window === "undefined") {
   const eventListeners: Record<string, Set<(e: any) => void>> = {};
 
@@ -23,7 +29,7 @@ if (typeof globalThis.window === "undefined") {
     location: {
       pathname: "/app/workspaces/demo-ws-northstar",
       search: "",
-      origin: "https://ais-pre-f5hmg3ing2g2i47qpg6u2d-379843806320.europe-west1.run.app",
+      origin: envUrl,
     },
     scrollTo: () => {},
     matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),

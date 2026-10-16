@@ -30,17 +30,24 @@ This guide outlines the production deployment workflow for Forge to Vercel and C
 | Variable | Description |
 |---|---|
 | `VITE_CONVEX_URL` | Convex cloud URL (e.g. `https://<deployment>.convex.cloud`) |
-| `SITE_URL` | Canonical production URL (e.g. `https://your-domain.vercel.app`) |
+| `SITE_URL` | Canonical Vercel production URL (e.g. `https://your-domain.vercel.app`). Required in production; the app will fail at startup with a clear error if missing. |
 
 ### Convex Deployment Secrets (Convex Dashboard)
 | Variable | Description |
 |---|---|
+| `SITE_URL` | Canonical Vercel production URL (must match client `SITE_URL`). App backend enforces this in production. |
 | `CONVEX_DEPLOY_KEY` | Deployment key from Convex Production Dashboard (set in Vercel CI) |
 | `AUTH_GITHUB_ID` | GitHub OAuth application Client ID |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth application Client Secret |
 | `EMAIL_PROVIDER` | `resend` or `brevo` for transactional OTP delivery |
 | `RESEND_API_KEY` | API key for Resend |
 | `EMAIL_FROM` | Verified sender address (e.g. `login@yourdomain.com`) |
+
+### GitHub OAuth Setup
+In your GitHub Developer Settings (OAuth App), configure:
+- **Homepage URL**: Your Vercel production `SITE_URL` (e.g. `https://your-domain.vercel.app`)
+- **Authorization callback URL**: `https://<your-convex-deployment>.convex.site/api/auth/callback/github`
+  *(Note: Must use `.convex.site`, not `.convex.cloud`)*
 
 ---
 

@@ -536,7 +536,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             Check your email
           </h1>
           <p className="mt-2 text-[15px] text-[#575657] leading-relaxed">
-            We sent a 6-digit code to <strong className="text-[#0D0D0D] font-medium">{email}</strong>
+            If this email can receive a code, we sent one.
           </p>
 
           <form onSubmit={handleCodeSubmit} className="mt-8 space-y-4">

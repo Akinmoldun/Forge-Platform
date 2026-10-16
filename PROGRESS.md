@@ -71,32 +71,89 @@ The user already committed and pushed the half-finished Task 5 changes. Run git 
 
 ---
 
+## Task 4b: Sweep leftover hardcoded URLs from Tasks 1 and 2
+- [x] Sweep leftover hardcoded URLs (`ideal-corgi-476` and `ais-pre-`) from `src` and `scripts`.
+  - *Proof*:
+    - `src/convex/auth.ts`: confirmed `getBaseSiteUrl()` throws explicit error when neither `SITE_URL` nor `VERCEL_URL` is set, with no hardcoded fallback URL.
+    - `scripts/run-cleanup-dryrun.ts`: reads URL from `process.env.CONVEX_SITE_URL || process.env.VITE_CONVEX_URL || process.env.SITE_URL` and exits with code 1 and error message if missing.
+    - `scripts/setup-test-env.ts`: reads `envUrl` from `process.env.CONVEX_SITE_URL || process.env.VITE_CONVEX_URL || process.env.SITE_URL` and exits with code 1 and error message if missing.
+    - Grep verification: `grep -rn "ideal-corgi-476\|ais-pre-" src scripts` returned 0 matches (exit code 1).
+    - `npx tsc -b`: exited with 0 (clean)
+    - `npm run lint`: exited with 0 (0 errors, 0 warnings)
+    - `npm run build`: built in 13.51s, dist/ and build/ generated cleanly
+    - Committed on branch `fix/security-cleanup`.
+
+---
+
 ## Task 5: Stop account enumeration
-- [ ] Merge sign-in and sign-up into one "Continue with email" flow. Always create account if not exists, always return "If this email can receive a code, we sent one."
-- [ ] Remove `NOT_FOUND` and `ALREADY_EXISTS` branches and `constantTimeDelay` helper.
-- [ ] Update login and signup pages to use the same unified flow.
+- [x] Merge sign-in and sign-up into one "Continue with email" flow. Always create account if not exists, always return "If this email can receive a code, we sent one."
+- [x] Remove `NOT_FOUND` and `ALREADY_EXISTS` branches and `constantTimeDelay` helper.
+- [x] Update login and signup pages to use the same unified flow.
+  - *Proof*:
+    - In `src/convex/auth.ts`, both login and signup routes route through unified `email-otp` provider which handles verification & account creation without branching on existence.
+    - Removed `NOT_FOUND`, `ALREADY_EXISTS`, and `constantTimeDelay` completely from `src/convex/auth.ts` and `src/convex/authCheck.ts`.
+    - In `src/components/AuthForm.tsx`, step 2 unconditionally renders: `"If this email can receive a code, we sent one."`
+    - Both `LoginPage.tsx` and `SignupPage.tsx` use the identical unified `AuthForm` component flow.
+    - Grep verification for account enumeration keywords:
+      `grep -rn "NOT_FOUND\|ALREADY_EXISTS\|couldn't find an account" src/ scripts/` returned 0 matches.
+      `grep -rn "already exists" src/ scripts/` returned only non-auth messages (duplicate project key, duplicate label, duplicate dependency).
+    - `npx tsc -b`: exited with 0 (clean)
+    - `npm run lint`: exited with 0 (0 errors, 0 warnings)
+    - `npm run build`: built in 13.10s, dist/ and build/ generated cleanly
+    - Committed as `fix(security): Task 5 stop account enumeration with unified email flow` (fb4c180).
 
 ---
 
 ## Task 6: Remove personal emails from the code
-- [ ] Replace hardcoded personal Gmail in `src/components/AuthForm.tsx` with generic message: "Email delivery is in test mode. Try GitHub sign-in or the demo."
-- [ ] Replace personal email in `src/convex/authCheck.ts` comment with `a***@example.com`.
-- [ ] Run `grep -rniE "gmail\.com|@(yahoo|outlook|hotmail)" src scripts *.md` and fix every real personal address.
+- [x] Replace hardcoded personal Gmail in `src/components/AuthForm.tsx` with generic message: "Email delivery is in test mode. Try GitHub sign-in or the demo."
+- [x] Replace personal email in `src/convex/authCheck.ts` comment with `a***@example.com`.
+- [x] Run `grep -rniE "gmail\.com|@(yahoo|outlook|hotmail)" src scripts *.md` and fix every real personal address.
+  - *Proof*:
+    - Confirmed `src/components/AuthForm.tsx` line 155 renders generic message: `"Email delivery is in test mode. Try GitHub sign-in or the demo."`
+    - Confirmed `src/convex/authCheck.ts` line 5 masks comment example with `a***@example.com`.
+    - Grep verification: `grep -rniE "gmail\.com|@(yahoo|outlook|hotmail)" src scripts *.md` returned 0 matches (exit code 1).
+    - Verified all existing emails across the codebase are strictly `@demo.invalid`, `@example.com`, or fictional dummy domains (`@northstar.team`, `@acme.com`).
+    - `npx tsc -b`: exited with 0 (clean)
+    - `npm run lint`: exited with 0 (0 errors, 0 warnings)
+    - `npm run build`: built in 14.30s, dist/ and build/ generated cleanly
 
 ---
 
 ## Task 7: Remove leftover platform files
-- [ ] Remove `vly-toolbar-readonly.tsx` import/usage from `src/main.tsx` and `tsconfig.app.json`, then delete file. Confirm build passes.
-- [ ] Check and remove `@vly-ai/integrations` from package.json if unused. Clean up `VITE_VLY_*`, `VLY_*`, `DOTENV_PRIVATE_KEY_LOCAL` from `.env.example`.
-- [ ] Delete `.replit` and `replit.md`. Remove Replit/Bun cache exclusions from `vite.config.ts` if Replit-specific.
-- [ ] Remove "Cluely-inspired theme" from README.md.
+- [x] Remove `vly-toolbar-readonly.tsx` import/usage from `src/main.tsx` and `tsconfig.app.json`, then delete file. Confirm build passes.
+- [x] Clean up `VITE_VLY_*`, `VLY_*`, and `DOTENV_PRIVATE_KEY_LOCAL` from `.env.example`. Check `@vly-ai/integrations` in `src/` (retained in package.json because unlisted `src/lib/vly-integrations.ts` imports it; added to PROPOSED DELETIONS below).
+- [x] Delete `.replit` and `replit.md`. Remove Replit/Bun cache exclusions (`ignored: ["**/.cache/**", "**/.config/**"]`) from `vite.config.ts`.
+- [x] Remove "Cluely-inspired theme" from README.md.
+  - *Proof*:
+    - Removed `VlyToolbar` and `ToolbarErrorBoundary` from `src/main.tsx`.
+    - Removed `vly-toolbar-readonly.tsx` from `tsconfig.app.json` include array.
+    - Deleted `vly-toolbar-readonly.tsx` from repository.
+    - Removed `DOTENV_PRIVATE_KEY_LOCAL`, `VITE_VLY_APP_ID`, `VITE_VLY_MONITORING_URL`, `VLY_APP_NAME`, `VLY_CONVEX_AUTH_ISSUER`, `VLY_INTEGRATION_KEY` from `.env.example`.
+    - Deleted `.replit` and `replit.md`.
+    - Removed Replit/Bun `watch.ignored` cache exclusions from `vite.config.ts`.
+    - Replaced "Cluely-inspired theme" line in `README.md` with "global styling and theme design tokens".
+    - `npx tsc -b`: exited with 0 (clean)
+    - `npm run lint`: exited with 0 (0 errors, 0 warnings)
+    - `npm run build`: built in 12.51s, dist/ and build/ generated cleanly with bundle size reduced from 1021 kB to 850 kB.
+
+### PROPOSED DELETIONS
+- `src/lib/vly-integrations.ts`: Unused 10-line wrapper importing `@vly-ai/integrations`. Not imported by any file in the application. Once approved for deletion, `@vly-ai/integrations` dependency can be removed from `package.json`.
+- `integrations.md`: Legacy documentation for VLY integrations gateway, not relevant to Forge platform.
 
 ---
 
 ## Task 8: Env and deploy config
-- [ ] `ALLOW_DEV_OTP_LOG`: keep off by default; update comment that it must never be set in production.
-- [ ] Fail with clear error at startup if `SITE_URL` is missing in production instead of fallback.
-- [ ] Update `.env.example` and `DEPLOYMENT.md` with GitHub OAuth callback URL (`https://<your-convex-deployment>.convex.site/api/auth/callback/github`) and Vercel `SITE_URL`.
+- [x] `ALLOW_DEV_OTP_LOG`: keep off by default; update comment that it must never be set in production.
+- [x] Fail with clear error at startup if `SITE_URL` is missing in production instead of fallback.
+- [x] Update `.env.example` and `DEPLOYMENT.md` with GitHub OAuth callback URL (`https://<your-convex-deployment>.convex.site/api/auth/callback/github`) and Vercel `SITE_URL`.
+  - *Proof*:
+    - In `src/convex/auth/emailOtp.ts` (line 39) and `src/convex/email.ts` (line 148), updated comments to explicitly state: `// DEV ONLY: Off by default. Must NEVER be set in production.`
+    - In `src/convex/auth.ts`, added top-level check `if (process.env.NODE_ENV === "production") getBaseSiteUrl();` which immediately throws `"Missing SITE_URL or VERCEL_URL environment variable."` at startup if missing.
+    - Updated `.env.example` with GitHub callback URL (`https://<your-convex-deployment>.convex.site/api/auth/callback/github`) and Vercel production `SITE_URL` requirement.
+    - Updated `DEPLOYMENT.md` with GitHub OAuth setup instructions, callback URL format, and production `SITE_URL` requirement.
+    - `npx tsc -b`: exited with 0 (clean)
+    - `npm run lint`: exited with 0 (0 errors, 0 warnings)
+    - `npm run build`: built in 14.61s, dist/ and build/ generated cleanly
 
 ---
 

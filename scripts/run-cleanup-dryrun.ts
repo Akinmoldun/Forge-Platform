@@ -7,7 +7,12 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../src/convex/_generated/api.js";
 
 async function main() {
-  const url = process.env.CONVEX_SITE_URL || process.env.VITE_CONVEX_URL || "https://ideal-corgi-476.convex.cloud";
+  const rawUrl = process.env.CONVEX_SITE_URL || process.env.VITE_CONVEX_URL || process.env.SITE_URL;
+  if (!rawUrl) {
+    console.error("Missing required environment variable: CONVEX_SITE_URL, VITE_CONVEX_URL, or SITE_URL");
+    process.exit(1);
+  }
+  const url = rawUrl;
   // Ensure we use .cloud URL for queries
   const cloudUrl = url.replace(".convex.site", ".convex.cloud").replace(/\/$/, "");
   console.log(`Connecting to Convex deployment at ${cloudUrl}...`);

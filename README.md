@@ -66,16 +66,16 @@ src/
 ├── components/        app shell, shared forge UI, shadcn/ui
 ├── pages/             landing, auth, app home, workspace, project,
 │                      issue, settings, members, notifications, invite
-└── index.css          Cluely-inspired theme (light + dark)
+└── index.css          global styling and theme design tokens
 ```
 
 ## Development
 
 ```bash
-bun install
-bun convex dev --once   # push backend + generate types
-bun run dev             # start the frontend
-bun tsc -b --noEmit     # typecheck everything
+npm install
+npx convex dev --once   # push backend + generate types
+npm run dev             # start the frontend
+npx tsc -b              # typecheck everything
 ```
 
 ## Engineering decisions

@@ -11,6 +11,7 @@ import {
   roleAtLeast,
 } from "./lib/auth";
 import { isIssueDone, isIssueOpen } from "./lib/issueStatus";
+import { validateWorkflowTransitionRules } from "./lib/workflowRules";
 import { DEFAULT_STATUS_ROWS } from "./workspaces";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -899,20 +900,12 @@ export const transitionIssue = mutation({
     }
 
     // --- workflow guard rules -------------------------------------------------
-    if (transition.requiresAssignee && !issue.assigneeId) {
-      throw new Error("This transition requires an assignee");
-    }
-    if (transition.requiresComment && !(args.comment ?? "").trim()) {
-      throw new Error("This transition requires a comment");
-    }
-
-    // cannot complete an issue with unresolved blockers
+    const openBlockers = [] as Doc<"issues">[];
     if (toStatus.category === "completed") {
       const blockers = await ctx.db
         .query("issueDependencies")
         .withIndex("by_blocked", (q) => q.eq("blockedIssueId", issue._id))
         .collect();
-      const openBlockers = [] as Doc<"issues">[];
       for (const dep of blockers.filter((d) => d.dependencyType === "blocks")) {
         const blocker = await ctx.db.get(dep.blockingIssueId);
         if (!blocker) continue;
@@ -921,15 +914,18 @@ export const transitionIssue = mutation({
           openBlockers.push(blocker);
         }
       }
-      if (openBlockers.length > 0) {
-        const names = openBlockers
-          .slice(0, 3)
-          .map((b) => `${project.key}-${b.number}`)
-          .join(", ");
-        throw new Error(
-          `Cannot complete: ${openBlockers.length} unresolved blocker${openBlockers.length > 1 ? "s" : ""} (${names})`,
-        );
-      }
+    }
+
+    const validation = validateWorkflowTransitionRules({
+      requiresAssignee: transition.requiresAssignee,
+      requiresComment: transition.requiresComment,
+      toStatusCategory: toStatus.category,
+      hasAssignee: Boolean(issue.assigneeId),
+      comment: args.comment,
+      unresolvedBlockers: openBlockers.map((b) => ({ key: project.key, number: b.number })),
+    });
+    if (!validation.allowed) {
+      throw new Error(validation.error);
     }
 
     const fromStatus = statuses.find((s) => s._id === issue.statusId);

@@ -36,7 +36,7 @@ export const emailOtp = Email({
   async sendVerificationRequest({ identifier: rawEmail, token }) {
     const email = normalizeEmail(rawEmail);
 
-    // DEV ONLY, remove before launch
+    // DEV ONLY: Off by default. Must NEVER be set in production.
     if (process.env.ALLOW_DEV_OTP_LOG === "true") {
       console.log(`[auth:dev-otp] One-time code for ${maskEmail(email)}: ${token}`);
     }

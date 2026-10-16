@@ -15,6 +15,11 @@ export function getBaseSiteUrl(): string {
   return siteUrl.replace(/\/+$/, "");
 }
 
+// Fail with a clear error at startup if SITE_URL/VERCEL_URL is missing in production
+if (process.env.NODE_ENV === "production") {
+  getBaseSiteUrl();
+}
+
 export function resolveSafeRedirectUrl(
   target: string | undefined | null,
   configuredBaseUrl?: string,
@@ -111,11 +116,15 @@ export const signIn = action({
         }
       }
 
-      // Ensure normalized email is used downstream
-      args.params.email = check.normalizedEmail;
-      return await (rawAuth.signIn as any)._handler(ctx, args);
+      type ActionHandler = {
+        _handler: (ctx: unknown, args: unknown) => Promise<unknown>;
+      };
+      return await (rawAuth.signIn as unknown as ActionHandler)._handler(ctx, args);
     }
 
-    return await (rawAuth.signIn as any)._handler(ctx, args);
+    type ActionHandler = {
+      _handler: (ctx: unknown, args: unknown) => Promise<unknown>;
+    };
+    return await (rawAuth.signIn as unknown as ActionHandler)._handler(ctx, args);
   },
 });
