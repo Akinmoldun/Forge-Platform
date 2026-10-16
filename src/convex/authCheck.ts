@@ -2,7 +2,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
- * Masks an email for safe logging (e.g. akineroeditzfortittok@gmail.com -> a***@gmail.com).
+ * Masks an email for safe logging (e.g. a***@example.com -> a***@example.com).
  * Never exposes the full email in plain text in logs.
  */
 export function maskEmail(email: string): string {
@@ -20,24 +20,47 @@ export function normalizeEmail(email: string): string {
 }
 
 const EMAIL_MAX_PER_HOUR = 5;
-const IP_MAX_PER_HOUR = 20;
+const GLOBAL_OTP_MAX_PER_HOUR = 200;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export const verifyAndRateLimitAuthAttempt = internalMutation({
   args: {
     email: v.string(),
-    mode: v.union(v.literal("signin"), v.literal("signup")),
     isVerifyStep: v.boolean(),
-    clientIp: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const normalizedEmail = normalizeEmail(args.email);
-    const clientIdentifier = args.clientIp ? `ip:${args.clientIp}` : "ip:default";
     const emailIdentifier = `email:${normalizedEmail}`;
+    const globalIdentifier = "global:otp";
 
-    // Rate limiting is applied on code request (existence check & sending code)
+    // Rate limiting is applied on code request (sending code)
     if (!args.isVerifyStep) {
       const now = Date.now();
+
+      // Check global rate limit (max 200 per hour across all emails)
+      const globalLimitDoc = await ctx.db
+        .query("authRateLimits")
+        .withIndex("identifier", (q) => q.eq("identifier", globalIdentifier))
+        .unique();
+
+      if (globalLimitDoc) {
+        const elapsed = now - globalLimitDoc.lastAttemptTime;
+        const recovered = elapsed * (GLOBAL_OTP_MAX_PER_HOUR / ONE_HOUR_MS);
+        const attemptsLeft = Math.min(GLOBAL_OTP_MAX_PER_HOUR, globalLimitDoc.attemptsLeft + recovered);
+        if (attemptsLeft < 1) {
+          return { allowed: false, reason: "RATE_LIMITED" as const, normalizedEmail };
+        }
+        await ctx.db.patch(globalLimitDoc._id, {
+          attemptsLeft: attemptsLeft - 1,
+          lastAttemptTime: now,
+        });
+      } else {
+        await ctx.db.insert("authRateLimits", {
+          identifier: globalIdentifier,
+          attemptsLeft: GLOBAL_OTP_MAX_PER_HOUR - 1,
+          lastAttemptTime: now,
+        });
+      }
 
       // Check email rate limit (max 5 per hour)
       const emailLimitDoc = await ctx.db
@@ -62,53 +85,6 @@ export const verifyAndRateLimitAuthAttempt = internalMutation({
           attemptsLeft: EMAIL_MAX_PER_HOUR - 1,
           lastAttemptTime: now,
         });
-      }
-
-      // Check IP rate limit (max 20 per hour)
-      const ipLimitDoc = await ctx.db
-        .query("authRateLimits")
-        .withIndex("identifier", (q) => q.eq("identifier", clientIdentifier))
-        .unique();
-
-      if (ipLimitDoc) {
-        const elapsed = now - ipLimitDoc.lastAttemptTime;
-        const recovered = elapsed * (IP_MAX_PER_HOUR / ONE_HOUR_MS);
-        const attemptsLeft = Math.min(IP_MAX_PER_HOUR, ipLimitDoc.attemptsLeft + recovered);
-        if (attemptsLeft < 1) {
-          return { allowed: false, reason: "RATE_LIMITED" as const, normalizedEmail };
-        }
-        await ctx.db.patch(ipLimitDoc._id, {
-          attemptsLeft: attemptsLeft - 1,
-          lastAttemptTime: now,
-        });
-      } else {
-        await ctx.db.insert("authRateLimits", {
-          identifier: clientIdentifier,
-          attemptsLeft: IP_MAX_PER_HOUR - 1,
-          lastAttemptTime: now,
-        });
-      }
-    }
-
-    // Account existence check:
-    // A real account has email matching normalizedEmail, emailVerificationTime defined,
-    // and is not anonymous. An unverified account or guest account does NOT count.
-    const users = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", normalizedEmail))
-      .collect();
-
-    const hasVerifiedAccount = users.some(
-      (u) => u.emailVerificationTime !== undefined && u.isAnonymous !== true,
-    );
-
-    if (args.mode === "signin") {
-      if (!hasVerifiedAccount) {
-        return { allowed: false, reason: "NOT_FOUND" as const, normalizedEmail };
-      }
-    } else if (args.mode === "signup") {
-      if (hasVerifiedAccount) {
-        return { allowed: false, reason: "ALREADY_EXISTS" as const, normalizedEmail };
       }
     }
 

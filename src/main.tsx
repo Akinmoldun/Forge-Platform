@@ -242,14 +242,23 @@ class RouteErrorBoundary extends React.Component<
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
-    window.parent.postMessage(
-      { type: "iframe-route-change", path: location.pathname },
-      "*",
-    );
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        { type: "iframe-route-change", path: location.pathname },
+        "*",
+      );
+    }
   }, [location.pathname]);
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
+      // Validate event origin against own origin or trusted parent preview domains
+      const isAllowedOrigin =
+        event.origin === window.location.origin ||
+        event.origin.endsWith(".run.app") ||
+        event.origin.endsWith(".google.com");
+      if (!isAllowedOrigin) return;
+
       if (event.data?.type === "navigate") {
         if (event.data.direction === "back") window.history.back();
         if (event.data.direction === "forward") window.history.forward();

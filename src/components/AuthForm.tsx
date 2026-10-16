@@ -130,7 +130,6 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     try {
       const formData = new FormData();
       formData.set('email', trimmedEmail);
-      formData.set('mode', mode === 'login' ? 'signin' : 'signup');
       await withTimeout(signIn('email-otp', formData), 10000);
       setStep('code');
       setCountdown(30);
@@ -144,17 +143,6 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       const combined = `${dataStr.toLowerCase()} ${msg}`;
 
       if (
-        combined.includes("couldn't find an account") ||
-        combined.includes("not find an account") ||
-        combined.includes("not_found")
-      ) {
-        setError("We couldn't find an account with this email. Please sign up first.");
-      } else if (
-        combined.includes("already exists") ||
-        combined.includes("already_exists")
-      ) {
-        setError("An account with this email already exists. Please sign in.");
-      } else if (
         combined.includes("email isn't set up yet") ||
         combined.includes("email isnt set up yet") ||
         combined.includes('email_provider') ||
@@ -164,7 +152,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       ) {
         setError("Email delivery isn't configured on Convex Cloud. Set EMAIL_PROVIDER in your Convex dashboard.");
       } else if (combined.includes('only send testing emails') || combined.includes('resend rejected')) {
-        setError("Resend test mode: Can only deliver to the account owner (baserobbie02@gmail.com) until a domain is verified.");
+        setError("Email delivery is in test mode. Try GitHub sign-in or the demo.");
       } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
       } else {
@@ -193,7 +181,6 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       const formData = new FormData();
       formData.set('email', email.trim());
       formData.set('code', trimmedCode);
-      formData.set('mode', mode === 'login' ? 'signin' : 'signup');
       await withTimeout(signIn('email-otp', formData), 10000);
       navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
@@ -461,12 +448,10 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>{mode === 'login' ? 'Sending code...' : 'Creating account...'}</span>
+                  <span>Sending code...</span>
                 </>
-              ) : mode === 'login' ? (
-                'Send code'
               ) : (
-                'Create account'
+                'Continue with email'
               )}
             </button>
           </form>

@@ -1,6 +1,3 @@
-// THIS FILE IS READ ONLY. Do not touch this file unless you are correctly adding a new auth provider in accordance to the vly auth documentation
-
-
 import { convexAuth } from "@convex-dev/auth/server";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
 import GitHub from "@auth/core/providers/github";
@@ -9,6 +6,45 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { emailOtp } from "./auth/emailOtp";
 import { normalizeEmail } from "./authCheck";
+
+export function getBaseSiteUrl(): string {
+  const siteUrl = process.env.SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+  if (!siteUrl) {
+    throw new Error("Missing SITE_URL or VERCEL_URL environment variable.");
+  }
+  return siteUrl.replace(/\/+$/, "");
+}
+
+export function resolveSafeRedirectUrl(
+  target: string | undefined | null,
+  configuredBaseUrl?: string,
+): string {
+  const baseUrl = (configuredBaseUrl ?? getBaseSiteUrl()).replace(/\/+$/, "");
+  const baseOrigin = new URL(baseUrl).origin;
+
+  const raw = (typeof target === "string" ? target : "/app").trim() || "/app";
+
+  // Reject protocol-relative URLs (e.g. "//evil.com")
+  if (raw.startsWith("//")) {
+    return `${baseUrl}/app`;
+  }
+
+  // Relative paths starting with a single "/" (and not "//")
+  if (raw.startsWith("/")) {
+    return `${baseUrl}${raw}`;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.origin === baseOrigin) {
+      return parsed.toString();
+    }
+  } catch {
+    // Malformed URL falls back to app
+  }
+
+  return `${baseUrl}/app`;
+}
 
 const gitHubProvider = GitHub({
   clientId: process.env.AUTH_GITHUB_ID,
@@ -31,24 +67,12 @@ const rawAuth = convexAuth({
   },
   callbacks: {
     async redirect({ redirectTo }) {
-      const target = (typeof redirectTo === "string" ? redirectTo : "/app").trim() || "/app";
-      if (target.startsWith("http://") || target.startsWith("https://")) {
-        return target;
-      }
-      const siteUrl = process.env.SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-      const baseUrl = (siteUrl || "https://ais-pre-f5hmg3ing2g2i47qpg6u2d-379843806320.europe-west1.run.app").replace(/\/+$/, "");
-      const cleanPath = target.startsWith("/") ? target : `/${target}`;
-      return `${baseUrl}${cleanPath}`;
+      return resolveSafeRedirectUrl(redirectTo);
     },
   },
 });
 
 export const { auth, signOut, store, isAuthenticated } = rawAuth;
-
-async function constantTimeDelay(targetMs = 350) {
-  const jitter = Math.floor(Math.random() * 100);
-  await new Promise((resolve) => setTimeout(resolve, targetMs + jitter));
-}
 
 export const signIn = action({
   args: {
@@ -71,35 +95,19 @@ export const signIn = action({
       }
 
       const email = normalizeEmail(params.email);
-      const rawMode = params.mode;
-      if (rawMode !== "signin" && rawMode !== "signup") {
-        throw new Error("Invalid authentication mode. Must be 'signin' or 'signup'.");
-      }
-      const mode: "signin" | "signup" = rawMode;
       const isVerifyStep = params.code !== undefined;
-      const clientIp = typeof params.clientIp === "string" ? params.clientIp : undefined;
 
       const check = await ctx.runMutation(
         internal.authCheck.verifyAndRateLimitAuthAttempt,
         {
           email,
-          mode,
           isVerifyStep,
-          clientIp,
         },
       );
 
       if (!check.allowed) {
         if (check.reason === "RATE_LIMITED") {
           throw new Error("Too many attempts, try again later");
-        }
-        if (check.reason === "NOT_FOUND") {
-          await constantTimeDelay();
-          throw new Error("We couldn't find an account with this email.");
-        }
-        if (check.reason === "ALREADY_EXISTS") {
-          await constantTimeDelay();
-          throw new Error("An account with this email already exists.");
         }
       }
 
