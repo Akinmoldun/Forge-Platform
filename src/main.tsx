@@ -61,14 +61,9 @@ const ProfileSettingsPage = safeLazy(() => import("./pages/ProfileSettingsPage")
 const InvitePage = safeLazy(() => import("./pages/InvitePage"));
 const NotFound = safeLazy(() => import("./pages/NotFound"));
 
-// Visible fallback for route transitions
+// Empty fallback for route transitions (no spinner, no text, matching page background)
 function RouteLoading() {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFBFC] text-[#0D0D0D]">
-      <div className="size-8 rounded-full border-2 border-border border-t-[#0D0D0D] animate-spin mb-3" />
-      <p className="text-sm font-medium text-muted-foreground">Loading Forge...</p>
-    </div>
-  );
+  return <div className="min-h-screen bg-[#FBFBFC]" />;
 }
 
 
@@ -273,22 +268,23 @@ class ChunkErrorBoundary extends React.Component<
 
 function RouteSyncer() {
   const location = useLocation();
+  const trustedParentOrigin = import.meta.env.VITE_TRUSTED_PARENT_ORIGIN;
+
   useEffect(() => {
-    if (window.parent && window.parent !== window) {
+    if (window.parent && window.parent !== window && trustedParentOrigin) {
       window.parent.postMessage(
         { type: "iframe-route-change", path: location.pathname },
-        "*",
+        trustedParentOrigin,
       );
     }
-  }, [location.pathname]);
+  }, [location.pathname, trustedParentOrigin]);
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      // Validate event origin against own origin or trusted parent preview domains
+      // Validate event origin against own origin or exact trusted parent origin
       const isAllowedOrigin =
         event.origin === window.location.origin ||
-        event.origin.endsWith(".run.app") ||
-        event.origin.endsWith(".google.com");
+        (Boolean(trustedParentOrigin) && event.origin === trustedParentOrigin);
       if (!isAllowedOrigin) return;
 
       if (event.data?.type === "navigate") {
@@ -298,7 +294,7 @@ function RouteSyncer() {
     }
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [trustedParentOrigin]);
 
   return null;
 }

@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
-  { ignores: ["dist", "build", "src/convex/**", "vly-toolbar-readonly.tsx", "scripts/**"] },
+  { ignores: ["dist", "build", "src/convex/**", "scripts/**"] },
   {
     extends: [
       js.configs.recommended,

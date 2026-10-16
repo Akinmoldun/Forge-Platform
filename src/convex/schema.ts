@@ -96,7 +96,9 @@ const schema = defineSchema(
       isDeleting: v.optional(v.boolean()),
       createdAt: v.number(),
       updatedAt: v.number(),
-    }).index("slug", ["slug"]),
+    })
+      .index("slug", ["slug"])
+      .index("by_created_at", ["createdAt"]),
 
     memberships: defineTable({
       workspaceId: v.id("workspaces"),

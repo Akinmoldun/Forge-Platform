@@ -23,15 +23,17 @@ export const cleanupDemoWorkspaces = internalMutation({
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const cutoff = now - SEVEN_DAYS_MS;
 
-    const allWorkspaces = await ctx.db.query("workspaces").collect();
+    const candidates = await ctx.db
+      .query("workspaces")
+      .withIndex("by_created_at", (q) => q.lte("createdAt", cutoff))
+      .take(50);
 
     // Find the first expired anonymous demo workspace to clean up
     let targetWs: Doc<"workspaces"> | null = null;
     let targetOwner: Doc<"users"> | null = null;
 
-    for (const ws of allWorkspaces) {
+    for (const ws of candidates) {
       if (!ws.name.startsWith("Demo: ")) continue;
-      if (ws.createdAt > cutoff) continue;
 
       const owner = await ctx.db.get(ws.ownerId);
       // Strictly verify owner is anonymous
@@ -113,14 +115,12 @@ export const cleanupDemoWorkspaces = internalMutation({
     await ctx.db.delete(targetWs._id);
 
     // Check if any other expired demo workspaces remain and schedule continuation
-    const remainingExpiredWs = allWorkspaces.some(
-      (w) =>
-        w._id !== targetWs!._id &&
-        w.name.startsWith("Demo: ") &&
-        w.createdAt <= cutoff,
-    );
+    const nextExpiredWs = await ctx.db
+      .query("workspaces")
+      .withIndex("by_created_at", (q) => q.lte("createdAt", cutoff))
+      .first();
 
-    if (remainingExpiredWs) {
+    if (nextExpiredWs) {
       await ctx.scheduler.runAfter(0, internal.crons.cleanupDemoWorkspaces, {});
     }
   },

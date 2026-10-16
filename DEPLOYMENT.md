@@ -27,15 +27,16 @@ This guide outlines the production deployment workflow for Forge to Vercel and C
 ## 2. Environment Variables
 
 ### Client Environment Variables (Vercel)
+Note: Vercel only needs `VITE_CONVEX_URL`. Only `VITE_`-prefixed variables are exposed to the client bundle.
+
 | Variable | Description |
 |---|---|
 | `VITE_CONVEX_URL` | Convex cloud URL (e.g. `https://<deployment>.convex.cloud`) |
-| `SITE_URL` | Canonical Vercel production URL (e.g. `https://your-domain.vercel.app`). Required in production; the app will fail at startup with a clear error if missing. |
 
 ### Convex Deployment Secrets (Convex Dashboard)
 | Variable | Description |
 |---|---|
-| `SITE_URL` | Canonical Vercel production URL (must match client `SITE_URL`). App backend enforces this in production. |
+| `SITE_URL` | Canonical Vercel production URL (e.g. `https://your-domain.vercel.app`). Used server-side by Convex Auth for OIDC and email verification redirects. |
 | `CONVEX_DEPLOY_KEY` | Deployment key from Convex Production Dashboard (set in Vercel CI) |
 | `AUTH_GITHUB_ID` | GitHub OAuth application Client ID |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth application Client Secret |

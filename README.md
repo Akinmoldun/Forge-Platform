@@ -2,7 +2,7 @@
 
 Forge is a high-velocity engineering workflow and issue tracking platform built for software engineering teams, tech leads, and startups who need clear visibility into project execution without Jira-style overhead. It unifies project tracking, customizable workflow state machines, dependency management with cycle prevention, explainable delivery risk assessment, and an immutable audit trail into a clean, reactive workspace.
 
-[**Explore Live Demo (No Account Required)**](LIVE_DEMO_URL)  
+[**Explore Live Demo (No Account Required)**](https://forge-virid-zeta.vercel.app)  
 *Note: Demo mode requires no registration or email verification. You can explore interactive workspaces, Kanban boards, project timelines, workflow rules, and delivery metrics immediately.*
 
 ---
