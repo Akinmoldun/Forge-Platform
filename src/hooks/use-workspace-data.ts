@@ -17,6 +17,7 @@ import type { Value } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { demoStore } from "@/data/in-memory-demo-store";
+import { isDemoMode } from "@/lib/demoMode";
 
 /** Shape useQueries accepts, widened so a dynamic key set can be built. */
 type QueryRequest = { query: FunctionReference<"query">; args: Record<string, Value> };
@@ -128,7 +129,7 @@ const EMPTY_QUERY_MAP: Record<string, QueryRequest> = Object.freeze({});
 /** Aggregated per-project summaries, keyed by project id. */
 export function useProjectSummaries(projectIds: Id<"projects">[]) {
   const isDemo = useMemo(
-    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    () => isDemoMode() || projectIds.some((id) => String(id).startsWith("demo-")),
     [projectIds]
   );
 
@@ -169,7 +170,7 @@ export function useProjectSummaries(projectIds: Id<"projects">[]) {
 /** Aggregated risk scores, keyed by project id. */
 export function useProjectRisks(projectIds: Id<"projects">[]) {
   const isDemo = useMemo(
-    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    () => isDemoMode() || projectIds.some((id) => String(id).startsWith("demo-")),
     [projectIds]
   );
 
@@ -214,7 +215,7 @@ export function useProjectRisks(projectIds: Id<"projects">[]) {
  */
 export function useProjectIssues(projectIds: Id<"projects">[]) {
   const isDemo = useMemo(
-    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    () => isDemoMode() || projectIds.some((id) => String(id).startsWith("demo-")),
     [projectIds]
   );
 
@@ -271,7 +272,7 @@ export function useProjectIssues(projectIds: Id<"projects">[]) {
 /** Status-change events per project, used to rebuild the review-wait metric. */
 export function useProjectStatusEvents(projectIds: Id<"projects">[], limit = 200) {
   const isDemo = useMemo(
-    () => projectIds.some((id) => String(id).startsWith("demo-")),
+    () => isDemoMode() || projectIds.some((id) => String(id).startsWith("demo-")),
     [projectIds]
   );
 

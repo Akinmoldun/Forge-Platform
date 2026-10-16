@@ -274,6 +274,10 @@ export default function OverviewPage() {
 
   const projectList = projects ?? [];
 
+  useEffect(() => {
+    console.debug(`[Forge Page] OverviewPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (workspaceId=${workspaceId})`);
+  }, [isDemo, workspaceId]);
+
   const renderWidgetItem = (item: WidgetItem) => {
     switch (item.id) {
       case "quick_actions":
@@ -292,6 +296,7 @@ export default function OverviewPage() {
             issues={realIssues}
             canWrite={canWrite}
             projectList={projectList}
+            isLoading={issuesLoading}
           />
         );
       case "recent_activity":
@@ -299,12 +304,14 @@ export default function OverviewPage() {
           <RecentActivityWidget
             workspaceId={id}
             activity={activity ?? []}
+            isLoading={activity === undefined}
           />
         );
       case "status_distribution":
         return (
           <StatusDistributionWidget
             rollup={realRollup}
+            isLoading={summariesLoading}
           />
         );
       case "priority_breakdown":
@@ -314,6 +321,7 @@ export default function OverviewPage() {
             issues={allWorkspaceIssues}
             workspaceId={id}
             projectList={projectList}
+            isLoading={issuesLoading || summariesLoading}
           />
         );
       case "project_health":

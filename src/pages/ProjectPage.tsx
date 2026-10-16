@@ -75,6 +75,10 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const isValidProjectId = Boolean(projectId && projectId !== "undefined" && projectId !== "null");
   const isDemo = Boolean(isDemoMode() || (projectId && projectId.startsWith("demo-")));
 
+  useEffect(() => {
+    console.debug(`[Forge Page] ProjectPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (projectId=${projectId})`);
+  }, [isDemo, projectId]);
+
   const project = useQuery(
     api.projects.getProject,
     isValidProjectId ? { projectId: projectId as never } : "skip",

@@ -5,6 +5,7 @@ import { detectCircularDependency } from "../convex/collaboration";
 import { validateWorkflowTransitionRules } from "../convex/lib/workflowRules";
 import { resolveSafeRedirectUrl } from "../convex/auth";
 import { escapeHtml } from "../convex/email/templates";
+import { demoStore } from "../data/in-memory-demo-store";
 
 describe("Pure Logic Unit Tests", () => {
   describe("1. roleAtLeast - Every role pair rank verification", () => {
@@ -240,6 +241,28 @@ describe("Pure Logic Unit Tests", () => {
       expect(escapeHtml("Task MOB-101: Fix biometric crash")).toBe(
         "Task MOB-101: Fix biometric crash",
       );
+    });
+  });
+
+  describe("7. Demo store issue count and data integrity", () => {
+    it("asserts the first workspace has at least 20 issues", () => {
+      const workspaces = demoStore.getWorkspaces();
+      expect(workspaces.length).toBeGreaterThan(0);
+      const firstWs = workspaces[0];
+      const wsIssues = demoStore.getWorkspaceIssues(firstWs._id);
+      expect(wsIssues.issues.length).toBeGreaterThanOrEqual(20);
+    });
+
+    it("asserts every project's issueCount equals the number of issues in the store for that project", () => {
+      const workspaces = demoStore.getWorkspaces();
+      for (const ws of workspaces) {
+        const projects = demoStore.getProjects(ws._id);
+        expect(projects.length).toBeGreaterThan(0);
+        for (const proj of projects) {
+          const projectIssues = demoStore.listIssues(proj._id);
+          expect(proj.issueCount).toBe(projectIssues.length);
+        }
+      }
     });
   });
 });

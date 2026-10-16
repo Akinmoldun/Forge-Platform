@@ -14,18 +14,25 @@ import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/hanken-grotesk/700.css";
 import "./index.css";
 
-/** Safe lazy loader that auto-retries failed dynamic imports (e.g. dev server restarts) */
+/** Safe lazy loader that retries twice with 800ms and 1600ms delays, then throws */
 function safeLazy<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
 ) {
-  return lazy(() =>
-    factory().catch((err) => {
-      console.warn("[Router] Retrying dynamic import...", err);
-      return new Promise<{ default: T }>((resolve) =>
-        setTimeout(resolve, 800),
-      ).then(factory);
-    }),
-  );
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      console.warn("[Router] Dynamic import failed, retrying in 800ms...", err);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      try {
+        return await factory();
+      } catch (retryErr) {
+        console.warn("[Router] Dynamic import retry failed, retrying in 1600ms...", retryErr);
+        await new Promise((resolve) => setTimeout(resolve, 1600));
+        return await factory();
+      }
+    }
+  });
 }
 
 const HomePage = safeLazy(() => import("./pages/HomePage"));
@@ -54,9 +61,14 @@ const ProfileSettingsPage = safeLazy(() => import("./pages/ProfileSettingsPage")
 const InvitePage = safeLazy(() => import("./pages/InvitePage"));
 const NotFound = safeLazy(() => import("./pages/NotFound"));
 
-// Silent fallback for route transitions with no text
+// Visible fallback for route transitions
 function RouteLoading() {
-  return <div className="min-h-screen bg-[#FBFBFC]" />;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFBFC] text-[#0D0D0D]">
+      <div className="size-8 rounded-full border-2 border-border border-t-[#0D0D0D] animate-spin mb-3" />
+      <p className="text-sm font-medium text-muted-foreground">Loading Forge...</p>
+    </div>
+  );
 }
 
 
@@ -221,6 +233,44 @@ class RouteErrorBoundary extends React.Component<
   }
 }
 
+class ChunkErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error) {
+    console.error("[Route] Chunk load error:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-background p-6">
+          <div className="w-full max-w-md rounded-lg border border-destructive/40 bg-card p-6 text-center">
+            <p className="text-sm font-semibold text-destructive">
+              Could not load this page
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground break-words">
+              {this.state.error?.message || "Failed to load page resources."}
+            </p>
+            <div className="mt-4 flex justify-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => window.location.reload()}
+              >
+                Reload
+              </Button>
+            </div>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -259,13 +309,14 @@ createRoot(document.getElementById("root")!).render(
       <AppProviders>
         <BrowserRouter>
           <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <RouteErrorBoundary>
-              <Routes>
-              <Route
-                path="/"
-                element={<HomePage />}
-              />
+          <ChunkErrorBoundary>
+            <Suspense fallback={<RouteLoading />}>
+              <RouteErrorBoundary>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={<HomePage />}
+                  />
               <Route
                 path="/workflows"
                 element={<HomePage />}
@@ -492,9 +543,10 @@ createRoot(document.getElementById("root")!).render(
             </Routes>
             </RouteErrorBoundary>
           </Suspense>
-        </BrowserRouter>
-        <Toaster />
-      </AppProviders>
-    </RootErrorBoundary>
-  </StrictMode>,
+        </ChunkErrorBoundary>
+      </BrowserRouter>
+      <Toaster />
+    </AppProviders>
+  </RootErrorBoundary>
+</StrictMode>,
 );

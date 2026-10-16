@@ -242,11 +242,13 @@ export function MyOpenIssuesWidget({
   workspaceId,
   issues,
   projectList,
+  isLoading = false,
 }: {
   workspaceId: string;
   issues: OverviewIssueItem[];
   canWrite: boolean;
   projectList?: OverviewDataProps["projectList"];
+  isLoading?: boolean;
 }) {
   const viewAllLink =
     projectList && projectList.length === 1
@@ -272,7 +274,13 @@ export function MyOpenIssuesWidget({
       </div>
 
       <div>
-        {rows.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-3 py-3">
+            <div className="h-4 w-full rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-4/5 rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-2/3 rounded bg-[#F1F1F3] animate-pulse" />
+          </div>
+        ) : rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <Inbox className="size-6 text-[#575657]/40 mb-1.5" />
             <p className="text-[13px] font-medium text-[#0D0D0D]">No open issues</p>
@@ -314,9 +322,11 @@ export function MyOpenIssuesWidget({
 export function RecentActivityWidget({
   workspaceId,
   activity,
+  isLoading = false,
 }: {
   workspaceId: string;
   activity: OverviewDataProps["activity"];
+  isLoading?: boolean;
 }) {
   const events = activity.slice(0, 7);
 
@@ -333,7 +343,13 @@ export function RecentActivityWidget({
       </div>
 
       <div>
-        {events.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-3 py-3">
+            <div className="h-4 w-full rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-4/5 rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-3/4 rounded bg-[#F1F1F3] animate-pulse" />
+          </div>
+        ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <Clock className="size-6 text-[#575657]/40 mb-1.5" />
             <p className="text-[13px] font-medium text-[#0D0D0D]">No activity yet</p>
@@ -387,8 +403,10 @@ export function RecentActivityWidget({
 /* 4. Status distribution */
 export function StatusDistributionWidget({
   rollup,
+  isLoading = false,
 }: {
   rollup: OverviewDataProps["rollup"];
+  isLoading?: boolean;
 }) {
   const statusList = Array.isArray(rollup?.byStatus) ? rollup.byStatus : [];
   const statusTotal = statusList.reduce((sum, s) => sum + (s?.count || 0), 0);
@@ -398,12 +416,14 @@ export function StatusDistributionWidget({
       <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">Status distribution</h3>
         <span className="text-[12px] text-[#575657] tabular-nums font-normal">
-          {statusTotal} total
+          {isLoading ? "..." : `${statusTotal} total`}
         </span>
       </div>
 
       <div className="py-1">
-        {statusTotal === 0 ? (
+        {isLoading ? (
+          <div className="h-6 w-full rounded bg-[#F1F1F3] animate-pulse my-2" />
+        ) : statusTotal === 0 ? (
           <p className="text-[12px] text-[#575657] text-center py-4">No issues recorded yet.</p>
         ) : (
           <StackedBar
@@ -425,11 +445,13 @@ export function PriorityBreakdownWidget({
   issues = [],
   workspaceId,
   projectList = [],
+  isLoading = false,
 }: {
   rollup: OverviewDataProps["rollup"];
   issues?: OverviewIssueItem[];
   workspaceId?: string;
   projectList?: OverviewDataProps["projectList"];
+  isLoading?: boolean;
 }) {
   // Use isOpenIssue so only open issues are counted and numbers match Overview cards exactly
   const openIssues = issues.length > 0
@@ -461,7 +483,15 @@ export function PriorityBreakdownWidget({
 
       {/* Five plain rows: label left, number & % right, thin 4px bar underneath */}
       <div className="space-y-3 pt-1">
-        {priorities.map((p) => {
+        {isLoading ? (
+          <div className="space-y-3 py-1">
+            <div className="h-4 w-full rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-4/5 rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-3/5 rounded bg-[#F1F1F3] animate-pulse" />
+            <div className="h-4 w-2/3 rounded bg-[#F1F1F3] animate-pulse" />
+          </div>
+        ) : (
+          priorities.map((p) => {
           let count = 0;
           if (openIssues.length > 0) {
             count = openIssues.filter((i) => {
@@ -513,7 +543,8 @@ export function PriorityBreakdownWidget({
               </div>
             </Link>
           );
-        })}
+        })
+      )}
       </div>
     </div>
   );

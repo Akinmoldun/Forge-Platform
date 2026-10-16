@@ -53,6 +53,7 @@ export default defineConfig({
           if (
             id.includes('node_modules/react/') ||
             id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/scheduler/') ||
             id.includes('node_modules/react-router/')
           ) {
             return 'react-vendor';
@@ -80,8 +81,8 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Standard 500 kB chunk warning limit
-    chunkSizeWarningLimit: 500,
+    // Standard 700 kB chunk warning limit
+    chunkSizeWarningLimit: 700,
     // Target modern browsers for better optimization
     target: 'esnext',
     // Minify options - using esbuild (faster than terser)

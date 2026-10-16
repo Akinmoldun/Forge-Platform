@@ -51,17 +51,19 @@ function useConvexAuthReal() {
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("code");
 
-  const isPending = isAuthLoading || hasCodeParam;
-  const isSignedOut = !isAuthLoading && !isAuthenticated && !hasCodeParam;
+  const inDemo = isDemoMode();
+  const isPending = inDemo ? false : (isAuthLoading || hasCodeParam);
+  const isSignedOut = inDemo ? false : (!isAuthLoading && !isAuthenticated && !hasCodeParam);
+  const effectiveAuth = inDemo ? true : isAuthenticated;
 
   return {
     isLoading: isPending,
-    authResolved: !isAuthLoading && !hasCodeParam,
-    isAuthenticated,
+    authResolved: inDemo ? true : (!isAuthLoading && !hasCodeParam),
+    isAuthenticated: effectiveAuth,
     isSessionPending: isPending,
     isSignedOut,
     hasOAuthCode: hasCodeParam,
-    user,
+    user: inDemo ? (user ?? DEMO_USER) : user,
     signIn,
     signOut,
   };
