@@ -13,7 +13,6 @@ import "@fontsource/hanken-grotesk/500.css";
 import "@fontsource/hanken-grotesk/600.css";
 import "@fontsource/hanken-grotesk/700.css";
 import "./index.css";
-import HomePage from "./pages/HomePage";
 
 /** Safe lazy loader that auto-retries failed dynamic imports (e.g. dev server restarts) */
 function safeLazy<T extends React.ComponentType<any>>(
@@ -28,6 +27,8 @@ function safeLazy<T extends React.ComponentType<any>>(
     }),
   );
 }
+
+const HomePage = safeLazy(() => import("./pages/HomePage"));
 
 const RequireAuth = safeLazy(() =>
   import("./components/RequireAuth").then((module) => ({

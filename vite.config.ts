@@ -46,41 +46,33 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual chunk splitting for better caching and lazy loading
-        manualChunks: {
-          // Vendor chunks for large libraries
-          'react-vendor': ['react', 'react-dom', 'react-router'],
-          'convex-vendor': ['convex'],
-          // Large UI library chunks
-          'radix-ui': [
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-collapsible',
-            '@radix-ui/react-context-menu',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-hover-card',
-            '@radix-ui/react-label',
-            '@radix-ui/react-menubar',
-            '@radix-ui/react-navigation-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-progress',
-            '@radix-ui/react-radio-group',
-            '@radix-ui/react-scroll-area',
-            '@radix-ui/react-select',
-            '@radix-ui/react-separator',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toggle',
-            '@radix-ui/react-toggle-group',
-            '@radix-ui/react-tooltip',
-          ],
-          // Heavy optional libraries - separate chunks for better lazy loading
-          'framer-motion': ['framer-motion'],
-          'charts': ['recharts'],
-          'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+        manualChunks(id) {
+          if (id.includes('node_modules/convex') || id.includes('node_modules/@convex-dev')) {
+            return 'convex-vendor';
+          }
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react-router/')
+          ) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'radix-ui';
+          }
+          if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion')) {
+            return 'framer-motion';
+          }
+          if (id.includes('node_modules/recharts')) {
+            return 'charts';
+          }
+          if (
+            id.includes('node_modules/react-hook-form') ||
+            id.includes('node_modules/@hookform') ||
+            id.includes('node_modules/zod')
+          ) {
+            return 'forms';
+          }
         },
         // Optimize chunk size
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -88,8 +80,8 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Increase chunk size warning limit for better chunking
-    chunkSizeWarningLimit: 1000,
+    // Standard 500 kB chunk warning limit
+    chunkSizeWarningLimit: 500,
     // Target modern browsers for better optimization
     target: 'esnext',
     // Minify options - using esbuild (faster than terser)

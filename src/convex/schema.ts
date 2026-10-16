@@ -234,6 +234,7 @@ const schema = defineSchema(
     })
       .index("by_project", ["projectId"])
       .index("by_project_number", ["projectId", "number"])
+      .index("by_workspace", ["workspaceId"])
       .index("by_workspace_created", ["workspaceId", "createdAt"])
       .index("by_assignee", ["assigneeId"])
       .index("by_status", ["statusId"])
@@ -278,6 +279,7 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_entity", ["entityType", "entityId"])
+      .index("by_workspace", ["workspaceId"])
       .index("by_workspace_created", ["workspaceId", "createdAt"])
       .index("by_project_created", ["projectId", "createdAt"]),
 

@@ -17,7 +17,8 @@ import {
   QUIET_HARBOR_PROJECT_SPECS,
   AVATAR_OPTIONS,
 } from "./constants";
-import type { Id } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
+import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -548,7 +549,7 @@ const QUIET_HARBOR_TITLES: Record<string, string[]> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function getAnonymousUser(ctx: any) {
+async function getAnonymousUser(ctx: MutationCtx | QueryCtx): Promise<Doc<"users">> {
   const user = await requireUser(ctx);
   if (!user.isAnonymous) {
     throw new Error("Guest demo is only available for anonymous guest users");
@@ -556,13 +557,13 @@ async function getAnonymousUser(ctx: any) {
   return user;
 }
 
-async function findGuestDemoWorkspaces(ctx: any, userId: Id<"users">) {
+async function findGuestDemoWorkspaces(ctx: MutationCtx | QueryCtx, userId: Id<"users">): Promise<Doc<"workspaces">[]> {
   const memberships = await ctx.db
     .query("memberships")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
 
-  const demoWorkspaces: any[] = [];
+  const demoWorkspaces: Doc<"workspaces">[] = [];
   for (const m of memberships) {
     const ws = await ctx.db.get(m.workspaceId);
     if (ws && ws.name.startsWith("Demo: ") && ws.ownerId === userId) {
@@ -572,23 +573,23 @@ async function findGuestDemoWorkspaces(ctx: any, userId: Id<"users">) {
   return demoWorkspaces;
 }
 
-async function deleteDemoWorkspace(ctx: any, workspaceId: Id<"workspaces">) {
+async function deleteDemoWorkspace(ctx: MutationCtx, workspaceId: Id<"workspaces">) {
   const issues = await ctx.db
     .query("issues")
-    .withIndex("by_workspace_created", (q: any) => q.eq("workspaceId", workspaceId))
+    .withIndex("by_workspace_created", (q) => q.eq("workspaceId", workspaceId))
     .collect();
 
   for (const iss of issues) {
     const ilRows = await ctx.db
       .query("issueLabels")
-      .withIndex("by_issue", (q: any) => q.eq("issueId", iss._id))
+      .withIndex("by_issue", (q) => q.eq("issueId", iss._id))
       .collect();
     for (const r of ilRows) await ctx.db.delete(r._id);
 
     if (iss.number % 2 === 1) {
       const cRows = await ctx.db
         .query("comments")
-        .withIndex("by_issue", (q: any) => q.eq("issueId", iss._id))
+        .withIndex("by_issue", (q) => q.eq("issueId", iss._id))
         .collect();
       for (const r of cRows) await ctx.db.delete(r._id);
     }
@@ -596,13 +597,13 @@ async function deleteDemoWorkspace(ctx: any, workspaceId: Id<"workspaces">) {
     if (iss.number % 12 === 6 || iss.number % 12 === 4) {
       const depBlocking = await ctx.db
         .query("issueDependencies")
-        .withIndex("by_blocking", (q: any) => q.eq("blockingIssueId", iss._id))
+        .withIndex("by_blocking", (q) => q.eq("blockingIssueId", iss._id))
         .collect();
       for (const r of depBlocking) await ctx.db.delete(r._id);
 
       const depBlocked = await ctx.db
         .query("issueDependencies")
-        .withIndex("by_blocked", (q: any) => q.eq("blockedIssueId", iss._id))
+        .withIndex("by_blocked", (q) => q.eq("blockedIssueId", iss._id))
         .collect();
       for (const r of depBlocked) await ctx.db.delete(r._id);
     }
@@ -612,30 +613,30 @@ async function deleteDemoWorkspace(ctx: any, workspaceId: Id<"workspaces">) {
 
   const activities = await ctx.db
     .query("activityEvents")
-    .withIndex("by_workspace_created", (q: any) => q.eq("workspaceId", workspaceId))
+    .withIndex("by_workspace_created", (q) => q.eq("workspaceId", workspaceId))
     .collect();
   for (const r of activities) await ctx.db.delete(r._id);
 
   const projects = await ctx.db
     .query("projects")
-    .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
     .collect();
 
   for (const p of projects) {
     const wfs = await ctx.db
       .query("workflows")
-      .withIndex("by_project", (q: any) => q.eq("projectId", p._id))
+      .withIndex("by_project", (q) => q.eq("projectId", p._id))
       .collect();
     for (const wf of wfs) {
       const statuses = await ctx.db
         .query("workflowStatuses")
-        .withIndex("by_workflow", (q: any) => q.eq("workflowId", wf._id))
+        .withIndex("by_workflow", (q) => q.eq("workflowId", wf._id))
         .collect();
       for (const s of statuses) await ctx.db.delete(s._id);
 
       const transitions = await ctx.db
         .query("workflowTransitions")
-        .withIndex("by_workflow", (q: any) => q.eq("workflowId", wf._id))
+        .withIndex("by_workflow", (q) => q.eq("workflowId", wf._id))
         .collect();
       for (const t of transitions) await ctx.db.delete(t._id);
 
@@ -646,13 +647,13 @@ async function deleteDemoWorkspace(ctx: any, workspaceId: Id<"workspaces">) {
 
   const labels = await ctx.db
     .query("labels")
-    .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
     .collect();
   for (const r of labels) await ctx.db.delete(r._id);
 
   const memberships = await ctx.db
     .query("memberships")
-    .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
     .collect();
 
   for (const m of memberships) {

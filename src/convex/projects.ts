@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   findProjectContext,
   loadProjectContext,
@@ -692,12 +694,12 @@ const DEMO_ISSUE_SPECS = [
 ];
 
 async function seedIssuesForProjectHelper(
-  ctx: any,
+  ctx: MutationCtx,
   params: {
-    workspaceId: any;
-    projectId: any;
-    userId: any;
-    statusDocs: any[];
+    workspaceId: Id<"workspaces">;
+    projectId: Id<"projects">;
+    userId: Id<"users">;
+    statusDocs: Doc<"workflowStatuses">[];
   },
 ) {
   const { workspaceId, projectId, userId, statusDocs } = params;
@@ -707,21 +709,21 @@ async function seedIssuesForProjectHelper(
   // Find workspace members to distribute assignments
   const memberships = await ctx.db
     .query("memberships")
-    .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
     .collect();
-  const memberUserIds = memberships.map((m: any) => m.userId);
+  const memberUserIds = memberships.map((m) => m.userId);
   if (!memberUserIds.includes(userId)) memberUserIds.unshift(userId);
 
   // Find existing issue number max
   const existingIssues = await ctx.db
     .query("issues")
-    .withIndex("by_project", (q: any) => q.eq("projectId", projectId))
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
     .collect();
-  let nextNumber = existingIssues.reduce((max: number, i: any) => Math.max(max, i.number), 0) + 1;
+  let nextNumber = existingIssues.reduce((max, i) => Math.max(max, i.number), 0) + 1;
 
   // Map categories to status IDs
   const findStatus = (cat: string) => {
-    const match = statusDocs.find((s: any) => {
+    const match = statusDocs.find((s) => {
       const sCat = (s.category || "").toLowerCase();
       const sName = (s.name || "").toLowerCase();
       if (cat === "started" || cat === "active") {
@@ -802,7 +804,7 @@ async function seedIssuesForProjectHelper(
     const s = statusDocs[sIdx];
     const sIssues = await ctx.db
       .query("issues")
-      .withIndex("by_status", (q: any) => q.eq("statusId", s._id))
+      .withIndex("by_status", (q) => q.eq("statusId", s._id))
       .collect();
 
     if (sIssues.length < 3) {
@@ -845,7 +847,7 @@ export const populateProjectWithDemoIssues = mutation({
 
     const workflow = await ctx.db
       .query("workflows")
-      .withIndex("by_project", (q: any) => q.eq("projectId", args.projectId))
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
       .first();
     if (!workflow) {
       throw new Error("Workflow not found for project");
@@ -853,7 +855,7 @@ export const populateProjectWithDemoIssues = mutation({
 
     const statusDocs = await ctx.db
       .query("workflowStatuses")
-      .withIndex("by_workflow", (q: any) => q.eq("workflowId", workflow._id))
+      .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
       .collect();
 
     if (statusDocs.length === 0) {
@@ -883,7 +885,7 @@ export const populateAllWorkspaceProjectsWithDemoIssues = mutation({
 
     const projects = await ctx.db
       .query("projects")
-      .withIndex("by_workspace", (q: any) => q.eq("workspaceId", workspaceId))
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
       .collect();
 
     let populatedCount = 0;
@@ -894,20 +896,20 @@ export const populateAllWorkspaceProjectsWithDemoIssues = mutation({
 
       const existingIssues = await ctx.db
         .query("issues")
-        .withIndex("by_project", (q: any) => q.eq("projectId", project._id))
+        .withIndex("by_project", (q) => q.eq("projectId", project._id))
         .collect();
 
       // If empty or fewer than 2 issues, populate it
       if (existingIssues.length <= 1) {
         const workflow = await ctx.db
           .query("workflows")
-          .withIndex("by_project", (q: any) => q.eq("projectId", project._id))
+          .withIndex("by_project", (q) => q.eq("projectId", project._id))
           .first();
         if (!workflow) continue;
 
         const statusDocs = await ctx.db
           .query("workflowStatuses")
-          .withIndex("by_workflow", (q: any) => q.eq("workflowId", workflow._id))
+          .withIndex("by_workflow", (q) => q.eq("workflowId", workflow._id))
           .collect();
 
         if (statusDocs.length > 0) {
