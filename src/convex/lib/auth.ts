@@ -3,6 +3,7 @@ import { internal } from "../_generated/api";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { WorkspaceRole } from "../schema";
+export type { WorkspaceRole };
 
 // ---------------------------------------------------------------------------
 // Current user
