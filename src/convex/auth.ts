@@ -66,22 +66,29 @@ const gitHubProvider = GitHub({
   },
 });
 
-const googleProvider = Google({
-  clientId: process.env.AUTH_GOOGLE_ID,
-  clientSecret: process.env.AUTH_GOOGLE_SECRET,
-  allowDangerousEmailAccountLinking: false,
-  profile(profile) {
-    return {
-      id: profile.sub,
-      name: profile.name,
-      email: profile.email ?? undefined,
-      image: profile.picture,
-    };
-  },
-});
-
 const rawAuth = convexAuth({
-  providers: [googleProvider, gitHubProvider, emailOtp, Anonymous],
+  providers: [
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+      ? [
+          Google({
+            clientId: process.env.AUTH_GOOGLE_ID,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET,
+            allowDangerousEmailAccountLinking: false,
+            profile(profile) {
+              return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email ?? undefined,
+                image: profile.picture,
+              };
+            },
+          }),
+        ]
+      : []),
+    gitHubProvider,
+    emailOtp,
+    Anonymous,
+  ],
   signIn: {
     maxFailedAttempsPerHour: 5,
   },

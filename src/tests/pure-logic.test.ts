@@ -222,6 +222,21 @@ describe("Pure Logic Unit Tests", () => {
       expect(resolveSafeRedirectUrl(undefined, base)).toBe("https://forge.example.com/app");
       expect(resolveSafeRedirectUrl("", base)).toBe("https://forge.example.com/app");
     });
+
+    it("preserves query params on same-origin OAuth returnTo redirects", () => {
+      expect(
+        resolveSafeRedirectUrl("/app/workspaces?invite=success&tab=general", base),
+      ).toBe("https://forge.example.com/app/workspaces?invite=success&tab=general");
+    });
+
+    it("rejects javascript: and data: pseudo-protocols in OAuth redirect targets", () => {
+      expect(resolveSafeRedirectUrl("javascript:alert(1)", base)).toBe(
+        "https://forge.example.com/app",
+      );
+      expect(resolveSafeRedirectUrl("data:text/html,<script>alert(1)</script>", base)).toBe(
+        "https://forge.example.com/app",
+      );
+    });
   });
 
   describe("6. HTML escaping (escapeHtml)", () => {
