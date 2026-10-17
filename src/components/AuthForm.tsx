@@ -38,20 +38,22 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isGuestLoading = false;
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestError, setGuestError] = useState<string | null>(null);
   const [githubError, setGithubError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
   const codeInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // Capture real OAuth errors from URL query parameters (e.g. from GitHub redirect failure)
+  // Capture real OAuth errors from URL query parameters (e.g. from GitHub or Google redirect failure)
   useEffect(() => {
     const oauthError = searchParams.get('error_description') || searchParams.get('error');
     if (oauthError) {
-      console.error('[OAuth] GitHub authentication error from redirect:', oauthError);
-      setGithubError(`GitHub authentication failed: ${oauthError}`);
+      console.error('[OAuth] Authentication error from redirect:', oauthError);
+      setGithubError(`Authentication failed: ${oauthError}`);
     }
   }, [searchParams]);
 
@@ -106,7 +108,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isSubmitting || isGuestLoading || isGitHubLoading) return;
+    if (isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading) return;
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return;
@@ -119,6 +121,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     disableDemoMode();
     setError(null);
     setGithubError(null);
+    setGoogleError(null);
 
     if (!isConvexConfigured) {
       setError("Email OTP sign-in requires a connected Convex deployment. Use 'Try demo as guest' to test Forge.");
@@ -255,10 +258,44 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (isGoogleLoading || isGitHubLoading || isSubmitting || isGuestLoading) return;
+    disableDemoMode();
+    setGoogleError(null);
+    setGithubError(null);
+    setError(null);
+    setGuestError(null);
+
+    if (!isConvexConfigured) {
+      setGoogleError("Google sign-in requires a connected Convex deployment with AUTH_GOOGLE_ID & AUTH_GOOGLE_SECRET configured. Use 'Try demo as guest' to test Forge.");
+      return;
+    }
+
+    setIsGoogleLoading(true);
+
+    try {
+      const destination = typeof window !== 'undefined' && window.location.origin
+        ? `${window.location.origin}${safeRedirect.startsWith('/') ? safeRedirect : '/' + safeRedirect}`
+        : safeRedirect;
+      await signIn('google', { redirectTo: destination });
+    } catch (err: unknown) {
+      console.error('Google sign-in error:', err);
+      const realMsg = err instanceof Error ? err.message : String(err);
+      const msg = realMsg.toLowerCase();
+      if (msg.includes('not configured') || msg.includes('missing auth_google')) {
+        setGoogleError("Google sign-in is not yet configured on Convex Cloud. Set AUTH_GOOGLE_ID & AUTH_GOOGLE_SECRET and deploy.");
+      } else {
+        setGoogleError(realMsg || "Couldn't sign in with Google, try again");
+      }
+      setIsGoogleLoading(false);
+    }
+  };
+
   const handleGitHubSignIn = async () => {
-    if (isGitHubLoading || isSubmitting || isGuestLoading) return;
+    if (isGitHubLoading || isGoogleLoading || isSubmitting || isGuestLoading) return;
     disableDemoMode();
     setGithubError(null);
+    setGoogleError(null);
     setError(null);
     setGuestError(null);
 
@@ -288,10 +325,11 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   };
 
   const handleGuestSignIn = () => {
-    if (isSubmitting || isGitHubLoading) return;
+    if (isSubmitting || isGitHubLoading || isGoogleLoading) return;
     setGuestError(null);
     setError(null);
     setGithubError(null);
+    setGoogleError(null);
     enableDemoMode();
     navigate(safeRedirect || '/app', { replace: true });
   };
@@ -341,12 +379,65 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             </div>
           )}
 
-          {/* Continue with GitHub Button */}
-          <div className="mt-8">
+          {/* Social Sign-in Buttons */}
+          <div className="mt-8 space-y-3">
+            {/* Continue with Google Button */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading || isGitHubLoading || isSubmitting || isGuestLoading}
+              className="w-full h-[48px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[15px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 cursor-pointer select-none"
+              style={{ boxShadow: 'none' }}
+            >
+              {isGoogleLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
+                  <span>Connecting to Google...</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4 shrink-0"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>Continue with Google</span>
+                </>
+              )}
+            </button>
+
+            {googleError && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
+              >
+                {googleError}
+              </p>
+            )}
+
+            {/* Continue with GitHub Button */}
             <button
               type="button"
               onClick={handleGitHubSignIn}
-              disabled={isGitHubLoading || isSubmitting || isGuestLoading}
+              disabled={isGitHubLoading || isGoogleLoading || isSubmitting || isGuestLoading}
               className="w-full h-[48px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[15px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 cursor-pointer select-none"
               style={{ boxShadow: 'none' }}
             >
@@ -374,20 +465,13 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             </button>
 
             {githubError && (
-              <>
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
-                >
-                  {githubError}
-                </p>
-                {Boolean(import.meta.env?.DEV) && (
-                  <p className="mt-1 font-mono text-[11px] text-[#575657] text-center">
-                    Origin: {typeof window !== "undefined" ? window.location.origin : ""}
-                  </p>
-                )}
-              </>
+              <p
+                role="alert"
+                aria-live="polite"
+                className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
+              >
+                {githubError}
+              </p>
             )}
           </div>
 
@@ -421,7 +505,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                   setEmail(e.target.value);
                   if (error) setError(null);
                 }}
-                disabled={isSubmitting || isGuestLoading || isGitHubLoading}
+                disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading}
                 placeholder="name@example.com"
                 required
                 className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
@@ -441,7 +525,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             {/* Primary button */}
             <button
               type="submit"
-              disabled={isSubmitting || isGuestLoading || isGitHubLoading || !email.trim()}
+              disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading || !email.trim()}
               className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
               style={{ boxShadow: 'none' }}
             >
@@ -471,7 +555,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
             <button
               type="button"
               onClick={handleGuestSignIn}
-              disabled={isGuestLoading || isSubmitting || isGitHubLoading}
+              disabled={isGuestLoading || isSubmitting || isGitHubLoading || isGoogleLoading}
               className="w-full h-[48px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[15px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
               style={{ boxShadow: 'none' }}
             >

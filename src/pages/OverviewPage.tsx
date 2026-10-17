@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useMemo, useEffect } from "react";
 import { useSafeQuery as useQuery } from "@/hooks/use-safe-query";
 import { Link, useParams, Navigate } from "react-router";
 import { api } from "@/convex/_generated/api";
@@ -10,12 +10,6 @@ import { OverviewSkeleton } from "@/components/Skeletons";
 import { EmptyState } from "@/components/forge";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { StatusIllustration } from "@/components/Illustrations";
 import { useAuth } from "@/hooks/use-auth";
 import { isDemoMode } from "@/lib/demoMode";
@@ -28,11 +22,6 @@ import {
 } from "@/hooks/use-workspace-data";
 import { isOpenIssue } from "@/lib/issueStatus";
 import {
-  DraggableWidgetGrid,
-  type WidgetItem,
-} from "@/components/ui/draggable-widget-grid";
-import {
-  DEFAULT_OVERVIEW_LAYOUT,
   QuickActionsWidget,
   MyOpenIssuesWidget,
   RecentActivityWidget,
@@ -42,10 +31,7 @@ import {
   type OverviewIssueItem,
 } from "@/components/overview/OverviewWidgets";
 import {
-  Move,
-  RotateCcw,
   Plus,
-  SlidersHorizontal,
   CheckCircle2,
   Circle,
   ArrowRight,
@@ -62,7 +48,6 @@ export default function OverviewPage() {
   const id = workspaceId as Id<"workspaces">;
   const isDemo = Boolean(isDemoMode() || (workspaceId && !isConvexId(workspaceId)));
   const { user } = useAuth();
-  const userId = user?._id || user?.email || "anonymous";
 
   const workspace = useQuery(
     api.workspaces.getWorkspace,
@@ -149,60 +134,7 @@ export default function OverviewPage() {
     }));
   }, [projectIssues, projects]);
 
-  // Edit mode state (sample data permanently disabled)
-  const [isEditing, setIsEditing] = useState(false);
   const canWrite = Boolean(workspace && workspace.role !== "viewer");
-
-  // Persistence in localStorage per user and workspace
-  const storageKey = `forge_overview_layout_${workspaceId}_${userId}`;
-
-  const loadSavedLayout = useCallback((): WidgetItem[] => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed: WidgetItem[] = JSON.parse(saved);
-        const validIds = new Set(DEFAULT_OVERVIEW_LAYOUT.map((w) => w.id));
-        const savedIds = new Set(parsed.map((w) => w.id));
-        if (validIds.size === savedIds.size && [...validIds].every((i) => savedIds.has(i))) {
-          return parsed.map((item) => {
-            const def = DEFAULT_OVERVIEW_LAYOUT.find((d) => d.id === item.id);
-            return {
-              ...item,
-              size: def?.size || item.size,
-              title: def?.title || item.title,
-            };
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("Failed to read overview layout from localStorage:", e);
-    }
-    return DEFAULT_OVERVIEW_LAYOUT;
-  }, [storageKey]);
-
-  const [layout, setLayout] = useState<WidgetItem[]>(loadSavedLayout);
-
-  useEffect(() => {
-    setLayout(loadSavedLayout());
-  }, [loadSavedLayout]);
-
-  const handleLayoutChange = (newLayout: WidgetItem[]) => {
-    setLayout(newLayout);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(newLayout));
-    } catch (e) {
-      console.warn("Failed to persist overview layout:", e);
-    }
-  };
-
-  const handleResetLayout = () => {
-    setLayout(DEFAULT_OVERVIEW_LAYOUT);
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (e) {
-      console.warn("Failed to clear overview layout:", e);
-    }
-  };
 
   const loading =
     workspace === undefined ||
@@ -264,65 +196,6 @@ export default function OverviewPage() {
 
   const projectList = projects ?? [];
 
-  const renderWidgetItem = (item: WidgetItem) => {
-    switch (item.id) {
-      case "quick_actions":
-        return (
-          <QuickActionsWidget
-            workspaceId={id}
-            workspaceName={workspace.workspace.name}
-            canWrite={canWrite}
-            projectList={projectList}
-          />
-        );
-      case "my_open_issues":
-        return (
-          <MyOpenIssuesWidget
-            workspaceId={id}
-            issues={realIssues}
-            canWrite={canWrite}
-            projectList={projectList}
-            isLoading={issuesLoading}
-          />
-        );
-      case "recent_activity":
-        return (
-          <RecentActivityWidget
-            workspaceId={id}
-            activity={activity ?? []}
-            isLoading={activity === undefined}
-          />
-        );
-      case "status_distribution":
-        return (
-          <StatusDistributionWidget
-            rollup={realRollup}
-            isLoading={summariesLoading}
-          />
-        );
-      case "priority_breakdown":
-        return (
-          <PriorityBreakdownWidget
-            rollup={realRollup}
-            issues={allWorkspaceIssues}
-            workspaceId={id}
-            projectList={projectList}
-            isLoading={issuesLoading || summariesLoading}
-          />
-        );
-      case "project_health":
-        return (
-          <ProjectHealthWidget
-            workspaceId={id}
-            projectList={projectList}
-            riskByProject={realRiskByProject}
-            canWrite={canWrite}
-          />
-        );
-      default:
-        return <div>{item.title}</div>;
-    }
-  };
 
   // Checklist state for new workspaces
   const hasProject = projectList.length > 0;
@@ -370,33 +243,6 @@ export default function OverviewPage() {
           description={`${workspace.workspace.name} · ${workspace.projectCount} active projects, ${workspace.memberCount} members.`}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              {/* Customize menu for layout rearrangement */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5 rounded-full text-[13px]">
-                    <SlidersHorizontal className="size-3.5" />
-                    <span>Customize</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-[14px] p-1.5 shadow-none border-border bg-white">
-                  <DropdownMenuItem
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="rounded-[10px] text-[13px] cursor-pointer"
-                  >
-                    <Move className="size-3.5 mr-2" />
-                    {isEditing ? "Done rearranging" : "Rearrange widgets"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleResetLayout}
-                    className="rounded-[10px] text-[13px] text-[#575657] cursor-pointer"
-                  >
-                    <RotateCcw className="size-3.5 mr-2" />
-                    Reset layout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* New Issue & New Project actions */}
               <CreateIssueDialog
                 projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
                 workspaceId={id}
@@ -410,14 +256,7 @@ export default function OverviewPage() {
               <CreateProjectDialog workspaceId={id} canCreate={canWrite} />
             </div>
           }
-        >
-          {isEditing && (
-            <div className="flex items-center gap-2 rounded-full border border-border bg-[#F1F1F3] px-3.5 py-1.5 text-[12px] text-[#575657]">
-              <Move className="size-3.5 text-[#0D0D0D]" />
-              <span>Drag widgets to rearrange. Use Alt + Arrow keys for keyboard reordering.</span>
-            </div>
-          )}
-        </PageHeader>
+        />
 
 
 
@@ -698,17 +537,65 @@ export default function OverviewPage() {
           </Link>
         </div>
 
-        <div className="w-full">
-          <DraggableWidgetGrid
-            items={layout}
-            onChange={handleLayoutChange}
-            renderItem={renderWidgetItem}
-            editable={isEditing}
-            maxColumns={4}
-            gap={16}
-            radius={20}
-            rowRatio={0.70}
-          />
+        <div className="w-full flex flex-col gap-4">
+          {/* Row 1: Quick actions + Status distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[340px]">
+            <div className="h-[340px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+              <QuickActionsWidget
+                workspaceId={id}
+                workspaceName={workspace.workspace.name}
+                canWrite={canWrite}
+                projectList={projectList}
+              />
+            </div>
+            <div className="h-[340px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+              <StatusDistributionWidget
+                rollup={realRollup}
+                isLoading={summariesLoading}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: My open issues + Priorities breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[380px]">
+            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+              <MyOpenIssuesWidget
+                workspaceId={id}
+                issues={realIssues}
+                canWrite={canWrite}
+                projectList={projectList}
+                isLoading={issuesLoading}
+              />
+            </div>
+            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+              <PriorityBreakdownWidget
+                rollup={realRollup}
+                issues={allWorkspaceIssues}
+                workspaceId={id}
+                projectList={projectList}
+                isLoading={issuesLoading || summariesLoading}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Recent activity + Project health */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[380px]">
+            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+              <RecentActivityWidget
+                workspaceId={id}
+                activity={activity ?? []}
+                isLoading={activity === undefined}
+              />
+            </div>
+            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+              <ProjectHealthWidget
+                workspaceId={id}
+                projectList={projectList}
+                riskByProject={realRiskByProject}
+                canWrite={canWrite}
+              />
+            </div>
+          </div>
         </div>
       </PageStack>
     </AppShell>

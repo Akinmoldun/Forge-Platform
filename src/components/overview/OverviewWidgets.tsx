@@ -179,65 +179,67 @@ export function QuickActionsWidget({
   projectList: OverviewDataProps["projectList"];
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">Quick actions</h3>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-0.5">
-        {canWrite && (
-          <CreateIssueDialog
-            projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] pr-1 pb-4 pt-3 flex flex-col justify-between gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-0.5">
+          {canWrite && (
+            <CreateIssueDialog
+              projects={projectList.map((p) => ({ _id: p._id, name: p.name, key: p.key }))}
+              workspaceId={workspaceId as Id<"workspaces">}
+              canCreate={canWrite}
+              trigger={
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-center rounded-[8px] text-[13px] font-medium border border-[rgba(0,0,0,0.08)] bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
+                >
+                  <Plus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
+                  <span className="truncate">New issue</span>
+                </Button>
+              }
+            />
+          )}
+          {canWrite && (
+            <CreateProjectDialog
+              workspaceId={workspaceId as Id<"workspaces">}
+              canCreate={canWrite}
+              trigger={
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-center rounded-[8px] text-[13px] font-medium border border-[rgba(0,0,0,0.08)] bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
+                >
+                  <FolderKanban className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
+                  <span className="truncate">New project</span>
+                </Button>
+              }
+            />
+          )}
+          <InviteMembersDialog
             workspaceId={workspaceId as Id<"workspaces">}
-            canCreate={canWrite}
+            workspaceName={workspaceName || "Workspace"}
+            canInvite={canWrite}
             trigger={
               <Button
                 variant="outline"
                 className="h-9 w-full justify-center rounded-[8px] text-[13px] font-medium border border-[rgba(0,0,0,0.08)] bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
               >
-                <Plus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
-                <span className="truncate">New issue</span>
+                <UserPlus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
+                <span className="truncate">Invite member</span>
               </Button>
             }
           />
-        )}
-        {canWrite && (
-          <CreateProjectDialog
-            workspaceId={workspaceId as Id<"workspaces">}
-            canCreate={canWrite}
-            trigger={
-              <Button
-                variant="outline"
-                className="h-9 w-full justify-center rounded-[8px] text-[13px] font-medium border border-[rgba(0,0,0,0.08)] bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
-              >
-                <FolderKanban className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
-                <span className="truncate">New project</span>
-              </Button>
-            }
-          />
-        )}
-        <InviteMembersDialog
-          workspaceId={workspaceId as Id<"workspaces">}
-          workspaceName={workspaceName || "Workspace"}
-          canInvite={canWrite}
-          trigger={
-            <Button
-              variant="outline"
-              className="h-9 w-full justify-center rounded-[8px] text-[13px] font-medium border border-[rgba(0,0,0,0.08)] bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
-            >
-              <UserPlus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
-              <span className="truncate">Invite member</span>
-            </Button>
-          }
-        />
+        </div>
+        <p className="text-[12px] text-[#575657] leading-relaxed">
+          Create work or onboard team members into {workspaceName || "this workspace"}.
+        </p>
       </div>
-      <p className="text-[12px] text-[#575657] leading-relaxed">
-        Create work or onboard team members into {workspaceName || "this workspace"}.
-      </p>
     </div>
   );
 }
 
-/* 2. My open issues (at most 5 rows, full width titles, card fits content) */
+/* 2. My open issues */
 export function MyOpenIssuesWidget({
   workspaceId,
   issues,
@@ -259,11 +261,10 @@ export function MyOpenIssuesWidget({
   const openIssues = issues.filter((i) =>
     isOpenIssue(i, i.statusCategory),
   );
-  const rows = openIssues.slice(0, 7);
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">My open issues</h3>
         <Link
           to={viewAllLink}
@@ -273,22 +274,22 @@ export function MyOpenIssuesWidget({
         </Link>
       </div>
 
-      <div>
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] pr-1 pb-4 pt-1 flex flex-col">
         {isLoading ? (
           <div className="space-y-3 py-3">
             <div className="h-4 w-full rounded bg-[#F1F1F3] animate-pulse" />
             <div className="h-4 w-4/5 rounded bg-[#F1F1F3] animate-pulse" />
             <div className="h-4 w-2/3 rounded bg-[#F1F1F3] animate-pulse" />
           </div>
-        ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
+        ) : openIssues.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
             <Inbox className="size-6 text-[#575657]/40 mb-1.5" />
             <p className="text-[13px] font-medium text-[#0D0D0D]">No open issues</p>
             <p className="text-[12px] text-[#575657]">You have no pending work items.</p>
           </div>
         ) : (
           <ul className="divide-y divide-[rgba(0,0,0,0.06)]">
-            {rows.map((issue) => {
+            {openIssues.map((issue) => {
               const keyBadge = issue.projectKey ? `${issue.projectKey}-${issue.number}` : `#${issue.number}`;
               return (
                 <li key={issue._id}>
@@ -318,7 +319,7 @@ export function MyOpenIssuesWidget({
   );
 }
 
-/* 3. Recent activity (at most 5 rows, full sentence, key as link, relative time) */
+/* 3. Recent activity */
 export function RecentActivityWidget({
   workspaceId,
   activity,
@@ -328,11 +329,11 @@ export function RecentActivityWidget({
   activity: OverviewDataProps["activity"];
   isLoading?: boolean;
 }) {
-  const events = activity.slice(0, 7);
+  const events = activity;
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">Recent activity</h3>
         <Link
           to={`/app/workspaces/${workspaceId}/activity`}
@@ -342,7 +343,7 @@ export function RecentActivityWidget({
         </Link>
       </div>
 
-      <div>
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] pr-1 pb-4 pt-1 flex flex-col">
         {isLoading ? (
           <div className="space-y-3 py-3">
             <div className="h-4 w-full rounded bg-[#F1F1F3] animate-pulse" />
@@ -350,7 +351,7 @@ export function RecentActivityWidget({
             <div className="h-4 w-3/4 rounded bg-[#F1F1F3] animate-pulse" />
           </div>
         ) : events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
             <Clock className="size-6 text-[#575657]/40 mb-1.5" />
             <p className="text-[13px] font-medium text-[#0D0D0D]">No activity yet</p>
             <p className="text-[12px] text-[#575657]">Actions taken in this workspace appear here.</p>
@@ -412,34 +413,39 @@ export function StatusDistributionWidget({
   const statusTotal = statusList.reduce((sum, s) => sum + (s?.count || 0), 0);
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">Status distribution</h3>
         <span className="text-[12px] text-[#575657] tabular-nums font-normal">
           {isLoading ? "..." : `${statusTotal} total`}
         </span>
       </div>
 
-      <div className="py-1">
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] pr-1 pb-4 pt-2.5 flex flex-col">
         {isLoading ? (
-          <div className="h-6 w-full rounded bg-[#F1F1F3] animate-pulse my-2" />
+          <div className="h-6 w-full rounded bg-[#F1F1F3] animate-pulse my-auto" />
         ) : statusTotal === 0 ? (
-          <p className="text-[12px] text-[#575657] text-center py-4">No issues recorded yet.</p>
+          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+            <p className="text-[13px] font-medium text-[#0D0D0D]">No issues recorded yet</p>
+            <p className="text-[12px] text-[#575657] mt-0.5">Issues added to your projects will appear here.</p>
+          </div>
         ) : (
-          <StackedBar
-            segments={statusList.map((s) => ({
-              label: s.statusName,
-              value: s.count,
-              color: s.color || STATUS_PALETTE[s.statusName] || "#9A9A9F",
-            }))}
-          />
+          <div className="space-y-4 my-auto">
+            <StackedBar
+              segments={statusList.map((s) => ({
+                label: s.statusName,
+                value: s.count,
+                color: s.color || STATUS_PALETTE[s.statusName] || "#9A9A9F",
+              }))}
+            />
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-/* 5. Priority breakdown: Notion-like title, muted subtitle, 5 plain rows with count, % and thin 4px bar */
+/* 5. Priority breakdown */
 export function PriorityBreakdownWidget({
   rollup,
   issues = [],
@@ -453,7 +459,6 @@ export function PriorityBreakdownWidget({
   projectList?: OverviewDataProps["projectList"];
   isLoading?: boolean;
 }) {
-  // Use isOpenIssue so only open issues are counted and numbers match Overview cards exactly
   const openIssues = issues.length > 0
     ? issues.filter((i) => isOpenIssue(i, i.statusCategory))
     : [];
@@ -474,15 +479,13 @@ export function PriorityBreakdownWidget({
     : `/app/workspaces/${workspaceId}/projects`;
 
   return (
-    <div className="flex flex-col gap-2.5">
-      {/* Title & subtitle */}
-      <div className="border-b border-[rgba(0,0,0,0.08)] pb-2.5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">Priority breakdown</h3>
         <p className="text-[12px] text-[#575657] mt-0.5">{totalOpen} open issues</p>
       </div>
 
-      {/* Five plain rows: label left, number & % right, thin 4px bar underneath */}
-      <div className="space-y-3 pt-1">
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] pr-1 pb-4 pt-2">
         {isLoading ? (
           <div className="space-y-3 py-1">
             <div className="h-4 w-full rounded bg-[#F1F1F3] animate-pulse" />
@@ -491,66 +494,67 @@ export function PriorityBreakdownWidget({
             <div className="h-4 w-2/3 rounded bg-[#F1F1F3] animate-pulse" />
           </div>
         ) : (
-          priorities.map((p) => {
-          let count = 0;
-          if (openIssues.length > 0) {
-            count = openIssues.filter((i) => {
-              const pr = (i.priority || "none").toLowerCase();
-              return pr === p.id;
-            }).length;
-          } else {
-            const priorityList = Array.isArray(rollup?.byPriority) ? rollup.byPriority : [];
-            const found = priorityList.find(
-              (r) => r.priority.toLowerCase() === p.id,
-            );
-            count = found ? found.count : 0;
-          }
+          <div className="space-y-3">
+            {priorities.map((p) => {
+              let count = 0;
+              if (openIssues.length > 0) {
+                count = openIssues.filter((i) => {
+                  const pr = (i.priority || "none").toLowerCase();
+                  return pr === p.id;
+                }).length;
+              } else {
+                const priorityList = Array.isArray(rollup?.byPriority) ? rollup.byPriority : [];
+                const found = priorityList.find(
+                  (r) => r.priority.toLowerCase() === p.id,
+                );
+                count = found ? found.count : 0;
+              }
 
-          const pct = totalOpen > 0 ? Math.round((count / totalOpen) * 100) : 0;
-          const targetUrl = `${destinationBase}?priority=${p.id}`;
+              const pct = totalOpen > 0 ? Math.round((count / totalOpen) * 100) : 0;
+              const targetUrl = `${destinationBase}?priority=${p.id}`;
 
-          return (
-            <Link
-              key={p.id}
-              to={targetUrl}
-              className="group block rounded-[6px] p-1 -mx-1 hover:bg-[#F1F1F3] transition-colors"
-            >
-              <div className="flex items-center justify-between text-[13px] mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="size-2 rounded-full shrink-0"
-                    style={{ backgroundColor: p.color }}
-                  />
-                  <span className="font-normal text-[#0D0D0D] group-hover:underline">
-                    {p.label}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-[12px] tabular-nums">
-                  <span className="font-medium text-[#0D0D0D]">{count}</span>
-                  <span className="text-[#575657]">({pct}%)</span>
-                </div>
-              </div>
+              return (
+                <Link
+                  key={p.id}
+                  to={targetUrl}
+                  className="group block rounded-[6px] p-1 -mx-1 hover:bg-[#F1F1F3] transition-colors"
+                >
+                  <div className="flex items-center justify-between text-[13px] mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2 rounded-full shrink-0"
+                        style={{ backgroundColor: p.color }}
+                      />
+                      <span className="font-normal text-[#0D0D0D] group-hover:underline">
+                        {p.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[12px] tabular-nums">
+                      <span className="font-medium text-[#0D0D0D]">{count}</span>
+                      <span className="text-[#575657]">({pct}%)</span>
+                    </div>
+                  </div>
 
-              {/* Thin 4px bar underneath in priority color */}
-              <div className="h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(100, Math.max(0, pct))}%`,
-                    backgroundColor: p.color,
-                  }}
-                />
-              </div>
-            </Link>
-          );
-        })
-      )}
+                  <div className="h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, pct))}%`,
+                        backgroundColor: p.color,
+                      }}
+                    />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* 6. Project health: up to 5 projects, plain text risk word, 4px progress bar */
+/* 6. Project health */
 export function ProjectHealthWidget({
   workspaceId,
   projectList,
@@ -559,10 +563,8 @@ export function ProjectHealthWidget({
   workspaceId: string;
   projectList: OverviewDataProps["projectList"];
   riskByProject: OverviewDataProps["riskByProject"];
-  canWrite: boolean;
+  canWrite?: boolean;
 }) {
-  const visibleProjects = projectList.slice(0, 5);
-
   const getRiskColor = (level: string) => {
     switch (level.toLowerCase()) {
       case "critical":
@@ -577,8 +579,8 @@ export function ProjectHealthWidget({
   };
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
         <h3 className="text-[14px] font-[500] text-[#0D0D0D]">Project health</h3>
         <Link
           to={`/app/workspaces/${workspaceId}/projects`}
@@ -588,14 +590,15 @@ export function ProjectHealthWidget({
         </Link>
       </div>
 
-      <div>
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] pr-1 pb-4 pt-1 flex flex-col">
         {projectList.length === 0 ? (
-          <div className="py-6 text-center text-[12px] text-[#575657]">
-            No projects in this workspace.
+          <div className="flex-1 flex flex-col items-center justify-center py-6 text-center text-[12px] text-[#575657]">
+            <p className="text-[13px] font-medium text-[#0D0D0D]">No projects yet</p>
+            <p className="text-[12px] text-[#575657] mt-0.5">Projects created in this workspace appear here.</p>
           </div>
         ) : (
           <div className="divide-y divide-[rgba(0,0,0,0.06)]">
-            {visibleProjects.map((p) => {
+            {projectList.map((p) => {
               const risk = riskByProject.get(p._id);
               const riskLevel = risk?.level?.toLowerCase() || "low";
               const riskWord =
@@ -627,7 +630,6 @@ export function ProjectHealthWidget({
                       </span>
                     </div>
 
-                    {/* Single small risk word in text, not a pill with a border */}
                     <span className={cn("text-[12px] shrink-0", getRiskColor(riskLevel))}>
                       {riskWord}
                     </span>
@@ -640,7 +642,6 @@ export function ProjectHealthWidget({
                     <span className="tabular-nums font-mono">{progressPct}%</span>
                   </div>
 
-                  {/* Thin 4px progress bar */}
                   <div className="mt-1.5 h-1 w-full rounded-full bg-[#F1F1F3] overflow-hidden">
                     <div
                       className="h-full rounded-full bg-[#0D0D0D] transition-all duration-300"

@@ -40,6 +40,8 @@ Note: Vercel only needs `VITE_CONVEX_URL`. Only `VITE_`-prefixed variables are e
 | `CONVEX_DEPLOY_KEY` | Deployment key from Convex Production Dashboard (set in Vercel CI) |
 | `AUTH_GITHUB_ID` | GitHub OAuth application Client ID |
 | `AUTH_GITHUB_SECRET` | GitHub OAuth application Client Secret |
+| `AUTH_GOOGLE_ID` | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 | `EMAIL_PROVIDER` | `resend` or `brevo` for transactional OTP delivery |
 | `RESEND_API_KEY` | API key for Resend |
 | `EMAIL_FROM` | Verified sender address (e.g. `login@yourdomain.com`) |
@@ -49,6 +51,15 @@ In your GitHub Developer Settings (OAuth App), configure:
 - **Homepage URL**: Your Vercel production `SITE_URL` (e.g. `https://your-domain.vercel.app`)
 - **Authorization callback URL**: `https://<your-convex-deployment>.convex.site/api/auth/callback/github`
   *(Note: Must use `.convex.site`, not `.convex.cloud`)*
+
+### Google OAuth Setup
+In Google Cloud Console:
+1. Create a project in Google Cloud Console.
+2. Configure the OAuth consent screen (User type: External, scopes: `openid`, `email`, `profile`).
+3. Create credentials: OAuth client ID of application type "Web application".
+4. Set **Authorized JavaScript origins** to your production site URL (e.g. `https://your-domain.vercel.app`).
+5. Set **Authorized redirect URIs** to `https://<your-convex-deployment>.convex.site/api/auth/callback/google` *(Note: Must use `.convex.site`, not `.convex.cloud`)*.
+6. Copy the Client ID and Client Secret into Convex environment variables as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
 
 ---
 

@@ -1,6 +1,7 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
 import GitHub from "@auth/core/providers/github";
+import Google from "@auth/core/providers/google";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
@@ -65,8 +66,22 @@ const gitHubProvider = GitHub({
   },
 });
 
+const googleProvider = Google({
+  clientId: process.env.AUTH_GOOGLE_ID,
+  clientSecret: process.env.AUTH_GOOGLE_SECRET,
+  allowDangerousEmailAccountLinking: false,
+  profile(profile) {
+    return {
+      id: profile.sub,
+      name: profile.name,
+      email: profile.email ?? undefined,
+      image: profile.picture,
+    };
+  },
+});
+
 const rawAuth = convexAuth({
-  providers: [gitHubProvider, emailOtp, Anonymous],
+  providers: [googleProvider, gitHubProvider, emailOtp, Anonymous],
   signIn: {
     maxFailedAttempsPerHour: 5,
   },
@@ -88,6 +103,11 @@ export const signIn = action({
     calledBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Google configuration validation
+    if (args.provider === "google" && (!process.env.AUTH_GOOGLE_ID || !process.env.AUTH_GOOGLE_SECRET)) {
+      throw new Error("Google sign-in is not configured. Missing AUTH_GOOGLE_ID or AUTH_GOOGLE_SECRET.");
+    }
+
     // GitHub configuration validation
     if (args.provider === "github" && (!process.env.AUTH_GITHUB_ID || !process.env.AUTH_GITHUB_SECRET)) {
       throw new Error("GitHub sign-in is not configured. Missing AUTH_GITHUB_ID or AUTH_GITHUB_SECRET.");

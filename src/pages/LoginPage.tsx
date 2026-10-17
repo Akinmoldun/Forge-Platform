@@ -33,9 +33,9 @@ export default function LoginPage({ redirectAfterAuth = '/app' }: LoginPageProps
   return (
     <div className="min-h-screen min-[900px]:h-screen w-full flex flex-col min-[900px]:flex-row min-[900px]:overflow-hidden bg-[#FBFBFC]">
       {/* Left half: white background, content vertically centered, max-width 380px */}
-      <div className="w-full min-[900px]:w-1/2 min-h-screen min-[900px]:h-full flex flex-col justify-between bg-white overflow-y-auto min-[900px]:overflow-hidden relative z-10">
+      <div className="w-full min-[900px]:w-1/2 min-h-screen min-[900px]:h-full flex flex-col justify-between bg-white overflow-y-auto relative z-10">
         {/* Top-left: Forge logo and wordmark (padding 32px 48px on desktop) */}
-        <div className="flex items-center justify-between w-full p-6 sm:p-8 min-[900px]:px-12 min-[900px]:py-8">
+        <div className="shrink-0 flex items-center justify-between w-full p-6 sm:p-8 min-[900px]:px-12 min-[900px]:py-8">
           <Link
             to="/"
             aria-label="Forge home"
@@ -66,17 +66,12 @@ export default function LoginPage({ redirectAfterAuth = '/app' }: LoginPageProps
         </div>
 
         {/* Form centered, max-width 380px, padding 24px under 900px */}
-        <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 min-[900px]:px-0 min-[900px]:py-0">
+        <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 min-[900px]:px-0 min-[900px]:py-8">
           <AuthForm mode="login" redirectAfterAuth={redirectAfterAuth} />
-          {Boolean(import.meta.env?.DEV) && (
-            <div className="mt-4 p-2 rounded bg-black/[0.04] text-center font-mono text-[11px] text-[#575657]">
-              Origin: {typeof window !== "undefined" ? window.location.origin : ""}
-            </div>
-          )}
         </div>
 
         {/* Bottom edge spacer */}
-        <div className="h-8 min-[900px]:px-12 min-[900px]:py-4" aria-hidden="true" />
+        <div className="shrink-0 h-8 min-[900px]:px-12 min-[900px]:py-4" aria-hidden="true" />
       </div>
 
       {/* Right half: decorative panel */}
