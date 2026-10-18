@@ -1,8 +1,23 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {
+      "source": "/(.*\\.(?:png|jpg|jpeg|svg|webp|ico|webmanifest))",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.(?:png|jpg|jpeg|svg|webp|ico|webmanifest|json|js|css|woff|woff2)).*)",
       "destination": "/index.html"
     }
   ]
