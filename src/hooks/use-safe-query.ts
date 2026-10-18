@@ -375,7 +375,12 @@ function useRealSafeMutation<Mutation extends FunctionReference<"mutation">>(
     try {
       return await realMutation(args as any);
     } catch (err: any) {
-      if (err?.data?.code === "ACCOUNT_REQUIRED" && typeof window !== "undefined") {
+      if (
+        (err?.data?.code === "ACCOUNT_REQUIRED" ||
+          err?.code === "ACCOUNT_REQUIRED" ||
+          err?.name === "DemoAccountRequiredError") &&
+        typeof window !== "undefined"
+      ) {
         window.dispatchEvent(new CustomEvent("forge:account-required"));
       }
       throw err;
@@ -390,7 +395,19 @@ function useMockMutation<Mutation extends FunctionReference<"mutation">>(
   return async (args?: Mutation["_args"]): Promise<Mutation["_returnType"]> => {
     const qName = getFunctionName(mutation).toLowerCase();
     const anyArgs = (args ?? {}) as Record<string, any>;
-    return executeDemoMutation(qName, anyArgs) as any;
+    try {
+      return executeDemoMutation(qName, anyArgs) as any;
+    } catch (err: any) {
+      if (
+        (err?.data?.code === "ACCOUNT_REQUIRED" ||
+          err?.code === "ACCOUNT_REQUIRED" ||
+          err?.name === "DemoAccountRequiredError") &&
+        typeof window !== "undefined"
+      ) {
+        window.dispatchEvent(new CustomEvent("forge:account-required"));
+      }
+      throw err;
+    }
   };
 }
 

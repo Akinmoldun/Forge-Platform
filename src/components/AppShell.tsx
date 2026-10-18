@@ -59,7 +59,7 @@ import { CreateIssueDialog, CreateProjectDialog } from "./dialogs";
 import { CommandPaletteDialog } from "./CommandPaletteDialog";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { InviteMembersDialog } from "./InviteMembersDialog";
-import { CreateAccountDialog } from "./CreateAccountDialog";
+import { useAccountRequired } from "./AccountRequiredProvider";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
 
 /** Primary workspace navigation rows. */
@@ -575,6 +575,7 @@ export function AppShell({
 
   // Invite member dialog state
   const [inviteOpen, setInviteOpen] = useState(false);
+  const { requireAccount } = useAccountRequired();
 
   // Pinned projects in localStorage
   const storagePinKey = `forge_pinned_${workspaceId || "global"}_${user?._id || "anon"}`;
@@ -812,9 +813,10 @@ export function AppShell({
           <Building2 className="size-3.5 mr-2 text-[#575657]" /> All workspaces
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => {
+          onSelect={(e) => {
             if (isDemoMode()) {
-              window.dispatchEvent(new CustomEvent("forge:account-required"));
+              e.preventDefault();
+              requireAccount();
               return;
             }
             navigate("/app");
@@ -1408,12 +1410,17 @@ export function AppShell({
         projects={projects}
         onNewIssue={() => setNewIssueOpen(true)}
         onNewProject={() => setNewProjectOpen(true)}
-        onInviteMember={() => setInviteOpen(true)}
+        onInviteMember={() => {
+          if (isDemoMode()) {
+            requireAccount();
+            return;
+          }
+          setInviteOpen(true);
+        }}
         onToggleSidebar={toggleCollapsed}
       />
 
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <CreateAccountDialog />
     </div>
   );
 }

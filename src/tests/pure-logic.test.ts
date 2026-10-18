@@ -7,6 +7,7 @@ import { resolveSafeRedirectUrl } from "../convex/auth";
 import { escapeHtml } from "../convex/email/templates";
 import { demoStore } from "../data/in-memory-demo-store";
 import { DemoAccountRequiredError } from "../lib/demoErrors";
+import { subscribeAccountRequired } from "../components/AccountRequiredProvider";
 
 describe("Pure Logic Unit Tests", () => {
   describe("1. roleAtLeast - Every role pair rank verification", () => {
@@ -357,6 +358,30 @@ describe("Pure Logic Unit Tests", () => {
 
       // Restore original
       demoStore.updateIssue(issue._id, { title: originalTitle });
+    });
+  });
+
+  describe("10. Account Required Event Bus Subscription", () => {
+    it("subscribeAccountRequired triggers callback on forge:account-required and unsubscribes cleanly", () => {
+      const originalWindow = (globalThis as any).window;
+      const target = new EventTarget();
+      (globalThis as any).window = target;
+
+      try {
+        let callCount = 0;
+        const unsubscribe = subscribeAccountRequired(() => {
+          callCount++;
+        });
+
+        window.dispatchEvent(new CustomEvent("forge:account-required"));
+        expect(callCount).toBe(1);
+
+        unsubscribe();
+        window.dispatchEvent(new CustomEvent("forge:account-required"));
+        expect(callCount).toBe(1);
+      } finally {
+        (globalThis as any).window = originalWindow;
+      }
     });
   });
 });

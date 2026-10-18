@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Dialog,
@@ -11,59 +10,34 @@ import {
 import { disableDemoMode } from "@/lib/demoMode";
 
 interface CreateAccountDialogProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function CreateAccountDialog({
-  open: controlledOpen,
-  onOpenChange: controlledOnOpenChange,
-}: CreateAccountDialogProps = {}) {
-  const [internalOpen, setInternalOpen] = useState(false);
+  open,
+  onOpenChange,
+}: CreateAccountDialogProps) {
   const navigate = useNavigate();
 
-  const isControlled = controlledOpen !== undefined;
-  const isOpen = isControlled ? controlledOpen : internalOpen;
-
-  const setOpen = React.useCallback(
-    (open: boolean) => {
-      if (!isControlled) {
-        setInternalOpen(open);
-      }
-      controlledOnOpenChange?.(open);
-    },
-    [isControlled, controlledOnOpenChange],
-  );
-
-  useEffect(() => {
-    const handleAccountRequired = () => {
-      setOpen(true);
-    };
-
-    window.addEventListener("forge:account-required", handleAccountRequired);
-    return () => {
-      window.removeEventListener("forge:account-required", handleAccountRequired);
-    };
-  }, [setOpen]);
-
   const handleCreateAccount = () => {
-    setOpen(false);
+    onOpenChange(false);
     disableDemoMode();
     navigate("/signup");
   };
 
   const handleLogIn = () => {
-    setOpen(false);
+    onOpenChange(false);
     disableDemoMode();
     navigate("/login");
   };
 
   const handleKeepExploring = () => {
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px] p-6 rounded-[16px] bg-white border border-black/10 shadow-xl">
         <DialogHeader className="text-left space-y-2">
           <DialogTitle className="text-[20px] font-semibold text-[#0D0D0D] tracking-tight">

@@ -10,6 +10,7 @@ import { OverviewSkeleton } from "@/components/Skeletons";
 import { EmptyState } from "@/components/forge";
 import { CreateIssueDialog, CreateProjectDialog } from "@/components/dialogs";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
+import { useAccountRequired } from "@/components/AccountRequiredProvider";
 import { StatusIllustration } from "@/components/Illustrations";
 import { useAuth } from "@/hooks/use-auth";
 import { isDemoMode } from "@/lib/demoMode";
@@ -48,6 +49,7 @@ export default function OverviewPage() {
   const id = workspaceId as Id<"workspaces">;
   const isDemo = Boolean(isDemoMode() || (workspaceId && !isConvexId(workspaceId)));
   const { user } = useAuth();
+  const { requireAccount } = useAccountRequired();
 
   const workspace = useQuery(
     api.workspaces.getWorkspace,
@@ -434,7 +436,17 @@ export default function OverviewPage() {
                       workspaceName={workspace.workspace.name}
                       canInvite={canWrite}
                       trigger={
-                        <Button size="sm" className="h-8 rounded-full bg-[#0D0D0D] px-3 text-[12px] text-white hover:bg-[#262626]">
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-full bg-[#0D0D0D] px-3 text-[12px] text-white hover:bg-[#262626]"
+                          onClick={(e) => {
+                            if (isDemoMode()) {
+                              e.preventDefault();
+                              requireAccount();
+                              return;
+                            }
+                          }}
+                        >
                           Invite member <ArrowRight className="size-3 ml-1" />
                         </Button>
                       }

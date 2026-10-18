@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { isDemoMode } from "@/lib/demoMode";
+import { useAccountRequired } from "@/components/AccountRequiredProvider";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ import { toast } from "sonner";
 export default function AppHome() {
   const { user, isAuthenticated, isLoading, hasOAuthCode } = useAuth();
   const navigate = useNavigate();
+  const { requireAccount } = useAccountRequired();
   const isRealUser = Boolean(user && !user.isAnonymous);
 
   useEffect(() => {
@@ -91,6 +93,10 @@ export default function AppHome() {
   };
 
   const handleCreate = async () => {
+    if (isDemoMode()) {
+      requireAccount();
+      return;
+    }
     if (name.trim().length < 2 || creating) return;
     setCreating(true);
     try {
@@ -106,6 +112,7 @@ export default function AppHome() {
         (e as Error)?.name === "DemoAccountRequiredError"
       ) {
         setCreateOpen(false);
+        requireAccount();
         return;
       }
       toast.error(e instanceof Error ? e.message : "Failed to create workspace");
@@ -134,14 +141,23 @@ export default function AppHome() {
               open={createOpen}
               onOpenChange={(open) => {
                 if (open && isDemoMode()) {
-                  window.dispatchEvent(new CustomEvent("forge:account-required"));
+                  requireAccount();
                   return;
                 }
                 setCreateOpen(open);
               }}
             >
               <DialogTrigger asChild>
-                <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
+                <Button
+                  onClick={(e) => {
+                    if (isDemoMode()) {
+                      e.preventDefault();
+                      requireAccount();
+                      return;
+                    }
+                  }}
+                  className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
+                >
                   <Plus className="size-4 mr-1" /> New workspace
                 </Button>
               </DialogTrigger>
@@ -187,7 +203,14 @@ export default function AppHome() {
                   </Button>
                   <Button
                     className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
-                    onClick={handleCreate}
+                    onClick={(e) => {
+                      if (isDemoMode()) {
+                        e.preventDefault();
+                        requireAccount();
+                        return;
+                      }
+                      handleCreate();
+                    }}
                     disabled={name.trim().length < 2 || creating}
                   >
                     {creating && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
@@ -305,7 +328,7 @@ export default function AppHome() {
                 <Button
                   onClick={() => {
                     if (isDemoMode()) {
-                      window.dispatchEvent(new CustomEvent("forge:account-required"));
+                      requireAccount();
                       return;
                     }
                     setCreateOpen(true);

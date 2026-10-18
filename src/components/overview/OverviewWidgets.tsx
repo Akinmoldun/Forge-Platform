@@ -18,6 +18,8 @@ import {
   AvatarIllustration,
 } from "@/components/Illustrations";
 import { isOpenIssue } from "@/lib/issueStatus";
+import { isDemoMode } from "@/lib/demoMode";
+import { useAccountRequired } from "@/components/AccountRequiredProvider";
 import { cn } from "@/lib/utils";
 
 export const DEFAULT_OVERVIEW_LAYOUT: WidgetItem[] = [
@@ -178,6 +180,7 @@ export function QuickActionsWidget({
   canWrite: boolean;
   projectList: OverviewDataProps["projectList"];
 }) {
+  const { requireAccount } = useAccountRequired();
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center justify-between border-b border-[rgba(0,0,0,0.08)] pb-2.5 shrink-0">
@@ -224,6 +227,13 @@ export function QuickActionsWidget({
               <Button
                 variant="outline"
                 className="h-9 w-full justify-center rounded-[8px] text-[13px] font-medium border border-[rgba(0,0,0,0.08)] bg-[#FBFBFC] hover:bg-[#F1F1F3] hover:border-[#0D0D0D]/30 text-[#0D0D0D] px-2 shadow-none cursor-pointer transition-all"
+                onClick={(e) => {
+                  if (isDemoMode()) {
+                    e.preventDefault();
+                    requireAccount();
+                    return;
+                  }
+                }}
               >
                 <UserPlus className="size-3.5 mr-1.5 shrink-0 text-[#0D0D0D]" />
                 <span className="truncate">Invite member</span>

@@ -5,6 +5,7 @@ import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
+import { AccountRequiredProvider } from "@/components/AccountRequiredProvider";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/700.css";
@@ -304,11 +305,12 @@ createRoot(document.getElementById("root")!).render(
     <RootErrorBoundary>
       <AppProviders>
         <BrowserRouter>
-          <RouteSyncer />
-          <ChunkErrorBoundary>
-            <Suspense fallback={<RouteLoading />}>
-              <RouteErrorBoundary>
-                <Routes>
+          <AccountRequiredProvider>
+            <RouteSyncer />
+            <ChunkErrorBoundary>
+              <Suspense fallback={<RouteLoading />}>
+                <RouteErrorBoundary>
+                  <Routes>
                   <Route
                     path="/"
                     element={<HomePage />}
@@ -540,7 +542,8 @@ createRoot(document.getElementById("root")!).render(
             </RouteErrorBoundary>
           </Suspense>
         </ChunkErrorBoundary>
-      </BrowserRouter>
+      </AccountRequiredProvider>
+    </BrowserRouter>
       <Toaster />
     </AppProviders>
   </RootErrorBoundary>

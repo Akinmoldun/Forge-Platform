@@ -59,6 +59,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteOrLeaveWorkspace } from "@/lib/guestDemo";
+import { useAccountRequired } from "@/components/AccountRequiredProvider";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -132,6 +133,7 @@ export default function WorkspaceSettings() {
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const { requireAccount } = useAccountRequired();
 
   // General details state
   const [name, setName] = useState<string | null>(null);
@@ -330,6 +332,10 @@ export default function WorkspaceSettings() {
   };
 
   const handleDeleteWorkspace = async () => {
+    if (isDemoMode()) {
+      requireAccount();
+      return;
+    }
     if (deleting) return;
     setDeleting(true);
     try {
@@ -343,6 +349,7 @@ export default function WorkspaceSettings() {
         (e as Error)?.name === "DemoAccountRequiredError"
       ) {
         setDeleteDialogOpen(false);
+        requireAccount();
         return;
       }
       toast.error(e instanceof Error ? e.message : "Failed to delete workspace");
@@ -538,23 +545,27 @@ export default function WorkspaceSettings() {
                   </div>
                   {isAdmin && (
                     <div>
-                      {isDemo ? (
-                        <div className="text-[12px] text-[#9A9A9F] bg-[#F1F1F3] px-3 py-1.5 rounded-full">
-                          Invitations are disabled in demo workspaces.
-                        </div>
-                      ) : (
-                        <InviteMembersDialog
-                          workspaceId={wid}
-                          workspaceName={workspace.workspace.name}
-                          canInvite={isAdmin}
-                          trigger={
-                            <Button size="sm" className="rounded-full h-8 px-4 text-[12px]">
-                              <UserPlus className="size-3.5 mr-1.5" />
-                              Invite teammate
-                            </Button>
-                          }
-                        />
-                      )}
+                      <InviteMembersDialog
+                        workspaceId={wid}
+                        workspaceName={workspace.workspace.name}
+                        canInvite={isAdmin}
+                        trigger={
+                          <Button
+                            size="sm"
+                            className="rounded-full h-8 px-4 text-[12px]"
+                            onClick={(e) => {
+                              if (isDemoMode()) {
+                                e.preventDefault();
+                                requireAccount();
+                                return;
+                              }
+                            }}
+                          >
+                            <UserPlus className="size-3.5 mr-1.5" />
+                            Invite teammate
+                          </Button>
+                        }
+                      />
                     </div>
                   )}
                 </div>
@@ -1035,7 +1046,7 @@ export default function WorkspaceSettings() {
                       open={deleteDialogOpen}
                       onOpenChange={(open) => {
                         if (open && isDemoMode()) {
-                          window.dispatchEvent(new CustomEvent("forge:account-required"));
+                          requireAccount();
                           return;
                         }
                         setDeleteDialogOpen(open);
@@ -1045,6 +1056,13 @@ export default function WorkspaceSettings() {
                         <Button
                           variant="destructive"
                           size="sm"
+                          onClick={(e) => {
+                            if (isDemoMode()) {
+                              e.preventDefault();
+                              requireAccount();
+                              return;
+                            }
+                          }}
                           className="rounded-full bg-[#B3261E] hover:bg-[#8F1E18] text-white h-8 px-4 text-[12px] shrink-0"
                         >
                           Delete workspace
@@ -1075,7 +1093,14 @@ export default function WorkspaceSettings() {
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             disabled={deleteConfirmName.trim() !== workspaceRealName.trim() || deleting}
-                            onClick={handleDeleteWorkspace}
+                            onClick={(e) => {
+                              if (isDemoMode()) {
+                                e.preventDefault();
+                                requireAccount();
+                                return;
+                              }
+                              handleDeleteWorkspace();
+                            }}
                             className="bg-[#B3261E] text-white hover:bg-[#8F1E18] rounded-full"
                           >
                             {deleting && <Loader2 className="size-3.5 animate-spin mr-1.5" />}

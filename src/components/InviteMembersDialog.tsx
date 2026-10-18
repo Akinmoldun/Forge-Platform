@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Copy, Loader2, Mail, MailCheck, MailWarning, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { isDemoMode } from "@/lib/demoMode";
+import { useAccountRequired } from "@/components/AccountRequiredProvider";
 
 type InviteSummary = {
   sent: string[];
@@ -73,9 +75,14 @@ export function InviteMembersDialog({
   const checkDeliveryStatus = useAction(api.emails.getEmailDeliveryStatus);
 
   const [internalOpen, setInternalOpen] = useState(false);
+  const { requireAccount } = useAccountRequired();
   const isControlled = typeof controlledOpen === "boolean";
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (val: boolean) => {
+    if (val && isDemoMode()) {
+      requireAccount();
+      return;
+    }
     if (!isControlled) setInternalOpen(val);
     controlledOnOpenChange?.(val);
   };
@@ -117,6 +124,10 @@ export function InviteMembersDialog({
   };
 
   const handleInvite = async () => {
+    if (isDemoMode()) {
+      requireAccount();
+      return;
+    }
     const emails = parseEmails(emailsText);
     if (emails.length === 0) return;
     setSending(true);
@@ -198,6 +209,15 @@ export function InviteMembersDialog({
       }
       setEmailsText("");
     } catch (e) {
+      if (
+        (e as any)?.code === "ACCOUNT_REQUIRED" ||
+        (e as any)?.data?.code === "ACCOUNT_REQUIRED" ||
+        (e as Error)?.name === "DemoAccountRequiredError"
+      ) {
+        setOpen(false);
+        requireAccount();
+        return;
+      }
       toast.error(e instanceof Error ? e.message : "Failed to invite");
     } finally {
       setSending(false);
@@ -210,7 +230,16 @@ export function InviteMembersDialog({
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : !isControlled ? (
         <DialogTrigger asChild>
-          <Button size="sm">
+          <Button
+            size="sm"
+            onClick={(e) => {
+              if (isDemoMode()) {
+                e.preventDefault();
+                requireAccount();
+                return;
+              }
+            }}
+          >
             <UserPlus /> Invite member
           </Button>
         </DialogTrigger>
@@ -407,7 +436,14 @@ export function InviteMembersDialog({
               </Button>
               <Button
                 size="sm"
-                onClick={handleInvite}
+                onClick={(e) => {
+                  if (isDemoMode()) {
+                    e.preventDefault();
+                    requireAccount();
+                    return;
+                  }
+                  handleInvite();
+                }}
                 disabled={parseEmails(emailsText).length === 0 || sending}
               >
                 {sending ? <Loader2 className="animate-spin" /> : <Mail />}
