@@ -64,7 +64,7 @@ const NotFound = safeLazy(() => import("./pages/NotFound"));
 
 // Empty fallback for route transitions (no spinner, no text, matching page background)
 function RouteLoading() {
-  return <div className="min-h-screen bg-[#FBFBFC]" />;
+  return <div className="min-h-svh bg-[#FBFBFC]" />;
 }
 
 
@@ -87,7 +87,7 @@ class RootErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
+        <div className="min-h-svh flex items-center justify-center bg-background text-foreground p-6">
           <div className="max-w-lg text-center">
             <p className="text-sm font-semibold">Preview runtime error</p>
             <p className="mt-2 text-xs text-muted-foreground break-words">
@@ -115,7 +115,7 @@ const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
 function _BackendSetupNotice() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6">
+    <main className="flex min-h-svh items-center justify-center bg-background p-6">
       <div className="w-full max-w-lg rounded-lg border border-border bg-card p-7 text-center">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Backend configuration required
@@ -181,7 +181,7 @@ class RouteErrorBoundary extends React.Component<
   render() {
     if (this.state.error) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-background p-6">
+        <main className="flex min-h-svh items-center justify-center bg-background p-6">
           <div className="w-full max-w-lg rounded-lg border border-destructive/40 bg-card p-6">
             <p className="text-sm font-semibold text-destructive">
               This page failed to render
@@ -243,7 +243,7 @@ class ChunkErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-background p-6">
+        <main className="flex min-h-svh items-center justify-center bg-background p-6">
           <div className="w-full max-w-md rounded-lg border border-destructive/40 bg-card p-6 text-center">
             <p className="text-sm font-semibold text-destructive">
               Could not load this page

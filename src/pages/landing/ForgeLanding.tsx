@@ -20,7 +20,7 @@ import { Section13Footer } from './sections/Section13Footer';
 export default function ForgeLanding() {
   return (
     <MotionProvider>
-      <div className="landing relative w-full min-h-screen">
+      <div className="landing relative w-full min-h-svh overflow-x-clip">
         <ScrollProgressLine />
         {/* 1. Shell + Nav (immediate) */}
         <Section1Nav />

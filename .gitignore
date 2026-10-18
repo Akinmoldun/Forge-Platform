@@ -13,3 +13,4 @@ build/
 # Temporary & system
 *.log
 .DS_Store
+test-results/

@@ -9,7 +9,7 @@ export default function NotFound() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex min-h-screen flex-col bg-background text-foreground"
+      className="flex min-h-svh flex-col bg-background text-foreground"
     >
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-16">
         <p className="eyebrow">404</p>

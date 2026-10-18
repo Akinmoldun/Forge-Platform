@@ -92,7 +92,7 @@ export default function InvitePage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background">
+    <div className="relative flex min-h-svh flex-col bg-background pt-safe pb-safe">
       <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_35%,black,transparent)]" />
       <div className="relative flex flex-1 items-center justify-center px-4 py-12">
         <Card className="w-full max-w-lg border-border bg-white shadow-none rounded-[20px]">

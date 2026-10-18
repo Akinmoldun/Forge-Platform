@@ -19,7 +19,7 @@ export default function SignupPage({ redirectAfterAuth = '/app' }: SignupPagePro
   // While an OAuth code exchange is in progress, do not show signup form or redirect
   if (hasOAuthCode) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#FBFBFC] p-6">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-[#FBFBFC] p-6">
         <div className="size-8 rounded-full border-2 border-border border-t-[#0D0D0D] animate-spin" />
       </main>
     );
@@ -31,11 +31,11 @@ export default function SignupPage({ redirectAfterAuth = '/app' }: SignupPagePro
   }
 
   return (
-    <div className="min-h-screen min-[900px]:h-screen w-full flex flex-col min-[900px]:flex-row min-[900px]:overflow-hidden bg-[#FBFBFC]">
+    <div className="min-h-svh lg:h-svh w-full flex flex-col lg:flex-row lg:overflow-hidden bg-[#FBFBFC]">
       {/* Left half: white background, content vertically centered, max-width 380px */}
-      <div className="w-full min-[900px]:w-1/2 min-h-screen min-[900px]:h-full flex flex-col justify-between bg-white overflow-y-auto relative z-10">
+      <div className="w-full lg:w-1/2 min-h-svh lg:h-full flex flex-col justify-between bg-white overflow-y-auto relative z-10 pt-safe pb-safe">
         {/* Top-left: Forge logo and wordmark (padding 32px 48px on desktop) */}
-        <div className="shrink-0 flex items-center justify-between w-full p-6 sm:p-8 min-[900px]:px-12 min-[900px]:py-8">
+        <div className="shrink-0 flex items-center justify-between w-full p-6 sm:p-8 lg:px-12 lg:py-8">
           <Link
             to="/"
             aria-label="Forge home"
@@ -56,22 +56,22 @@ export default function SignupPage({ redirectAfterAuth = '/app' }: SignupPagePro
             </span>
           </Link>
 
-          {/* Under 900px: Log in link moves to top-right */}
+          {/* Under lg: Log in link moves to top-right */}
           <Link
             to="/login"
-            className="min-[900px]:hidden rounded-full border border-black/[0.08] px-3.5 py-1.5 text-[13px] font-medium text-[#0D0D0D] hover:border-black/20 transition-colors"
+            className="lg:hidden rounded-full border border-black/[0.08] px-3.5 py-1.5 text-[13px] font-medium text-[#0D0D0D] hover:border-black/20 transition-colors"
           >
             Log in
           </Link>
         </div>
 
-        {/* Form centered, max-width 380px, padding 24px under 900px */}
-        <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 min-[900px]:px-0 min-[900px]:py-8">
+        {/* Form centered, max-width 380px, padding 24px under lg */}
+        <div className="w-full max-w-[380px] mx-auto my-auto px-6 py-8 lg:px-0 lg:py-8">
           <AuthForm mode="signup" redirectAfterAuth={redirectAfterAuth} />
         </div>
 
         {/* Bottom edge spacer */}
-        <div className="shrink-0 h-8 min-[900px]:px-12 min-[900px]:py-4" aria-hidden="true" />
+        <div className="shrink-0 h-8 lg:px-12 lg:py-4" aria-hidden="true" />
       </div>
 
       {/* Right half: decorative panel */}

@@ -52,7 +52,7 @@ export function RequireAuth({
   // If loading or OAuth exchange timed out after 8s, show error state with retry
   if (timedOut) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
+      <main className="flex min-h-svh items-center justify-center bg-background p-6">
         <Card className="w-full max-w-md border-destructive/40 text-center">
           <CardHeader>
             <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
@@ -90,7 +90,7 @@ export function RequireAuth({
   // no redirect or fallback to guest may happen. Show a silent skeleton, not the word "Loading".
   if (isSessionPending || hasOAuthCode) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#FBFBFC] p-6">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-[#FBFBFC] p-6">
         <div className="size-8 rounded-full border-2 border-border border-t-[#0D0D0D] animate-spin" />
       </main>
     );

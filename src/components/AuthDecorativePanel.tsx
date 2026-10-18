@@ -88,7 +88,7 @@ export function AuthDecorativePanel({ mode }: AuthDecorativePanelProps) {
 
   return (
     <div
-      className="hidden min-[900px]:flex min-[900px]:w-1/2 h-full p-3 select-none"
+      className="hidden lg:flex lg:w-1/2 h-full p-3 select-none"
       style={{ boxSizing: 'border-box' }}
     >
       <div

@@ -36,8 +36,8 @@ export function Reveal({
     ? false
     : {
         opacity: 0,
-        y: direction === 'up' ? 36 : direction === 'pop' ? 24 : 0,
-        x: direction === 'left' ? -36 : direction === 'right' ? 36 : 0,
+        y: direction === 'up' ? 32 : direction === 'pop' ? 20 : 20,
+        x: 0,
         scale: direction === 'pop' ? 0.94 : 0.98,
       };
 

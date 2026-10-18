@@ -38,9 +38,9 @@ html.lenis, html.lenis body {
   background-color: var(--page);
   color: var(--ink);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  min-height: 100vh;
+  min-height: 100svh;
   width: 100%;
-  overflow: visible;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -651,7 +651,7 @@ body {
   overflow: visible !important;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .stack-card {
     position: sticky !important;
     align-self: start !important;
@@ -684,7 +684,7 @@ body {
   }
 }
 
-@media (max-width: 899px) {
+@media (max-width: 1023px) {
   .stack-card {
     position: static !important;
     background: #ffffff !important;
