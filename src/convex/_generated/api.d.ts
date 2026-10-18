@@ -10,7 +10,7 @@
 
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
-import type * as auth_emailOtp from "../auth/emailOtp.js";
+import type * as auth_password from "../auth/password.js";
 import type * as authCheck from "../authCheck.js";
 import type * as collaboration from "../collaboration.js";
 import type * as crons from "../crons.js";
@@ -40,7 +40,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   auth: typeof auth;
-  "auth/emailOtp": typeof auth_emailOtp;
+  "auth/password": typeof auth_password;
   authCheck: typeof authCheck;
   collaboration: typeof collaboration;
   crons: typeof crons;

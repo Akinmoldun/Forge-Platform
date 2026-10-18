@@ -35,9 +35,9 @@ const { issue, project, role } = await loadIssueContext(ctx, args.issueId);
 No query or mutation loads an issue or project solely by ID without verifying workspace membership.
 
 ### 2. Authentication & Rate Limiting
-- **Passwordless Authentication**: Secure email OTP authentication and GitHub OAuth.
+- **Authentication**: Secure email and password authentication, Google OAuth, and GitHub OAuth.
 - **Anti-Enumeration Flow**: Unified login and signup flow returning identical responses regardless of whether an account exists, eliminating user enumeration vectors.
-- **Multi-Tier Rate Limiting**: Global request limiting (200 requests/hr) and per-email limits (5 requests/hr) tracked via database token buckets to protect against brute-force attacks.
+- **Rate Limiting & Brute-Force Protection**: Server-side attempt limits per hour configured on Convex Auth to protect against brute-force attacks.
 - **Strict Redirect Allow-List**: Open redirect protections (`resolveSafeRedirectUrl`) that validate base origins and reject external targets or protocol-relative vectors (`//evil.com`).
 - **Cryptographic Invitation Tokens**: One-time invitation links generated with SHA-256 hashes and 7-day expiration windows.
 - **PII Scrubbing**: Email masking (`maskEmail`) ensures sensitive user identifiers are sanitized before logging.

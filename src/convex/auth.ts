@@ -3,10 +3,8 @@ import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
 import GitHub from "@auth/core/providers/github";
 import Google from "@auth/core/providers/google";
 import { action } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { emailOtp } from "./auth/emailOtp";
-import { normalizeEmail } from "./authCheck";
+import { passwordProvider } from "./auth/password";
 
 export function getBaseSiteUrl(): string {
   const siteUrl = process.env.SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
@@ -86,7 +84,7 @@ const rawAuth = convexAuth({
         ]
       : []),
     gitHubProvider,
-    emailOtp,
+    passwordProvider,
     Anonymous,
   ],
   signIn: {
@@ -118,35 +116,6 @@ export const signIn = action({
     // GitHub configuration validation
     if (args.provider === "github" && (!process.env.AUTH_GITHUB_ID || !process.env.AUTH_GITHUB_SECRET)) {
       throw new Error("GitHub sign-in is not configured. Missing AUTH_GITHUB_ID or AUTH_GITHUB_SECRET.");
-    }
-
-    if (args.provider === "email-otp") {
-      const params = args.params;
-      if (!params || typeof params.email !== "string" || !params.email.trim()) {
-        throw new Error("Enter a valid email");
-      }
-
-      const email = normalizeEmail(params.email);
-      const isVerifyStep = params.code !== undefined;
-
-      const check = await ctx.runMutation(
-        internal.authCheck.verifyAndRateLimitAuthAttempt,
-        {
-          email,
-          isVerifyStep,
-        },
-      );
-
-      if (!check.allowed) {
-        if (check.reason === "RATE_LIMITED") {
-          throw new Error("Too many attempts, try again later");
-        }
-      }
-
-      type ActionHandler = {
-        _handler: (ctx: unknown, args: unknown) => Promise<unknown>;
-      };
-      return await (rawAuth.signIn as unknown as ActionHandler)._handler(ctx, args);
     }
 
     type ActionHandler = {

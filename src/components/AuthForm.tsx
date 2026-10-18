@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
 import { enableDemoMode, disableDemoMode } from '@/lib/demoMode';
 import { isConvexConfigured } from '@/hooks/use-safe-query';
-import { Loader2, User, Info } from 'lucide-react';
+import { Loader2, User, Info, Eye, EyeOff } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'login' | 'signup';
@@ -32,9 +32,9 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
       ? '/app'
       : rawTarget;
 
-  const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isGuestLoading = false;
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
@@ -43,9 +43,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
   const [guestError, setGuestError] = useState<string | null>(null);
   const [githubError, setGithubError] = useState<string | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(0);
 
-  const codeInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   // Capture real OAuth errors from URL query parameters (e.g. from GitHub or Google redirect failure)
@@ -64,32 +62,10 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     }
   }, [authLoading, isAuthenticated, navigate, safeRedirect]);
 
-  // Escape key returns to step 1 from step 2, focus moves to code input on step 2
+  // Focus email input on mount
   useEffect(() => {
-    if (step === 'code') {
-      codeInputRef.current?.focus();
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          setStep('email');
-          setError(null);
-          setCode('');
-        }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    } else {
-      emailInputRef.current?.focus();
-    }
-  }, [step]);
-
-  // Resend 30s countdown timer
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(() => {
-      setCountdown((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [countdown]);
+    emailInputRef.current?.focus();
+  }, []);
 
   const withTimeout = <T,>(promise: Promise<T> | Promise<unknown>, ms = 10000): Promise<T> => {
     return Promise.race([
@@ -105,16 +81,24 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
   };
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading) return;
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) return;
-
-    if (!validateEmail(trimmedEmail)) {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !validateEmail(trimmedEmail)) {
       setError('Enter a valid email');
+      return;
+    }
+
+    if (!password) {
+      setError('Enter your password');
+      return;
+    }
+
+    if (mode === 'signup' && password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
@@ -122,9 +106,10 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     setError(null);
     setGithubError(null);
     setGoogleError(null);
+    setGuestError(null);
 
     if (!isConvexConfigured) {
-      setError("Email OTP sign-in requires a connected Convex deployment. Use 'Try demo as guest' to test Forge.");
+      setError("Email & password sign-in requires a connected Convex deployment. Use 'Try the demo as guest' to test Forge.");
       return;
     }
 
@@ -133,128 +118,34 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
     try {
       const formData = new FormData();
       formData.set('email', trimmedEmail);
-      await withTimeout(signIn('email-otp', formData), 10000);
-      setStep('code');
-      setCountdown(30);
-    } catch (err: unknown) {
-      console.error('Send OTP error:', err);
-      const dataStr = (err as { data?: unknown })?.data
-        ? String((err as { data?: unknown }).data)
-        : '';
-      const rawMsg = err instanceof Error ? err.message : String(err);
-      const msg = rawMsg.toLowerCase();
-      const combined = `${dataStr.toLowerCase()} ${msg}`;
+      formData.set('password', password);
+      formData.set('flow', mode === 'login' ? 'signIn' : 'signUp');
 
-      if (
-        combined.includes("email isn't set up yet") ||
-        combined.includes("email isnt set up yet") ||
-        combined.includes('email_provider') ||
-        combined.includes('email provider') ||
-        combined.includes('not configured') ||
-        combined.includes('is not configured')
-      ) {
-        setError("Email delivery isn't configured on Convex Cloud. Set EMAIL_PROVIDER in your Convex dashboard.");
-      } else if (combined.includes('only send testing emails') || combined.includes('resend rejected')) {
-        setError("Email delivery is in test mode. Try GitHub sign-in or the demo.");
-      } else if (combined.includes('rate') || combined.includes('too many')) {
-        setError('Too many attempts, try again later');
-      } else {
-        setError(rawMsg || "We couldn't send the code, try again");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCodeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting || isGuestLoading) return;
-
-    const trimmedCode = code.trim();
-    if (trimmedCode.length !== 6) {
-      setError('That code is incorrect');
-      return;
-    }
-
-    disableDemoMode();
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.set('email', email.trim());
-      formData.set('code', trimmedCode);
-      await withTimeout(signIn('email-otp', formData), 10000);
+      await withTimeout(signIn('password', formData), 10000);
       navigate(safeRedirect, { replace: true });
     } catch (err: unknown) {
-      console.error('Verify OTP error:', err);
+      console.error('Password sign-in error:', err);
       const rawMsg = err instanceof Error ? err.message : String(err);
-      const msg = rawMsg.toLowerCase();
-
-      if (msg.includes('expired')) {
-        setError('That code has expired');
-      } else if (msg.includes('rate') || msg.includes('too many')) {
-        setError('Too many attempts, try again later');
-      } else if (msg.includes('invalid') || msg.includes('incorrect') || msg.includes('wrong')) {
-        setError('That code is incorrect');
-      } else {
-        setError(rawMsg || 'That code is incorrect');
-      }
-      setCode('');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (countdown > 0 || isSubmitting || isGuestLoading) return;
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.set('email', email.trim());
-      await withTimeout(signIn('email-otp', formData), 10000);
-      setCountdown(30);
-    } catch (err: unknown) {
-      console.error('Resend OTP error:', err);
       const dataStr = (err as { data?: unknown })?.data
         ? String((err as { data?: unknown }).data)
         : '';
-      const rawMsg = err instanceof Error ? err.message : String(err);
-      const msg = rawMsg.toLowerCase();
-      const combined = `${dataStr.toLowerCase()} ${msg}`;
-      if (
-        combined.includes("email isn't set up yet") ||
-        combined.includes("email isnt set up yet") ||
-        combined.includes('email_provider') ||
-        combined.includes('email provider') ||
-        combined.includes('not configured') ||
-        combined.includes('is not configured')
+      const combined = `${dataStr} ${rawMsg}`.toLowerCase();
+
+      if (combined.includes('timed out') || combined.includes('timeout')) {
+        setError('The request timed out, please try again');
+      } else if (
+        combined.includes('too many') ||
+        combined.includes('rate') ||
+        combined.includes('maxfailedattemps')
       ) {
-        setError("Email isn't set up yet");
-      } else if (combined.includes('rate') || combined.includes('too many')) {
         setError('Too many attempts, try again later');
+      } else if (mode === 'login') {
+        setError('Incorrect email or password');
       } else {
-        setError(rawMsg || "We couldn't send the code, try again");
+        setError('We could not create your account. If you already have one, sign in instead.');
       }
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setCode(raw);
-    if (error) setError(null);
-  };
-
-  const handleCodePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pasted) {
-      setCode(pasted);
-      if (error) setError(null);
     }
   };
 
@@ -339,357 +230,315 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
         }
       `}</style>
 
-      {step === 'email' ? (
-        <div className="transition-opacity duration-150 motion-reduce:transition-none">
-          {/* Heading */}
-          <h1 className="text-[32px] font-medium tracking-[-0.03em] text-[#0D0D0D] leading-[1.2]">
-            {mode === 'login' ? 'Sign in to Forge' : 'Create your Forge account'}
-          </h1>
+      <div className="transition-opacity duration-150 motion-reduce:transition-none">
+        {/* Heading */}
+        <h1 className="text-[32px] font-medium tracking-[-0.03em] text-[#0D0D0D] leading-[1.2]">
+          {mode === 'login' ? 'Sign in to Forge' : 'Create your Forge account'}
+        </h1>
 
-          {/* Subheading */}
-          <p className="mt-2 text-[15px] text-[#575657] leading-relaxed">
-            {mode === 'login'
-              ? "Enter your email and we'll send you a one-time code."
-              : "No password. We'll email you a one-time code."}
-          </p>
+        {/* Subheading */}
+        <p className="mt-2 text-[15px] text-[#575657] leading-relaxed">
+          {mode === 'login'
+            ? 'Enter your email and password.'
+            : 'Choose an email and a password (at least 8 characters).'}
+        </p>
 
-          {/* Friendly preview notice when Convex is not configured */}
-          {!isConvexConfigured && (
-            <div className="mt-5 rounded-[12px] border border-amber-200 bg-amber-50/90 p-3.5 text-left">
-              <div className="flex items-start gap-2.5">
-                <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                <div className="text-[13px] text-amber-900 leading-relaxed">
-                  <span className="font-semibold">Preview environment:</span> Real accounts require a connected Convex backend. You can explore all Forge workspaces and features right now with{" "}
-                  <button
-                    type="button"
-                    onClick={handleGuestSignIn}
-                    className="font-semibold underline hover:text-black cursor-pointer"
-                  >
-                    Try the demo as guest
-                  </button>
-                  .
-                </div>
+        {/* Friendly preview notice when Convex is not configured */}
+        {!isConvexConfigured && (
+          <div className="mt-5 rounded-[12px] border border-amber-200 bg-amber-50/90 p-3.5 text-left">
+            <div className="flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-[13px] text-amber-900 leading-relaxed">
+                <span className="font-semibold">Preview environment:</span> Real accounts require a connected Convex backend. You can explore all Forge workspaces and features right now with{" "}
+                <button
+                  type="button"
+                  onClick={handleGuestSignIn}
+                  className="font-semibold underline hover:text-black cursor-pointer"
+                >
+                  Try the demo as guest
+                </button>
+                .
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* 1. Email form (primary action at the top) */}
-          <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
-            <div>
+        {/* Email + Password form */}
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <div>
+            <label
+              htmlFor="auth-email"
+              className="block text-[14px] font-medium text-[#0D0D0D] mb-2"
+            >
+              Email
+            </label>
+            <input
+              ref={emailInputRef}
+              id="auth-email"
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
+              disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading}
+              placeholder="name@example.com"
+              required
+              className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
+              style={{ boxShadow: 'none' }}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
               <label
-                htmlFor="auth-email"
-                className="block text-[14px] font-medium text-[#0D0D0D] mb-2"
+                htmlFor="auth-password"
+                className="block text-[14px] font-medium text-[#0D0D0D]"
               >
-                Email
+                Password
               </label>
+            </div>
+            <div className="relative">
               <input
-                ref={emailInputRef}
-                id="auth-email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={email}
+                id="auth-password"
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                value={password}
                 onChange={(e) => {
-                  setEmail(e.target.value);
+                  setPassword(e.target.value);
                   if (error) setError(null);
                 }}
                 disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading}
-                placeholder="name@example.com"
+                placeholder={mode === 'signup' ? 'At least 8 characters' : 'Enter your password'}
                 required
-                className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
+                className="auth-field-input w-full h-[48px] pl-4 pr-11 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
                 style={{ boxShadow: 'none' }}
               />
-              {error && (
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  className="mt-2 text-[13px] text-[#B3261E] font-medium"
-                >
-                  {error}
-                </p>
-              )}
-            </div>
-
-            {/* Primary button */}
-            <button
-              type="submit"
-              disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading || !email.trim()}
-              className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
-              style={{ boxShadow: 'none' }}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Sending code...</span>
-                </>
-              ) : (
-                'Continue with email'
-              )}
-            </button>
-          </form>
-
-          {/* 2. Thin divider with "or continue with" */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-black/[0.08]" />
-            </div>
-            <div className="relative flex justify-center text-[13px]">
-              <span className="bg-white px-3 text-[#575657]">or continue with</span>
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                disabled={isSubmitting}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#575657] hover:text-[#0D0D0D] transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4 shrink-0" />
+                ) : (
+                  <Eye className="w-4 h-4 shrink-0" />
+                )}
+              </button>
             </div>
           </div>
 
-          {/* 3. Two equal-width outline buttons side by side (stacked on very small screens) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* GitHub button */}
-            <button
-              type="button"
-              onClick={handleGitHubSignIn}
-              disabled={isGitHubLoading || isGoogleLoading || isSubmitting || isGuestLoading}
-              className="w-full h-[44px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[14px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
-              style={{ boxShadow: 'none' }}
+          {error && (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="mt-2 text-[13px] text-[#B3261E] font-medium"
             >
-              {isGitHubLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
-                  <span>Connecting...</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4 shrink-0 fill-current text-[#0D0D0D]"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                    />
-                  </svg>
-                  <span>GitHub</span>
-                </>
-              )}
-            </button>
-
-            {/* Google button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isGoogleLoading || isGitHubLoading || isSubmitting || isGuestLoading}
-              className="w-full h-[44px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[14px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
-              style={{ boxShadow: 'none' }}
-            >
-              {isGoogleLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
-                  <span>Connecting...</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4 shrink-0"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      fill="#4285F4"
-                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                    />
-                  </svg>
-                  <span>Google</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {(githubError || googleError) && (
-            <div className="mt-2 space-y-1">
-              {githubError && (
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  className="text-[13px] text-[#B3261E] font-medium text-center"
-                >
-                  {githubError}
-                </p>
-              )}
-              {googleError && (
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  className="text-[13px] text-[#B3261E] font-medium text-center"
-                >
-                  {googleError}
-                </p>
-              )}
-            </div>
+              {error}
+            </p>
           )}
 
-          {/* 4. At the very bottom, smaller and quieter: guest demo as plain text link / ghost button */}
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={handleGuestSignIn}
-              disabled={isGuestLoading || isSubmitting || isGitHubLoading || isGoogleLoading}
-              className="inline-flex items-center gap-1.5 text-[13px] text-[#575657] hover:text-[#0D0D0D] transition-colors py-1.5 px-3 rounded-full hover:bg-black/[0.04] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer select-none"
-            >
-              {isGuestLoading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-[#0D0D0D]" />
-                  <span>Starting demo...</span>
-                </>
-              ) : (
-                <>
-                  <User className="w-3.5 h-3.5 shrink-0 text-[#575657]" />
-                  <span>Try the demo as guest</span>
-                </>
-              )}
-            </button>
-
-            {guestError && (
-              <p
-                role="alert"
-                aria-live="polite"
-                className="mt-1 text-[13px] text-[#B3261E] font-medium text-center"
-              >
-                {guestError}
-              </p>
-            )}
-          </div>
-
-          {/* Navigation link */}
-          <p className="mt-6 text-center text-[14px] text-[#575657]">
-            {mode === 'login' ? (
+          {/* Primary button */}
+          <button
+            type="submit"
+            disabled={
+              isSubmitting ||
+              isGuestLoading ||
+              isGitHubLoading ||
+              isGoogleLoading ||
+              !email.trim() ||
+              !password
+            }
+            className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
+            style={{ boxShadow: 'none' }}
+          >
+            {isSubmitting ? (
               <>
-                Don't have an account?{' '}
-                <Link
-                  to="/signup"
-                  className="text-[#0D0D0D] font-medium hover:underline"
-                >
-                  Sign up
-                </Link>
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                <span>{mode === 'login' ? 'Signing in...' : 'Creating account...'}</span>
+              </>
+            ) : (
+              mode === 'login' ? 'Sign in' : 'Create account'
+            )}
+          </button>
+        </form>
+
+        {/* Thin divider with "or continue with" */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-black/[0.08]" />
+          </div>
+          <div className="relative flex justify-center text-[13px]">
+            <span className="bg-white px-3 text-[#575657]">or continue with</span>
+          </div>
+        </div>
+
+        {/* Two equal-width outline buttons side by side */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* GitHub button */}
+          <button
+            type="button"
+            onClick={handleGitHubSignIn}
+            disabled={isGitHubLoading || isGoogleLoading || isSubmitting || isGuestLoading}
+            className="w-full h-[44px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[14px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
+            style={{ boxShadow: 'none' }}
+          >
+            {isGitHubLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
+                <span>Connecting...</span>
               </>
             ) : (
               <>
-                Already have an account?{' '}
-                <Link
-                  to="/login"
-                  className="text-[#0D0D0D] font-medium hover:underline"
+                <svg
+                  className="w-4 h-4 shrink-0 fill-current text-[#0D0D0D]"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
-                  Log in
-                </Link>
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                  />
+                </svg>
+                <span>GitHub</span>
               </>
             )}
-          </p>
+          </button>
 
-          {/* Terms line */}
-          <p className="mt-3 text-center text-[13px] text-[#575657] leading-relaxed">
-            By continuing, you agree to the terms and privacy policy.
-          </p>
-        </div>
-      ) : (
-        /* STEP 2 OF THE FORM */
-        <div className="transition-opacity duration-150 motion-reduce:transition-none">
-          <h1 className="text-[32px] font-medium tracking-[-0.03em] text-[#0D0D0D] leading-[1.2]">
-            Check your email
-          </h1>
-          <p className="mt-2 text-[15px] text-[#575657] leading-relaxed">
-            If this email can receive a code, we sent one.
-          </p>
-
-          <form onSubmit={handleCodeSubmit} className="mt-8 space-y-4">
-            <div>
-              <label htmlFor="auth-code" className="sr-only">
-                6-digit verification code
-              </label>
-              <input
-                ref={codeInputRef}
-                id="auth-code"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete="one-time-code"
-                maxLength={6}
-                value={code}
-                onChange={handleCodeChange}
-                onPaste={handleCodePaste}
-                disabled={isSubmitting}
-                placeholder="······"
-                autoFocus
-                className="auth-field-input w-full h-[56px] text-center font-mono text-[28px] tracking-[0.35em] font-medium rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] placeholder:text-[#575657]/40 transition-all disabled:opacity-60"
-                style={{ boxShadow: 'none' }}
-              />
-              {error && (
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  className="mt-2 text-[13px] text-[#B3261E] font-medium text-center"
+          {/* Google button */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isGoogleLoading || isGitHubLoading || isSubmitting || isGuestLoading}
+            className="w-full h-[44px] rounded-full bg-white border border-black/[0.12] hover:border-[#0D0D0D] active:bg-black/[0.02] text-[#0D0D0D] text-[14px] font-medium transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
+            style={{ boxShadow: 'none' }}
+          >
+            {isGoogleLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#0D0D0D]" />
+                <span>Connecting...</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4 shrink-0"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
-                  {error}
-                </p>
-              )}
-            </div>
-
-            {/* Verify and sign in */}
-            <button
-              type="submit"
-              disabled={isSubmitting || code.length !== 6}
-              className="w-full h-[48px] rounded-full bg-[#0D0D0D] hover:bg-[#232325] hover:scale-[1.01] active:scale-[0.99] text-white text-[15px] font-medium transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:hover:bg-[#0D0D0D] disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer select-none"
-              style={{ boxShadow: 'none' }}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Verifying...</span>
-                </>
-              ) : (
-                'Verify and sign in'
-              )}
-            </button>
-          </form>
-
-          {/* Links under button: Resend code + Use a different email */}
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <button
-              type="button"
-              onClick={handleResendCode}
-              disabled={countdown > 0 || isSubmitting}
-              className={`text-[14px] transition-colors select-none ${
-                countdown > 0 || isSubmitting
-                  ? 'text-[#575657]/50 cursor-not-allowed'
-                  : 'text-[#0D0D0D] font-medium hover:underline cursor-pointer'
-              }`}
-            >
-              {countdown > 0 ? `Resend code (${countdown}s)` : 'Resend code'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStep('email');
-                setError(null);
-                setCode('');
-              }}
-              disabled={isSubmitting}
-              className="text-[14px] text-[#575657] hover:text-[#0D0D0D] transition-colors cursor-pointer"
-            >
-              Use a different email
-            </button>
-          </div>
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Google</span>
+              </>
+            )}
+          </button>
         </div>
-      )}
+
+        {(githubError || googleError) && (
+          <div className="mt-2 space-y-1">
+            {githubError && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="text-[13px] text-[#B3261E] font-medium text-center"
+              >
+                {githubError}
+              </p>
+            )}
+            {googleError && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="text-[13px] text-[#B3261E] font-medium text-center"
+              >
+                {googleError}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Guest demo as plain text link */}
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={handleGuestSignIn}
+            disabled={isGuestLoading || isSubmitting || isGitHubLoading || isGoogleLoading}
+            className="inline-flex items-center gap-1.5 text-[13px] text-[#575657] hover:text-[#0D0D0D] transition-colors py-1.5 px-3 rounded-full hover:bg-black/[0.04] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer select-none"
+          >
+            {isGuestLoading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-[#0D0D0D]" />
+                <span>Starting demo...</span>
+              </>
+            ) : (
+              <>
+                <User className="w-3.5 h-3.5 shrink-0 text-[#575657]" />
+                <span>Try the demo as guest</span>
+              </>
+            )}
+          </button>
+
+          {guestError && (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="mt-1 text-[13px] text-[#B3261E] font-medium text-center"
+            >
+              {guestError}
+            </p>
+          )}
+        </div>
+
+        {/* Navigation link */}
+        <p className="mt-6 text-center text-[14px] text-[#575657]">
+          {mode === 'login' ? (
+            <>
+              Don't have an account?{' '}
+              <Link
+                to="/signup"
+                className="text-[#0D0D0D] font-medium hover:underline"
+              >
+                Sign up
+              </Link>
+            </>
+          ) : (
+            <>
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="text-[#0D0D0D] font-medium hover:underline"
+              >
+                Log in
+              </Link>
+            </>
+          )}
+        </p>
+
+        {/* Terms line */}
+        <p className="mt-3 text-center text-[13px] text-[#575657] leading-relaxed">
+          By continuing, you agree to the terms and privacy policy.
+        </p>
+      </div>
     </div>
   );
 }

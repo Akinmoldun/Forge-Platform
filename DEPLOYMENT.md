@@ -42,9 +42,9 @@ Note: Vercel only needs `VITE_CONVEX_URL`. Only `VITE_`-prefixed variables are e
 | `AUTH_GITHUB_SECRET` | GitHub OAuth application Client Secret |
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
-| `EMAIL_PROVIDER` | `resend` or `brevo` for transactional OTP delivery |
-| `RESEND_API_KEY` | API key for Resend |
-| `EMAIL_FROM` | Verified sender address (e.g. `login@yourdomain.com`) |
+| `EMAIL_PROVIDER` | *(Optional)* `resend` or `brevo` for notification emails (optional; does not affect sign-in) |
+| `RESEND_API_KEY` | *(Optional)* API key for Resend notification emails |
+| `EMAIL_FROM` | *(Optional)* Verified sender address for notification emails (e.g. `notifications@yourdomain.com`) |
 
 ### GitHub OAuth Setup
 In your GitHub Developer Settings (OAuth App), configure:

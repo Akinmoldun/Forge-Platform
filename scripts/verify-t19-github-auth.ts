@@ -32,9 +32,9 @@ function testT19() {
     authContent.includes("allowDangerousEmailAccountLinking: false")
   );
 
-  assert("auth.ts custom signIn wrapper passes github through to rawAuth.signIn without email-otp checks",
+  assert("auth.ts custom signIn wrapper passes github through to rawAuth.signIn without extra checks",
     authContent.includes('args.provider === "github"') &&
-    authContent.includes('(rawAuth.signIn as any)._handler(ctx, args)')
+    authContent.includes('(rawAuth.signIn as unknown as ActionHandler)._handler(ctx, args)')
   );
 
   assert("auth.ts does not print or log secrets",
@@ -80,8 +80,8 @@ function testT19() {
     authFormContent.includes("signIn('github', { redirectTo:")
   );
 
-  assert("AuthForm keeps email OTP and guest demo button intact",
-    authFormContent.includes("signIn('email-otp',") &&
+  assert("AuthForm keeps password auth and guest demo button intact",
+    authFormContent.includes("signIn('password',") &&
     authFormContent.includes("enableDemoMode()")
   );
 
