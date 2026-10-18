@@ -100,6 +100,14 @@ export default function AppHome() {
       toast.success("Workspace created");
       navigate(`/app/workspaces/${result.workspaceId}`);
     } catch (e) {
+      if (
+        (e as any)?.code === "ACCOUNT_REQUIRED" ||
+        (e as any)?.data?.code === "ACCOUNT_REQUIRED" ||
+        (e as Error)?.name === "DemoAccountRequiredError"
+      ) {
+        setCreateOpen(false);
+        return;
+      }
       toast.error(e instanceof Error ? e.message : "Failed to create workspace");
     } finally {
       setCreating(false);
@@ -122,7 +130,16 @@ export default function AppHome() {
                 Each workspace is an isolated tenant with its own members, projects, and workflows.
               </p>
             </div>
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <Dialog
+              open={createOpen}
+              onOpenChange={(open) => {
+                if (open && isDemoMode()) {
+                  window.dispatchEvent(new CustomEvent("forge:account-required"));
+                  return;
+                }
+                setCreateOpen(open);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]">
                   <Plus className="size-4 mr-1" /> New workspace
@@ -286,7 +303,13 @@ export default function AppHome() {
               </p>
               <div className="mt-4">
                 <Button
-                  onClick={() => setCreateOpen(true)}
+                  onClick={() => {
+                    if (isDemoMode()) {
+                      window.dispatchEvent(new CustomEvent("forge:account-required"));
+                      return;
+                    }
+                    setCreateOpen(true);
+                  }}
                   className="rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 px-4 text-[13px]"
                 >
                   <Plus className="size-4 mr-1" /> Create workspace

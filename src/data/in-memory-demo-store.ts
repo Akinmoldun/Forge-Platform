@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { DemoAccountRequiredError } from "../lib/demoErrors";
 
 export interface DemoUser {
   _id: string;
@@ -1313,25 +1314,11 @@ class InMemoryDemoStore {
     }
   }
 
-  public createWorkspace(args: { name: string; slug?: string }): { workspaceId: string } {
-    const wsId = `demo-ws-${Date.now()}`;
-    const slug =
-      args.slug ||
-      args.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/-+/g, "-");
-    const newWs: DemoWorkspace = {
-      _id: wsId,
-      name: args.name,
-      slug,
-      role: "owner",
-      createdAt: Date.now(),
-      ownerId: "demo-user-alex",
-    };
-    this.workspaces.unshift(newWs);
-    this.notify();
-    return { workspaceId: wsId };
+  public createWorkspace(_args: { name: string; slug?: string }): { workspaceId: string } {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
   }
 
   public updateWorkspace(workspaceId: string, patch: Partial<DemoWorkspace>) {
@@ -1343,10 +1330,32 @@ class InMemoryDemoStore {
     return { ok: true };
   }
 
-  public deleteWorkspace(workspaceId: string) {
-    this.workspaces = this.workspaces.filter((w) => w._id !== workspaceId);
-    this.notify();
-    return { ok: true };
+  public deleteWorkspace(_workspaceId: string): { ok: boolean } {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
+  }
+
+  public createInvitations(..._args: any[]): any {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
+  }
+
+  public addMember(..._args: any[]): any {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
+  }
+
+  public inviteMember(..._args: any[]): any {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
   }
 
   public archiveProject(projectId: string) {

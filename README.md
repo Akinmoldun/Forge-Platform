@@ -41,6 +41,7 @@ No query or mutation loads an issue or project solely by ID without verifying wo
 - **Strict Redirect Allow-List**: Open redirect protections (`resolveSafeRedirectUrl`) that validate base origins and reject external targets or protocol-relative vectors (`//evil.com`).
 - **Cryptographic Invitation Tokens**: One-time invitation links generated with SHA-256 hashes and 7-day expiration windows.
 - **PII Scrubbing**: Email masking (`maskEmail`) ensures sensitive user identifiers are sanitized before logging.
+- **Guest Demo Gating & Account Enforcement**: Guests explore interactive demo workspaces in memory. Creating or deleting workspaces and inviting members strictly requires a verified, real account (`requireRealUser` and `isRealAccount`). The server mutation rejects anonymous accounts (`isAnonymous: true`) and demo synthetic addresses (`@demo.invalid`), caps workspace ownership at 5 per account, and the in-memory demo store enforces `DemoAccountRequiredError` (`ACCOUNT_REQUIRED`) to prevent DevTools bypass.
 
 ### 3. Automated Test Suite
 Forge includes an automated unit test suite (`src/tests/pure-logic.test.ts`) executed via Vitest and enforced in CI (`.github/workflows/ci.yml`):

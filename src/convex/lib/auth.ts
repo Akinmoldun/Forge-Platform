@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
@@ -9,6 +10,15 @@ export type { WorkspaceRole };
 // Current user
 // ---------------------------------------------------------------------------
 
+export function isRealAccount(
+  user: { isAnonymous?: boolean; email?: string | null } | null | undefined,
+): boolean {
+  if (!user) return false;
+  if (user.isAnonymous === true) return false;
+  if (user.email && user.email.toLowerCase().endsWith("@demo.invalid")) return false;
+  return true;
+}
+
 export async function requireUser(ctx: QueryCtx | MutationCtx): Promise<Doc<"users">> {
   const userId = await getAuthUserId(ctx);
   if (userId === null) {
@@ -16,6 +26,17 @@ export async function requireUser(ctx: QueryCtx | MutationCtx): Promise<Doc<"use
   }
   const user = await ctx.db.get(userId);
   if (!user) throw new Error("Not authenticated");
+  return user;
+}
+
+export async function requireRealUser(ctx: QueryCtx | MutationCtx): Promise<Doc<"users">> {
+  const user = await requireUser(ctx);
+  if (!isRealAccount(user)) {
+    throw new ConvexError({
+      code: "ACCOUNT_REQUIRED",
+      message: "Create an account to do this.",
+    });
+  }
   return user;
 }
 

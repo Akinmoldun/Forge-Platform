@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query, internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -9,6 +9,7 @@ import {
   loadWorkspaceContext,
   optionalUser,
   recordEvent,
+  requireRealUser,
   requireUser,
   roleAtLeast,
 } from "./lib/auth";
@@ -64,7 +65,21 @@ const DEFAULT_LABELS = [
 export const createWorkspace = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireUser(ctx);
+    const user = await requireRealUser(ctx);
+
+    const ownedMemberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .filter((q) => q.eq(q.field("role"), "owner"))
+      .take(6);
+
+    if (ownedMemberships.length >= 5) {
+      throw new ConvexError({
+        code: "WORKSPACE_LIMIT",
+        message: "You can own up to 5 workspaces.",
+      });
+    }
+
     const name = args.name.trim();
     if (name.length < 2 || name.length > 60) {
       throw new Error("Workspace name must be 2-60 characters");
@@ -528,7 +543,7 @@ export const createInvitations = mutation({
     if (args.emails.length > 50) {
       throw new Error("You can invite up to 50 people at a time");
     }
-    const user = await requireUser(ctx);
+    const user = await requireRealUser(ctx);
     const workspaceForNotify = (await ctx.db.get(args.workspaceId))!;
     if (
       workspaceForNotify.name.startsWith("Demo:") ||
@@ -942,6 +957,7 @@ export const deleteWorkspace = mutation({
     typedName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireRealUser(ctx);
     const { workspaceId, workspace, role } = await loadWorkspaceContext(ctx, args.workspaceId);
     if (role !== "owner") {
       throw new Error("Only the workspace owner can delete this workspace");

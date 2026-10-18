@@ -59,6 +59,7 @@ import { CreateIssueDialog, CreateProjectDialog } from "./dialogs";
 import { CommandPaletteDialog } from "./CommandPaletteDialog";
 import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { InviteMembersDialog } from "./InviteMembersDialog";
+import { CreateAccountDialog } from "./CreateAccountDialog";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
 
 /** Primary workspace navigation rows. */
@@ -811,7 +812,13 @@ export function AppShell({
           <Building2 className="size-3.5 mr-2 text-[#575657]" /> All workspaces
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => navigate("/app")}
+          onClick={() => {
+            if (isDemoMode()) {
+              window.dispatchEvent(new CustomEvent("forge:account-required"));
+              return;
+            }
+            navigate("/app");
+          }}
           className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
         >
           <Plus className="size-3.5 mr-2" /> Create workspace
@@ -1406,6 +1413,7 @@ export function AppShell({
       />
 
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <CreateAccountDialog />
     </div>
   );
 }

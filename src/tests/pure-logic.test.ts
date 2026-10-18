@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { roleAtLeast, WorkspaceRole } from "../convex/lib/auth";
+import { roleAtLeast, WorkspaceRole, isRealAccount } from "../convex/lib/auth";
 import { normalizeEmail, maskEmail } from "../convex/authCheck";
 import { detectCircularDependency } from "../convex/collaboration";
 import { validateWorkflowTransitionRules } from "../convex/lib/workflowRules";
 import { resolveSafeRedirectUrl } from "../convex/auth";
 import { escapeHtml } from "../convex/email/templates";
 import { demoStore } from "../data/in-memory-demo-store";
+import { DemoAccountRequiredError } from "../lib/demoErrors";
 
 describe("Pure Logic Unit Tests", () => {
   describe("1. roleAtLeast - Every role pair rank verification", () => {
@@ -278,6 +279,84 @@ describe("Pure Logic Unit Tests", () => {
           expect(proj.issueCount).toBe(projectIssues.length);
         }
       }
+    });
+  });
+
+  describe("8. isRealAccount security verification", () => {
+    it("returns false for null or undefined user", () => {
+      expect(isRealAccount(null)).toBe(false);
+      expect(isRealAccount(undefined)).toBe(false);
+    });
+
+    it("returns false for anonymous users regardless of email", () => {
+      expect(isRealAccount({ isAnonymous: true })).toBe(false);
+      expect(isRealAccount({ isAnonymous: true, email: "user@example.com" })).toBe(false);
+      expect(isRealAccount({ isAnonymous: true, email: "guest@demo.invalid" })).toBe(false);
+    });
+
+    it("returns false for demo synthetic emails ending with @demo.invalid", () => {
+      expect(isRealAccount({ isAnonymous: false, email: "guest-12345@demo.invalid" })).toBe(false);
+      expect(isRealAccount({ email: "TEST@DEMO.INVALID" })).toBe(false);
+      expect(isRealAccount({ email: "guest@demo.invalid" })).toBe(false);
+    });
+
+    it("returns true for regular accounts with real email addresses", () => {
+      expect(isRealAccount({ isAnonymous: false, email: "alice@example.com" })).toBe(true);
+      expect(isRealAccount({ email: "engineer@startup.io" })).toBe(true);
+    });
+
+    it("returns true for OAuth users without email (e.g. GitHub users with private email)", () => {
+      expect(isRealAccount({ isAnonymous: false, email: null })).toBe(true);
+      expect(isRealAccount({ isAnonymous: false, email: undefined })).toBe(true);
+      expect(isRealAccount({ isAnonymous: false })).toBe(true);
+    });
+  });
+
+  describe("9. Demo store workspace and member gating", () => {
+    it("throws DemoAccountRequiredError on createWorkspace and does not modify store", () => {
+      const countBefore = demoStore.getWorkspaces().length;
+      expect(() => demoStore.createWorkspace({ name: "Hacker Workspace" })).toThrow(DemoAccountRequiredError);
+      try {
+        demoStore.createWorkspace({ name: "Hacker Workspace" });
+      } catch (err: any) {
+        expect(err.code).toBe("ACCOUNT_REQUIRED");
+      }
+      expect(demoStore.getWorkspaces().length).toBe(countBefore);
+    });
+
+    it("throws DemoAccountRequiredError on deleteWorkspace and does not delete anything", () => {
+      const workspaces = demoStore.getWorkspaces();
+      expect(workspaces.length).toBeGreaterThan(0);
+      const targetId = workspaces[0]._id;
+      expect(() => demoStore.deleteWorkspace(targetId)).toThrow(DemoAccountRequiredError);
+      try {
+        demoStore.deleteWorkspace(targetId);
+      } catch (err: any) {
+        expect(err.code).toBe("ACCOUNT_REQUIRED");
+      }
+      expect(demoStore.getWorkspaces().some((w) => w._id === targetId)).toBe(true);
+    });
+
+    it("throws DemoAccountRequiredError on createInvitations, addMember, and inviteMember", () => {
+      expect(() => demoStore.createInvitations({ emails: ["bob@example.com"] })).toThrow(DemoAccountRequiredError);
+      expect(() => demoStore.addMember("demo-ws", "new-user")).toThrow(DemoAccountRequiredError);
+      expect(() => demoStore.inviteMember("demo-ws", "bob@example.com")).toThrow(DemoAccountRequiredError);
+    });
+
+    it("permits standard demo operations like listing and updating issues", () => {
+      const workspaces = demoStore.getWorkspaces();
+      const ws = workspaces[0];
+      const issues = demoStore.getWorkspaceIssues(ws._id).issues;
+      expect(issues.length).toBeGreaterThan(0);
+
+      const issue = issues[0];
+      const originalTitle = issue.title;
+      demoStore.updateIssue(issue._id, { title: originalTitle + " [demo edit]" });
+      const updated = demoStore.getIssue(issue._id);
+      expect(updated?.issue.title).toBe(originalTitle + " [demo edit]");
+
+      // Restore original
+      demoStore.updateIssue(issue._id, { title: originalTitle });
     });
   });
 });

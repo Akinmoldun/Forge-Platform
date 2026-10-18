@@ -2,6 +2,7 @@ import { useMutation, useConvex, useSafeQuery, isConvexId } from "@/hooks/use-sa
 import { api } from "@/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link, Navigate } from "react-router";
+import { isDemoMode } from "@/lib/demoMode";
 import { AppShell, RoleBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -336,6 +337,14 @@ export default function WorkspaceSettings() {
       toast.success("Workspace deleted");
       navigate("/app");
     } catch (e) {
+      if (
+        (e as any)?.code === "ACCOUNT_REQUIRED" ||
+        (e as any)?.data?.code === "ACCOUNT_REQUIRED" ||
+        (e as Error)?.name === "DemoAccountRequiredError"
+      ) {
+        setDeleteDialogOpen(false);
+        return;
+      }
       toast.error(e instanceof Error ? e.message : "Failed to delete workspace");
     } finally {
       setDeleting(false);
@@ -1022,7 +1031,16 @@ export default function WorkspaceSettings() {
                       </p>
                     </div>
 
-                    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <AlertDialog
+                      open={deleteDialogOpen}
+                      onOpenChange={(open) => {
+                        if (open && isDemoMode()) {
+                          window.dispatchEvent(new CustomEvent("forge:account-required"));
+                          return;
+                        }
+                        setDeleteDialogOpen(open);
+                      }}
+                    >
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="destructive"

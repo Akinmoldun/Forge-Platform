@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { containsDemoId, isConvexId, isDemoId } from "@/lib/idValidation";
 import { isDemoMode } from "@/lib/demoMode";
 import { demoStore } from "@/data/in-memory-demo-store";
+import { DemoAccountRequiredError } from "@/lib/demoErrors";
 
 export { isConvexId, isDemoId, containsDemoId };
 export const hasDemoArgument = containsDemoId;
@@ -138,13 +139,34 @@ function resolveDemoQueryData(queryName: string, args: Record<string, any>) {
 
 function executeDemoMutation(qName: string, anyArgs: Record<string, any>) {
   if (qName.includes("createworkspace")) {
-    return demoStore.createWorkspace({ name: anyArgs.name, slug: anyArgs.slug });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
+  }
+  if (qName.includes("deleteworkspace")) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
+  }
+  if (
+    qName.includes("createinvitation") ||
+    qName.includes("createinvitations") ||
+    qName.includes("invitemember") ||
+    qName.includes("addmember") ||
+    (qName.includes("invitation") &&
+      !qName.includes("revoke") &&
+      !qName.includes("resend") &&
+      !qName.includes("accept"))
+  ) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("forge:account-required"));
+    }
+    throw new DemoAccountRequiredError();
   }
   if (qName.includes("updateworkspace")) {
     return demoStore.updateWorkspace(anyArgs.workspaceId, anyArgs);
-  }
-  if (qName.includes("deleteworkspace")) {
-    return demoStore.deleteWorkspace(anyArgs.workspaceId);
   }
   if (qName.includes("createissue")) {
     return demoStore.createIssue(anyArgs as any);
@@ -350,7 +372,14 @@ function useRealSafeMutation<Mutation extends FunctionReference<"mutation">>(
       return executeDemoMutation(qName, anyArgs) as any;
     }
     console.debug(`[Forge DataSource] Mutation ${qName}: Convex backend`);
-    return await realMutation(args as any);
+    try {
+      return await realMutation(args as any);
+    } catch (err: any) {
+      if (err?.data?.code === "ACCOUNT_REQUIRED" && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("forge:account-required"));
+      }
+      throw err;
+    }
   };
 }
 
