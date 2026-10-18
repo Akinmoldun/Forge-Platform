@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { FocusPullHeading } from '../motion/FocusPullHeading';
 import { InkFillParagraph } from '../motion/InkFillParagraph';
@@ -9,6 +9,26 @@ export function Section3FeaturesBento() {
   const shouldReduceMotion = useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
   useProgress(sectionRef);
+
+  const card4ContainerRef = useRef<HTMLDivElement>(null);
+  const [card4Scale, setCard4Scale] = useState<number>(1);
+
+  useEffect(() => {
+    const el = card4ContainerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      if (w < 1060 && w > 0) {
+        setCard4Scale(Math.min(1, w / 688));
+      } else {
+        setCard4Scale(1);
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Easing specified: cubic-bezier(.16, 1, .3, 1)
   const customEase = [0.16, 1, 0.3, 1] as const;
@@ -58,7 +78,7 @@ export function Section3FeaturesBento() {
 
           <FocusPullHeading
             as="h2"
-            className="text-[30px] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4"
+            className="text-[clamp(24px,6vw,30px)] sm:text-[48px] font-[500] tracking-[-0.03em] leading-[1.1] text-[#0D0D0D] max-w-[760px] mx-auto mb-4 text-balance"
           >
             Built for how engineering teams actually work.
           </FocusPullHeading>
@@ -119,9 +139,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '40px',
+                  left: 'clamp(12px, 4vw, 40px)',
                   top: '124px',
-                  width: '330px',
+                  width: 'min(330px, calc(100% - 24px))',
                   height: '166px',
                   borderRadius: '14px',
                   boxShadow: 'none',
@@ -134,7 +154,7 @@ export function Section3FeaturesBento() {
                   filter: 'blur(0.5px)',
                   zIndex: 10,
                 }}
-                className="pl-[16px] pr-[46px] flex flex-col justify-between py-1"
+                className="pl-[12px] sm:pl-[16px] pr-[16px] sm:pr-[46px] flex flex-col justify-between py-1"
               >
                 {/* Header row 44px: neutral dot + title, label */}
                 <div className="h-[44px] flex items-center justify-between border-b border-black/[0.05]">
@@ -187,9 +207,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '32px',
+                  left: 'clamp(8px, 3vw, 32px)',
                   top: '292px',
-                  width: '330px',
+                  width: 'min(330px, calc(100% - 24px))',
                   height: '166px',
                   borderRadius: '14px',
                   boxShadow: 'none',
@@ -201,7 +221,7 @@ export function Section3FeaturesBento() {
                     : 'rotate(calc(-4deg + var(--p, 1) * 2deg)) translateY(calc((1 - var(--p, 1)) * 14px))',
                   zIndex: 15,
                 }}
-                className="pl-[16px] pr-[46px] flex flex-col justify-between py-1"
+                className="pl-[12px] sm:pl-[16px] pr-[16px] sm:pr-[46px] flex flex-col justify-between py-1"
               >
                 {/* Header row 44px: neutral dot + Review, label Sign-off */}
                 <div className="h-[44px] flex items-center justify-between border-b border-black/[0.05]">
@@ -250,9 +270,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '24px',
+                  left: 'clamp(4px, 2vw, 24px)',
                   top: '460px',
-                  width: '330px',
+                  width: 'min(330px, calc(100% - 24px))',
                   height: '166px',
                   borderRadius: '14px',
                   boxShadow: 'none',
@@ -260,7 +280,7 @@ export function Section3FeaturesBento() {
                   background: '#ffffff',
                   zIndex: 20,
                 }}
-                className="pl-[16px] pr-[46px] flex flex-col justify-between py-1"
+                className="pl-[12px] sm:pl-[16px] pr-[16px] sm:pr-[46px] flex flex-col justify-between py-1"
               >
                 {/* Header row 44px: neutral dot + Done, label Progress */}
                 <div className="h-[44px] flex items-center justify-between border-b border-black/[0.05]">
@@ -377,9 +397,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '23px',
+                  left: 'clamp(12px, 3vw, 23px)',
                   top: '116px',
-                  width: '292px',
+                  width: 'min(292px, calc(100% - 24px))',
                   height: '48px',
                   borderRadius: '14px',
                   background: '#ffffff',
@@ -395,7 +415,7 @@ export function Section3FeaturesBento() {
                       <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
                     </svg>
                   </div>
-                  <span className="text-[12.5px] text-[#111418] ml-2.5 whitespace-nowrap">
+                  <span className="text-[12.5px] text-[#111418] ml-2.5 truncate">
                     <strong className="font-semibold text-[#111418]">Alex</strong> moved PROJ-142 to Review
                   </span>
                 </div>
@@ -406,9 +426,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '23px',
+                  left: 'clamp(12px, 3vw, 23px)',
                   top: '174px',
-                  width: '292px',
+                  width: 'min(292px, calc(100% - 24px))',
                   height: '104px',
                   borderRadius: '14px',
                   background: '#ffffff',
@@ -524,9 +544,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '150px',
+                  left: 'clamp(30px, 10vw, 150px)',
                   top: '190px',
-                  width: '234px',
+                  width: 'min(234px, calc(100% - 40px))',
                   height: '180px',
                   borderRadius: '14px',
                   background: '#ffffff',
@@ -563,9 +583,9 @@ export function Section3FeaturesBento() {
               <div
                 style={{
                   position: 'absolute',
-                  left: '52px',
+                  left: 'clamp(12px, 5vw, 52px)',
                   top: '108px',
-                  width: '234px',
+                  width: 'min(234px, calc(100% - 24px))',
                   height: '198px',
                   borderRadius: '14px',
                   background: '#ffffff',
@@ -686,7 +706,7 @@ export function Section3FeaturesBento() {
               borderColor: 'rgba(0,0,0,.08)',
               background: '#ffffff',
             }}
-            className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-4 min-[1060px]:row-start-2 min-[1060px]:row-end-3 h-[340px]"
+            className="w-full min-[1060px]:col-start-2 min-[1060px]:col-end-4 min-[1060px]:row-start-2 min-[1060px]:row-end-3 h-auto min-[1060px]:h-[340px] p-5 sm:p-6 min-[1060px]:p-0 flex flex-col justify-start min-[1060px]:block"
           >
             {/* Seamless faint grid background across the whole card with soft radial fade */}
             <div
@@ -703,42 +723,52 @@ export function Section3FeaturesBento() {
               }}
             />
 
-            {/* Card text block: max-width 360px, max 2 lines, does not touch diagram heading */}
-            <div className="absolute top-[24px] left-[24px] right-[24px] z-30 pointer-events-none text-left">
-              <h3 className="text-[20px] leading-[24px] font-semibold text-[#111418] tracking-tight">
+            {/* Card text block: in normal flow on <1060px, absolute on desktop */}
+            <div className="relative min-[1060px]:absolute min-[1060px]:top-[24px] min-[1060px]:left-[24px] min-[1060px]:right-[24px] z-30 pointer-events-none text-left mb-3 min-[1060px]:mb-0">
+              <h3 className="text-[18px] sm:text-[20px] leading-[22px] sm:leading-[24px] font-semibold text-[#111418] tracking-tight">
                 Dependencies without loops
               </h3>
-              <p className="text-[14px] leading-[18px] text-[#5f6368] max-w-[360px] line-clamp-2 mt-1">
+              <p className="text-[13px] sm:text-[14px] leading-[18px] text-[#5f6368] max-w-[360px] min-[1060px]:line-clamp-2 mt-1">
                 Circular blocking chains are rejected before they are saved into the DAG.
               </p>
             </div>
 
-            {/* Heading at left 28, top 108: 7px #111418 square bullet + Release 2.4 (15px semibold) & Due Jun 30 (10.5px muted) */}
+            {/* Heading at left 28, top 108: in normal flow on <1060px, absolute on desktop */}
             <div
-              style={{
-                position: 'absolute',
-                left: '28px',
-                top: '108px',
-                zIndex: 15,
-              }}
-              className="pointer-events-none select-none text-left"
+              className="relative min-[1060px]:absolute min-[1060px]:left-[28px] min-[1060px]:top-[108px] z-15 pointer-events-none select-none text-left mb-4 min-[1060px]:mb-0"
             >
               <div className="flex items-center gap-1.5">
                 <span className="w-[7px] h-[7px] rounded-[1.5px] bg-[#111418] inline-block shrink-0" />
-                <span className="text-[15px] font-semibold text-[#111418] leading-none">Release 2.4</span>
+                <span className="text-[14px] sm:text-[15px] font-semibold text-[#111418] leading-none">Release 2.4</span>
               </div>
               <span className="text-[10.5px] text-[#6b7280] mt-1 block pl-[13px]">Due Jun 30</span>
             </div>
 
-            {/* Mock stage: animates as single unit when 20% in view (270ms delay) */}
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 36, filter: 'blur(6px)' }}
-              whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.9, delay: 0.27, ease: customEase }}
-              className="w-[688px] h-[340px] origin-top-left scale-[0.46] min-[390px]:scale-[0.52] min-[480px]:scale-[0.66] sm:scale-[0.85] min-[1060px]:scale-100 min-[1060px]:inset-0 min-[1060px]:absolute pointer-events-none select-none"
+            {/* Mock stage wrapper: fluid height on mobile, absolute full card on desktop */}
+            <div
+              ref={card4ContainerRef}
+              className="relative w-full overflow-hidden min-[1060px]:overflow-visible min-[1060px]:absolute min-[1060px]:inset-0 pointer-events-none select-none"
+              style={{
+                height: card4Scale < 1 ? `${Math.round(340 * card4Scale)}px` : undefined,
+              }}
             >
-              {/* SVG Connectors: stroke #c3c7ce, 1.25px, small arrowheads; dashed loop in #6b7280 */}
+              <div
+                style={{
+                  width: '688px',
+                  height: '340px',
+                  transform: card4Scale < 1 ? `scale(${card4Scale})` : undefined,
+                  transformOrigin: 'top left',
+                }}
+                className="origin-top-left min-[1060px]:scale-100 min-[1060px]:inset-0 min-[1060px]:absolute pointer-events-none select-none"
+              >
+                <motion.div
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 36, filter: 'blur(6px)' }}
+                  whileInView={shouldReduceMotion ? {} : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.9, delay: 0.27, ease: customEase }}
+                  className="w-full h-full relative"
+                >
+                {/* SVG Connectors: stroke #c3c7ce, 1.25px, small arrowheads; dashed loop in #6b7280 */}
               <svg
                 style={{
                   position: 'absolute',
@@ -1019,7 +1049,9 @@ export function Section3FeaturesBento() {
                 </span>
               </motion.div>
             </motion.div>
-          </UnfoldCard>
+            </div>
+          </div>
+        </UnfoldCard>
         </UnfoldGroup>
       </div>
     </section>

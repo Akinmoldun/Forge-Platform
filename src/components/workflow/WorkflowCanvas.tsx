@@ -456,7 +456,7 @@ export function AddStatusNotice({
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 rounded-[20px] bg-white border border-border shadow-none">
+        <DialogContent className="max-w-2xl max-h-[85svh] flex flex-col p-6 rounded-[20px] bg-white border border-border shadow-none">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-[#0D0D0D]">Add workflow status</DialogTitle>
             <DialogDescription className="text-xs text-[#575657]">

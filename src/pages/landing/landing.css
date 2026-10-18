@@ -385,9 +385,15 @@ body {
   border-radius: 24px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  min-height: 560px;
+  min-height: 460px;
   background: radial-gradient(ellipse 80% 70% at 50% 40%, #FFFFFF 0%, #F8F8F7 50%, #F4F4F5 100%);
   box-shadow: none;
+}
+
+@media (min-width: 640px) {
+  .hero-panel {
+    min-height: 560px;
+  }
 }
 
 @media (min-width: 768px) {

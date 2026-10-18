@@ -688,7 +688,7 @@ export function AppShell({
   // If outside workspace (e.g. /app, /app/settings/profile, /invite)
   if (!isInsideWorkspace) {
     return (
-      <div className="flex min-h-screen flex-col bg-[#FBFBFC] text-[#0D0D0D]">
+      <div className="flex min-h-svh flex-col bg-[#FBFBFC] text-[#0D0D0D]">
         <ScrollManager />
         <GuestDemoBanner workspaceId={workspaceId} />
 
@@ -1289,7 +1289,7 @@ export function AppShell({
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#FBFBFC] text-[#0D0D0D]">
+    <div className="flex h-svh w-full overflow-hidden bg-[#FBFBFC] text-[#0D0D0D]">
       <ScrollManager />
 
       {/* Desktop Sidebar (>= 1024px) */}

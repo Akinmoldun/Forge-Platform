@@ -74,7 +74,7 @@ export function Section4KeyCapabilities() {
             {/* Bold Display Heading */}
             <FocusPullHeading
               as="h2"
-              className="text-[34px] sm:text-[42px] lg:text-[46px] font-[600] tracking-[-0.03em] leading-[1.08] text-[#0D0D0D] text-left m-0 max-w-[460px]"
+              className="text-[clamp(26px,6.5vw,34px)] sm:text-[42px] lg:text-[46px] font-[600] tracking-[-0.03em] leading-[1.08] text-[#0D0D0D] text-left m-0 max-w-[460px] text-balance"
             >
               Everything a delivery team needs, built in.
             </FocusPullHeading>
@@ -87,15 +87,15 @@ export function Section4KeyCapabilities() {
 
             {/* Three vertically stacked pills with vivid blue line icons */}
             <div className="flex flex-col items-start gap-2.5 mt-7">
-              <div className="inline-flex items-center gap-2.5 bg-white border border-black/[0.08] hover:border-black/20 rounded-full px-3.5 py-2 text-[13.5px] font-medium text-[#0D0D0D] transition-colors shadow-none cursor-default">
+              <div className="inline-flex items-center gap-2.5 bg-white border border-black/[0.08] hover:border-black/20 rounded-full px-3.5 py-2 min-h-[44px] text-[13.5px] font-medium text-[#0D0D0D] transition-colors shadow-none cursor-default">
                 <Lock className="w-4 h-4 text-[#1D6FE8] shrink-0" strokeWidth={1.8} aria-hidden="true" />
                 <span>Tenant isolation</span>
               </div>
-              <div className="inline-flex items-center gap-2.5 bg-white border border-black/[0.08] hover:border-black/20 rounded-full px-3.5 py-2 text-[13.5px] font-medium text-[#0D0D0D] transition-colors shadow-none cursor-default">
+              <div className="inline-flex items-center gap-2.5 bg-white border border-black/[0.08] hover:border-black/20 rounded-full px-3.5 py-2 min-h-[44px] text-[13.5px] font-medium text-[#0D0D0D] transition-colors shadow-none cursor-default">
                 <ShieldCheck className="w-4 h-4 text-[#1D6FE8] shrink-0" strokeWidth={1.8} aria-hidden="true" />
                 <span>Rules that hold</span>
               </div>
-              <div className="inline-flex items-center gap-2.5 bg-white border border-black/[0.08] hover:border-black/20 rounded-full px-3.5 py-2 text-[13.5px] font-medium text-[#0D0D0D] transition-colors shadow-none cursor-default">
+              <div className="inline-flex items-center gap-2.5 bg-white border border-black/[0.08] hover:border-black/20 rounded-full px-3.5 py-2 min-h-[44px] text-[13.5px] font-medium text-[#0D0D0D] transition-colors shadow-none cursor-default">
                 <BarChart3 className="w-4 h-4 text-[#1D6FE8] shrink-0" strokeWidth={1.8} aria-hidden="true" />
                 <span>Analytics without setup</span>
               </div>

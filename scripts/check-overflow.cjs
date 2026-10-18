@@ -1,6 +1,25 @@
+const fs = require('fs');
+const path = require('path');
 const { createRequire } = require('module');
-const customRequire = createRequire('/root/.npm/_npx/420ff84f11983ee5/node_modules/playwright/index.js');
-const { chromium } = customRequire('playwright');
+
+function getPlaywright() {
+  try {
+    return require('playwright');
+  } catch {}
+  const npxDir = '/root/.npm/_npx';
+  if (fs.existsSync(npxDir)) {
+    for (const d of fs.readdirSync(npxDir)) {
+      const candidate = path.join(npxDir, d, 'node_modules', 'playwright');
+      if (fs.existsSync(candidate)) {
+        const req = createRequire(candidate + '/index.js');
+        return req('playwright');
+      }
+    }
+  }
+  throw new Error("Cannot find Playwright in node_modules or _npx cache");
+}
+
+const { chromium } = getPlaywright();
 
 const widths = [
   { name: 'Smallest floor (Galaxy Fold cover)', width: 280, height: 653 },

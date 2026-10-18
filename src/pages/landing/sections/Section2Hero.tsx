@@ -216,7 +216,7 @@ export function Section2Hero() {
   useProgress(heroSectionRef);
 
   return (
-    <section ref={heroSectionRef} id="hero" className="pt-[84px] md:pt-[92px] pb-14 sm:pb-20 overflow-hidden relative">
+    <section ref={heroSectionRef} id="hero" className="pt-[70px] sm:pt-[84px] md:pt-[92px] pb-10 sm:pb-16 md:pb-20 overflow-hidden relative">
       {/* Outer panel container: container minus 12px gutter each side (max-width 1440px, centered) */}
       <div className="w-full max-w-[1440px] mx-auto px-3">
         <div
@@ -224,7 +224,7 @@ export function Section2Hero() {
             transform: 'scale(calc(1 - (var(--p, 0) * 0.04)))',
             borderRadius: 'calc(24px + var(--p, 0) * 16px)',
           }}
-          className="hero-panel hero-inner-panel-drift flex flex-col items-center justify-center text-center px-4 sm:px-8 py-16 sm:py-20 md:py-24 transition-transform duration-75"
+          className="hero-panel hero-inner-panel-drift flex flex-col items-center justify-center text-center px-4 sm:px-8 py-7 sm:py-14 md:py-24 transition-transform duration-75"
         >
           {/* Layer 2: Pastel Haze */}
           <div className="hero-pastel-haze" aria-hidden="true" />
@@ -238,11 +238,11 @@ export function Section2Hero() {
             <div className="hero-sun-disc" />
           </div>
 
-          {/* Hero Content (Centered, nudged ~24px above center) */}
-          <div className="relative z-10 flex flex-col items-center justify-center max-w-[960px] mx-auto -translate-y-4 md:-translate-y-6">
+          {/* Hero Content (Centered, nudged ~24px above center on desktop) */}
+          <div className="relative z-10 flex flex-col items-center justify-center max-w-[960px] mx-auto -translate-y-1 sm:-translate-y-4 md:-translate-y-6">
             {/* Pill chip with arrow */}
             <div
-              className="landing-pill mb-6 select-none text-[13px] inline-flex items-center gap-1.5 cursor-default transition-all duration-900 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              className="landing-pill mb-3 sm:mb-5 md:mb-6 select-none text-[12px] sm:text-[13px] inline-flex items-center gap-1.5 cursor-default transition-all duration-900 ease-[cubic-bezier(0.16,1,0.3,1)]"
             >
               <span>Engineering Workflow Platform</span>
               <svg
@@ -266,13 +266,13 @@ export function Section2Hero() {
             {/* Centered H1 Focus Pull */}
             <FocusPullHeading
               as="h1"
-              className="max-w-[880px] mx-auto text-[#0D0D0D] font-medium tracking-[-0.03em] leading-[1.05] text-[38px] sm:text-[54px] md:text-[68px] text-center text-balance mb-5"
+              className="max-w-[880px] mx-auto text-[#0D0D0D] font-medium tracking-[-0.03em] leading-[1.1] sm:leading-[1.05] text-[clamp(28px,7vw,38px)] sm:text-[54px] md:text-[68px] text-center text-balance mb-3 sm:mb-4 md:mb-5"
             >
               Run engineering work on rules, not reminders.
             </FocusPullHeading>
 
             {/* Subtext */}
-            <InkFillParagraph className="text-[16px] sm:text-[18px] text-[#575657] max-w-[620px] mx-auto text-center leading-[1.5] mb-8">
+            <InkFillParagraph className="text-[14px] sm:text-[16px] md:text-[18px] text-[#575657] max-w-[620px] mx-auto text-center leading-[1.45] sm:leading-[1.5] mb-5 sm:mb-6 md:mb-8 px-2 sm:px-0">
               Projects, custom workflows, issue dependencies and explainable risk scoring in one multi-tenant workspace.
             </InkFillParagraph>
 
