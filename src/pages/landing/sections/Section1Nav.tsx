@@ -165,8 +165,9 @@ export function Section1Nav() {
   return (
     <div
       ref={navContainerRef}
-      className="fixed top-[12px] left-0 right-0 mx-auto z-50 transition-transform duration-250 ease-out"
+      className="fixed left-0 right-0 mx-auto z-50 transition-transform duration-250 ease-out"
       style={{
+        top: 'max(12px, env(safe-area-inset-top, 12px))',
         width: 'min(1200px, calc(100% - 24px))',
         transform: `translateY(${navVisible || mobileMenuOpen ? '0px' : '-130%'})`,
       }}
@@ -254,7 +255,7 @@ export function Section1Nav() {
           style={{
             backgroundColor: '#FFFFFF',
           }}
-          className="md:hidden mt-2 w-full rounded-[24px] border border-black/[0.06] p-[16px] flex flex-col gap-1 shadow-none"
+          className="md:hidden mt-2 w-full max-h-[calc(100svh-80px)] overflow-y-auto rounded-[24px] border border-black/[0.06] p-[16px] flex flex-col gap-1 shadow-none"
         >
           {navLinks.map((link) => {
             const isCurrentInView = !link.external && link.id === activeSection;

@@ -220,7 +220,7 @@ export function Section5ProofNumbers() {
         </Reveal>
 
         {/* 3 Metrics Grid: 1080px container, CSS grid, 3 equal columns, gap 12px */}
-        <div className="w-full max-w-[1080px] mx-auto grid grid-cols-1 min-[900px]:grid-cols-3 gap-[12px]">
+        <div className="w-full max-w-[1080px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-[12px]">
           <MetricCard
             target={4}
             step={1}

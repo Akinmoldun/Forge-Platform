@@ -11,8 +11,8 @@ function getPlaywright() {
     for (const d of fs.readdirSync(npxDir)) {
       const candidate = path.join(npxDir, d, 'node_modules', 'playwright');
       if (fs.existsSync(candidate)) {
-        const req = createRequire(candidate + '/index.js');
-        return req('playwright');
+        const req = createRequire(path.join(candidate, 'package.json'));
+        return req(candidate);
       }
     }
   }
@@ -21,7 +21,7 @@ function getPlaywright() {
 
 const { chromium } = getPlaywright();
 
-const widths = [
+const DEFAULT_WIDTHS = [
   { name: 'Smallest floor (Galaxy Fold cover)', width: 280, height: 653 },
   { name: 'iPhone SE 1st gen', width: 320, height: 568 },
   { name: 'iPhone SE 2/3 / iPhone 8', width: 375, height: 667 },
@@ -36,39 +36,132 @@ const widths = [
   { name: 'Desktop 1440', width: 1440, height: 900 },
 ];
 
-async function run() {
-  const browser = await chromium.launch({ headless: true });
-  for (const vp of widths) {
-    const page = await browser.newPage();
-    await page.setViewportSize({ width: vp.width, height: vp.height });
-    await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
-    await page.waitForTimeout(800);
-    const bad = await page.evaluate(() => {
-      const vw = document.documentElement.clientWidth;
-      const bad = [];
-      if (document.documentElement.scrollWidth > vw + 1) bad.push('PAGE scrolls sideways: ' + document.documentElement.scrollWidth + ' > ' + vw);
-      document.querySelectorAll('body *').forEach((el) => {
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0) return;
-        if (r.right > vw + 1 || r.left < -1) {
-          let p = el.parentElement, scroller = false;
-          while (p && p !== document.body) {
-            const o = getComputedStyle(p).overflowX;
-            if (o === 'auto' || o === 'scroll' || o === 'hidden' || o === 'clip') { scroller = true; break; }
-            p = p.parentElement;
-          }
-          if (!scroller) bad.push(el.tagName + '.' + String(el.className).slice(0, 60) + ' right=' + Math.round(r.right));
-        }
-      });
-      return bad.slice(0, 30);
-    });
-    console.log(`[${vp.width}x${vp.height}] ${vp.name}: ${bad.length === 0 ? 'PASS (no overflow)' : 'FAIL (' + bad.length + ' offenders)'}`);
-    if (bad.length > 0) {
-      console.log('   Offenders:', bad.slice(0, 5));
+const EXTRA_WIDTHS = [
+  { name: 'Galaxy Z Fold 4/5 cover', width: 344, height: 882 },
+  { name: 'Pixel 7/8', width: 412, height: 915 },
+  { name: '7-inch tablet', width: 600, height: 960 },
+  { name: 'iPad mini 6', width: 744, height: 1133 },
+  { name: 'iPad 10th gen / Air', width: 820, height: 1180 },
+  { name: 'iPad Pro 11-inch', width: 834, height: 1194 },
+  { name: 'Surface Pro / Large tablet', width: 1032, height: 1376 },
+  { name: 'HD 720p', width: 1280, height: 720 },
+  { name: 'Laptop standard', width: 1536, height: 864 },
+  { name: 'FHD 1080p', width: 1920, height: 1080 },
+  { name: 'QHD 1440p', width: 2560, height: 1440 },
+  { name: 'Ultrawide 3440', width: 3440, height: 1440 },
+  { name: 'Landscape iPhone 12-16', width: 844, height: 390 },
+  { name: 'Landscape iPhone Pro Max', width: 932, height: 430 },
+  { name: 'Landscape Pixel', width: 915, height: 412 },
+];
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  let paths = ['/'];
+  let demo = false;
+  let allSizes = false;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--paths') {
+      paths = [];
+      i++;
+      while (i < args.length && !args[i].startsWith('--')) {
+        paths.push(args[i]);
+        i++;
+      }
+      i--;
+    } else if (args[i] === '--demo') {
+      demo = true;
+    } else if (args[i] === '--all-sizes') {
+      allSizes = true;
     }
-    await page.close();
   }
-  await browser.close();
+  return { paths: paths.length ? paths : ['/'], demo, allSizes };
 }
 
-run().catch(console.error);
+async function run() {
+  const { paths, demo, allSizes } = parseArgs();
+  const testWidths = allSizes ? [...DEFAULT_WIDTHS, ...EXTRA_WIDTHS] : DEFAULT_WIDTHS;
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+
+  let browser;
+  let hasFailures = false;
+
+  try {
+    browser = await chromium.launch({ headless: true });
+
+    for (const testPath of paths) {
+      console.log(`\n=== CHECKING PATH: ${testPath} ===`);
+      for (const vp of testWidths) {
+        const page = await browser.newPage();
+        try {
+          await page.setViewportSize({ width: vp.width, height: vp.height });
+
+          if (demo) {
+            // First visit home, ensure demo mode is active
+            await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
+            await page.waitForTimeout(400);
+            const tryDemoBtn = await page.$('text=Try demo');
+            if (tryDemoBtn) {
+              await tryDemoBtn.click();
+              await page.waitForTimeout(600);
+            }
+          }
+
+          const targetUrl = testPath.startsWith('http') ? testPath : `${baseUrl}${testPath}`;
+          await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+          await page.waitForTimeout(800);
+
+          const bad = await page.evaluate(() => {
+            const vw = document.documentElement.clientWidth;
+            const bad = [];
+            if (document.documentElement.scrollWidth > vw + 1) {
+              bad.push(`PAGE scrolls sideways: ${document.documentElement.scrollWidth} > ${vw}`);
+            }
+            document.querySelectorAll('body *').forEach((el) => {
+              const r = el.getBoundingClientRect();
+              if (r.width === 0 || r.height === 0) return;
+              if (r.right > vw + 1 || r.left < -1) {
+                let p = el.parentElement;
+                let scroller = false;
+                while (p && p !== document.body) {
+                  const o = getComputedStyle(p).overflowX;
+                  if (o === 'auto' || o === 'scroll' || o === 'hidden' || o === 'clip') {
+                    scroller = true;
+                    break;
+                  }
+                  p = p.parentElement;
+                }
+                if (!scroller) {
+                  bad.push(
+                    `${el.tagName}.${String(el.className).slice(0, 60)} right=${Math.round(r.right)} left=${Math.round(r.left)}`
+                  );
+                }
+              }
+            });
+            return bad.slice(0, 30);
+          });
+
+          const status = bad.length === 0 ? 'PASS (no overflow)' : `FAIL (${bad.length} offenders)`;
+          if (bad.length > 0) hasFailures = true;
+          console.log(`[${vp.width}x${vp.height}] ${vp.name}: ${status}`);
+          if (bad.length > 0) {
+            console.log('   Offenders:', bad.slice(0, 5));
+          }
+        } finally {
+          await page.close();
+        }
+      }
+    }
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+
+  process.exit(hasFailures ? 1 : 0);
+}
+
+run().catch((err) => {
+  console.error("Runner error:", err);
+  process.exit(1);
+});

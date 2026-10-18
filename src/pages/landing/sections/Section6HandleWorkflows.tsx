@@ -106,7 +106,7 @@ export function Section6HandleWorkflows() {
                     borderColor: 'rgba(0, 0, 0, 0.08)',
                     borderRadius: '10px',
                   }}
-                  className="reliability-card p-[18px] h-full min-h-[168px] min-[900px]:h-[168px] flex flex-col justify-between shadow-none cursor-default"
+                  className="reliability-card p-[18px] h-full min-h-[168px] flex flex-col justify-between shadow-none cursor-default"
                 >
                   {/* Top: Icon tile 36px x 36px, radius 8px, background #EAF2FF, 18px line icon in #1D6FE8 */}
                   <div className="w-[36px] h-[36px] rounded-[8px] bg-[#EAF2FF] flex items-center justify-center shrink-0">

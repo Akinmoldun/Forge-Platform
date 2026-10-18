@@ -219,8 +219,8 @@ export function ActivityHeatmap() {
           )}
 
           {/* Centered Heatmap wrapper with overflow protection */}
-          <div className="w-full flex justify-center overflow-x-auto pb-2">
-            <div className="flex items-start shrink-0">
+          <div className="w-full flex justify-start md:justify-center overflow-x-auto pb-2">
+            <div className="flex items-start shrink-0 px-2">
               {/* Day Labels at left */}
               <div className="flex flex-col gap-[3px] pt-[20px] pr-2 shrink-0 text-[11px] text-[#575657] font-mono leading-none">
                 {dayLabels.map((label, idx) => (

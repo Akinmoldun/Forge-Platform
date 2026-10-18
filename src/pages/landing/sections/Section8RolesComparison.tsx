@@ -131,15 +131,25 @@ export function Section8RolesComparison() {
       <style>{`
         .roles-grid-row {
           display: grid;
-          grid-template-columns: minmax(150px, 1.6fr) repeat(4, minmax(0, 1fr));
+          grid-template-columns: minmax(160px, 1.8fr) repeat(4, minmax(80px, 1fr));
         }
         @media (min-width: 768px) {
           .roles-grid-row {
             grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr));
           }
         }
+        @media (max-width: 639px) {
+          .roles-grid-row > :first-child {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background-color: inherit;
+            box-shadow: 2px 0 6px -2px rgba(0, 0, 0, 0.08);
+          }
+        }
         .roles-body-row {
           transition: background-color 150ms ease;
+          background-color: #FFFFFF;
         }
         .roles-body-row:hover {
           background-color: #F3F6FA !important;
@@ -167,6 +177,10 @@ export function Section8RolesComparison() {
 
         {/* Two-layer Table Frame */}
         <Reveal delayMs={100} className="w-full max-w-[1080px] mx-auto">
+          {/* Mobile scroll hint */}
+          <div className="sm:hidden flex items-center justify-end px-2 py-1 text-[11px] text-[#575657] font-medium">
+            <span>Scroll horizontally for all roles →</span>
+          </div>
           <div
             ref={tableRef}
             className="w-full p-2 rounded-[20px] bg-[#FAFAFA] border border-black/[0.04] shadow-none"
@@ -176,7 +190,7 @@ export function Section8RolesComparison() {
             <div
               role="table"
               aria-label="Forge roles and capabilities comparison"
-              className="w-full min-w-[560px] md:min-w-0"
+              className="w-full min-w-[500px] sm:min-w-[560px] md:min-w-0"
             >
               {/* Header row */}
               <div role="rowgroup">

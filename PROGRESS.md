@@ -17,8 +17,8 @@ Rules that matter most:
 
 # NOW (update this line before you start each item)
 
-NOW: nothing in progress. Next agent starts with Part 2, section 2 (integrity check: tsc, stray file, script hangs).
-Last updated by: owner handover, 18 Oct 2026, after session 2 (session 2 never wrote to this file; this entry was rebuilt from its action log and the repo snapshot).
+NOW: Part 2, section 2 (integrity check: tsc, delete stray file, fix script hangs, extend check-overflow.cjs, hero re-measure). Touching scripts/ and PROGRESS.md.
+Last updated by: Session 3, 18 Oct 2026.
 
 ---
 
