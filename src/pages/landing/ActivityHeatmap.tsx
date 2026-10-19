@@ -39,7 +39,15 @@ export function ActivityHeatmap() {
   } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // Start scrolled to the most recent week (right edge) on narrow screens
+    if (scrollerRef.current && window.innerWidth < 768) {
+      scrollerRef.current.scrollLeft = scrollerRef.current.scrollWidth;
+    }
+  }, []);
 
   // Generate 7 rows x 52 columns of data with fixed seed
   const { grid, monthLabels } = useMemo(() => {
@@ -219,7 +227,7 @@ export function ActivityHeatmap() {
           )}
 
           {/* Centered Heatmap wrapper with overflow protection */}
-          <div className="w-full flex justify-start md:justify-center overflow-x-auto pb-2">
+          <div ref={scrollerRef} className="w-full flex justify-start md:justify-center overflow-x-auto pb-2">
             <div className="flex items-start shrink-0 px-2">
               {/* Day Labels at left */}
               <div className="flex flex-col gap-[3px] pt-[20px] pr-2 shrink-0 text-[11px] text-[#575657] font-mono leading-none">

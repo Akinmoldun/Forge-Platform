@@ -247,7 +247,7 @@ export default function InvitePage() {
                 </div>
               ) : isAuthenticated && !isEmailMismatch ? (
                 <Button
-                  className="w-full rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-10 text-[14px]"
+                  className="w-full rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] min-h-[44px] text-[14px] cursor-pointer"
                   disabled={accepting}
                   onClick={handleAccept}
                 >
@@ -255,14 +255,14 @@ export default function InvitePage() {
                   Accept invitation
                 </Button>
               ) : !isAuthenticated ? (
-                <div className="w-full space-y-2">
-                  <p className="text-center text-[12px] text-[#575657]">
+                <div className="w-full space-y-3">
+                  <p className="text-center text-[13px] text-[#575657]">
                     Sign in or create an account with <strong>{invitation.email}</strong> to accept.
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2.5">
                     <Button
                       variant="outline"
-                      className="w-full rounded-full h-9 text-[13px]"
+                      className="w-full rounded-full min-h-[44px] text-[14px] cursor-pointer"
                       onClick={() =>
                         navigate(
                           `/login?returnTo=${encodeURIComponent(`/invite?token=${token}`)}`,
@@ -272,7 +272,7 @@ export default function InvitePage() {
                       Sign in
                     </Button>
                     <Button
-                      className="w-full rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] h-9 text-[13px]"
+                      className="w-full rounded-full bg-[#0D0D0D] text-white hover:bg-[#262626] min-h-[44px] text-[14px] cursor-pointer"
                       onClick={() =>
                         navigate(
                           `/signup?returnTo=${encodeURIComponent(`/invite?token=${token}`)}`,

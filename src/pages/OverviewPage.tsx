@@ -552,7 +552,7 @@ export default function OverviewPage() {
         <div className="w-full flex flex-col gap-4">
           {/* Row 1: Quick actions + Status distribution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[340px]">
-            <div className="h-[340px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+            <div className="min-h-[300px] h-auto lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
               <QuickActionsWidget
                 workspaceId={id}
                 workspaceName={workspace.workspace.name}
@@ -560,7 +560,7 @@ export default function OverviewPage() {
                 projectList={projectList}
               />
             </div>
-            <div className="h-[340px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+            <div className="min-h-[300px] h-auto lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
               <StatusDistributionWidget
                 rollup={realRollup}
                 isLoading={summariesLoading}
@@ -570,7 +570,7 @@ export default function OverviewPage() {
 
           {/* Row 2: My open issues + Priorities breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[380px]">
-            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+            <div className="min-h-[320px] h-auto lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
               <MyOpenIssuesWidget
                 workspaceId={id}
                 issues={realIssues}
@@ -579,7 +579,7 @@ export default function OverviewPage() {
                 isLoading={issuesLoading}
               />
             </div>
-            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+            <div className="min-h-[320px] h-auto lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
               <PriorityBreakdownWidget
                 rollup={realRollup}
                 issues={allWorkspaceIssues}
@@ -592,14 +592,14 @@ export default function OverviewPage() {
 
           {/* Row 3: Recent activity + Project health */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[380px]">
-            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+            <div className="min-h-[320px] h-auto lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
               <RecentActivityWidget
                 workspaceId={id}
                 activity={activity ?? []}
                 isLoading={activity === undefined}
               />
             </div>
-            <div className="h-[380px] lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
+            <div className="min-h-[320px] h-auto lg:h-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-5 flex flex-col min-h-0 overflow-hidden hover:border-[rgba(13,13,13,0.18)] transition-all">
               <ProjectHealthWidget
                 workspaceId={id}
                 projectList={projectList}

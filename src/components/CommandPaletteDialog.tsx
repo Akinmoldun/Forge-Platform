@@ -233,7 +233,7 @@ export function CommandPaletteDialog({
       <DialogContent
         showCloseButton={false}
         overlayClassName="bg-[rgba(13,13,13,0.25)] backdrop-blur-none"
-        className="max-w-[600px] w-full rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-0 gap-0 shadow-none overflow-hidden block"
+        className="w-[calc(100vw-2rem)] sm:w-full max-w-[600px] max-h-[calc(100svh-2rem)] rounded-[16px] border border-[rgba(0,0,0,0.08)] bg-white p-0 gap-0 shadow-none overflow-hidden block"
       >
         <CommandPrimitive
           shouldFilter={false}
@@ -257,7 +257,7 @@ export function CommandPaletteDialog({
           <div className="h-px w-full bg-[rgba(0,0,0,0.08)]" />
 
           {/* Vertical List */}
-          <CommandPrimitive.List className="max-h-[400px] overflow-y-auto no-scrollbar p-2">
+          <CommandPrimitive.List className="max-h-[min(400px,calc(100svh-120px))] overflow-y-auto no-scrollbar p-2">
             {!hasAnyResults && (
               <CommandPrimitive.Empty className="py-8 text-center text-[13px] text-[#575657]">
                 No results for &ldquo;{search}&rdquo;

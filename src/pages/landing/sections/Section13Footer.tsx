@@ -36,11 +36,15 @@ export function Section13Footer() {
 
   return (
     <footer
-      style={{ backgroundColor: '#0D0D0D', width: '100%' }}
-      className="w-full pt-12 pb-8 text-left relative z-1"
+      style={{
+        backgroundColor: '#0D0D0D',
+        width: '100%',
+        paddingBottom: 'max(32px, env(safe-area-inset-bottom, 32px))',
+      }}
+      className="w-full pt-12 text-left relative z-1"
     >
       <div className="landing-container max-w-[1200px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-8">
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-5 gap-8 pb-8">
           {/* Col 1 & 2: Brand & Tagline */}
           <Reveal index={0} className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5">

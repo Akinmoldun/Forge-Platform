@@ -286,7 +286,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
               disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading}
               placeholder="name@example.com"
               required
-              className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
+              className="auth-field-input w-full h-[48px] px-4 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[16px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
               style={{ boxShadow: 'none' }}
             />
           </div>
@@ -314,7 +314,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                 disabled={isSubmitting || isGuestLoading || isGitHubLoading || isGoogleLoading}
                 placeholder={mode === 'signup' ? 'At least 8 characters' : 'Enter your password'}
                 required
-                className="auth-field-input w-full h-[48px] pl-4 pr-11 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[15px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
+                className="auth-field-input w-full h-[48px] pl-4 pr-12 rounded-[12px] border border-black/[0.12] bg-white text-[#0D0D0D] text-[16px] placeholder:text-[#575657]/50 transition-all disabled:opacity-60"
                 style={{ boxShadow: 'none' }}
               />
               <button
@@ -322,7 +322,7 @@ export function AuthForm({ mode, redirectAfterAuth = '/app' }: AuthFormProps) {
                 onClick={() => setShowPassword((prev) => !prev)}
                 disabled={isSubmitting}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#575657] hover:text-[#0D0D0D] transition-colors cursor-pointer disabled:opacity-60"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-[44px] h-[44px] flex items-center justify-center text-[#575657] hover:text-[#0D0D0D] transition-colors cursor-pointer disabled:opacity-60 rounded-full hover:bg-black/5"
               >
                 {showPassword ? (
                   <EyeOff className="w-4 h-4 shrink-0" />
