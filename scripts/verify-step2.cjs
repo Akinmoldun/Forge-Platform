@@ -137,6 +137,29 @@ async function run() {
 
         const activitySec = await page.$('#activity');
         if (activitySec) {
+          // Tap on a cell in the heatmap grid
+          const cell = await page.$('#activity .grid .cursor-pointer');
+          if (cell) {
+            await cell.click();
+            await page.waitForTimeout(300);
+            const tooltipData = await page.evaluate(() => {
+              const tip = Array.from(document.querySelectorAll('div')).find(
+                (d) => d.textContent.includes('event') && d.classList.contains('z-50')
+              );
+              if (!tip) return null;
+              const r = tip.getBoundingClientRect();
+              return {
+                text: tip.textContent.trim(),
+                left: Math.round(r.left),
+                right: Math.round(r.right),
+                top: Math.round(r.top),
+                width: Math.round(r.width),
+                viewportWidth: window.innerWidth,
+                onScreen: r.left >= 0 && r.right <= window.innerWidth,
+              };
+            });
+            console.log('Heatmap tooltip data at 360x640:', tooltipData);
+          }
           await activitySec.screenshot({ path: `${screensDir}/heatmap-360x640.png` });
           console.log(`Saved ${screensDir}/heatmap-360x640.png`);
         }
@@ -211,6 +234,65 @@ async function run() {
         }
       } finally {
         await page.close();
+      }
+    }
+
+    // 6. TEST FOOTER AT 280, 360, 768
+    console.log('\n=== TEST 6: FOOTER SECTION ===');
+    for (const [w, h] of [[280, 653], [360, 640], [768, 1024]]) {
+      const page = await browser.newPage();
+      try {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+        const footerEl = await page.$('footer');
+        if (footerEl) {
+          await footerEl.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(400);
+          await footerEl.screenshot({ path: `${screensDir}/footer-${w}x${h}.png` });
+          console.log(`Saved ${screensDir}/footer-${w}x${h}.png`);
+        }
+      } finally {
+        await page.close();
+      }
+    }
+
+    // 7. TEST AUTH AND INVITE PAGES (C1 to C3)
+    console.log('\n=== TEST 7: AUTH & INVITE PAGES ===');
+    for (const p of ['/login', '/signup', '/invite']) {
+      for (const [w, h] of [[320, 568], [360, 640], [768, 1024]]) {
+        const page = await browser.newPage();
+        try {
+          await page.setViewportSize({ width: w, height: h });
+          await page.goto(`http://localhost:3000${p}`, { waitUntil: 'networkidle' });
+          await page.waitForTimeout(500);
+
+          const inputsAndButtons = await page.evaluate(() => {
+            const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"])'));
+            const buttons = Array.from(document.querySelectorAll('button:not([aria-hidden="true"])'));
+            return {
+              inputs: inputs.map(i => ({
+                id: i.id || i.name || i.placeholder,
+                fontSize: window.getComputedStyle(i).fontSize,
+                height: Math.round(i.getBoundingClientRect().height)
+              })),
+              buttons: buttons.map(b => ({
+                text: b.textContent.trim().slice(0, 25),
+                height: Math.round(b.getBoundingClientRect().height),
+                width: Math.round(b.getBoundingClientRect().width)
+              }))
+            };
+          });
+
+          console.log(`${p} at ${w}x${h}:`,
+            `inputs (${inputsAndButtons.inputs.length}):`, inputsAndButtons.inputs.map(i => `${i.id || 'input'}:${i.fontSize}`).join(', '),
+            `buttons (${inputsAndButtons.buttons.length}):`, inputsAndButtons.buttons.slice(0, 3).map(b => `${b.text}:${b.height}px`).join(', ')
+          );
+
+          const pageSlug = p.replace('/', '');
+          await page.screenshot({ path: `${screensDir}/${pageSlug}-${w}x${h}.png` });
+        } finally {
+          await page.close();
+        }
       }
     }
 

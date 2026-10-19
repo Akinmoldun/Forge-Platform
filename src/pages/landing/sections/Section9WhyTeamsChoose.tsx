@@ -166,7 +166,7 @@ function MarqueeCard({ item }: { item: MarqueeCardItem }) {
 
 export function Section9WhyTeamsChoose() {
   return (
-    <section className="landing-section relative band-white pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] select-none w-full">
+    <section id="why-teams-choose" className="landing-section relative band-white pt-[64px] md:pt-[96px] pb-[72px] md:pb-[104px] select-none w-full">
       {/* Header */}
       <Reveal className="landing-container relative z-1 text-center mb-[56px]">
         <div className="inline-flex items-center gap-1.5 px-[14px] py-[6px] rounded-[999px] bg-white border border-black/[0.08] text-[14px] font-medium text-[#0D0D0D] mb-4 shadow-none">

@@ -744,10 +744,55 @@ export function Section3FeaturesBento() {
               <span className="text-[10.5px] text-[#6b7280] mt-1 block pl-[13px]">Due Jun 30</span>
             </div>
 
+            {/* Small-screen readable dependency steps list (<520px) */}
+            <div className="block min-[520px]:hidden w-full space-y-2 z-20 pointer-events-none select-none mt-1">
+              <div className="flex items-center justify-between p-2.5 rounded-lg border border-black/5 bg-white shadow-none text-left">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-[10.5px] text-[#6b7280] shrink-0">PROJ-101</span>
+                  <span className="text-[12.5px] font-medium text-[#111418] truncate">Define schema rules</span>
+                </div>
+                <span className="h-[20px] px-2 rounded-full text-[10.5px] font-medium bg-white border border-[#d1d5db] text-[#111418] flex items-center gap-1 shrink-0 ml-2">
+                  <svg className="w-2.5 h-2.5 text-[#111418]" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span>Passed</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-center text-[#9ca3af]">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg border border-black/5 bg-white shadow-none text-left">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-[10.5px] text-[#6b7280] shrink-0">PROJ-102</span>
+                  <span className="text-[12.5px] font-medium text-[#111418] truncate">Transition gate check</span>
+                </div>
+                <span className="h-[20px] px-2 rounded-full text-[10.5px] font-medium bg-[#eceef1] text-[#111418] flex items-center gap-1 shrink-0 ml-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2f6df6]" />
+                  <span>Running</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-center text-[#9ca3af]">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg border border-black/5 bg-white shadow-none text-left">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-[10.5px] text-[#6b7280] shrink-0">PROJ-103</span>
+                  <span className="text-[12.5px] font-medium text-[#111418] truncate">Audit chain commit</span>
+                </div>
+                <span className="h-[20px] px-2 rounded-full text-[10.5px] font-medium bg-[#111418] text-white flex items-center shrink-0 ml-2">
+                  Blocked
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[#e5e7eb] text-[11px] font-medium text-[#dc2626]">
+                <span>✕ Cycle rejected</span>
+                <span className="text-[#6b7280] font-normal">· Loop prevented</span>
+              </div>
+            </div>
+
             {/* Mock stage wrapper: fluid height on mobile, absolute full card on desktop */}
             <div
               ref={card4ContainerRef}
-              className="relative w-full overflow-hidden min-[1060px]:overflow-visible min-[1060px]:absolute min-[1060px]:inset-0 pointer-events-none select-none"
+              className="hidden min-[520px]:block relative w-full overflow-hidden min-[1060px]:overflow-visible min-[1060px]:absolute min-[1060px]:inset-0 pointer-events-none select-none"
               style={{
                 height: card4Scale < 1 ? `${Math.round(340 * card4Scale)}px` : undefined,
               }}

@@ -6,10 +6,11 @@ This guide outlines the production deployment workflow for Forge to Vercel and C
 
 ## 1. Vercel Configuration
 
+- **Node.js Version**: 22.x (required for Vite, Vitest >= 5.0.5, and ES modules)
 - **Framework Preset**: Vite
 - **Build Command**: `npx convex deploy --cmd 'npm run build'` (or `npm run build` if Convex is deployed independently)
 - **Output Directory**: `dist`
-- **Install Command**: `npm install`
+- **Install Command**: `npm ci`
 - **Routing**: Handled by `/vercel.json` SPA rewrite:
   ```json
   {

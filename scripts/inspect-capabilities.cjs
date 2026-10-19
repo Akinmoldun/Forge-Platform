@@ -3,14 +3,9 @@ const fs = require('fs');
 const { createRequire } = require('module');
 
 function getPlaywright() {
-  const npxDir = '/root/.npm/_npx';
-  for (const d of fs.readdirSync(npxDir)) {
-    const candidate = path.join(npxDir, d, 'node_modules', 'playwright');
-    if (fs.existsSync(candidate)) {
-      const req = createRequire(path.join(candidate, 'package.json'));
-      return req(candidate);
-    }
-  }
+  try { return require('playwright'); } catch {}
+  try { return require('/root/.bun/install/global/node_modules/playwright'); } catch {}
+  throw new Error('Playwright not found');
 }
 
 const { chromium } = getPlaywright();

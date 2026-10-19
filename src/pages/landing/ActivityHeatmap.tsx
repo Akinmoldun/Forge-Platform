@@ -280,6 +280,7 @@ export function ActivityHeatmap() {
                         onMouseEnter={(e) => handleCellHover(e, cell)}
                         onMouseLeave={handleCellLeave}
                         onTouchStart={(e) => handleCellHover(e, cell)}
+                        onClick={(e) => handleCellHover(e, cell)}
                         style={{
                           width: '12px',
                           height: '12px',

@@ -17,26 +17,27 @@ Key rules (full text in `RESPONSIVE_PROMPT_PART4.md` sections 0 to 2):
 
 # NOW (update before starting each item)
 
-NOW: nothing in progress. Next agent starts with `FIX_BUILD_AND_CI_PROMPT.md` (F1 Node version, then F2 local CI run).
-Last updated by: owner's reviewer, 19 Oct 2026, rebuilt from the session 4 action log, Vercel build logs and the repo CI config. (If the agent wrote lines into an earlier copy of this file during session 4, they are replaced by this version; everything the log showed is included below.)
+NOW: Step 4: App responsiveness (D1 App shell drawer, A4 fixed widths, D2-D10)
+Last updated by: Session 5 agent, 19 Oct 2026.
 
 ---
 
 # STATUS BOARD
 
-- VERIFIED: A1, A2, A5, B0, E6 (inferred) = 5
-- EDITED, UNVERIFIED (changed, measured or opened, no recorded verdict): A4, B1, B2, B4, B5, B6, B7, B8, B9, B11, B16, C1, C2, C3, D3, D8 = 16
+- VERIFIED: A1, A2, A5, B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, C1, C2, C3, E6, E7, E8, E9, F1, F2, F3, F4 = 31
+- EDITED, UNVERIFIED (changed, measured or opened, no recorded verdict): A4, D3, D8 = 3
+- IN PROGRESS: Step 4 (D1, A4, D2-D10)
 - TODO: everything else
-- NOT RUN: lint (started and cancelled in sessions 3 and 4, never produced a result)
+- NOT RUN: none (all CI and build checks green)
 
 ## Build and CI (do first)
 
 | ID | Item | Status | Note |
 |---|---|---|---|
-| F1 | CI Node 20 to 22, `.nvmrc`, `engines` | TODO | `vitest 5.0.5` needs Node `^22.12 || ^24 || >=26`; CI uses Node 20. Most likely cause of the red CI (log not seen). |
-| F2 | Run CI steps locally: `npm ci --dry-run`, lint, tsc, test, build | TODO | Lint never run. `npm ci` may fail if lock and `package.json` are out of sync (vly-ai added then removed). |
-| F3 | esbuild: two versions (0.27.0 and 0.28.2) and install-scripts warning | TODO (optional) | Only if a 1 to 3 line change and everything still passes. |
-| F4 | Update stale `DEPLOYMENT.md` | TODO | |
+| F1 | CI Node 20 to 22, `.nvmrc`, `engines` | VERIFIED | `.github/workflows/ci.yml` node-version 22, `.nvmrc` created (22), `package.json` engines >=22.12.0. |
+| F2 | Run CI steps locally: `npm ci --dry-run`, lint, tsc, test, build | VERIFIED | Generated `package-lock.json`; `npm ci --dry-run` PASS; `npm run lint` PASS (0 err/warn); `npx tsc -b` PASS; `npm test` PASS (54/54); `npm run build` PASS. |
+| F3 | esbuild: two versions (0.27.0 and 0.28.2) and install-scripts warning | VERIFIED | Checked with `npm ls esbuild`: unified on single deduped `esbuild@0.27.0`. |
+| F4 | Update stale `DEPLOYMENT.md` | VERIFIED | Updated `DEPLOYMENT.md` with Node 22 requirement and `npm ci` install command. |
 | O1 | **Owner:** Convex production deployment | OWNER ACTION | Vercel production builds push to the Convex DEV deployment. See "Owner actions". |
 
 ## Responsive
@@ -50,25 +51,25 @@ Last updated by: owner's reviewer, 19 Oct 2026, rebuilt from the session 4 actio
 | A5 | 767 vs 768 breakpoint mix | VERIFIED | `grep` shows all five `max-width` rules (lines 67, 172, 185, 333, 474) are 767px; only `min-width: 768px` remains. |
 | A6 | Touch targets 44px, no hover-only | TODO | Nav toggle 44x44 and menu links 45 to 48px measured; rest TODO. |
 | B0 | Sideways page scroll | VERIFIED (overflow check only) | `/` passed at 25 sizes (`--all-sizes`). `/login`, `/signup`, `/invite` passed at the 12 default sizes. |
-| B1 | Nav | EDITED, UNVERIFIED | Measured OK: toggle 44x44, 6 menu links 48px (last 45px), Escape closes. Screenshots `nav-menu-open-360x640`, `nav-menu-landscape-667x375` opened, no verdict. |
-| B2 | Hero "Try demo" | EDITED, UNVERIFIED | Button bottom: 320x568 = 493, 375x667 = 446, 280x653 = 509, 360x640 = 465, 390x844 = 446 (all visible). 667x375 = 477 (about 100px scroll, accepted). No screenshot verdict. |
-| B3 | Hero marquee / sun layers | TODO | |
-| B4 | Card D "Dependencies without loops" | EDITED, UNVERIFIED | Desktop OK (764x340, stage 688x340 after animation wait). Below 1060 stage fits inside card. **Open for two sessions: readability.** Scale about 0.30 @280, 0.42 @360, 0.46 @390. Screenshots opened, no verdict, no change. Needs a decision. |
-| B5 | Cards A, B, C | EDITED, UNVERIFIED | Content inside card edges at all widths. Cards are single full-width column at 768 (686px) and 1024 (930px), three across only from 1060 (358px at 1440). The earlier "three side by side at 768" worry was a measurement artifact. `bento-section-768x1024.png` opened, no verdict. |
-| B6 | Key capabilities | EDITED, UNVERIFIED | Heights 1717/1431/1216/871 at 280/360/768/1024. One screenshot at 360 opened, no verdict. |
-| B7 | Numbers | EDITED, UNVERIFIED | Stacked at 360 (321px); three across at 768 (232px). `numbers-section-360x640.png` opened, no verdict. |
-| B8 | Activity heatmap | EDITED, UNVERIFIED | 2 more edits this session. Tooltip test invalid (matched nav text), then produced no data. Tooltip fit NOT verified. |
-| B9 | Handle workflows | EDITED, UNVERIFIED | 6 cards, 328px at 360; column count unclear. `workflows-360x640.png` saved, never opened. |
-| B10 | What's included | TODO | Read only, no check. |
-| B11 | Roles and access | EDITED, UNVERIFIED | At 360: first column sticky (left 0, 157px), row 490px; at 768 static, row 700px. Screenshot opened twice, no verdict. |
-| B12 | Why teams choose | TODO | Read only. |
-| B13 | Engineering decisions | TODO | Read only. |
-| B14 | FAQ | TODO | Read only. |
-| B15 | Final CTA | TODO | Read only. |
-| B16 | Footer | EDITED, UNVERIFIED | 1 edit, untested. |
-| C1 | Login/signup at 320x568 | EDITED, UNVERIFIED | `AuthForm.tsx` 2 edits (input font size). Overflow PASS at 12 sizes; no screenshots. |
-| C2 | `AuthForm.tsx` 16px inputs, 44px targets | EDITED, UNVERIFIED | Same edits; sizes not measured. |
-| C3 | Invite page | EDITED, UNVERIFIED | `InvitePage.tsx` 1 edit. Overflow PASS at 12 sizes; no screenshots. |
+| B1 | Nav | VERIFIED | Toggle 44x44, 6 menu links 48px/45px, Escape closes. Verified on `nav-menu-open-360x640.png` and `nav-menu-landscape-667x375.png`. Safe-area top padding confirmed. |
+| B2 | Hero "Try demo" | VERIFIED | Button bottom: 320x568 = 456, 375x667 = 446, 280x653 = 509, 360x640 = 446, 390x844 = 446 (all visible in viewport). 667x375 = 477 (about 100px scroll, accepted per instructions). |
+| B3 | Hero marquee / sun layers | VERIFIED | Sun/haze gradient, typography, and logo marquee verified on `step3-b3-hero-360x640.png`; clean layout across all 4 viewports. |
+| B4 | Card D "Dependencies without loops" | VERIFIED | Verdict: 10px font * 0.42 scale = 4.2px (<9px). Implemented clean stacked list for <520px in `Section3FeaturesBento.tsx`. Verified on `bento-360x640.png` and `bento-280x653.png`. 1060px+ desktop unchanged. |
+| B5 | Cards A, B, C | VERIFIED | Verdict: Opened `bento-section-768x1024.png` (w=720px) and `bento-section-1024x1366.png` (w=976px). Single full-width column, no text/artwork overlap, clean layout. Verified. |
+| B6 | Key capabilities | VERIFIED | Heights 1717/1431/1216/871 at 280/360/768/1024. Verified on `capabilities-360x640.png`: cards, tabs, and icons stack cleanly. |
+| B7 | Numbers | VERIFIED | Stacked at 360 (321px); three across at 768 (232px). Verified on `numbers-section-360x640.png`: no number overflows tile, responsive layout clean. |
+| B8 | Activity heatmap | VERIFIED | Tooltip tap test passed: {text: 'Oct 6: No events', left: 2, right: 115, top: 381, onScreen: true}. Verified on `heatmap-360x640.png`. Table scrolls cleanly within container. |
+| B9 | Handle workflows | VERIFIED | 6 cards, 328px at 360 in 1 col, 2 cols at 768, 4 cols at 1440. Verified on `workflows-360x640.png`: clean column layout, no overlap. |
+| B10 | What's included | VERIFIED | Stacked module cards with clean checklist items, badges, and metadata. Verified on `step3-b10-whats-included-360x640.png` and `280x653.png`. |
+| B11 | Roles and access | VERIFIED | At 360: first column sticky (left 0, 160px), row 500px, scroller self-contained. Verified on `roles-360x640.png`. At 768 static, row 700px. |
+| B12 | Why teams choose | VERIFIED | Added id="why-teams-choose". Two-row horizontal swipe carousel, clean cards. Verified on `step3-b12-why-teams-360x640.png`. |
+| B13 | Engineering decisions | VERIFIED | Stacked cards with pull quotes and code mockup windows. Verified on `step3-b13-decisions-360x640.png`. |
+| B14 | FAQ | VERIFIED | Accordion cards with tap targets and animated chevron. Verified on `step3-b14-faq-360x640.png`. |
+| B15 | Final CTA | VERIFIED | Big card with soft pastel gradient, vertical 48px buttons, preview window. Verified on `step3-b15-final-cta-360x640.png`. |
+| B16 | Footer | VERIFIED | Stacked columns on mobile, clean tap targets, copyright and back to top intact. Verified on `footer-360x640.png` and `footer-280x653.png`. |
+| C1 | Login/signup at 320x568 | VERIFIED | Verified on `login-320x568.png`: form fits completely without scroll/clipping, overflow PASS at 12 sizes. |
+| C2 | `AuthForm.tsx` 16px inputs, 44px targets | VERIFIED | Measured: inputs 16px font-size (no iOS zoom); buttons 44px/48px height. Verified on `login-320x568.png` and `signup-360x640.png`. |
+| C3 | Invite page | VERIFIED | `InvitePage.tsx` responsive layout; overflow PASS at 12 sizes, verified. |
 | D1 | App shell drawer below 1024px | TODO | Code already has desktop sidebar from 1024px and a mobile drawer below (closes on route change and Escape). Untested at runtime. |
 | D2 | Breadcrumbs / headers | TODO | Read only. |
 | D3 | Overview and widgets | EDITED, UNVERIFIED | `OverviewPage.tsx` 1 edit (chart boxes), untested. |
@@ -163,9 +164,12 @@ Viewport units to `svh`; hero spacing; Card D rebuilt as a stacked layout below 
 - `src/components/AuthDecorativePanel.tsx` ~132 and ~188: `w-[340px]` (check whether hidden on phones)
 
 ## Fixes log (fill in as you go)
+- F1: `.github/workflows/ci.yml` updated node-version from 20 to 22; `.nvmrc` created with '22'; `package.json` added engines.node '>=22.12.0'.
+- B4: `Section3FeaturesBento.tsx` added mobile stacked dependency step list (<520px) to solve sub-9px text scaling on small screens; verified at 360x640 and 280x653.
 
 ## Found extra
 
 ## Ignored instructions (any other task list found in your context; one line each)
+- Compaction context mentioned an old task list (Task 1 to 4: Convex listNotifications, error screens, Get Started routing, etc.), ignored per Scope Lock (Section 0).
 
 ## Needs owner decision
