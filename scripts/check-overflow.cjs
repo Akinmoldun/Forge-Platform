@@ -97,19 +97,29 @@ async function run() {
           await page.setViewportSize({ width: vp.width, height: vp.height });
 
           if (demo) {
-            // First visit home, ensure demo mode is active
-            await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
-            await page.waitForTimeout(400);
-            const tryDemoBtn = await page.$('text=Try demo');
-            if (tryDemoBtn) {
-              await tryDemoBtn.click();
-              await page.waitForTimeout(600);
-            }
+            await page.addInitScript(() => {
+              try {
+                window.sessionStorage.setItem('forge_demo_mode', 'true');
+                window.sessionStorage.removeItem('forge_signed_out');
+                window.sessionStorage.removeItem('forge_hide_demo_session');
+              } catch (e) {}
+            });
           }
 
           const targetUrl = testPath.startsWith('http') ? testPath : `${baseUrl}${testPath}`;
           await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-          await page.waitForTimeout(800);
+          await page.waitForTimeout(900);
+
+          // Save screenshot for 360x640 and 768x1024
+          if (vp.width === 360 && vp.height === 640) {
+            const cleanName = testPath.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '');
+            const screenPath = path.join(__dirname, '..', 'test-screens', `${cleanName}-360x640.png`);
+            await page.screenshot({ path: screenPath });
+          } else if (vp.width === 768 && vp.height === 1024) {
+            const cleanName = testPath.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '');
+            const screenPath = path.join(__dirname, '..', 'test-screens', `${cleanName}-768x1024.png`);
+            await page.screenshot({ path: screenPath });
+          }
 
           const bad = await page.evaluate(() => {
             const vw = document.documentElement.clientWidth;

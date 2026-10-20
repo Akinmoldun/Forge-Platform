@@ -162,7 +162,7 @@ function AccountMenu({
             "group flex items-center rounded-[10px] text-left transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
             collapsed
               ? "size-10 justify-center hover:bg-[#ECECEE]"
-              : "w-full gap-2.5 p-1.5 hover:bg-[#ECECEE]"
+              : "w-full gap-2.5 p-1.5 min-h-[44px] lg:min-h-0 hover:bg-[#ECECEE]"
           )}
           aria-label="Account menu"
         >
@@ -561,6 +561,16 @@ export function AppShell({
     setMobileDrawerOpen(false);
   }, [pathname]);
 
+  // Body scroll lock while mobile drawer is open
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mobileDrawerOpen]);
+
   // Command palette state
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -752,7 +762,7 @@ export function AppShell({
             "group flex w-full items-center rounded-[10px] text-left transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
             collapsed
               ? "size-10 justify-center hover:bg-[#ECECEE]"
-              : "gap-2 px-2 py-1.5 hover:bg-[#ECECEE]"
+              : "gap-2 px-2 py-1.5 min-h-[44px] lg:min-h-0 hover:bg-[#ECECEE]"
           )}
         >
           <div className="flex size-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-[#FBFBFC] text-[#0D0D0D]">
@@ -834,8 +844,8 @@ export function AppShell({
     <TooltipProvider delayDuration={300}>
       <aside
         className={cn(
-          "flex h-full flex-col bg-[#F7F7F8] border-r border-border transition-all duration-200 select-none",
-          collapsed ? "w-14" : "w-64"
+          "flex h-full flex-col bg-[#F7F7F8] border-r border-border transition-all duration-200 select-none w-full lg:w-auto",
+          collapsed ? "lg:w-14" : "lg:w-64"
         )}
       >
         {/* Top: Logo & collapse toggle */}
@@ -900,7 +910,7 @@ export function AppShell({
                   type="button"
                   onClick={() => setCommandOpen(true)}
                   className={cn(
-                    "flex h-8 items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
+                    "flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
                     collapsed ? "w-full justify-center" : "flex-1 justify-between"
                   )}
                   aria-label="Search (Ctrl+K)"
@@ -925,7 +935,7 @@ export function AppShell({
                   <button
                     type="button"
                     onClick={() => setNewIssueOpen(true)}
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none"
+                    className="inline-flex size-11 lg:size-8 shrink-0 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none"
                     aria-label="New issue (C)"
                   >
                     <Plus className="size-4" />
@@ -942,7 +952,7 @@ export function AppShell({
               <Link
                 to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/notifications` : "/app"}
                 className={cn(
-                  "flex h-8 w-full items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                  "flex min-h-[44px] lg:min-h-0 lg:h-8 w-full items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
                   collapsed ? "justify-center relative" : "justify-between",
                   pathname.includes("/notifications")
                     ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
@@ -1012,7 +1022,7 @@ export function AppShell({
                         <Link
                           to={to}
                           className={cn(
-                            "flex h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                            "flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
                             collapsed ? "justify-center" : "gap-2.5",
                             active
                               ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
@@ -1054,7 +1064,7 @@ export function AppShell({
                       key={pId}
                       to={`/app/projects/${pId}`}
                       className={cn(
-                        "group flex h-8 items-center justify-between rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                        "group flex min-h-[44px] lg:min-h-0 lg:h-8 items-center justify-between rounded-[8px] px-2 text-[13px] transition-colors outline-none",
                         active
                           ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
                           : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
@@ -1154,7 +1164,7 @@ export function AppShell({
                         <TooltipTrigger asChild>
                           <div
                             className={cn(
-                              "group flex h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors cursor-pointer",
+                              "group flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors cursor-pointer",
                               collapsed ? "justify-center" : "justify-between",
                               active
                                 ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
@@ -1305,7 +1315,13 @@ export function AppShell({
             aria-hidden="true"
           />
           {/* Drawer content */}
-          <div className="relative z-10 h-full w-72 max-w-[85vw] shadow-none">
+          <div
+            className="relative z-10 h-full w-72 max-w-[85vw] shadow-none bg-[#F7F7F8]"
+            style={{
+              paddingTop: 'max(0px, env(safe-area-inset-top, 0px))',
+              paddingBottom: 'max(0px, env(safe-area-inset-bottom, 0px))',
+            }}
+          >
             {sidebarContent}
           </div>
         </div>
@@ -1317,13 +1333,18 @@ export function AppShell({
         <GuestDemoBanner workspaceId={workspaceId} />
 
         {/* Sticky slim top strip (48px) */}
-        <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center justify-between border-b border-border bg-white/95 px-4 sm:px-8 backdrop-blur-xs">
-          <div className="flex items-center gap-3 min-w-0">
+        <header
+          className="sticky top-0 z-30 flex min-h-12 shrink-0 items-center justify-between border-b border-border bg-white/95 px-3 sm:px-8 backdrop-blur-xs"
+          style={{
+            paddingTop: 'max(0px, env(safe-area-inset-top, 0px))',
+          }}
+        >
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Hamburger for mobile (< 1024px) */}
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="inline-flex size-9 lg:hidden items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+              className="inline-flex size-11 lg:hidden items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] shrink-0"
               aria-label="Open navigation menu"
             >
               <Menu className="size-5" />

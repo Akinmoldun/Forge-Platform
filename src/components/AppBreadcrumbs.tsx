@@ -32,7 +32,7 @@ export function AppBreadcrumbs({
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[13px] min-w-0">
       <Link
         to={`/app/workspaces/${workspace._id}`}
-        className="flex items-center gap-1.5 font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[140px] sm:max-w-[200px]"
+        className="flex items-center gap-1.5 font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[90px] xs:max-w-[120px] sm:max-w-[200px]"
       >
         <EmblemIllustration
           emblemKey={workspace.iconKey}
@@ -48,7 +48,7 @@ export function AppBreadcrumbs({
           <ChevronRight className="size-3.5 shrink-0 text-[#575657]/50" aria-hidden="true" />
           <Link
             to={`/app/projects/${project._id}`}
-            className="flex items-center gap-1.5 font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[140px] sm:max-w-[200px]"
+            className="flex items-center gap-1.5 font-medium text-[#575657] hover:text-[#0D0D0D] transition-colors truncate max-w-[85px] xs:max-w-[120px] sm:max-w-[200px]"
           >
             <EmblemIllustration
               emblemKey={project.iconKey}
@@ -66,7 +66,7 @@ export function AppBreadcrumbs({
           <ChevronRight className="size-3.5 shrink-0 text-[#575657]/50" aria-hidden="true" />
           <Link
             to={`/app/issues/${issue._id}`}
-            className="font-medium text-[#0D0D0D] truncate max-w-[160px] sm:max-w-[260px] hover:underline"
+            className="font-medium text-[#0D0D0D] truncate max-w-[100px] xs:max-w-[150px] sm:max-w-[260px] hover:underline"
           >
             {project?.key ? `${project.key}-${issue.number}` : `#${issue.number}`}: {issue.title}
           </Link>
