@@ -108,6 +108,10 @@ function ScrollManager() {
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, left: 0, behavior: reduce ? "auto" : "smooth" });
+    const appMain = document.querySelector("main");
+    if (appMain) {
+      appMain.scrollTo({ top: 0, left: 0, behavior: reduce ? "auto" : "smooth" });
+    }
   }, [pathname, navigationType]);
   return null;
 }
@@ -198,7 +202,7 @@ function AccountMenu({
       <DropdownMenuContent
         align={collapsed ? "start" : "end"}
         side="top"
-        className="w-64 rounded-[16px] border border-border bg-white p-2 shadow-none"
+        className="w-64 rounded-[16px] border border-border bg-white p-2 shadow-none z-[60]"
       >
         <div className="px-2.5 py-1.5">
           {editingName ? (
@@ -293,8 +297,13 @@ function AccountMenu({
         <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem
           onClick={async () => {
+            const wasDemo = isDemoMode();
             await signOut();
-            navigate("/login");
+            if (wasDemo) {
+              navigate("/");
+            } else {
+              navigate("/login");
+            }
           }}
           className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#B3261E] hover:bg-[#B3261E]/10 cursor-pointer"
         >
@@ -364,13 +373,13 @@ function GuestDemoBanner({ workspaceId }: { workspaceId?: string }) {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="inline-flex size-6 items-center justify-center rounded-[6px] text-[#575657] hover:bg-black/[0.05] hover:text-[#0D0D0D] transition-colors"
+              className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#575657] hover:bg-black/[0.05] hover:text-[#0D0D0D] transition-colors"
               aria-label="Demo options"
             >
-              <MoreHorizontal className="size-3.5" />
+              <MoreHorizontal className="size-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 rounded-[12px] border border-border bg-white p-1 shadow-none">
+          <DropdownMenuContent align="end" className="w-44 rounded-[12px] border border-border bg-white p-1 shadow-none z-[60]">
             <DropdownMenuItem
               onClick={handleResetDemo}
               disabled={resetting}
@@ -563,13 +572,27 @@ export function AppShell({
 
   // Body scroll lock while mobile drawer is open
   useEffect(() => {
-    if (!mobileDrawerOpen) return;
+    if (!mobileDrawerOpen) {
+      document.body.style.overflow = "";
+      return;
+    }
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
     };
   }, [mobileDrawerOpen]);
+
+  // Ensure mobile drawer closes and scroll lock releases on desktop resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileDrawerOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Command palette state
   const [commandOpen, setCommandOpen] = useState(false);
@@ -752,7 +775,7 @@ export function AppShell({
   const hasMoreProjects = (projects?.length ?? 0) > 6;
 
   // Workspace switcher component for sidebar
-  const workspaceSwitcherPill = (
+  const renderWorkspaceSwitcher = (isCollapsed: boolean, inDrawer: boolean = false) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
@@ -760,7 +783,7 @@ export function AppShell({
           aria-label="Switch workspace"
           className={cn(
             "group flex w-full items-center rounded-[10px] text-left transition-colors outline-none focus-visible:outline-2 focus-visible:outline-[rgba(13,13,13,0.3)] focus-visible:outline-offset-2",
-            collapsed
+            isCollapsed
               ? "size-10 justify-center hover:bg-[#ECECEE]"
               : "gap-2 px-2 py-1.5 min-h-[44px] lg:min-h-0 hover:bg-[#ECECEE]"
           )}
@@ -773,7 +796,7 @@ export function AppShell({
               size={18}
             />
           </div>
-          {!collapsed && (
+          {!isCollapsed && (
             <>
               {isWsLoading ? (
                 <div className="h-4 w-28 rounded bg-[#EEEEF0] animate-pulse" />
@@ -789,7 +812,7 @@ export function AppShell({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-64 rounded-[16px] border border-border bg-white p-1.5 shadow-none"
+        className="w-64 rounded-[16px] border border-border bg-white p-1.5 shadow-none z-[60]"
       >
         <DropdownMenuLabel className="px-2 py-1 text-xs text-[#575657] font-medium">
           Switch workspace
@@ -797,7 +820,10 @@ export function AppShell({
         {myWorkspaces?.map((w) => (
           <DropdownMenuItem
             key={w._id}
-            onClick={() => navigate(workspacePath(w._id, ""))}
+            onClick={() => {
+              if (inDrawer) setMobileDrawerOpen(false);
+              navigate(workspacePath(w._id, ""));
+            }}
             className="rounded-[10px] px-2.5 py-2 text-[13px] text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
           >
             <WorkspaceIllustration
@@ -817,7 +843,10 @@ export function AppShell({
         )}
         <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem
-          onClick={() => navigate("/app")}
+          onClick={() => {
+            if (inDrawer) setMobileDrawerOpen(false);
+            navigate("/app");
+          }}
           className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
         >
           <Building2 className="size-3.5 mr-2 text-[#575657]" /> All workspaces
@@ -829,6 +858,7 @@ export function AppShell({
               requireAccount();
               return;
             }
+            if (inDrawer) setMobileDrawerOpen(false);
             navigate("/app");
           }}
           className="rounded-[10px] px-2.5 py-2 text-[13px] font-medium text-[#0D0D0D] hover:bg-[#F1F1F3] cursor-pointer"
@@ -839,475 +869,540 @@ export function AppShell({
     </DropdownMenu>
   );
 
-  // Sidebar content (shared by desktop sidebar and mobile drawer)
-  const sidebarContent = (
-    <TooltipProvider delayDuration={300}>
-      <aside
-        className={cn(
-          "flex h-full flex-col bg-[#F7F7F8] border-r border-border transition-all duration-200 select-none w-full lg:w-auto",
-          collapsed ? "lg:w-14" : "lg:w-64"
-        )}
-      >
-        {/* Top: Logo & collapse toggle */}
-        <div className="flex h-12 items-center justify-between px-3 border-b border-border/40 shrink-0">
-          {!collapsed ? (
-            <>
-              <Link
-                to={dashboardHref}
-                onClick={handleLogoClick}
-                className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
-                aria-label="Forge home"
+  // Render sidebar either for desktop or for mobile drawer
+  const renderSidebar = ({
+    collapsed: isCollapsed,
+    inDrawer = false,
+  }: {
+    collapsed: boolean;
+    inDrawer?: boolean;
+  }) => {
+    // Quick Rows: Search & Inbox
+    const quickRows = (
+      <div className={cn("space-y-0.5", inDrawer ? "p-2 border-b border-border/40 shrink-0" : "p-2 space-y-0.5 border-b border-border/40 shrink-0")}>
+        {/* Search row with '+' new issue button */}
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => {
+                  if (inDrawer) setMobileDrawerOpen(false);
+                  setCommandOpen(true);
+                }}
+                className={cn(
+                  "flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
+                  isCollapsed ? "w-full justify-center" : "flex-1 justify-between"
+                )}
+                aria-label="Search (Ctrl+K)"
               >
-                <ForgeLogo className="size-5 text-[#0D0D0D]" />
-                <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
-                  Forge
-                </span>
-              </Link>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Search className="size-4 shrink-0" />
+                  {!isCollapsed && <span className="font-medium">Search</span>}
+                </div>
+                {!isCollapsed && (
+                  <kbd className="rounded-[4px] border border-border/70 bg-white px-1.5 py-0.2 text-[10px] font-mono text-[#575657]">
+                    ⌘K
+                  </kbd>
+                )}
+              </button>
+            </TooltipTrigger>
+            {isCollapsed && <TooltipContent side="right">Search (⌘K)</TooltipContent>}
+          </Tooltip>
 
+          {!isCollapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (inDrawer) setMobileDrawerOpen(false);
+                    setNewIssueOpen(true);
+                  }}
+                  className="inline-flex size-11 lg:size-8 shrink-0 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none"
+                  aria-label="New issue (C)"
+                >
+                  <Plus className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">New issue (C)</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {/* Inbox row (Notifications) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/notifications` : "/app"}
+              onClick={() => {
+                if (inDrawer) setMobileDrawerOpen(false);
+              }}
+              className={cn(
+                "flex min-h-[44px] lg:min-h-0 lg:h-8 w-full items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                isCollapsed ? "justify-center relative" : "justify-between",
+                pathname.includes("/notifications")
+                  ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                  : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+              )}
+              aria-label={`Inbox ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Bell className="size-4 shrink-0" />
+                {!isCollapsed && <span className="font-medium">Inbox</span>}
+              </div>
+              {unreadCount > 0 && (
+                <span
+                  className={cn(
+                    "rounded-full bg-[#D78FC6] font-medium text-white flex items-center justify-center",
+                    isCollapsed
+                      ? "absolute top-1 right-1 size-2"
+                      : "px-1.5 py-0.2 text-[10px]"
+                  )}
+                >
+                  {!isCollapsed && unreadCount}
+                </span>
+              )}
+            </Link>
+          </TooltipTrigger>
+          {isCollapsed && (
+            <TooltipContent side="right">
+              Inbox {unreadCount > 0 ? `(${unreadCount} unread)` : ""}
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </div>
+    );
+
+    // Workspace Links
+    const workspaceLinks = (
+      <div className={cn("p-2 border-b border-border/40", inDrawer ? "shrink-0" : "shrink-0")}>
+        <div>
+          {!isCollapsed && (
+            <div className="flex items-center justify-between px-2 pb-1">
+              <span className="text-[12px] font-medium text-[#575657] lowercase first-letter:capitalize">
+                Workspace
+              </span>
+              <button
+                type="button"
+                onClick={() => setWorkspaceSectionCollapsed((p) => !p)}
+                className="text-[#575657] hover:text-[#0D0D0D]"
+                aria-label="Toggle workspace section"
+              >
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 transition-transform",
+                    workspaceSectionCollapsed && "-rotate-90"
+                  )}
+                />
+              </button>
+            </div>
+          )}
+
+          {!workspaceSectionCollapsed && (
+            <nav aria-label="Workspace pages" className="space-y-0.5">
+              {WORKSPACE_NAV.map(({ label, segment, icon: Icon }) => {
+                const to = effectiveWorkspaceId ? workspacePath(effectiveWorkspaceId, segment) : "/app";
+                const active = isNavActive(pathname, to, segment === "");
+
+                return (
+                  <Tooltip key={label}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        to={to}
+                        onClick={() => {
+                          if (inDrawer) setMobileDrawerOpen(false);
+                        }}
+                        className={cn(
+                          "flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                          isCollapsed ? "justify-center" : "gap-2.5",
+                          active
+                            ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                            : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                        )}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        {!isCollapsed && <span className="truncate">{label}</span>}
+                      </Link>
+                    </TooltipTrigger>
+                    {isCollapsed && <TooltipContent side="right">{label}</TooltipContent>}
+                  </Tooltip>
+                );
+              })}
+            </nav>
+          )}
+        </div>
+      </div>
+    );
+
+    // Projects list
+    const projectsList = (
+      <div className={cn(inDrawer ? "px-2 py-3 space-y-4" : "flex-1 min-h-0 overflow-y-auto px-2 py-3 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden")}>
+        {/* Section: Pinned Projects (if any) */}
+        {!isCollapsed && pinnedIds.length > 0 && projects && (
+          <div>
+            <div className="flex items-center justify-between px-2 pb-1">
+              <span className="text-[12px] font-medium text-[#575657] flex items-center gap-1">
+                <Star className="size-3 text-[#D6C6A1]" /> Pinned
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {pinnedIds.map((pId) => {
+                const proj = projects.find((p) => p._id === pId);
+                if (!proj) return null;
+                const active = activeProjectId === pId;
+
+                return (
+                  <Link
+                    key={pId}
+                    to={`/app/projects/${pId}`}
+                    onClick={() => {
+                      if (inDrawer) setMobileDrawerOpen(false);
+                    }}
+                    className={cn(
+                      "group flex min-h-[44px] lg:min-h-0 lg:h-8 items-center justify-between rounded-[8px] px-2 text-[13px] transition-colors outline-none",
+                      active
+                        ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                        : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ProjectIllustration
+                        projectKey={proj.key}
+                        name={proj.name}
+                        iconKey={proj.iconKey}
+                        id={proj._id}
+                        size={15}
+                      />
+                      <span className="truncate">{proj.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => togglePinProject(pId, e)}
+                      className="opacity-0 group-hover:opacity-100 text-[#D6C6A1] hover:text-[#0D0D0D]"
+                      title="Unpin project"
+                    >
+                      <Star className="size-3 fill-current" />
+                    </button>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Section: Projects */}
+        <div>
+          {!isCollapsed && (
+            <div className="flex items-center justify-between px-2 pb-1">
+              <span className="text-[12px] font-medium text-[#575657]">Projects</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (inDrawer) setMobileDrawerOpen(false);
+                    setNewProjectOpen(true);
+                  }}
+                  className="inline-flex size-5 items-center justify-center rounded-[4px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                  title="Create project"
+                  aria-label="Create project"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProjectsSectionCollapsed((p) => !p)}
+                  className="text-[#575657] hover:text-[#0D0D0D]"
+                  aria-label="Toggle projects section"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 transition-transform",
+                      projectsSectionCollapsed && "-rotate-90"
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!projectsSectionCollapsed && (
+            <div className="space-y-0.5">
+              {/* Skeleton when projects is undefined */}
+              {!projects && (
+                <div className="space-y-1 px-1">
+                  <div className="h-6 w-full rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+                  <div className="h-6 w-3/4 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+                  <div className="h-6 w-5/6 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
+                </div>
+              )}
+
+              {/* Empty state */}
+              {projects && projects.length === 0 && !isCollapsed && (
+                <div className="px-2 py-3 text-center">
+                  <p className="text-[12px] text-[#575657]">No projects yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (inDrawer) setMobileDrawerOpen(false);
+                      setNewProjectOpen(true);
+                    }}
+                    className="mt-1 text-[11px] font-medium text-[#0D0D0D] hover:underline"
+                  >
+                    + Create project
+                  </button>
+                </div>
+              )}
+
+              {/* Projects list */}
+              {visibleProjects.map((proj) => {
+                const active = activeProjectId === proj._id;
+                const isPinned = pinnedIds.includes(proj._id);
+                const isExpanded = !!expandedProjects[proj._id];
+
+                return (
+                  <div key={proj._id} className="space-y-0.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={cn(
+                            "group flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors cursor-pointer",
+                            isCollapsed ? "justify-center" : "justify-between",
+                            active
+                              ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                              : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                          )}
+                          onClick={() => {
+                            if (inDrawer) setMobileDrawerOpen(false);
+                            navigate(`/app/projects/${proj._id}`);
+                          }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {!isCollapsed && (
+                              <button
+                                type="button"
+                                onClick={(e) => toggleProjectExpanded(proj._id, e)}
+                                className="text-[#575657] hover:text-[#0D0D0D]"
+                                aria-label="Expand project views"
+                              >
+                                <ChevronRight
+                                  className={cn(
+                                    "size-3 transition-transform",
+                                    isExpanded && "rotate-90"
+                                  )}
+                                />
+                              </button>
+                            )}
+                            <ProjectIllustration
+                              projectKey={proj.key}
+                              name={proj.name}
+                              iconKey={proj.iconKey}
+                              id={proj._id}
+                              size={15}
+                            />
+                            {!isCollapsed && (
+                              <span className="truncate font-medium">{proj.name}</span>
+                            )}
+                          </div>
+
+                          {!isCollapsed && (
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-[10px] text-[#575657] opacity-0 group-hover:opacity-100 uppercase">
+                                {proj.key}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => togglePinProject(proj._id, e)}
+                                className={cn(
+                                  "p-0.5 transition-opacity",
+                                  isPinned
+                                    ? "text-[#D6C6A1] opacity-100"
+                                    : "text-[#575657] opacity-0 group-hover:opacity-100 hover:text-[#0D0D0D]"
+                                )}
+                                title={isPinned ? "Unpin" : "Pin project"}
+                              >
+                                <Star
+                                  className={cn("size-3", isPinned && "fill-current")}
+                                />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      {isCollapsed && (
+                        <TooltipContent side="right">
+                          {proj.name} ({proj.key})
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+
+                    {/* Expanded Views: Board, List, Analytics, Settings */}
+                    {!isCollapsed && isExpanded && (
+                      <div className="ml-5 pl-2 border-l border-border/60 space-y-0.5 pt-0.5">
+                        <Link
+                          to={`/app/projects/${proj._id}?view=board`}
+                          onClick={() => inDrawer && setMobileDrawerOpen(false)}
+                          className={cn(
+                            "flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] transition-colors",
+                            active && pathname.includes("/projects") && !pathname.includes("/analytics") && !pathname.includes("/settings")
+                              ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
+                              : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
+                          )}
+                        >
+                          <KanbanSquare className="size-3.5 shrink-0" />
+                          <span>Board</span>
+                        </Link>
+                        <Link
+                          to={`/app/projects/${proj._id}?view=list`}
+                          onClick={() => inDrawer && setMobileDrawerOpen(false)}
+                          className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                        >
+                          <List className="size-3.5 shrink-0" />
+                          <span>List</span>
+                        </Link>
+                        <Link
+                          to={`/app/projects/${proj._id}/analytics`}
+                          onClick={() => inDrawer && setMobileDrawerOpen(false)}
+                          className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                        >
+                          <BarChart3 className="size-3.5 shrink-0" />
+                          <span>Analytics</span>
+                        </Link>
+                        <Link
+                          to={`/app/projects/${proj._id}/settings/workflows`}
+                          onClick={() => inDrawer && setMobileDrawerOpen(false)}
+                          className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                        >
+                          <SlidersHorizontal className="size-3.5 shrink-0" />
+                          <span>Settings</span>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* More row */}
+              {hasMoreProjects && !isCollapsed && (
+                <Link
+                  to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/projects` : "/app"}
+                  onClick={() => inDrawer && setMobileDrawerOpen(false)}
+                  className="flex h-7 items-center px-2 text-[12px] font-medium text-[#575657] hover:text-[#0D0D0D]"
+                >
+                  More projects ({(projects?.length ?? 0) - 6} more)...
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    return (
+      <TooltipProvider delayDuration={300}>
+        <aside
+          className={cn(
+            "flex h-full flex-col bg-[#F7F7F8] border-r border-border transition-all duration-200 select-none w-full",
+            inDrawer ? "w-full" : (isCollapsed ? "lg:w-14" : "lg:w-64")
+          )}
+        >
+          {/* Top: Logo & collapse toggle (toggle hidden in drawer) */}
+          <div className="flex h-12 items-center justify-between px-3 border-b border-border/40 shrink-0">
+            {!isCollapsed ? (
+              <>
+                <Link
+                  to={dashboardHref}
+                  onClick={(e) => {
+                    if (inDrawer) setMobileDrawerOpen(false);
+                    handleLogoClick(e);
+                  }}
+                  className="flex items-center gap-2 rounded-[8px] py-1 outline-none transition-opacity hover:opacity-85"
+                  aria-label="Forge home"
+                >
+                  <ForgeLogo className="size-5 text-[#0D0D0D]" />
+                  <span className="text-[15px] font-semibold tracking-tight text-[#0D0D0D]">
+                    Forge
+                  </span>
+                </Link>
+
+                {!inDrawer && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={toggleCollapsed}
+                        className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                        aria-label="Collapse sidebar ([)"
+                      >
+                        <PanelLeftClose className="size-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Collapse sidebar ([)</TooltipContent>
+                  </Tooltip>
+                )}
+              </>
+            ) : (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={toggleCollapsed}
-                    className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                    aria-label="Collapse sidebar ([)"
+                    className="mx-auto inline-flex size-8 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
+                    aria-label="Expand sidebar ([)"
                   >
-                    <PanelLeftClose className="size-4" />
+                    <PanelLeftOpen className="size-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right">Collapse sidebar ([)</TooltipContent>
-              </Tooltip>
-            </>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={toggleCollapsed}
-                  className="mx-auto inline-flex size-8 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                  aria-label="Expand sidebar ([)"
-                >
-                  <PanelLeftOpen className="size-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Expand sidebar ([)</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-
-        {/* Workspace Switcher */}
-        <div className="p-2 border-b border-border/40 shrink-0">
-          {workspaceSwitcherPill}
-        </div>
-
-        {/* Quick Rows: Search & Inbox */}
-        <div className="p-2 space-y-0.5 border-b border-border/40 shrink-0">
-          {/* Search row with '+' new issue button */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setCommandOpen(true)}
-                  className={cn(
-                    "flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none",
-                    collapsed ? "w-full justify-center" : "flex-1 justify-between"
-                  )}
-                  aria-label="Search (Ctrl+K)"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Search className="size-4 shrink-0" />
-                    {!collapsed && <span className="font-medium">Search</span>}
-                  </div>
-                  {!collapsed && (
-                    <kbd className="rounded-[4px] border border-border/70 bg-white px-1.5 py-0.2 text-[10px] font-mono text-[#575657]">
-                      ⌘K
-                    </kbd>
-                  )}
-                </button>
-              </TooltipTrigger>
-              {collapsed && <TooltipContent side="right">Search (⌘K)</TooltipContent>}
-            </Tooltip>
-
-            {!collapsed && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setNewIssueOpen(true)}
-                    className="inline-flex size-11 lg:size-8 shrink-0 items-center justify-center rounded-[8px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors outline-none"
-                    aria-label="New issue (C)"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">New issue (C)</TooltipContent>
+                <TooltipContent side="right">Expand sidebar ([)</TooltipContent>
               </Tooltip>
             )}
           </div>
 
-          {/* Inbox row (Notifications) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/notifications` : "/app"}
-                className={cn(
-                  "flex min-h-[44px] lg:min-h-0 lg:h-8 w-full items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
-                  collapsed ? "justify-center relative" : "justify-between",
-                  pathname.includes("/notifications")
-                    ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
-                    : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
-                )}
-                aria-label={`Inbox ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Bell className="size-4 shrink-0" />
-                  {!collapsed && <span className="font-medium">Inbox</span>}
-                </div>
-                {unreadCount > 0 && (
-                  <span
-                    className={cn(
-                      "rounded-full bg-[#D78FC6] font-medium text-white flex items-center justify-center",
-                      collapsed
-                        ? "absolute top-1 right-1 size-2"
-                        : "px-1.5 py-0.2 text-[10px]"
-                    )}
-                  >
-                    {!collapsed && unreadCount}
-                  </span>
-                )}
-              </Link>
-            </TooltipTrigger>
-            {collapsed && (
-              <TooltipContent side="right">
-                Inbox {unreadCount > 0 ? `(${unreadCount} unread)` : ""}
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </div>
-
-        {/* Workspace Links - Never scroll */}
-        <div className="p-2 border-b border-border/40 shrink-0">
-          <div>
-            {!collapsed && (
-              <div className="flex items-center justify-between px-2 pb-1">
-                <span className="text-[12px] font-medium text-[#575657] lowercase first-letter:capitalize">
-                  Workspace
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setWorkspaceSectionCollapsed((p) => !p)}
-                  className="text-[#575657] hover:text-[#0D0D0D]"
-                  aria-label="Toggle workspace section"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "size-3.5 transition-transform",
-                      workspaceSectionCollapsed && "-rotate-90"
-                    )}
-                  />
-                </button>
-              </div>
-            )}
-
-            {!workspaceSectionCollapsed && (
-              <nav aria-label="Workspace pages" className="space-y-0.5">
-                {WORKSPACE_NAV.map(({ label, segment, icon: Icon }) => {
-                  const to = effectiveWorkspaceId ? workspacePath(effectiveWorkspaceId, segment) : "/app";
-                  const active = isNavActive(pathname, to, segment === "");
-
-                  return (
-                    <Tooltip key={label}>
-                      <TooltipTrigger asChild>
-                        <Link
-                          to={to}
-                          className={cn(
-                            "flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors outline-none",
-                            collapsed ? "justify-center" : "gap-2.5",
-                            active
-                              ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
-                              : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
-                          )}
-                          aria-current={active ? "page" : undefined}
-                        >
-                          <Icon className="size-4 shrink-0" />
-                          {!collapsed && <span className="truncate">{label}</span>}
-                        </Link>
-                      </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
-                    </Tooltip>
-                  );
-                })}
-              </nav>
-            )}
+          {/* Workspace Switcher */}
+          <div className="p-2 border-b border-border/40 shrink-0">
+            {renderWorkspaceSwitcher(isCollapsed, inDrawer)}
           </div>
-        </div>
 
-        {/* Scrollable Projects Section (takes remaining height, hidden scrollbar) */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-2 py-3 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {/* Section: Pinned Projects (if any) */}
-          {!collapsed && pinnedIds.length > 0 && projects && (
-            <div>
-              <div className="flex items-center justify-between px-2 pb-1">
-                <span className="text-[12px] font-medium text-[#575657] flex items-center gap-1">
-                  <Star className="size-3 text-[#D6C6A1]" /> Pinned
-                </span>
-              </div>
-              <div className="space-y-0.5">
-                {pinnedIds.map((pId) => {
-                  const proj = projects.find((p) => p._id === pId);
-                  if (!proj) return null;
-                  const active = activeProjectId === pId;
-
-                  return (
-                    <Link
-                      key={pId}
-                      to={`/app/projects/${pId}`}
-                      className={cn(
-                        "group flex min-h-[44px] lg:min-h-0 lg:h-8 items-center justify-between rounded-[8px] px-2 text-[13px] transition-colors outline-none",
-                        active
-                          ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
-                          : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <ProjectIllustration
-                          projectKey={proj.key}
-                          name={proj.name}
-                          iconKey={proj.iconKey}
-                          id={proj._id}
-                          size={15}
-                        />
-                        <span className="truncate">{proj.name}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => togglePinProject(pId, e)}
-                        className="opacity-0 group-hover:opacity-100 text-[#D6C6A1] hover:text-[#0D0D0D]"
-                        title="Unpin project"
-                      >
-                        <Star className="size-3 fill-current" />
-                      </button>
-                    </Link>
-                  );
-                })}
-              </div>
+          {/* Nav List / Projects: on mobile drawer, wraps quickRows, workspaceLinks, and projectsList in a unified touch-scrollable scroller. On desktop, preserves original layout */}
+          {inDrawer ? (
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [touch-action:pan-y] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {quickRows}
+              {workspaceLinks}
+              {projectsList}
             </div>
+          ) : (
+            <>
+              {quickRows}
+              {workspaceLinks}
+              {projectsList}
+            </>
           )}
 
-          {/* Section: Projects */}
-          <div>
-            {!collapsed && (
-              <div className="flex items-center justify-between px-2 pb-1">
-                <span className="text-[12px] font-medium text-[#575657]">Projects</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setNewProjectOpen(true)}
-                    className="inline-flex size-5 items-center justify-center rounded-[4px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
-                    title="Create project"
-                    aria-label="Create project"
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProjectsSectionCollapsed((p) => !p)}
-                    className="text-[#575657] hover:text-[#0D0D0D]"
-                    aria-label="Toggle projects section"
-                  >
-                    <ChevronDown
-                      className={cn(
-                        "size-3.5 transition-transform",
-                        projectsSectionCollapsed && "-rotate-90"
-                      )}
-                    />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!projectsSectionCollapsed && (
-              <div className="space-y-0.5">
-                {/* Skeleton when projects is undefined */}
-                {!projects && (
-                  <div className="space-y-1 px-1">
-                    <div className="h-6 w-full rounded-[6px] bg-[#EEEEF0] animate-pulse" />
-                    <div className="h-6 w-3/4 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
-                    <div className="h-6 w-5/6 rounded-[6px] bg-[#EEEEF0] animate-pulse" />
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {projects && projects.length === 0 && !collapsed && (
-                  <div className="px-2 py-3 text-center">
-                    <p className="text-[12px] text-[#575657]">No projects yet.</p>
-                    <button
-                      type="button"
-                      onClick={() => setNewProjectOpen(true)}
-                      className="mt-1 text-[11px] font-medium text-[#0D0D0D] hover:underline"
-                    >
-                      + Create project
-                    </button>
-                  </div>
-                )}
-
-                {/* Projects list */}
-                {visibleProjects.map((proj) => {
-                  const active = activeProjectId === proj._id;
-                  const isPinned = pinnedIds.includes(proj._id);
-                  const isExpanded = !!expandedProjects[proj._id];
-
-                  return (
-                    <div key={proj._id} className="space-y-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={cn(
-                              "group flex min-h-[44px] lg:min-h-0 lg:h-8 items-center rounded-[8px] px-2 text-[13px] transition-colors cursor-pointer",
-                              collapsed ? "justify-center" : "justify-between",
-                              active
-                                ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
-                                : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
-                            )}
-                            onClick={() => navigate(`/app/projects/${proj._id}`)}
-                          >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              {!collapsed && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleProjectExpanded(proj._id, e)}
-                                  className="text-[#575657] hover:text-[#0D0D0D]"
-                                  aria-label="Expand project views"
-                                >
-                                  <ChevronRight
-                                    className={cn(
-                                      "size-3 transition-transform",
-                                      isExpanded && "rotate-90"
-                                    )}
-                                  />
-                                </button>
-                              )}
-                              <ProjectIllustration
-                                projectKey={proj.key}
-                                name={proj.name}
-                                iconKey={proj.iconKey}
-                                id={proj._id}
-                                size={15}
-                              />
-                              {!collapsed && (
-                                <span className="truncate font-medium">{proj.name}</span>
-                              )}
-                            </div>
-
-                            {!collapsed && (
-                              <div className="flex items-center gap-1">
-                                <span className="font-mono text-[10px] text-[#575657] opacity-0 group-hover:opacity-100 uppercase">
-                                  {proj.key}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => togglePinProject(proj._id, e)}
-                                  className={cn(
-                                    "p-0.5 transition-opacity",
-                                    isPinned
-                                      ? "text-[#D6C6A1] opacity-100"
-                                      : "text-[#575657] opacity-0 group-hover:opacity-100 hover:text-[#0D0D0D]"
-                                  )}
-                                  title={isPinned ? "Unpin" : "Pin project"}
-                                >
-                                  <Star
-                                    className={cn("size-3", isPinned && "fill-current")}
-                                  />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        {collapsed && (
-                          <TooltipContent side="right">
-                            {proj.name} ({proj.key})
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-
-                      {/* Expanded Views: Board, List, Analytics, Settings */}
-                      {!collapsed && isExpanded && (
-                        <div className="ml-5 pl-2 border-l border-border/60 space-y-0.5 pt-0.5">
-                          <Link
-                            to={`/app/projects/${proj._id}?view=board`}
-                            className={cn(
-                              "flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] transition-colors",
-                              active && pathname.includes("/projects") && !pathname.includes("/analytics") && !pathname.includes("/settings")
-                                ? "bg-[#ECECEE] text-[#0D0D0D] font-medium"
-                                : "text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D]"
-                            )}
-                          >
-                            <KanbanSquare className="size-3.5 shrink-0" />
-                            <span>Board</span>
-                          </Link>
-                          <Link
-                            to={`/app/projects/${proj._id}?view=list`}
-                            className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                          >
-                            <List className="size-3.5 shrink-0" />
-                            <span>List</span>
-                          </Link>
-                          <Link
-                            to={`/app/projects/${proj._id}/analytics`}
-                            className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                          >
-                            <BarChart3 className="size-3.5 shrink-0" />
-                            <span>Analytics</span>
-                          </Link>
-                          <Link
-                            to={`/app/projects/${proj._id}/settings/workflows`}
-                            className="flex h-7 items-center gap-2 rounded-[6px] px-2 text-[12px] text-[#575657] hover:bg-[#ECECEE] hover:text-[#0D0D0D] transition-colors"
-                          >
-                            <SlidersHorizontal className="size-3.5 shrink-0" />
-                            <span>Settings</span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* More row */}
-                {hasMoreProjects && !collapsed && (
-                  <Link
-                    to={effectiveWorkspaceId ? `/app/workspaces/${effectiveWorkspaceId}/projects` : "/app"}
-                    className="flex h-7 items-center px-2 text-[12px] font-medium text-[#575657] hover:text-[#0D0D0D]"
-                  >
-                    More projects ({(projects?.length ?? 0) - 6} more)...
-                  </Link>
-                )}
-              </div>
-            )}
+          {/* Pinned Bottom: user row only */}
+          <div className="p-2 border-t border-border/40 shrink-0">
+            <AccountMenu
+              onOpenShortcuts={() => setShortcutsOpen(true)}
+              collapsed={isCollapsed}
+            />
           </div>
-        </div>
-
-        {/* Pinned Bottom: user row only */}
-        <div className="p-2 border-t border-border/40 shrink-0">
-          <AccountMenu
-            onOpenShortcuts={() => setShortcutsOpen(true)}
-            collapsed={collapsed}
-          />
-        </div>
-      </aside>
-    </TooltipProvider>
-  );
+        </aside>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <div className="flex h-svh w-full overflow-hidden bg-[#FBFBFC] text-[#0D0D0D]">
       <ScrollManager />
 
       {/* Desktop Sidebar (>= 1024px) */}
-      <div className="hidden lg:flex shrink-0 h-full">{sidebarContent}</div>
+      <div className="hidden lg:flex shrink-0 h-full">
+        {renderSidebar({ collapsed, inDrawer: false })}
+      </div>
 
       {/* Mobile Drawer (< 1024px) */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
+        <div className="fixed inset-y-0 left-0 z-50 flex lg:hidden">
           {/* Dim overlay */}
           <div
             className="fixed inset-0 bg-[#0D0D0D]/35 transition-opacity"
@@ -1316,13 +1411,13 @@ export function AppShell({
           />
           {/* Drawer content */}
           <div
-            className="relative z-10 h-full w-72 max-w-[85vw] shadow-none bg-[#F7F7F8]"
+            className="relative z-10 flex flex-col h-full h-svh w-72 max-w-[85vw] shadow-none bg-[#F7F7F8]"
             style={{
               paddingTop: 'max(0px, env(safe-area-inset-top, 0px))',
               paddingBottom: 'max(0px, env(safe-area-inset-bottom, 0px))',
             }}
           >
-            {sidebarContent}
+            {renderSidebar({ collapsed: false, inDrawer: true })}
           </div>
         </div>
       )}
@@ -1382,7 +1477,7 @@ export function AppShell({
         </header>
 
         {/* Page Content Viewport with independent scroll */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-h-0 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8 sm:py-8">
             <FadeIn key={pathname}>
               {children}

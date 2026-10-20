@@ -131,7 +131,7 @@ export function Section8RolesComparison() {
       <style>{`
         .roles-grid-row {
           display: grid;
-          grid-template-columns: minmax(160px, 1.8fr) repeat(4, minmax(80px, 1fr));
+          grid-template-columns: minmax(180px, 1.8fr) repeat(4, minmax(80px, 1fr));
         }
         @media (min-width: 768px) {
           .roles-grid-row {
@@ -254,7 +254,7 @@ export function Section8RolesComparison() {
                         backgroundColor: '#F3F6FA',
                         transition: { duration: 0.15 },
                       }}
-                      className={`roles-grid-row roles-body-row h-[48px] md:h-[54px] cursor-default ${
+                      className={`roles-grid-row roles-body-row min-h-[48px] h-auto md:h-[54px] cursor-default ${
                         isLast ? 'border-b-0' : 'border-b border-black/[0.07]'
                       }`}
                       style={{
@@ -264,7 +264,7 @@ export function Section8RolesComparison() {
                       {/* First cell: capability label */}
                       <div
                         role="cell"
-                        className="flex items-center pl-4 md:pl-[40px] text-[14px] md:text-[15px] font-[400] text-[#0D0D0D] truncate pr-2"
+                        className="flex items-center pl-4 md:pl-[40px] text-[13px] sm:text-[14px] md:text-[15px] font-[400] text-[#0D0D0D] min-w-0 whitespace-normal md:truncate leading-snug py-2 pr-2"
                       >
                         {row.capability}
                       </div>

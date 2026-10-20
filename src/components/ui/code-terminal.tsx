@@ -182,7 +182,7 @@ export function CodeTerminal({
           </div>
 
           {tabs && tabs.length > 1 ? (
-            <div className="flex items-center gap-1 ml-3 overflow-x-auto">
+            <div className="flex items-center gap-1 ml-3 min-w-0 overflow-x-auto">
               {tabs.map((tab, idx) => {
                 const isActive = activeTabIdx === idx;
                 return (
@@ -224,11 +224,19 @@ export function CodeTerminal({
             opacity: crossfade ? 0 : 1,
             transition: "opacity 200ms ease",
           }}
-          className="grid p-4 text-[11.5px] leading-relaxed sm:text-[12.5px] text-[#1F2328]"
+          className="grid grid-cols-[minmax(0,1fr)] min-w-0 max-w-full overflow-hidden p-4 text-[11.5px] leading-relaxed sm:text-[12.5px] text-[#1F2328]"
         >
           {/* invisible full copy reserves the final height, so nothing jumps */}
-          <pre aria-hidden className="invisible col-start-1 row-start-1 whitespace-pre-wrap break-words">{activeCode}</pre>
-          <pre className="col-start-1 row-start-1 whitespace-pre-wrap break-words" aria-label={activeCode}>
+          <pre
+            aria-hidden
+            className="invisible col-start-1 row-start-1 min-w-0 max-w-full overflow-hidden whitespace-pre font-mono select-none pointer-events-none"
+          >
+            {activeCode}
+          </pre>
+          <pre
+            className="col-start-1 row-start-1 min-w-0 max-w-full overflow-x-auto whitespace-pre font-mono [overscroll-behavior-x:contain] [touch-action:pan-x] focus:outline-none"
+            aria-label={activeCode}
+          >
             {typed}
             {!done && <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-[#1F2328] align-middle" />}
           </pre>

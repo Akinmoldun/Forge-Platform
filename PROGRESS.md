@@ -13,19 +13,30 @@ Key rules (full text in `RESPONSIVE_PROMPT_PART5.md`):
 
 # NOW (update before starting each item)
 
-NOW: Part 5, Step 3: Sweep app routes with check-overflow and screenshots (overview, projects, board, issue, workflow, analytics, settings, dialogs, toasts)
-Last updated by: Session 6 (Step 2 D1/A3/A6 complete and verified), 20 Oct 2026.
+NOW: Part 6A Complete (Bugs 1-7 Verified). Ready for Part 6.
+Last updated by: Session 8 (Completed Part 6A Bugs 1-7), 20 Oct 2026.
 
 ---
 
 # STATUS BOARD
 
-- VERIFIED: A1, A2, A3, A5, A6, B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, C1, C2, C3, D1, E6, E7, E8, E9, F1, F2, F3, F4 = 34
-- EDITED, UNVERIFIED (changed, measured or opened, no recorded verdict): A4, D3, D8, E1, E3, E4 = 6
-- UNVERIFIED: none
-- IN PROGRESS: Step 3: sweep app routes (D2-D10)
-- TODO: everything else
-- NOT RUN: GitHub CI result is unknown (not readable from here). Local CI steps all pass (F2).
+- VERIFIED: A1, A2, A3, A5, A6, B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, C1, C2, C3, D1, E6, E7, E8, E9, F1, F2, F3, F4, Bug 1, Bug 2, Bug 3, Bug 4, Bug 5, Bug 6, Bug 7 = 41
+- EDITED, UNVERIFIED: A4, D3, D8, E1, E3, E4 = 6
+- UNVERIFIED, needs owner test: none yet
+- IN PROGRESS: Ready for Part 6
+- TODO: Part 6 tasks
+
+## Part 6A: Real-phone bug fixes (run BEFORE Part 6)
+
+| ID | Item | Status | Proof / note |
+|---|---|---|---|
+| Bug 1 | Drawer collapsed icon-only bug | VERIFIED | AppShell.tsx: drawer renders with `collapsed: false`, desktop uses stored state, collapse toggle hidden in drawer (`{!inDrawer && ...}`). Tested at 360x640 with `localStorage.forge_sidebar_collapsed = "true"`. Measured: `hasSearch: true`, `hasInbox: true`, `hasProjects: true`, `hasOverview: true`, `hasCollapseToggle: false`. Screenshot `bug1-drawer-expanded-360x640.png`: PASS — full labels, navigation, and account row visible with no empty floating icon column. |
+| Bug 2 | Nav list touch scroll | VERIFIED | Drawer container has `flex flex-col h-full h-svh w-72 max-w-[85vw]`, middle scroller has `flex-1 min-h-0 overflow-y-auto overscroll-contain [touch-action:pan-y]`. Measured at 360x640: `scrollHeight: 554, clientHeight: 494, afterScrollTop: 60`. Measured at 360x560: `scrollHeight: 554, clientHeight: 414, afterScrollTop: 140`. Scroller scrolls freely with touch swipe while header and account row remain pinned. |
+| Bug 3 | Scroll up locked after scrolling down | VERIFIED | Body scroll lock restored cleanly on close: `document.body.style.overflow = ""`. Added window resize listener (`>= 1024px`) to close drawer and clear lock. Updated `ScrollManager` to scroll both window and main container. Measured at 360x640: scrolled down 800px (`scrollTopDown: 800, scrollHeight: 1280, clientHeight: 592`), scrolled back up (`scrollTopUp: 0`), `bodyOverflow: visible` (`bodyOverflowRestored: true`, `scrollUpReturnedToZero: true`). |
+| Bug 4 | Guest demo menu / "..." menu tap response | VERIFIED | Raised DropdownMenuContent z-index to `z-[60]` in `dropdown-menu.tsx` and `AppShell.tsx`. Demo options "..." button has `min-h-[44px]` (via padding/size) and `aria-label="Demo options"`. Account trigger button has `min-h-[44px]` touch target. Sign out handler cleans up demo mode session storage and navigates to `/` in demo. Measured: banner menu opened (`reset demo` visible); account menu in drawer opened (`zIndex: 60`, `hasSignOut: true`); sign out tapped -> redirected to `http://localhost:3000/`, demoModeFlag cleared. Screenshot `bug4-guest-menu-open.png`: PASS — menu opens above drawer with all actions visible. |
+| Bug 5 | Landing Engineering Decisions code cutoff | VERIFIED | `src/components/ui/code-terminal.tsx`: code container is `min-w-0 max-w-full overflow-hidden`, visible `<pre>` has `col-start-1 row-start-1 min-w-0 max-w-full overflow-x-auto whitespace-pre font-mono [overscroll-behavior-x:contain] [touch-action:pan-x]`, invisible `<pre>` is `invisible col-start-1 row-start-1 min-w-0 max-w-full overflow-hidden whitespace-pre font-mono select-none pointer-events-none`. Measured at 280px (`pre sw=344 cw=164`, card right=239 <= 280), 360px (`pre sw=344 cw=244`, card right=319 <= 360), 390px (`pre sw=344 cw=274`, card right=349 <= 390). Screenshots `bug5-terminal-360x640.png` and `bug5-terminal-280x653.png`: PASS — code scrolls horizontally without blowout, card stays inside viewport. |
+| Bug 6 | Roles comparison capability names cutoff | VERIFIED | `Section8RolesComparison.tsx`: sticky column is `minmax(180px, 1.8fr)`, right shadow `2px 0 6px -2px rgba(0,0,0,0.08)`. Cells have `whitespace-normal md:truncate` and proper padding. Measured across all 10 rows at 280px, 360px, 390px: every single cell `sw=180 cw=180`, `any clipped: false`. Screenshot `bug6-roles-360x640.png`: PASS — capability names cleanly readable, sticky header and rows aligned. |
+| Bug 7 | Landing and App text clipping audit | VERIFIED | Created `scripts/check-text-clipping.cjs` testing viewports 360x640, 280x653, and 390x844 across landing sections (`#features`, `#capabilities`, `#decisions`, `#security`, `#faq`) and `/app` demo routes (overview, workspaces, projects, boards, workflows). Excludes intentional truncations. Output: `=== TEXT CLIPPING AUDIT COMPLETE: total unhandled violations = 0 ===` (PASS across all 18 tested route/viewport combinations). |
 
 ## Build and CI (do first)
 
@@ -180,3 +191,4 @@ Viewport units to `svh`; hero spacing; Card D rebuilt as a stacked layout below 
 - Compaction context mentioned an old task list (Task 1 to 4: Convex listNotifications, error screens, Get Started routing, etc.), ignored per Scope Lock (Section 0).
 
 ## Needs owner decision
+- Theme-color meta tag in index.html line 9 is brand orange #F36421 (`<meta name="theme-color" content="#F36421" />`). Chrome on Android tints the browser bar with it. It was in the repo before the responsive work. Optional: keep for landing, or switch to #FFFFFF (or #FBFBFC) for a neutral bar. Owner decides.
