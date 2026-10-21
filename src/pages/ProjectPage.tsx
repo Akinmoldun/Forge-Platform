@@ -76,7 +76,9 @@ export default function ProjectPage({ tab }: { tab?: "analytics" | "activity" })
   const isDemo = Boolean(isDemoMode() || (projectId && projectId.startsWith("demo-")));
 
   useEffect(() => {
-    console.debug(`[Forge Page] ProjectPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (projectId=${projectId})`);
+    if (import.meta.env.DEV) {
+      console.debug(`[Forge Page] ProjectPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (projectId=${projectId})`);
+    }
   }, [isDemo, projectId]);
 
   const project = useQuery(

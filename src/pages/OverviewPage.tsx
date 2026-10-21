@@ -149,7 +149,9 @@ export default function OverviewPage() {
   const { timedOut: loadTimedOut, retry: retryLoading } = useLoadingTimeout(loading, 8000);
 
   useEffect(() => {
-    console.debug(`[Forge Page] OverviewPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (workspaceId=${workspaceId})`);
+    if (import.meta.env.DEV) {
+      console.debug(`[Forge Page] OverviewPage: using ${isDemo ? "in-memory demoStore" : "Convex backend"} (workspaceId=${workspaceId})`);
+    }
   }, [isDemo, workspaceId]);
 
   if (!isValidWsId) {

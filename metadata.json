@@ -1,5 +1,0 @@
-{
-  "name": "Forge — Engineering workflow platform",
-  "description": "Engineering workflow platform with issue tracking, workflows, and collaboration",
-  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

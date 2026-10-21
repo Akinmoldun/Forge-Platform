@@ -256,12 +256,16 @@ function useRealSafeQuery<Query extends FunctionReference<"query">>(
   if (isDemo) {
     const qName = getFunctionName(query);
     const demoData = resolveDemoQueryData(qName, (args ?? {}) as Record<string, any>);
-    console.debug(`[Forge DataSource] ${qName || "query"}: in-memory demoStore`);
+    if (import.meta.env.DEV) {
+      console.debug(`[Forge DataSource] ${qName || "query"}: in-memory demoStore`);
+    }
     return demoData as Query["_returnType"];
   }
 
   const qName = getFunctionName(query);
-  console.debug(`[Forge DataSource] ${qName || "query"}: Convex backend`);
+  if (import.meta.env.DEV) {
+    console.debug(`[Forge DataSource] ${qName || "query"}: Convex backend`);
+  }
   return convexResult;
 }
 
@@ -280,7 +284,9 @@ function useMockQuery<Query extends FunctionReference<"query">>(
   }
   const qName = getFunctionName(query);
   const demoData = resolveDemoQueryData(qName, (args ?? {}) as Record<string, any>);
-  console.debug(`[Forge DataSource] ${qName || "query"}: in-memory demoStore (offline mode)`);
+  if (import.meta.env.DEV) {
+    console.debug(`[Forge DataSource] ${qName || "query"}: in-memory demoStore (offline mode)`);
+  }
   return demoData as Query["_returnType"];
 }
 
@@ -291,10 +297,12 @@ function useRealSafeQueries<
   Queries extends Record<string, { query: FunctionReference<"query">; args: Record<string, any> }>,
 >(queryMap: Queries): Record<keyof Queries, any> {
   const isDemo = isDemoMode();
-  if (isDemo) {
-    console.debug(`[Forge DataSource] SafeQueries: in-memory demoStore`);
-  } else {
-    console.debug(`[Forge DataSource] SafeQueries: Convex backend`);
+  if (import.meta.env.DEV) {
+    if (isDemo) {
+      console.debug(`[Forge DataSource] SafeQueries: in-memory demoStore`);
+    } else {
+      console.debug(`[Forge DataSource] SafeQueries: Convex backend`);
+    }
   }
   const { convexMap, demoKeys } = useMemo(() => {
     if (isDemo) {
@@ -367,11 +375,15 @@ function useRealSafeMutation<Mutation extends FunctionReference<"mutation">>(
     const isDemo = containsDemoId(args) || isDemoMode();
     const qName = getFunctionName(mutation).toLowerCase();
     if (isDemo) {
-      console.debug(`[Forge DataSource] Mutation ${qName}: in-memory demoStore`);
+      if (import.meta.env.DEV) {
+        console.debug(`[Forge DataSource] Mutation ${qName}: in-memory demoStore`);
+      }
       const anyArgs = (args ?? {}) as Record<string, any>;
       return executeDemoMutation(qName, anyArgs) as any;
     }
-    console.debug(`[Forge DataSource] Mutation ${qName}: Convex backend`);
+    if (import.meta.env.DEV) {
+      console.debug(`[Forge DataSource] Mutation ${qName}: Convex backend`);
+    }
     try {
       return await realMutation(args as any);
     } catch (err: any) {
