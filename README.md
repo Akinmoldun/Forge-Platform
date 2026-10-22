@@ -116,3 +116,10 @@ npm run build
 - **Reactive Backend**: Utilizes Convex for reactive data subscriptions, typed schema indexing, and transactional mutations, eliminating the need for separate Redis pub/sub infrastructure.
 - **Append-Only Event Ledger**: Critical actions write append-only records to `activityEvents`, providing auditability and serving as the data source for delivery metrics.
 - **Deterministic Analytics**: Risk assessment uses transparent, formula-driven weighting rather than opaque heuristics, allowing teams to understand why an issue is flagged.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
